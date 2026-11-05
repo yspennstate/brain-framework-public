@@ -162,6 +162,11 @@ def _proc_details(pids):
     """{pid: (age_min, command line)} for a handful of live pids, one limited-query handle each (no process
     creation). Used only for the session's own descendants and orphan candidates that are younger than the cached
     census, so the report can still say what they are and how old."""
+    if os.name != "nt":
+        # libproc reads the whole table in ~20 ms on the Mac, so one read answers any handful of pids
+        import posix_proc
+        t = posix_proc.table()
+        return {p: (t[p][2], t[p][3]) for p in pids if p in t}
     import ctypes
     from ctypes import wintypes
 
@@ -290,6 +295,11 @@ def census():
         rows = _overlay_live(blob, t0, "snapshot" if age < CENSUS_MAX_AGE_S else "stale")
         if rows:
             return rows
+    # A failed snapshot or unreadable cache must still respect the shared retry
+    # budget; otherwise every prompt starts another expensive census rebuild.
+    if not _rebuild_due():
+        _LAST[:] = ["rebuild-backoff", time.perf_counter() - t0, 0]
+        return {}
     _mark_rebuild_attempt()
     rows = _census_live(CENSUS_REBUILD_TIMEOUT_S)
     if rows:
@@ -363,7 +373,9 @@ def my_session_root(rows):
             break
         chain.append(pid)
         ppid, name, _, _ = rows[pid]
-        if name.lower() in ("claude.exe", "codex.exe") or (name.lower() == "node.exe" and "claude" in rows[pid][3].lower()):
+        n = name.lower()
+        n = n[:-4] if n.endswith(".exe") else n   # the Mac names hosts claude / codex / node, with no .exe
+        if n in ("claude", "codex") or (n == "node" and "claude" in rows[pid][3].lower()):
             return pid, chain
         pid = ppid
     return None, chain
@@ -401,7 +413,33 @@ def _subtree(rows, root):
     return out
 
 
-HARNESS = ("shell-snapshots", "snapshot-bash", "snapshot-zsh", "snapshot-powershell")
+HARNESS = ("shell-snapshots", "snapshot-bash", "snapshot-zsh", "snapshot-powershell",
+           "caffeinate -i -t ")   # Claude Code on the Mac keeps one under every session
+_PARSER_SEEN = {}
+
+
+def _harness_parser(cmd):
+    """Claude Code's PowerShell tool keeps one long-lived helper per session that parses each command before it runs:
+    `powershell.exe -NoProfile -NonInteractive -NoLogo -EncodedCommand <b64>`, whose decoded script reads base64 from
+    stdin and calls Language.Parser]::ParseInput. Its command line names no snapshot file, so until 31 Oct this hook
+    listed it on every prompt as the session's oldest idle worker (pid 59772, 1168 min, claude-99aebc7f). Plumbing,
+    not work: recognised by decoding the command, cached per command line."""
+    if not cmd or "-EncodedCommand" not in cmd:
+        return False
+    hit = _PARSER_SEEN.get(cmd)
+    if hit is not None:
+        return hit
+    hit = False
+    try:
+        import base64, re
+        m = re.search(r"-EncodedCommand\s+(\S+)", cmd)
+        if m:
+            txt = base64.b64decode(m.group(1)).decode("utf-16-le", "ignore")
+            hit = "Language.Parser]::ParseInput" in txt and "[Console]::In.ReadToEnd()" in txt
+    except Exception:
+        hit = False
+    _PARSER_SEEN[cmd] = hit
+    return hit
 
 
 def descendants(rows, root, exclude):
@@ -416,7 +454,7 @@ def descendants(rows, root, exclude):
                 if _stale_link(rows, pid, p):
                     continue
                 seen.add(pid); out.append((pid, name, age, cmd)); stack.append(pid)
-    real = [d for d in out if not any(h in (d[3] or "") for h in HARNESS)]
+    real = [d for d in out if not any(h in (d[3] or "") for h in HARNESS) and not _harness_parser(d[3])]
     if all(d[1].lower() in ("conhost.exe", "openconsole.exe") for d in real):
         real = []
     return real

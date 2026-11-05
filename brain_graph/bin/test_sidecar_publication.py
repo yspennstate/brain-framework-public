@@ -130,6 +130,18 @@ def publish_cases():
     ls.log = lambda msg: None
     td = tempfile.mkdtemp(prefix="sidecar_pub_rep_")
     out = {}
+    readers = []
+    if os.name != "nt":
+        # POSIX renames over a file a reader holds, so the Windows refusal is stood in for while a reader is open
+        real_replace = os.replace
+
+        def replace(src, dst, *a, **k):
+            if readers and os.path.abspath(dst) == os.path.abspath(os.path.join(td, "sidecar.sqlite")):
+                raise PermissionError(13, "Access is denied")
+            return real_replace(src, dst, *a, **k)
+        ls.os = type(os)("os_standin")
+        ls.os.__dict__.update(os.__dict__)
+        ls.os.replace = replace
     try:
         old, new = os.path.join(td, "sidecar.sqlite"), os.path.join(td, "sidecar.sqlite.new")
         for p, v in ((old, "old"), (new, "new")):
@@ -140,7 +152,8 @@ def publish_cases():
             db.close()
         reader = sqlite3.connect(old, check_same_thread=False)   # closed from the timer's thread
         reader.execute("SELECT count(*) FROM t").fetchone()
-        threading.Timer(0.6, reader.close).start()
+        readers.append(reader)
+        threading.Timer(0.6, lambda r=reader: (readers.remove(r), r.close())).start()
         try:
             waited = ls.publish(new, old, tries=40, wait=0.1)
             db = sqlite3.connect(old)
@@ -158,10 +171,12 @@ def publish_cases():
         db.close()
         reader = sqlite3.connect(old)
         reader.execute("SELECT count(*) FROM t").fetchone()
+        readers.append(reader)
         try:
             ls.publish(new, old, tries=5, wait=0.05)
             out["P5"] = (False, "published under a reader")
         except PermissionError:
+            readers.remove(reader)
             reader.close()
             db = sqlite3.connect(old)
             v = db.execute("SELECT v FROM t").fetchone()[0]

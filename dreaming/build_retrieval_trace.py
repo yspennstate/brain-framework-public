@@ -44,6 +44,7 @@ import io
 import json
 import math
 import os
+import re
 import sys
 import time
 from collections import Counter
@@ -54,12 +55,24 @@ TDIR = os.path.join(HOME, ".claude", "projects", "{{BRAIN_SLUG}}")
 MEMORY_ROOT = os.path.normpath(os.path.join(TDIR, "memory"))
 OUT = os.path.join(HOME, ".claude", "dreaming", "retrievals.tsv")
 CACHE = os.path.join(HOME, ".claude", "dreaming", "retrieval_trace_cache.json")
+# THE DURABLE READ LOG (29 Oct 2026, Mac mini). Most sessions here write no transcript, and memories are read through
+# Bash and `brain.py node`, not the Read tool, so the transcripts alone gave a header-only trace. coactivation_log.py and
+# brain.py node append every memory read to this file (read_trace.py); its rows are merged with the transcripts', a Read
+# found in both counted once by its tool_use_id. A session's first prompt comes from the prompt ledger, which every
+# session writes, so the test-worker rule holds for sessions that left no transcript.
+READS = os.path.join(HOME, ".claude", "dreaming", "memory_reads.tsv")
+LEDGER = os.path.join(MEMORY_ROOT, "prompts", "PROMPTS.jsonl")
 # same special-pages skip the graph/salience use, so the trace covers the same slug space
 SKIP = {"MEMORY", "INDEX_ARCHIVE", "PREDICTIONS", "STATE_OF_MIND", "OPEN_QUESTIONS", "AUTOBIOGRAPHY",
         "MODEL_OF_PARTNER", "FASCINATIONS", "THE_OTHER_MINDS", "CONSCIENCE", "MISTAKES", "SALIENCE",
         "GROWTH", "STATS", "CURIOSITY", "RECONSOLIDATION_QUEUE"}
-_NEEDLE = b'"Read"'                 # the rarer of the two strings a memory-Read line must hold
+# Every tool call, not only Read: on the Mac memories are read through Bash (cat/sed/head, brain.py node), and the
+# '"Read"' needle left the trace empty there - 79 Read lines and 0 memory reads in a 43 MB session (29 Oct, W71).
+_NEEDLE = b'"tool_use"'
 _NEEDLE2 = b'"tool_use"'
+_BASH_READ = re.compile(r"(?:^|[\s;|&(])(?:cat|head|tail|sed|less|more|bat|awk|grep)\s")
+_BASH_PATH = re.compile(r"""(?<![>])\s*((?:~|\$HOME|/)[^\s'"|;&<>()]*/memory/[^\s'"|;&<>()/]+\.md)""")
+_BASH_NODE = re.compile(r"brain\.py\"?\s+node\s+([A-Za-z0-9_.\-]+)")
 _CHUNK = 16 << 20
 _HEAD = 4096                        # bytes of a file's start kept as its signature
 _HEAD_FINAL = 4 * 65536             # a file this long has its first 64K characters on disk for good
@@ -113,6 +126,35 @@ def _reads_in_line(o, path, line_no):
     if not isinstance(content, list):
         return
     for index, c in enumerate(content):
+        if isinstance(c, dict) and c.get("type") == "tool_use" and c.get("name") == "Bash":
+            cmd = (c.get("input") or {}).get("command", "") if isinstance(c.get("input"), dict) else ""
+            if not isinstance(cmd, str) or not cmd:
+                continue
+            slugs = []
+            if _BASH_READ.search(cmd):      # a reading command; a path only written to (> or >>) is not a read
+                for m in _BASH_PATH.finditer(cmd):
+                    if cmd[max(0, m.start(1) - 3):m.start(1)].rstrip().endswith(">"):
+                        continue
+                    p = m.group(1).replace("$HOME", HOME)
+                    slug = _memory_slug(p)
+                    # a shell variable or a glob ($s.md, *.md) names no one memory: only an existing file counts
+                    if slug and not re.fullmatch(r"[A-Za-z0-9_.\-]+", slug):
+                        continue
+                    if slug and os.path.exists(os.path.join(MEMORY_ROOT, slug + ".md")) and slug not in slugs:
+                        slugs.append(slug)
+            for m in _BASH_NODE.finditer(cmd):
+                slug = m.group(1)
+                if os.path.exists(os.path.join(MEMORY_ROOT, slug + ".md")) and slug not in slugs:
+                    slugs.append(slug)
+            for slug in slugs:
+                if c.get("id"):
+                    identity = ("tool", str(c.get("id")), slug)
+                elif o.get("uuid"):
+                    identity = ("message", str(o.get("uuid")), str(index), slug)
+                else:
+                    identity = ("source", os.path.abspath(path), str(line_no), str(index), slug)
+                yield slug, identity
+            continue
         if isinstance(c, dict) and c.get("type") == "tool_use" and c.get("name") == "Read":
             inputs = c.get("input")
             if not isinstance(inputs, dict):
@@ -223,6 +265,55 @@ def _test_sessions(root, memo=None):
         for name in set(memo) - set(names):
             del memo[name]
     return tests
+
+
+def _ledger_test_sessions(path=LEDGER):
+    """12-character session keys of the ledger's '[headless-worker]' prompts. Only lines holding the prefix are parsed,
+    so the 127 MB ledger costs one streamed read. A test worker's prompts all carry it; a session of his that pasted one
+    would be dropped too, which errs toward leaving use out, as the transcript rule does."""
+    keys = set()
+    needle = TEST_PROMPT.encode("utf-8")
+    try:
+        with io.open(path, "rb") as fh:
+            for raw in fh:
+                if needle not in raw:
+                    continue
+                try:
+                    o = json.loads(raw.decode("utf-8", "replace"))
+                except Exception:
+                    continue
+                if isinstance(o, dict) and str(o.get("text") or "").lstrip().lstrip("﻿").startswith(TEST_PROMPT):
+                    keys.add(str(o.get("session") or "")[:12])
+    except OSError:
+        pass
+    keys.discard("")
+    return keys
+
+
+def _durable_reads(path=READS):
+    """[(iso, session, slug, identity)] from the durable read log; [] when it is absent. A short or malformed line
+    (a write cut by a crash) is skipped."""
+    out = []
+    try:
+        fh = io.open(path, encoding="utf-8", errors="replace")
+    except OSError:
+        return out
+    with fh:
+        for ln in fh:
+            p = ln.rstrip("\n").split("\t")
+            if len(p) < 4 or not p[0]:
+                continue
+            try:
+                ep = float(p[1])
+            except ValueError:
+                continue
+            if not math.isfinite(ep):
+                continue
+            iso = datetime.fromtimestamp(ep, timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+            ref = p[4] if len(p) > 4 else ""
+            identity = ("tool", ref) if ref else ("durable", p[3], p[1], p[0])
+            out.append((iso, p[2], p[0], identity))
+    return out
 
 
 def _positive_days(value):
@@ -399,7 +490,8 @@ def _file_reads(root, stats, cache, state):
         _save_cache(cache, state)
 
 
-def build_rows(root=TDIR, days=None, as_of=None, keep_tests=False, cache=_LIVE_ROOT):
+def build_rows(root=TDIR, days=None, as_of=None, keep_tests=False, cache=_LIVE_ROOT, reads_log=_LIVE_ROOT,
+               ledger=LEDGER):
     """Build rows without writing them; `as_of` is an injectable wall-clock seam for evaluation.
     `cache`: a scan-cache path, None for a full read; by default only the live transcript root is cached."""
     if not os.path.isdir(root):
@@ -410,8 +502,11 @@ def build_rows(root=TDIR, days=None, as_of=None, keep_tests=False, cache=_LIVE_R
     if days is not None and (not math.isfinite(float(days)) or float(days) <= 0):
         raise ValueError("days must be finite and positive")
     cutoff = as_of - float(days) * 86400.0 if days is not None else None
+    live_root = os.path.normcase(os.path.abspath(root)) == os.path.normcase(os.path.abspath(TDIR))
     if cache is _LIVE_ROOT:
-        cache = CACHE if os.path.normcase(os.path.abspath(root)) == os.path.normcase(os.path.abspath(TDIR)) else None
+        cache = CACHE if live_root else None
+    if reads_log is _LIVE_ROOT:      # an evaluator's copied root never picks up the live read log by accident
+        reads_log = READS if live_root else None
 
     state = None
     if cache:
@@ -430,14 +525,20 @@ def build_rows(root=TDIR, days=None, as_of=None, keep_tests=False, cache=_LIVE_R
     events = {}                       # (session, identity) -> event tuple
     tests = set() if keep_tests else _test_sessions(root, state["kinds"] if state is not None else None)
     stats["test_sessions"] = len(tests)
-    for nested, fallback_session, reads in _file_reads(root, stats, cache, state):
+    ledger_tests = set() if keep_tests or not reads_log else _ledger_test_sessions(ledger)
+    durable = _durable_reads(reads_log) if reads_log else []
+    stats["durable_rows"] = len(durable)
+    sources = list(_file_reads(root, stats, cache, state))
+    if durable:
+        sources.append((False, None, durable))
+    for nested, fallback_session, reads in sources:
         for iso, session, slug, identity in reads:
             identity = tuple(identity)
             epoch = _epoch(iso)
             if slug in SKIP or slug.startswith("dream_"):
                 stats["filtered_special"] += 1
                 continue
-            if session in tests or fallback_session in tests:
+            if session in tests or fallback_session in tests or str(session)[:12] in ledger_tests:
                 stats["test_worker_reads"] += 1
                 continue
             stats["scanned_reads"] += 1
@@ -505,8 +606,8 @@ def main(argv=None, transcript_dir=None, output=None, as_of=None):
     except TraceIntegrityError as exc:
         print("build_retrieval_trace: source integrity failure; prior trace preserved:", exc)
         return 2
-    if not stats["transcript_files"]:
-        print("build_retrieval_trace: no transcript files found; prior trace preserved")
+    if not stats["transcript_files"] and not stats["durable_rows"]:
+        print("build_retrieval_trace: no transcript files and no durable reads found; prior trace preserved")
         return 2
     if stats["open_errors"]:
         print("build_retrieval_trace: %d transcript file(s) unreadable; prior trace preserved" %
@@ -534,6 +635,7 @@ def main(argv=None, transcript_dir=None, output=None, as_of=None):
     print("  most-retrieved:", ", ".join(f"{s}({n})" for s, n in top))
     print("  left out: %d reads by %d test-worker sessions (--keep-tests keeps them)" % (
         stats["test_worker_reads"], stats["test_sessions"]))
+    print("  durable read log: %d rows read (%s)" % (stats["durable_rows"], READS))
     return 0
 
 

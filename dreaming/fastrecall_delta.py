@@ -11,7 +11,7 @@ postings, lengths, title tokens, bigrams, ids and rows, so idf and the mean leng
 
 Differences from a full rebuild, by design (each makes extend() refuse rather than answer differently):
   - a SUPERSEDES link among the new links: the revision rules need the whole pool, so refuse;
-  - a new link between two old cards is not seen (graph spread only); new links on new cards are;
+  - new links between two old cards are read by edge rowid (_read_links, 4 Nov); a supersedes one goes to the revisions;
   - the meaning channel has no vector for a new card (it scores on words, symbols and formulas only);
   - more than MAX_CARDS new cards: refuse (a rebuild is the right tool then).
 """
@@ -25,21 +25,78 @@ MAX_CARDS = int(os.environ.get("MATH_RECALL_DELTA_MAX", "5000") or 5000)
 
 def _connect(store_path):
     uri = "file:%s?mode=ro" % os.path.abspath(store_path).replace("\\", "/")
-    return sqlite3.connect(uri, uri=True, timeout=30)
+    con = sqlite3.connect(uri, uri=True, timeout=30)
+    # RECALL-10X lead 3: one read transaction per reader, so the new cards, the retracted set and the new links come
+    # from one version of the store (as separate statements a write landing between them mixed two versions).
+    con.execute("BEGIN")
+    return con
 
 
-def read_delta(store_path, n_known, known_rows, upto=None):
-    """(nodes, edges) added at rowid > n_known (and <= upto when given), as GraphNode/GraphEdge, or (None, why)."""
+MAX_LINKS = int(os.environ.get("MATH_RECALL_DELTA_MAX_LINKS", "20000") or 20000)
+
+
+def _read_links(con, edge_top, known_rows, known_pairs, retracted, known_kinds):
+    """New links between two cards the state already has: edges at rowid > edge_top whose ends are both known and
+    whose (source, target, kind) the state does not list. Before 4 Nov these were never read; a linking lane joins old
+    cards to old cards, so every link it landed stayed out of every walk (math_recall --id) and the graph spread until
+    the next full build - on 4 Nov 20:4x the Yoneda card showed 13 of its 25 links, and the last full build was 11 h
+    old. Supersedes links are left to the revision rules. Returns (links, new_top), (None, why), or ([], None) when
+    the edges table is not append-only (the rowid cursor is then unsafe and the lane stays off)."""
+    from math_brain.models import EdgeKind, GraphEdge
+    top = con.execute("SELECT max(rowid), count(*) FROM edges").fetchone()
+    if top[0] is None or top[0] != top[1]:
+        return [], None
+    start = int(edge_top or 0)
+    if top[0] <= start:
+        return [], top[0]
+    want = []
+    for r in con.execute("SELECT id, source_id, target_id, kind FROM edges WHERE rowid > ? AND rowid <= ?",
+                         (start, top[0])):
+        if r[3] == "supersedes" or r[3] not in known_kinds or r[0] in retracted:
+            continue
+        if r[1] not in known_rows or r[2] not in known_rows:
+            continue    # a link on a new card comes with that card
+        if r[3] in known_pairs.get((r[1], r[2]), ()):
+            continue
+        want.append(r[0])
+    if len(want) > MAX_LINKS:
+        return None, "%d new links between known cards, over MATH_RECALL_DELTA_MAX_LINKS" % len(want)
+    links = []
+    for k in range(0, len(want), 500):
+        chunk = want[k:k + 500]
+        for r in con.execute("SELECT id, source_id, target_id, kind, rationale, weight, metadata_json, created_at "
+                             "FROM edges WHERE id IN (%s)" % ",".join("?" * len(chunk)), chunk):
+            links.append(GraphEdge(id=r[0], source_id=r[1], target_id=r[2], kind=EdgeKind(r[3]), rationale=r[4],
+                                   weight=r[5], metadata=json.loads(r[6]), created_at=r[7]))
+    links.sort(key=lambda e: (e.created_at, e.id))
+    return links, top[0]
+
+
+def read_delta(store_path, n_known, known_rows, upto=None, edge_top=None, known_pairs=None):
+    """(nodes, edges) added at rowid > n_known (and <= upto when given), as GraphNode/GraphEdge, or (None, why).
+    With known_pairs (the state's pair_kinds) also the new links between known cards, from the same read: then
+    (nodes, edges, links, new_edge_top)."""
     from math_brain.models import EdgeKind, GraphEdge, GraphNode, NodeKind
     con = _connect(store_path)
     try:
+        lane = known_pairs is not None
+        links, etop = [], None
+        if lane:
+            try:
+                retracted0 = {x[0] for x in con.execute("SELECT edge_id FROM edge_retractions")}
+            except sqlite3.Error:
+                retracted0 = set()
+            got = _read_links(con, edge_top, known_rows, known_pairs, retracted0, {k.value for k in EdgeKind})
+            if got[0] is None:
+                return None, got[1]
+            links, etop = got
         top = con.execute("SELECT max(rowid), count(*) FROM nodes").fetchone()
         if top[0] != top[1]:
             return None, "the nodes table is not append-only (max rowid %s, count %s)" % top
         if upto is not None:
             top = (min(upto, top[0]), min(upto, top[0]))
         if top[0] == n_known:
-            return ([], []), ""
+            return (([], [], links, etop) if lane else ([], [])), ""
         if top[0] < n_known:
             return None, "the store has fewer cards than the state"
         if top[0] - n_known > MAX_CARDS:
@@ -74,7 +131,7 @@ def read_delta(store_path, n_known, known_rows, upto=None):
                                        weight=r[5], metadata=json.loads(r[6]), created_at=r[7]))
         uniq = {e.id: e for e in edges}
         edges = sorted(uniq.values(), key=lambda e: (e.created_at, e.id))
-        return (nodes, edges), ""
+        return ((nodes, edges, links, etop) if lane else (nodes, edges)), ""
     finally:
         con.close()
 
@@ -86,12 +143,23 @@ def extend(prepared, store_path=None, short_ids=None, upto=None):
     R = prepared.R
     s = prepared.s
     store_path = store_path or prepared.store_path
-    got, why = read_delta(store_path, len(s["order"]), s["rows"], upto)
+    try:
+        import fastrecall as _FR
+        _FR.STATUS["extended_links"] = 0
+    except Exception:
+        _FR = None
+    got, why = read_delta(store_path, len(s["order"]), s["rows"], upto, s.get("edge_top"), s["tool"]["pair_kinds"])
     if got is None:
         return None, why
-    nodes, edges = got
+    nodes, edges, links, etop = got
     if not nodes:
-        return 0, "nothing new"
+        if links:
+            _add_links(prepared, links)
+            if _FR is not None:
+                _FR.STATUS["extended_links"] = len(links)
+        if etop is not None:
+            s["edge_top"] = etop
+        return 0, ("nothing new" if not links else "")
     accepted, exclusions = R.guard_nodes(tuple(nodes), None)
     if exclusions:
         return None, "the guard excluded a new card"
@@ -105,6 +173,15 @@ def extend(prepared, store_path=None, short_ids=None, upto=None):
     for e in rev_edges:      # a supersedes link between two old cards, newer than the state
         if e.id not in have and "supersedes" not in tool0["pair_kinds"].get((e.source_id, e.target_id), ()):
             edges.append(e)
+            have.add(e.id)
+    for e in links:          # an ordinary link between two old cards, newer than the state
+        if e.id not in have:
+            edges.append(e)
+            have.add(e.id)
+    if links and _FR is not None:
+        _FR.STATUS["extended_links"] = len(links)
+    if etop is not None:
+        s["edge_top"] = etop
     edges.sort(key=lambda e: (e.created_at, e.id))
     drop = [d for d, i in enumerate(s["ids"]) if i in hidden]
     accepted = tuple(n for n in accepted if n.id not in hidden)
@@ -186,6 +263,29 @@ def extend(prepared, store_path=None, short_ids=None, upto=None):
     prepared._delta_corpus = "\n".join((tool["title"].get(n.id, "") + " " + (n.body or "")).lower() for n in nodes)
     _patch_heavy(prepared)
     return len(accepted), ""
+
+
+def _add_links(prepared, links):
+    """New links between known cards into the printout maps and the graph spread, when no card is new."""
+    tool = prepared.s["tool"]
+    for e in links:
+        tool["pair_kinds"].setdefault((e.source_id, e.target_id), []).append(e.kind.value)
+        why_ = " ".join((e.rationale or "").split())
+        tool["links"].setdefault(e.source_id, []).append(("->", e.kind.value, e.target_id, why_))
+        tool["links"].setdefault(e.target_id, []).append(("<-", e.kind.value, e.source_id, why_))
+    prepared.tool = tool
+    old = tuple(getattr(prepared, "_delta_edges", ()) or ())
+    seen = {r[6] for r in old}
+    prepared._delta_edges = old + tuple((e.source_id, e.target_id, e.kind.value, e.rationale, e.weight,
+                                         json.dumps(e.metadata), e.id, e.schema_version, e.created_at)
+                                        for e in links if e.id not in seen)
+    if not hasattr(prepared, "_delta_corpus"):
+        prepared._delta_corpus = ""
+    h = getattr(prepared, "_heavy", None)
+    if isinstance(h, dict) and h.get("_delta"):      # heavy already read and patched: add the links to it too
+        have = {r[6] for r in h["edges"]}
+        h["edges"] = tuple(h["edges"]) + tuple(r for r in prepared._delta_edges if r[6] not in have)
+    _patch_heavy(prepared)
 
 
 REVISION_REASONS = ("superseded_revision", "superseded_by_unavailable_revision", "competing_revision_heads")

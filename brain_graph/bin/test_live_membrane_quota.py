@@ -140,7 +140,8 @@ run("8 receiver kind read from its transcript, unknown re-read, settled kept", k
 def decide_serves():
     reset([row(1, "test"), row(2, "test")])
     pol = m.policy()
-    pol.update({"serve_attr": False, "serve_err": False, "serve_place": False, "serve_word": False, "serve_mem": True,
+    # hold_mem off: the diffuse-line trial holds a line by a hash of the session, a separate rule from the quota
+    pol.update({"hold_mem": False, "serve_attr": False, "serve_err": False, "serve_place": False, "serve_word": False, "serve_mem": True,
                 "tired": []})
     ev = {"mem_all": [{"slug": M, "size": pol["mem_size_min"] + 1.0, "hebb": 0, "reach": 0,
                        "why": ["file:~/work/some_script.py"], "descr": "a memory"}]}

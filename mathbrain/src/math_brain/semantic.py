@@ -349,7 +349,10 @@ def standout_details(query: str, node_ids) -> dict[str, tuple[float, float]]:
                    f"the claim vectors have dimension {_vecs.shape[1]}")
         return {}
 
-    cosines = _vecs @ question
+    # numpy 2.2.3 on Apple Accelerate raises divide/overflow/invalid warnings on clean float32 matmuls; the
+    # result is exact, and the question vector was checked finite above.
+    with np.errstate(all="ignore"):
+        cosines = _vecs @ question
     mean = float(cosines.mean())
     spread = float(cosines.std())
     if not np.isfinite(spread) or spread <= 1e-9:

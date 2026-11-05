@@ -43,6 +43,9 @@ def _rewrites():
     except (OSError, ValueError):
         return {}
 MIN_N = 4
+# the routes a fire can come by (the fire log's column 7: regex, graph, ff; hook for the Codex path). A judged row's
+# `path` outside these is no route: the hand sheet of 2 Sep (session 7dcb21b8) wrote its source there (27 Sep).
+KNOWN_PATHS = ("regex", "graph", "ff", "hook")
 
 
 def main():
@@ -85,12 +88,16 @@ def main():
     paths = collections.defaultdict(lambda: collections.defaultdict(lambda: {"yes": 0, "no": 0}))
     rewrites = _rewrites()
     dropped = collections.Counter()
+    bad_path = collections.Counter()
     for r in rows:
         rid = r.get("instinct")
         if not rid:
             continue
         d = str(r.get("domain_at_play", "")).lower()
         pth = str(r.get("path") or "").strip().lower()
+        if pth and pth not in KNOWN_PATHS:
+            bad_path[pth[:60]] += 1
+            pth = ""
         if rid in rewrites and pth not in ("graph", "ff") and str(r.get("stratum", "")).lower() != "suppressed":
             fired = str(r.get("fired_at") or "").replace("T", " ")[:16]
             if not fired or fired < rewrites[rid]:
@@ -121,6 +128,7 @@ def main():
         if str(r.get("useful", "")).lower() in ("yes", "true", "1"):
             agg[rid]["useful"] += 1
     out = {"built": time.strftime("%Y-%m-%dT%H:%M:%S"), "min_n": MIN_N, "rows": len(rows), "reflexes": {},
+           "rows_with_unknown_path_label": sum(bad_path.values()),
            # the gates' measured cost: suppressed fires the judge found on-domain, per reason (J3 stratum)
            "gates": {k: dict(v, cost_rate=(v["yes"] / float(v["yes"] + v["no"])) if (v["yes"] + v["no"]) else None)
                      for k, v in sorted(gates.items())}}

@@ -285,6 +285,46 @@ def _mark_delivered(session_hmac: str, projects: list[str]) -> None:
             return
 
 
+def _review_nag_due(session_hmac: str, windows: dict[str, str], cooldown: float) -> set[str]:
+    """The review line calls itself hourly but repeated on about a fifth of all tool calls for hours (31 Oct 2026,
+    1000-ways D5 #69: 1,183 fires inside keep-working jobs on the Mac, the read-latest it asks for run after 1.0%).
+    Name a project once per session per cooldown, and at once when its review window changes. Stamped per project:
+    the due set moves with the working directory, so one stamp for the whole set re-fired on every cd.
+    Unreadable state names them all."""
+    try:
+        state = json.loads((ROOT / "hot-drift-state.json").read_text(encoding="utf-8"))
+        entry = (state.get("review_nags") or {}).get(session_hmac) or {}
+    except Exception:
+        return set(windows)
+    now = time.time()
+    return {project for project, window in windows.items()
+            if not isinstance(entry.get(project), dict) or entry[project].get("w") != window
+            or now - float(entry[project].get("at", 0)) >= cooldown}
+
+
+def _mark_review_nag(session_hmac: str, windows: dict[str, str]) -> None:
+    state_path = ROOT / "hot-drift-state.json"
+    with _state_lock(ROOT / "hot-drift-state.lock") as locked:
+        if not locked:
+            return
+        try:
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            if state.get("schema") != DRIFT_STATE_SCHEMA:
+                return
+            nags = state.setdefault("review_nags", {})
+            now = time.time()
+            entry = {p: v for p, v in (nags.get(session_hmac) or {}).items() if isinstance(v, dict)}
+            entry.update({project: {"w": window, "at": now} for project, window in windows.items()})
+            nags[session_hmac] = entry
+            if len(nags) > 1024:
+                newest = lambda item: max([float(v.get("at", 0)) for v in nags[item].values() if isinstance(v, dict)] or [0])
+                keep = sorted(nags, key=newest, reverse=True)[:1024]
+                state["review_nags"] = {item: nags[item] for item in keep}
+            _write_state(state_path, state)
+        except Exception:
+            return
+
+
 def main() -> int:
     if any(a in ("-h", "--help") for a in sys.argv[1:]):
         # Discovery is not execution: this script writes, so a help request must
@@ -348,9 +388,17 @@ def main() -> int:
                               for feature in action_features)
                 support_scores[project] = matched / float(len(action_features))
         drift_due = _update_drift(policy, session_hmac, support_scores, progress)
-        lines = ["[prompt-contract] %s: operation/target overlaps active prohibition %s for %s. Re-read the current prompt before retrying."
-                 % ("BLOCKED" if policy.get("deny_exact_negative") else "WARNING", clause, project)
-                 for project, clause in violations]
+        # One line per call, not one per clause (30 Oct 2026). A one-token overlap is enough to count, and most
+        # clauses forbid every op, so a replay of 300 Mac shell commands warned on 296 at about 30 lines each,
+        # while dangerous controls warned no more often: ~40 lines of clause hashes per tool call told the
+        # agent nothing it could act on. Counts per project keep every signal the old lines carried.
+        per_project: dict[str, int] = {}
+        for project, _clause in violations:
+            per_project[project] = per_project.get(project, 0) + 1
+        lines = (["[prompt-contract] %s: operation/target overlaps %d active prohibition clause(s) (%s). Re-read the current prompt before retrying."
+                  % ("BLOCKED" if policy.get("deny_exact_negative") else "WARNING", len(violations),
+                     ", ".join("%s %d" % item for item in sorted(per_project.items())))]
+                 if violations else [])
         if stale:
             lines.append("[prompt-contract] Signed contract cache is stale (%.0f seconds); exact checks used the last verified generation, but irreversible work should wait for hourly reconciliation." % cache_age)
         if progress and body.get("contracts") and not projects:
@@ -358,23 +406,37 @@ def main() -> int:
         lines.extend("[prompt-contract] The current progress action is weakly connected to every open clause for %s. Re-read the prompt contract and reconnect the next action; persistent divergence is scored by the hourly graph." % project
                      for project in drift_due)
         acknowledged = set(body.get("acknowledgements", {}).get(session_hmac, ()))
+        due = []
         for project in projects:
             review = body.get("reviews", {}).get(project)
             if review and review.get("window_id") not in acknowledged:
                 if review.get("attempt_unresolved"):
                     lines.append("[project-context] The newest hourly review attempt for %s is unresolved; do not treat an older quiet packet as current." % project)
                 else:
-                    # The CLI migrated to the runtime root beside this hook (2026-07-23);
-                    # resolve it as a sibling so the nag never points at a moved path again.
-                    cli = Path(__file__).resolve().parent / "project_memory_cli.py"
-                    lines.append("[project-context] Hourly review %s is due for %s (%s occurrences). Run: \"%s\" \"%s\" read-latest --project %s --session %s"
-                                 % (review["generation"], project, review["occurrence_count"], sys.executable, cli, project, session))
+                    due.append("%s (review %s, %s occurrences)" % (project, review["generation"], review["occurrence_count"]))
+        due_windows = {p: str((body.get("reviews", {}).get(p) or {}).get("window_id")) for p in projects
+                       if any(d.startswith(p + " (") for d in due)}
+        if due_windows:
+            show = _review_nag_due(session_hmac, due_windows,
+                                   float(policy.get("review_nag_cooldown_seconds", 3600)))
+            due = [d for d in due if d.split(" (", 1)[0] in show]
+            due_windows = {p: w for p, w in due_windows.items() if p in show}
+        if due:
+            # One line for every due review (30 Oct 2026): five projects printed five full command lines on
+            # every tool call, and on the Mac a review is 24-30 shards of ~48 KB, so the nag never clears.
+            # The CLI migrated to the runtime root beside this hook (2026-07-23);
+            # resolve it as a sibling so the nag never points at a moved path again.
+            cli = Path(__file__).resolve().parent / "project_memory_cli.py"
+            lines.append("[project-context] Hourly review due: %s. Run: \"%s\" \"%s\" read-latest --project <id> --session %s"
+                         % ("; ".join(due), sys.executable, cli, session))
         if not lines:
             return 0
         output = {"hookEventName": "PreToolUse", "additionalContext": "\n".join(lines)}
         sys.stdout.write(json.dumps({"hookSpecificOutput": output}, ensure_ascii=False))
         sys.stdout.flush()
         _mark_delivered(session_hmac, drift_due)
+        if due:
+            _mark_review_nag(session_hmac, due_windows)
     except Exception:
         sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
             "additionalContext": "[prompt-contract] Signed hot cache validation failed; avoid irreversible work until reconciliation."}}))

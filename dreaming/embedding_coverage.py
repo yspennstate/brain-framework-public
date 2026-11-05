@@ -298,15 +298,39 @@ def active_coverage_report(mem_dir, canonical, expected_model, authority_path):
         return report
 
 
+def _corpus_fingerprint(mem_dir):
+    """Name, size and mtime of every .md in mem_dir, or None if one vanished mid-pass. Any write moves it."""
+    try:
+        rows = []
+        for fn in sorted(os.listdir(mem_dir)):
+            if fn.endswith(".md"):
+                st = os.stat(os.path.join(mem_dir, fn))
+                rows.append((fn, st.st_size, st.st_mtime_ns))
+        return rows
+    except OSError:
+        return None
+
+
 def write_status(mem_dir=builder.MEM_DEFAULT, sidecar=builder.OUT,
                  expected_model=builder.DEFAULT_MODEL, path=DEFAULT_STATUS, checked_at=None,
                  authority_path=DEFAULT_AUTHORITY, lock_path=None,
                  memory_lock_path=DEFAULT_MEMORY_LOCK):
-    """Re-audit under shared locks and atomically publish a non-authoritative wake observer."""
+    """Re-audit under shared locks and atomically publish a non-authoritative wake observer.
+
+    The audit runs before the memory lock is taken, and is kept only if no memory moved between a fingerprint
+    taken before it and one taken under the lock; otherwise it is redone under the lock as before. On 3 Nov,
+    under swap, the locked audit held memory_write.lock over 10 min on 13 s of CPU, and every `remember` gave
+    up at its 20 s wait; the fingerprint of 45k memories took 11 s there. With the builder's stat-keyed read cache
+    on, a locked re-audit re-reads only the files that moved since the unlocked one.
+    """
+    builder.enable_read_cache()
     lock_path = lock_path or (os.path.abspath(sidecar) + ".publish.lock")
     with artifact.file_lock(lock_path):
+        before = _corpus_fingerprint(mem_dir)
+        report = active_coverage_report(mem_dir, sidecar, expected_model, authority_path)
         with artifact.file_lock(memory_lock_path):
-            report = active_coverage_report(mem_dir, sidecar, expected_model, authority_path)
+            if before is None or _corpus_fingerprint(mem_dir) != before:
+                report = active_coverage_report(mem_dir, sidecar, expected_model, authority_path)
             snapshot = _write_status_snapshot(report, path, checked_at)
     return snapshot, report
 

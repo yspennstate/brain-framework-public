@@ -22,7 +22,15 @@ crash cannot leave a half-written shard and an unchanged month does not churn th
 
 Usage:
     python shard_prompt_archive.py            # publish shards, print the manifest
-    python shard_prompt_archive.py --check     # verify only, write nothing (exit 1 on mismatch)
+    python shard_prompt_archive.py --union-existing  # merge a partial ledger into existing shards
+    python shard_prompt_archive.py --check     # strict local-ledger audit, write nothing
+
+Union mode preserves existing shard order and the maximum occurrence count of every exact
+line across the archive and local ledger. It does not deduplicate repeated ledger entries.
+Fetch/merge the latest repo archive before publishing; this is not a concurrent-writer lock.
+--check always audits against the local ledger, even with --union-existing: archive-only rows
+still fail that audit until the ledger is reconciled. Union publishing instead verifies the
+exact merged multiset, including archive-only rows, both before and after writing.
 """
 from __future__ import annotations
 
@@ -52,7 +60,7 @@ def month_of(line: str) -> str:
         rec = json.loads(line)
     except Exception:
         return UNDATED
-    ts = str(rec.get("ts") or "")
+    ts = str(rec.get("ts") or "") if isinstance(rec, dict) else ""
     # "2026-07-09T12:07:09" -> "2026-07"; reject anything not shaped like a real date.
     if len(ts) >= 7 and ts[4] == "-" and ts[:4].isdigit() and ts[5:7].isdigit():
         return ts[:7]
@@ -106,6 +114,22 @@ def existing_shards() -> dict[str, list[str]]:
     return found
 
 
+def union_shards(source: list[str], published: dict[str, list[str]]) -> dict[str, list[str]]:
+    """Keep all archived occurrences; append only missing occurrences from source.
+
+    Compare globally so an existing line in an unexpected shard is still preserved rather
+    than duplicated. Existing shard contents and ordering are never rewritten from source.
+    """
+    merged = {key: list(lines) for key, lines in published.items()}
+    available = collections.Counter(line for lines in published.values() for line in lines)
+    for line in source:
+        if available[line]:
+            available[line] -= 1
+        else:
+            merged.setdefault(month_of(line), []).append(line)
+    return merged
+
+
 def digest(lines: list[str]) -> str:
     h = hashlib.sha256()
     for line in lines:
@@ -118,6 +142,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true",
                     help="verify the published shards against the live ledger; write nothing")
+    ap.add_argument("--union-existing", action="store_true",
+                    help="publish the multiset union with existing shards; --check remains "
+                         "a strict local-ledger audit")
     args = ap.parse_args()
 
     if not os.path.exists(LIVE):
@@ -149,10 +176,19 @@ def main() -> int:
                   % sum(invented.values()), file=sys.stderr)
         return 0 if ok else 1
 
+    expected = collections.Counter(source)
+    if args.union_existing:
+        published_before = existing_shards()
+        archived = collections.Counter(line for lines in published_before.values() for line in lines)
+        expected |= archived  # maximum multiplicity, not a set or concatenation
+        buckets = union_shards(source, published_before)
+        print("union existing : %d archive-only occurrence(s) preserved"
+              % sum((archived - collections.Counter(source)).values()))
+
     # Prove the split is lossless BEFORE touching the repo: a multiset comparison both ways,
     # so a duplicated or dropped line cannot pass as equal counts.
     rebuilt = [l for k in sorted(buckets) for l in buckets[k]]
-    if collections.Counter(rebuilt) != collections.Counter(source):
+    if collections.Counter(rebuilt) != expected:
         print("shard_prompt_archive: ABORT - the split is not lossless; nothing written",
               file=sys.stderr)
         return 1
@@ -176,7 +212,7 @@ def main() -> int:
     # repo will actually carry, not what we intended to write.
     published = existing_shards()
     flat = [l for k in sorted(published) for l in published[k]]
-    ok = collections.Counter(flat) == collections.Counter(source)
+    ok = collections.Counter(flat) == expected
     print()
     print("source records : %d" % len(source))
     print("published      : %d across %d shards, %.2f MB total, largest %.2f MB"

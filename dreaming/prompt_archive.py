@@ -217,11 +217,22 @@ def provisional_class(text):
     return "other"
 
 
+def dumps_line(rec):
+    """One ledger line. json.dumps(ensure_ascii=False) leaves U+2028, U+2029 and U+0085 raw, and
+    str.splitlines() treats each as a line break. On 2026-09-23 two records of a pasted review (09-21
+    16:05, 28 U+2028 between the lines of its display math) were found cut into 58 unparseable
+    fragments: apply_prompt_classes.py read the ledger with splitlines(), kept the fragments verbatim
+    and rejoined them with newlines, so every reader skipped the prompt. Escaping the three keeps each
+    record on one physical line whatever splits it; json.loads restores the same characters."""
+    return (json.dumps(rec, ensure_ascii=False)
+            .replace("\u2028", "\\u2028").replace("\u2029", "\\u2029").replace("\x85", "\\u0085"))
+
+
 def append_line(rec):
     try:
         os.makedirs(ARCHIVE_DIR, exist_ok=True)
         with io.open(LEDGER, "a", encoding="utf-8") as f:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            f.write(dumps_line(rec) + "\n")
     except Exception:
         pass  # fail-open: archiving must never break a prompt
 
@@ -309,7 +320,38 @@ def main():
         prompt_origin.stamp(rec)
     except Exception:
         pass  # fail-open: archiving must never break a prompt
+    # Where the session came from decides more than what the prompt says (2026-09-24): a headless run is started by
+    # an agent with a prompt it wrote. The content patterns in prompt_origin kept missing new worker templates (a
+    # "picture maker for YouTube thumbnails" brief reached every agent's hourly block as his ask, re-fired x3).
+    try:
+        if _headless_session(data, runtime):
+            rec["origin"] = "automation"
+    except Exception:
+        pass
     append_line(rec)
+
+
+def _headless_session(data, runtime):
+    """True for `claude -p` (Claude Code hands its hooks CLAUDE_CODE_ENTRYPOINT=sdk-cli, against cli when he types)
+    and for `codex exec` (the rollout's session_meta, written before the first prompt, says source "exec")."""
+    if runtime == "claude":
+        return str(os.environ.get("CLAUDE_CODE_ENTRYPOINT", "")).strip().lower().startswith("sdk")
+    path = str(data.get("transcript_path") or "")
+    if not path or not os.path.isfile(path):
+        return False
+    with open(path, "rb") as fh:
+        for _ in range(8):
+            raw = fh.readline()
+            if not raw:
+                break
+            try:
+                row = json.loads(raw.decode("utf-8", "replace"))
+            except Exception:
+                continue
+            if isinstance(row, dict) and row.get("type") == "session_meta" and isinstance(row.get("payload"), dict):
+                meta = row["payload"]
+                return str(meta.get("source") or "") == "exec" or str(meta.get("originator") or "") == "codex_exec"
+    return False
 
 
 if __name__ == "__main__":

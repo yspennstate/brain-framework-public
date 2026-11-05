@@ -422,9 +422,51 @@ def _advisory(source: Any, event: str) -> Optional[dict[str, Any]]:
     return {"hookSpecificOutput": out}
 
 
+# A picture-maker work order is a fully specified image job for a headless Codex worker. Over the week to 2026-09-24,
+# 1,080 reflex notes landed on these prompts from 58 reflexes, two of them about pictures; the rest were prose-voice,
+# recall, verification and trading scars. The worker's brief comes from the agent that wrote it; the brain adds nothing.
+_IMAGE_WORK_ORDER = re.compile(r"^\s*(?:\[headless-worker\]\s*)?You are (?:a|the) picture maker\b", re.I)
+# A picture worker's own image calls (tools.image_gen__imagegen({prompt}) inside its exec code) reach this hook as
+# PreToolUse with the picture's description as input; no reflex can help a description, and 56 of 444 fires in the
+# hour after the 18:31 landing on 2026-09-24 landed there. Matched by name, or by an input that is a prompt plus
+# image options only (the bridge serves Codex alone, so Claude's Agent calls, which carry more keys, never get here).
+_IMAGE_TOOL = re.compile(r"image[_.]?gen", re.I)
+_IMAGE_ARGS = frozenset(("prompt", "size", "quality", "n", "background", "transparent_background",
+                         "transparentBackground", "output_format", "aspect_ratio", "model", "style"))
+
+
+def _is_image_work_order(prompt: Any) -> bool:
+    return isinstance(prompt, str) and bool(_IMAGE_WORK_ORDER.match(prompt))
+
+
+def _is_image_call(payload: Mapping[str, Any]) -> bool:
+    if str(payload.get("hook_event_name") or "") not in ("PreToolUse", "PostToolUse"):
+        return False
+    if _IMAGE_TOOL.search(str(payload.get("tool_name") or "")):
+        return True
+    ti = payload.get("tool_input")
+    return isinstance(ti, dict) and "prompt" in ti and set(ti) <= _IMAGE_ARGS
+
+
+def _as_run(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    """The payload as its command will actually run. Codex reports its shell tool as "Bash", but on Windows that shell
+    is PowerShell, where a backslash in a path is literal. Labelled "Bash", the Bash-only backslash reflex fired on the
+    wake command every Codex session runs first and its ack-gate denied it (1,615 fires in the week to 2026-09-24), and
+    the heeded token each agent then wrote fired a second reflex (1,585). The ack gate treats the two names alike."""
+    if os.name == "nt" and payload.get("tool_name") == "Bash":
+        relabelled = dict(payload)
+        relabelled["tool_name"] = "PowerShell"
+        return relabelled
+    return payload
+
+
 def process(payload: Mapping[str, Any]) -> Optional[dict[str, Any]]:
     event = str(payload.get("hook_event_name") or "")
     if event not in SUPPORTED:
+        return None
+    if event == "UserPromptSubmit" and _is_image_work_order(payload.get("prompt")):
+        return None
+    if _is_image_call(payload):
         return None
     session = str(payload.get("session_id") or "")
     try:
@@ -442,7 +484,8 @@ def process(payload: Mapping[str, Any]) -> Optional[dict[str, Any]]:
     # A silent reflex engine is the COMMON case, not a failure: most prompts trip no instinct.
     # Returning here meant the association lane below never ran, so a Codex agent naming a topic
     # got no recall at all unless a reflex happened to fire first. The two lanes are independent.
-    child = _capture(instinct_prime, payload)
+    run = _as_run(payload)
+    child = _capture(instinct_prime, run)
     out = _advisory(child, event) if child is not None else None
     # The association/topic lane is a SEPARATE hook for Claude sessions, so bridging only the
     # reflex engine left Codex agents without it - measured: a topic-naming Codex prompt drew
@@ -451,7 +494,7 @@ def process(payload: Mapping[str, Any]) -> Optional[dict[str, Any]]:
     # association to offer, leaves the reflex result exactly as it was.
     try:
         import spread_recall
-        assoc = _capture(spread_recall, payload)
+        assoc = _capture(spread_recall, run)
         extra = ""
         if isinstance(assoc, Mapping):
             hso = assoc.get("hookSpecificOutput")
@@ -599,6 +642,31 @@ def _selftest() -> int:
         nested_payload = {"hook_event_name": "PreToolUse", "tool_name": "exec", "cwd": td,
                           "tool_input": nested}
         ok = ok and _help_guard(nested_payload) is None
+    # 2026-09-24: the shell as it runs, and the image work orders that get no reflexes
+    wake = {"hook_event_name": "PreToolUse", "tool_name": "Bash",
+            "tool_input": {"command": r'C:\Python314\python.exe -B os.path.expanduser(r"~/.claude/dreaming/codex_wake.py")'}}
+    ok = ok and (_as_run(wake).get("tool_name") == ("PowerShell" if os.name == "nt" else "Bash"))
+    ok = ok and wake["tool_name"] == "Bash"                     # the caller's payload is not mutated
+    ok = ok and _as_run({"tool_name": "Edit"}).get("tool_name") == "Edit"
+    ok = ok and _is_image_work_order("You are a picture maker for a history documentary series. Make exactly 5")
+    ok = ok and _is_image_work_order("[headless-worker] You are a picture maker for a cinematic documentary")
+    ok = ok and not _is_image_work_order("make a picture of the D-Day beaches for episode 6")
+    ok = ok and not _is_image_work_order("fix the render queue; You are a picture maker appears later")
+    ok = ok and process({"hook_event_name": "UserPromptSubmit",
+                         "prompt": "You are a picture maker for a history documentary series."}) is None
+    # 2026-09-24 19:4x: the other brief form, and the worker's own image calls
+    ok = ok and _is_image_work_order("[headless-worker] You are THE picture maker for a cinematic documentary")
+    ok = ok and _is_image_call({"hook_event_name": "PreToolUse", "tool_name": "image_gen__imagegen",
+                                "tool_input": {"prompt": "A lone astronomer seen from behind"}})
+    ok = ok and _is_image_call({"hook_event_name": "PreToolUse", "tool_name": "unknown",
+                                "tool_input": {"prompt": "Cinematic photoreal image", "size": "1536x1024"}})
+    ok = ok and not _is_image_call({"hook_event_name": "PreToolUse", "tool_name": "Bash",
+                                    "tool_input": {"command": "python render.py --prompt x"}})
+    ok = ok and not _is_image_call({"hook_event_name": "PreToolUse", "tool_name": "Agent",
+                                    "tool_input": {"prompt": "audit the render", "description": "audit"}})
+    ok = ok and not _is_image_call({"hook_event_name": "UserPromptSubmit", "prompt": "make an image of Rome"})
+    ok = ok and process({"hook_event_name": "PreToolUse", "tool_name": "image_gen__imagegen",
+                         "tool_input": {"prompt": "The Milky Way over a desert"}}) is None
     print("codex_reflex_hook selftest:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 

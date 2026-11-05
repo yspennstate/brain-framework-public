@@ -53,6 +53,37 @@ SIGS = [
 ]
 
 
+def hits_for(resp, cmd):
+    """The signature labels this response earns after the false-alarm filters (pure: no state, no ledger)."""
+    display = bool(DISPLAY_CMD.match(cmd)) if cmd else False
+    echo = bool(SELF_ECHO.search(resp))
+    # PDF text extraction is EXPECTED to yield odd glyphs (ligatures, math unicode) that match
+    # the mojibake byte patterns - 3 of the first 4 hand-labeled false alarms in the snippet-era
+    # ledger were paper-reading sessions extracting PDFs (measured 2026-07-09 00:15, n=13). A
+    # genuinely mangled FILE write presents in the writing command, not the extraction.
+    pdf_cmd = bool(re.search(r"pdf|fitz|pdftotext|pymupdf", cmd, re.I))
+    # A secret SCANNER prints secret-shaped strings on purpose (its regex, its positive controls,
+    # its findings). Measured 2026-09-02 over 14 days: all 5 LEAKED SECRET rows in the ledger were
+    # scanners (PAT='...ghp_|AKIA[0-9A-Z]{16}...' commands echoing AKIAIOSFODNN7EXAMPLE and
+    # xoxb-1111 controls). The tell is a secret prefix followed by regex construction in the COMMAND.
+    scanner_cmd = bool(re.search(r"(ghp_|sk-|AKIA|xox\[?[abpr]|PRIVATE KEY)[^\n]{0,8}(\[|\{|\\|\||\)\|)", cmd))
+    hits = []
+    for label, pat in SIGS:
+        if not re.search(pat, resp):
+            continue
+        is_secret = "SECRET" in label
+        # keep secrets always; drop others when the output is our own machinery's echo, or the
+        # command only shows text or names the trigger itself
+        if not is_secret and (echo or (cmd and (display or re.search(pat, cmd)))):
+            continue
+        if is_secret and scanner_cmd:
+            continue
+        if label.startswith("mojibake") and pdf_cmd:
+            continue
+        hits.append(label)
+    return hits
+
+
 def main():
     if any(a in ("-h", "--help") for a in sys.argv[1:]):
         # Discovery is not execution: this script writes, so a help request must
@@ -64,39 +95,18 @@ def main():
     except Exception:
         return
     try:
-        resp = data.get("tool_response", "")
+        # A call that FAILED (non-zero exit, a tool error) never reaches PostToolUse: Claude Code sends it to
+        # PostToolUseFailure with the text under "error" and no tool_response. Measured 30 Oct on the Mac over 48 h:
+        # 0 of 281 failed calls carried any PostToolUse hook output against 812 of 8,807 ok calls, and all 165 ERN
+        # fires were on calls that had succeeded. Read the failure text so the felt error can see real failures.
+        resp = data.get("tool_response") or data.get("error") or ""
         if isinstance(resp, (dict, list)):
             resp = json.dumps(resp, ensure_ascii=False)
         resp = str(resp)
         if not resp:
             return
         cmd = ((data.get("tool_input", {}) or {}).get("command", "") or "")
-        display = bool(DISPLAY_CMD.match(cmd)) if cmd else False
-        echo = bool(SELF_ECHO.search(resp))
-        # PDF text extraction is EXPECTED to yield odd glyphs (ligatures, math unicode) that match
-        # the mojibake byte patterns - 3 of the first 4 hand-labeled false alarms in the snippet-era
-        # ledger were paper-reading sessions extracting PDFs (measured 2026-07-09 00:15, n=13). A
-        # genuinely mangled FILE write presents in the writing command, not the extraction.
-        pdf_cmd = bool(re.search(r"pdf|fitz|pdftotext|pymupdf", cmd, re.I))
-        # A secret SCANNER prints secret-shaped strings on purpose (its regex, its positive controls,
-        # its findings). Measured 2026-09-02 over 14 days: all 5 LEAKED SECRET rows in the ledger were
-        # scanners (PAT='...ghp_|AKIA[0-9A-Z]{16}...' commands echoing AKIAIOSFODNN7EXAMPLE and
-        # xoxb-1111 controls). The tell is a secret prefix followed by regex construction in the COMMAND.
-        scanner_cmd = bool(re.search(r"(ghp_|sk-|AKIA|xox\[?[abpr]|PRIVATE KEY)[^\n]{0,8}(\[|\{|\\|\||\)\|)", cmd))
-        hits = []
-        for label, pat in SIGS:
-            if not re.search(pat, resp):
-                continue
-            is_secret = "SECRET" in label
-            # keep secrets always; drop others when the output is our own machinery's echo, or the
-            # command only shows text or names the trigger itself
-            if not is_secret and (echo or (cmd and (display or re.search(pat, cmd)))):
-                continue
-            if is_secret and scanner_cmd:
-                continue
-            if label.startswith("mojibake") and pdf_cmd:
-                continue
-            hits.append(label)
+        hits = hits_for(resp, cmd)
         if not hits:
             return
         sess = data.get("session_id") or ""

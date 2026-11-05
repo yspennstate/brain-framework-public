@@ -43,6 +43,13 @@ from collections import defaultdict
 HOME = os.path.expanduser("~")
 HERE = os.path.dirname(os.path.abspath(__file__))
 
+try:   # the archive's own test for a machine-written turn (see _is_owner); fail-open: without it the stamps decide
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from prompt_origin import machine_turn as _MACHINE_TURN
+except Exception:
+    _MACHINE_TURN = None
+
 
 def _discover_memory_dir():
     """The brain's memory directory: the env var, else the project memory dir that owns the live prompt ledger."""
@@ -231,6 +238,19 @@ def _read_ledger():
 
 
 def _is_owner(r):
+    # a row the classifier judged machine-written is not his words, whatever the origin stamp says: on 2026-09-23
+    # 1,960 rows since 08-31 carried origin "owner" and class_model "automation" (loop ticks, the waking prompt,
+    # connectivity checks, loop re-fires of his typed orders), and 25 of them stood in his feed with 1,495 re-fires
+    # counted as his re-asks ("Loop iteration (owner's 14:14 order...)" read "asked x129"). His typed head of a loop
+    # keeps its action class (apply_prompt_classes.py scope "heads"), so the order itself stays.
+    if (r.get("class_model") or "") == "automation":
+        return False
+    # the archive's stamp is the rule of the day the row was written; the machine-turn test is today's, so a kind of
+    # machine prompt named after its rows were stamped leaves his feed too (30 Sep: the Codex app's own suggestion task
+    # of 03:01, stamped 'owner' before its rule landed, stood in the hourly block as his ask)
+    if _MACHINE_TURN is not None and _MACHINE_TURN(str(r.get("text") or ""), str(r.get("cwd") or ""),
+                                                   str(r.get("session") or "")):
+        return False
     origin = (r.get("origin") or "").lower()
     if origin:
         return origin == "owner"
@@ -274,11 +294,34 @@ def owner_prompts(rows):
     return out
 
 
+# Keys that collide with ordinary words are matched on word boundaries; every other key keeps the plain substring
+# rule, which absorbs his spelling ('agnet' inside 'subagnets', 'que' inside 'qued'). Measured 27 Sep on his last
+# 3000 prompts: bounding every key changed 145 labels and lost more than it fixed (of 40 sampled, 15 better, 18
+# worse); bounding only these changed 30, judged 19 better, 3 worse, 8 wrong either way. ' ask' had routed every
+# "what i asked for" prompt carrying one brain word to live trading (his 03:26 brain order among them), and 'hub'
+# matched 'github', 'bots' 'robots', 'position' 'composition', 'quot' 'quota', 'margin' 'marginal'.
+_BOUNDED_KEYS = {
+    "ask": re.compile(r"(?<![a-z])ask(?![a-z])"),
+    "bid": re.compile(r"(?<![a-z])bid(?![a-z])"),
+    "hub": re.compile(r"(?<![a-z])hub"),
+    "bots": re.compile(r"(?<![a-z])bots"),
+    "position": re.compile(r"(?<![a-z])position"),
+    "positions": re.compile(r"(?<![a-z])positions"),
+    "quot": re.compile(r"(?<![a-z])quot(?!a)"),
+    "margin": re.compile(r"(?<![a-z])margin(?!al)"),
+}
+
+
+def _key_hit(key, t):
+    bounded = _BOUNDED_KEYS.get(key.strip())
+    return bool(bounded.search(t)) if bounded is not None else key in t
+
+
 def topic_of(text):
     t = " " + text.lower() + " "
     best, best_n = "other", 0
     for name, keys in TOPICS:
-        n = sum(1 for k in keys if k in t)
+        n = sum(1 for k in keys if _key_hit(k, t))
         if n > best_n:
             best, best_n = name, n
     return best

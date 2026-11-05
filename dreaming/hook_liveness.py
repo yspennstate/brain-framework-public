@@ -113,7 +113,7 @@ def _index_coverage():
         del blob
         eligible = [s for s in (os.path.basename(q)[:-3]
                                 for q in glob.glob(os.path.join(MEMDIR, "*.md")))
-                    if s not in SKIP_FILES and not s.startswith("dream_")]
+                    if s not in SKIP_FILES and not re.fullmatch(r"dream_\d{4}_\d{2}_\d{2}", s)]
         if not eligible:
             return None
         return len(dl), len(eligible), sum(1 for s in eligible if s not in dl)
@@ -178,6 +178,27 @@ def _last_dream_commit_age():
         return max(0.0, time.time() - float(p.stdout.strip().splitlines()[0]))
     except Exception:
         return None
+
+
+def _no_dream_committer():
+    """Why this machine makes no dream commit, or None when it should. The consolidation commit comes from
+    run_dream.ps1; with no PowerShell the dream is run_dream.py, which commits nothing (the Mac mini, whose
+    ~/brain-repo is also a shallow clone). Only consulted when no such commit is found."""
+    import shutil
+    if any(shutil.which(x) for x in ("pwsh", "powershell", "powershell.exe")):
+        return None
+    return "no PowerShell here, so the dream is run_dream.py, which makes no consolidation commit"
+
+
+def _wired_anywhere(script):
+    """True if a hook config on this machine names the script (Claude settings, the dispatcher list, Codex)."""
+    for p in (SETTINGS, os.path.join(HERE, "hook_dispatch_list.json"), CODEX_HOOKS):
+        try:
+            if script in io.open(p, encoding="utf-8").read():
+                return True
+        except Exception:
+            continue
+    return False
 
 
 def _age(path):
@@ -336,7 +357,11 @@ def main():
         # hold is that work_timer.py is in the dispatched list at all. Before this the checker read the
         # dispatcher entry itself as "work_timer.py is not final" on every wake - a permanent red verdict is
         # how a safety checker stops being read [[a_pass_needs_a_way_to_fail]].
-        _dispatched = len(_stop_order) == 1 and _stop_order[0] == "hook_dispatch.py"
+        # 2026-10-29 (Mac): the canonical file (17 Oct) allows only NAMED standalone Stop entries beside the dispatcher
+        # (the harness runs an event's hooks in parallel); an unknown sibling still fails. The Mac's is the keep-working gate.
+        _STANDALONE_STOP_OK = {"keep_working_after_compact.py", "keep_working_brain.py"}
+        _dispatched = ("hook_dispatch.py" in _stop_order and
+                       all(s == "hook_dispatch.py" or s in _STANDALONE_STOP_OK for s in _stop_order))
         if _dispatched:
             _list_path = os.path.join(HERE, "hook_dispatch_list.json")
             _list = json.load(io.open(_list_path, encoding="utf-8"))
@@ -469,6 +494,11 @@ def main():
         if _missing_trust:
             _codex_bad.append("Codex hook trust incomplete (%d/%d trusted); owner must review /hooks" %
                               (len(_expected_trust) - len(_missing_trust), len(_expected_trust)))
+    except FileNotFoundError as _exc:
+        # 2026-10-29 (Mac): a machine with Codex but no ~/.codex/hooks.json printed only "FileNotFoundError"; name
+        # the missing file, since that means Codex sessions there run without any brain hook.
+        _codex_bad.append("Codex hooks not installed: %s missing, Codex sessions here run with no brain hooks"
+                          % (getattr(_exc, "filename", None) or CODEX_HOOKS))
     except Exception as _exc:
         _codex_bad.append("Codex warning contract audit failed: %s" % type(_exc).__name__)
     print("\nCODEX STATIC WARNING CONTRACT + SHADOW HOST TELEMETRY:")
@@ -687,7 +717,10 @@ def main():
         if _mt_age is None:
             _mt_bad.append("the math transport has NEVER RUN")
         elif _mt_age > 2.0:
-            _mt_bad.append("the math transport last ran %.1fh ago (task BrainMathTransport15m dead?)" % _mt_age)
+            # the 15-min task is Windows-only; on the Mac the transport runs only inside a dream (no launchd job yet)
+            _mt_bad.append("the math transport last ran %.1fh ago (%s)" % (_mt_age, "task BrainMathTransport15m dead?"
+                           if sys.platform == "win32" else "no Mac scheduler: it runs only in a dream; a launchd job "
+                           "waits on the owner"))
         if _mt_oldest > 48.0:
             _mt_bad.append("a queued math result has waited %.0fh for an agent (python math_transport.py status)" % _mt_oldest)
         # A STALE PREFILTER INDEX (2026-09-22, round 5): built 14:51, it hid the twelve conjecture nodes filed 19:11-22:39
@@ -761,6 +794,7 @@ def main():
     try:
         _ms_path = os.path.join(HERE, "mathbrain_silence.tsv")
         _ms_exc, _ms_last, _ms_rows = 0, "", 0
+        _ms_refused, _ms_refused_last = 0, ""
         _ms_last_exc_ts, _ms_ok_ts = 0.0, []  # when the last exception fell, and every clean live fire's time
         _ms_exc3, _ms_rows3 = 0, 0          # rows AFTER the hook file last changed decide "still broken" vs "recovered"
         _ms_cut3 = time.time() - 3 * 3600   # (a fix lands mid-day; rows before it are history, rows after it are the test)
@@ -785,6 +819,13 @@ def main():
                     # broke for eight days, so it proves nothing about the retrieval path either way
                     continue
                 _ms_rows += 1
+                if "selected_card_refused" in _ms_c[2] and not _ms_c[2].startswith("integrity:"):
+                    # REFUSED-CARD SILENCES (2026-10-31). The hook picked a card the integrity reader refused, so the
+                    # whole block went silent: a bad card in the store, not a broken hook, and no exception either.
+                    # 5-15 Oct had 33 of these in real sessions and this check called each day "ok". Each refusal
+                    # writes two rows (SelectionUnavailable + integrity:); count the first only.
+                    _ms_refused += 1
+                    _ms_refused_last = _ms_c[2].split(":")[-1].strip()[:50]
                 _ms_is_exc = bool(re.match(r"^[A-Za-z]*(Error|Exception)\b", _ms_c[2]))
                 if _ms_is_exc:
                     _ms_exc += 1
@@ -854,6 +895,10 @@ def main():
             _artifact_bad.append("the math hook raised %d times in 24h and has not fired live since (%s) - unverified" % (_ms_exc, _ms_last))
         else:
             print("  math hook (live)       %d silences in 24h, none an exception - ok" % _ms_rows)
+        if _ms_refused:
+            # a store fault, not a hook fault: printed, not added to _artifact_bad (the hook is working as built)
+            print("  math hook (store)      %d live prompts silenced in 24h by a refused selected card (last: %s) <- a bad "
+                  "card is hiding answers; math_refused_cards.py names them" % (_ms_refused, _ms_refused_last))
     except Exception as _exc:
         print("  math hook (live)       UNKNOWN   (silence log read failed: %s) <- not clean" % type(_exc).__name__)
         _artifact_bad.append("math hook silence log read failed: %s" % type(_exc).__name__)
@@ -864,7 +909,10 @@ def main():
     # commit has landed within DREAM_COMMIT_MAX_H (the dream runs at least daily). The reason lives in the
     # newest dream log's 'git said:' line (run_dream.ps1 captures git's stderr since 2026-09-02).
     dream_commit_age = _last_dream_commit_age()
-    if dream_commit_age is None:
+    _no_committer = _no_dream_committer() if dream_commit_age is None else None
+    if _no_committer:
+        print(f"  dream repo commit      n/a           {_no_committer}")
+    elif dream_commit_age is None:
         print("  dream repo commit      age UNKNOWN   (git log unreadable) <- not clean")
         _artifact_bad.append("last dream commit age unreadable (git log failed)")
     else:
@@ -879,8 +927,10 @@ def main():
     # main (pushed=False in every log, the reason swallowed by Out-Null) because waking sessions had pushed 28
     # commits from worktrees and the exact-SHA push was a non-fast-forward. The brain on GitHub was a day stale
     # and nothing said so. This asks the remote itself (ls-remote, 20 s bound) and counts local-only commits.
-    _unpushed = _dream_commits_unpushed()
-    if _unpushed is None:
+    _unpushed = None if _no_committer else _dream_commits_unpushed()
+    if _no_committer:
+        print("  dream commit on GitHub n/a           no dream commit is made on this machine")
+    elif _unpushed is None:
         print("  dream commit on GitHub UNKNOWN   (remote or git unreadable within the bound) <- not clean")
         _artifact_bad.append("could not verify that the newest dream commit reached origin/main (ls-remote/rev-list failed)")
     else:
@@ -901,9 +951,15 @@ def main():
     # the file holds. Age triggers at 3 h (two missed cycles); the hook's own --status shows the same.
     _op_json = os.path.join(MEMDIR, "prompts", "owner_prompts_hourly.json")
     _op_age = _age(_op_json)
-    _op_late = _op_age is None or _op_age > 3 * 3600
-    print(f"  owner-prompt layers    age {_fmt(_op_age):>7}   hourly build read by every wake and delta - "
-          f"{'NO FRESH BUILD IN 3h' if _op_late else 'ok'}")
+    # A machine that never wired owner_prompts_hook.py has no reader for the build, so a missing or old one
+    # starves nothing (the Mac mini, 30 Oct). Wired, the 3 h rule holds as before.
+    _op_wired = _wired_anywhere("owner_prompts_hook.py")
+    _op_late = _op_wired and (_op_age is None or _op_age > 3 * 3600)
+    if not _op_wired:
+        print(f"  owner-prompt layers    age {_fmt(_op_age):>7}   n/a - owner_prompts_hook.py is not wired here, nothing reads the build")
+    else:
+        print(f"  owner-prompt layers    age {_fmt(_op_age):>7}   hourly build read by every wake and delta - "
+              f"{'NO FRESH BUILD IN 3h' if _op_late else 'ok'}")
     if _op_late:
         _artifact_bad.append(f"owner-prompt layers build {_fmt(_op_age)} old - the BrainOwnerPromptsHourly task is not landing; "
                              f"run python owner_prompts_hook.py --status, then owner_prompts_hourly.py")

@@ -49,6 +49,12 @@ def payload(event, tool, sid):
     return json.dumps(d)
 
 
+# Hooks whose output legitimately differs between two identical calls (29 Oct, hook_dispatch_control re-run by
+# claude-a9b28e2d: waste_sense prints a live process census, owner_board_hook posts once per interval). A mismatch on
+# one of these alone removed the whole allowlist, so every hook in every session ran as its own process.
+STATEFUL_TOLERATED = {"waste_sense.py", "owner_board_hook.py"}
+
+
 def shape(rc, out):
     t = (out or "").strip()
     if not t:
@@ -104,6 +110,11 @@ def control_a():
             else:
                 ok = shape(rc3, o3) == shape(rc1, o1) or shape(rc3, o3) == shape(rc2, o2)
                 why = "shape"
+            if not ok and label.lower() in STATEFUL_TOLERATED:
+                # 29 Oct: its output is meant to change between two identical calls, so a mismatch says nothing about
+                # the dispatcher. It stays off the fast path (never added to passed) instead of voiding the allowlist.
+                print("     %-34s %-5s TOLERATED (stateful; stays in its own process)" % (label[:34], why))
+                continue
             if not ok:
                 bad.append((event, label, why, (rc1, shape(rc1, o1)), (rc3, shape(rc3, o3))))
             elif path and why == "exact":
@@ -169,9 +180,27 @@ def control_b():
     return ok
 
 
-def control_c():
+def control_c(passed=None):
+    """Times the CANDIDATE list, not whatever allowlist is on disk. 29 Oct: with the file removed, dispatch() spawned
+    every hook and could never beat the one-by-one run, so a lost allowlist failed this control forever (0.8x)."""
     print("== C. COST on the same payload, same minute")
     saved = []
+    real_allow, tmp = HD.ALLOW, None
+    if passed is not None:
+        import tempfile
+        fd, tmp = tempfile.mkstemp(prefix="ctl_allow_", suffix=".json")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump({"in_process_ok": sorted(passed)}, f)
+        HD.ALLOW = tmp
+    try:
+        return _control_c_timed(saved)
+    finally:
+        HD.ALLOW = real_allow
+        if tmp:
+            os.remove(tmp)
+
+
+def _control_c_timed(saved):
     for event, tool in [("PreToolUse", "Bash"), ("PostToolUse", "Bash")]:
         entries = HD.hook_entries(event, tool)
         t = time.perf_counter()
@@ -187,7 +216,7 @@ def control_c():
 
 
 if __name__ == "__main__":
-    a, passed = control_a(); b = control_b(); c = control_c()
+    a, passed = control_a(); b = control_b(); c = control_c(passed)
     print("\nRESULT: equivalence %s | blocking %s | cost %s" % ("PASS" if a else "FAIL", "PASS" if b else "FAIL", "PASS" if c else "FAIL"))
     ok = a and b and c
     if ok:

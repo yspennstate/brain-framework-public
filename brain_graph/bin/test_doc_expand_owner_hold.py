@@ -1,10 +1,11 @@
 """The owner hold must stop both entry paths before subprocess or store mutation."""
-import contextlib, datetime, importlib.util, io, json
+import contextlib, datetime, importlib.util, io, json, os
 from pathlib import Path
 from unittest import mock
 import unittest
 
-LIVE = Path(os.path.expanduser(r'~/.claude/brain_graph/bin/doc_expand.py'))
+# the doc_expand.py beside this test (DOC_EXPAND_UNDER_TEST names another copy)
+LIVE = Path(os.environ.get('DOC_EXPAND_UNDER_TEST') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'doc_expand.py'))
 spec=importlib.util.spec_from_file_location('held_doc_expand',LIVE)
 mod=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)

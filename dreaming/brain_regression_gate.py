@@ -832,12 +832,34 @@ def check_keyword_artifact():
             "reviewed_aliases": dict(sorted(builder.REVIEWED_ALIASES.items())),
         }
         stale = [key for key, value in expected_source.items() if source.get(key) != value]
-        record(
-            "artifact",
-            "source receipt is current",
-            "PASS" if not stale else "FAIL",
-            "" if not stale else "drifted fields: %s" % stale,
-        )
+        # The prompt ledger and the memory corpus grow by the minute; the gate runs a few minutes after the dream
+        # builds this artifact, so a receipt that drifted only on those inputs, from a build inside this cycle, is
+        # live growth, not staleness. Measured 2026-09-23: this check read FAIL in 3 of 4 dreams (03:30, 11:30,
+        # 19:30), each time on prompt or corpus fields alone, minutes after the build - a red that was always red.
+        # It still fails when the artifact is older than the window (the build did not publish) or when the
+        # reviewed aliases changed (a config change the artifact must be rebuilt for).
+        growing = {"prompt_terms_sha256", "prompt_term_count", "corpus_search_sha256", "corpus_vocab_sha256",
+                   "memory_count"}
+        window_s = float(os.environ.get("BRAIN_GATE_RECEIPT_WINDOW_S", "10800") or 10800)
+        try:
+            age_s = time.time() - float(selected["manifest"].get("created_at") or 0)
+        except Exception:
+            age_s = float("inf")
+        if stale and set(stale) <= growing and 0 <= age_s <= window_s:
+            record(
+                "artifact",
+                "source receipt is current",
+                "PASS",
+                "built %.0f min ago; since then the live inputs moved (%s), expected on a live ledger"
+                % (age_s / 60.0, ", ".join(stale)),
+            )
+        else:
+            record(
+                "artifact",
+                "source receipt is current",
+                "PASS" if not stale else "FAIL",
+                "" if not stale else "drifted fields: %s (artifact built %.0f min ago)" % (stale, age_s / 60.0),
+            )
 
         tokens_by_slug = {slug: set(TOKEN.findall(text)) for slug, text in texts.items()}
         bad = []
@@ -931,6 +953,97 @@ def _percentile(values, q):
     return values[int(round((len(values) - 1) * q))]
 
 
+class _ListCachedOs(object):
+    """os with listdir answered once per directory; everything else is the real os."""
+
+    def __init__(self, real):
+        self._real = real
+        self._lists = {}
+
+    def listdir(self, path="."):
+        key = os.fspath(path)
+        if key not in self._lists:
+            self._lists[key] = self._real.listdir(path)
+        return list(self._lists[key])
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+
+class _replay_snapshot(object):
+    """One copy of spread_recall's inputs for one replay pass.
+
+    The hook reads its inputs fresh because it runs once per process. The replay below runs it
+    120 times in one process, and each call re-read the graph, listed the memory folder, walked
+    the supersession files and reloaded the BM25 vocabulary: about 12 s a call, 1851 s for the
+    recall section on 1 Nov, most of the gate's 2700 s budget in the dream. Inside this block
+    each loader answers once; on exit every original is put back, so nothing outlives the pass.
+    """
+
+    ZERO_ARG = ("_load_superseded", "_load_habituation", "_load_mistake_weights",
+                "_load_salience", "_load_keyword_snapshot")
+
+    def __init__(self, sr):
+        self.sr = sr
+        self.saved = {}
+
+    def _memo(self, name):
+        real = getattr(self.sr, name)
+        memo = {}
+
+        def wrapped(*args, **kwargs):
+            key = (args, tuple(sorted(kwargs.items())))
+            if key not in memo:
+                memo[key] = real(*args, **kwargs)
+            return memo[key]
+
+        self.saved[name] = real
+        setattr(self.sr, name, wrapped)
+
+    def __enter__(self):
+        for name in self.ZERO_ARG + ("_load_graph",):
+            if hasattr(self.sr, name):
+                self._memo(name)
+        real_strip = getattr(self.sr, "_without_session_records", None)
+        if real_strip is not None:
+            memo = {}
+
+            def strip(adj, deg, deg_base):
+                key = (id(adj), id(deg), id(deg_base))
+                if key not in memo:
+                    memo[key] = (adj, deg, deg_base, real_strip(adj, deg, deg_base))
+                return memo[key][3]
+
+            self.saved["_without_session_records"] = real_strip
+            self.sr._without_session_records = strip
+        self.saved["os"] = self.sr.os
+        self.sr.os = _ListCachedOs(self.sr.os)
+        try:
+            import bm25
+            real_bm25 = bm25.BM25
+            box = []
+
+            def one_bm25(*args, **kwargs):
+                if args or kwargs:
+                    return real_bm25(*args, **kwargs)
+                if not box:
+                    box.append(real_bm25())
+                return box[0]
+
+            self.bm25, self.real_bm25 = bm25, real_bm25
+            bm25.BM25 = one_bm25
+        except Exception:
+            self.bm25 = None
+        return self
+
+    def __exit__(self, *exc):
+        for name, real in self.saved.items():
+            setattr(self.sr, name, real)
+        if self.bm25 is not None:
+            self.bm25.BM25 = self.real_bm25
+        return False
+
+
 def check_recall(n_prompts):
     try:
         import eval_mistake_surfacing as em
@@ -945,6 +1058,9 @@ def check_recall(n_prompts):
 
     try:
         prompts = em.harvest(n_files=8)[:n_prompts]
+        if len(prompts) < 20 and hasattr(em, "harvest_archive"):
+            # the Mac keeps one transcript (29 Oct); top up from the owner's prompt archive instead of going INCOMPLETE
+            prompts += em.harvest_archive(n_prompts - len(prompts), exclude=prompts)
     except Exception as exc:
         record("recall", "harvest prompts", "INCOMPLETE", repr(exc)[:180])
         return
@@ -985,17 +1101,18 @@ def check_recall(n_prompts):
         off, on = [], []
         edge_counts, node_counts, hit_counts = [], [], []
         sal = sr._load_salience()
-        for index, prompt in enumerate(prompts):
-            off.append(run(prompt, "off", index, False))
-            on.append(run(prompt, "on", index, True))
-            words = sr._words(prompt)
-            members, aliases, hit, weights, related, _generation = sr._topic_context(words)
-            overlay = sr._topic_overlay(
-                words, sal, members, aliases, hit, weights=weights, related=related
-            )
-            hit_counts.append(len(hit))
-            edge_counts.append(sum(len(value) for value in overlay.values()))
-            node_counts.append(len(overlay))
+        with _replay_snapshot(sr):
+            for index, prompt in enumerate(prompts):
+                off.append(run(prompt, "off", index, False))
+                on.append(run(prompt, "on", index, True))
+                words = sr._words(prompt)
+                members, aliases, hit, weights, related, _generation = sr._topic_context(words)
+                overlay = sr._topic_overlay(
+                    words, sal, members, aliases, hit, weights=weights, related=related
+                )
+                hit_counts.append(len(hit))
+                edge_counts.append(sum(len(value) for value in overlay.values()))
+                node_counts.append(len(overlay))
 
         fires = sum(1 for value in on if value)
         mistakes = sum(1 for value in on if value and mw.get(value, 0) >= 0.5)

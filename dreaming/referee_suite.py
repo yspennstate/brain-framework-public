@@ -75,7 +75,10 @@ def _sub(argv, timeout=90):
 
 
 # --- INVARIANT 2: all wired Stop hooks fail-safe on malformed input ---
-out = _sub(["referee_hook_failsafe.py"])
+# 300 s, not the default 90 (2026-10-29, Mac): each hook start inside is already capped at 20 s and a hang shows as its
+# own TIMEOUT row; the outer cap only measured load. At nice 10 on a box at load 30 this call took 123 s (and 1,295 s
+# once) while the same run un-niced took 4 s, so the invariant read as broken with every hook fail-safe.
+out = _sub(["referee_hook_failsafe.py"], timeout=300)
 rec("all wired Stop hooks fail-safe on garbage input",
     "ALL wired Stop hooks are fail-safe" in out, out.strip().splitlines()[-1][:80] if out.strip() else "(no output)")
 
@@ -90,10 +93,19 @@ rec("registry_refresh selftest (utf-8-sig BOM read holds)",
     "PASS: registry_refresh selftest" in out, out.strip().splitlines()[-1][:80] if out.strip() else "(no output)")
 
 # --- INVARIANT 5: independent Codex warning lifecycle contract rejects known-dead configurations ---
-out = _sub(["codex_warning_acceptance.py", "--selftest"])
-rec("Codex warning hook contract selftest (known-dead wiring is rejected)",
-    "PASS: codex_warning_acceptance selftest" in out,
-    out.strip().splitlines()[-1][:80] if out.strip() else "(no output)")
+# The contract validates Windows Codex wiring (commandWindows, C:\Python314, ~/.brain-framework/runtime). On the Mac
+# its own known-good baseline fails before any negative case runs, so it read as a regressed guard every run (29-30
+# Oct). It is SKIPPED off Windows, not passed: the Mac's Codex hooks are a separate gap the wake check reports.
+if os.name != "nt":
+    results.append(("Codex warning hook contract selftest (known-dead wiring is rejected)", None,
+                    "SKIPPED off Windows: the contract checks Windows Codex wiring; this machine has no Codex brain "
+                    "hooks wired (~/.codex/hooks.json %s)" % ("present" if os.path.exists(
+                        os.path.expanduser("~/.codex/hooks.json")) else "missing")))
+else:
+    out = _sub(["codex_warning_acceptance.py", "--selftest"])
+    rec("Codex warning hook contract selftest (known-dead wiring is rejected)",
+        "PASS: codex_warning_acceptance selftest" in out,
+        out.strip().splitlines()[-1][:80] if out.strip() else "(no output)")
 
 # --- INVARIANT 6: shared outgoing-prose contract blocks only durable, non-numeric owner invariants ---
 out = _sub(["owner_report_contract.py", "--selftest"])
@@ -159,12 +171,14 @@ finally:
 print("=" * 72)
 print(" REFEREE SUITE - firing-stack + crash-recovery invariants")
 print("=" * 72)
-npass = sum(1 for _, p, _ in results if p)
+checked = [r for r in results if r[1] is not None]   # passed=None is a skip: neither a pass nor a fail
+npass = sum(1 for _, p, _ in checked if p)
+nskip = len(results) - len(checked)
 for name, passed, detail in results:
-    print("  %-4s %s" % ("PASS" if passed else "FAIL", name))
+    print("  %-4s %s" % ("SKIP" if passed is None else "PASS" if passed else "FAIL", name))
     if detail:
         print("        %s" % detail)
 print("-" * 72)
-print("%d/%d invariants hold." % (npass, len(results)), "ALL GREEN." if npass == len(results)
-      else "!! A GUARD REGRESSED - investigate the FAIL(s) above.")
-sys.exit(0 if npass == len(results) else 1)
+print("%d/%d invariants hold%s." % (npass, len(checked), " (%d skipped on this machine)" % nskip if nskip else ""),
+      "ALL GREEN." if npass == len(checked) else "!! A GUARD REGRESSED - investigate the FAIL(s) above.")
+sys.exit(0 if npass == len(checked) else 1)

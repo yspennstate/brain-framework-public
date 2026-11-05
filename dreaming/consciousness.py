@@ -28,7 +28,7 @@ for dream.py and the nav layer to read. Pure read-only over the memory dir.
 Usage:  python consciousness.py [memory_dir]
 Import: import consciousness; tiers = consciousness.classify_corpus(mem_dir)
 """
-import os, re, io, sys
+import os, re, io, sys, time
 from collections import Counter
 import salience
 
@@ -45,7 +45,26 @@ LOGNAME = re.compile(r"^(inspector_w\d+|build_watchdog|model_inspector|watchdog_
 BOILER = re.compile(r"quiet cycle|steady[- ]state|no new (builder|memos|deliverable|finding)|"
                     r"clean\b.{0,30}\bquiet|nothing (new|to report)|no memos since|"
                     r"cycle \d+ clean|^\s*(clean|quiet)\b", re.I)
-RECENT_R = 0.72   # recency >= 0.72 ~ younger than ~2 weeks at salience TAU=45d
+# Ages, not recency scores (2026-09-24). These were RECENT_R = 0.72 and recency < 0.40, written for salience's
+# single 45-day exponential, where they meant about two weeks and about 41 days. On 2026-07-23 salience moved to
+# the measured 1.3-day episodic kernel, and the same numbers came to mean about 10 hours and 1.2 days: a short,
+# unlinked project memory was demoted as an "old stub" the day after it was written. Measured on the corpus that
+# day (17,188 memories): no tier changed, 457 memories went from reason "distinct" to "recent".
+RECENT_DAYS = 14.0
+STUB_DAYS = 41.0
+
+
+def _age_days(mem_dir, fn, s, now=None):
+    """Age in days the way salience computes it: noon of the memory's date, else the file's mtime."""
+    now = time.time() if now is None else now
+    try:
+        y, mo, d = map(int, str(s.get("date") or "").split("-"))
+        return max(0.0, (now - time.mktime((y, mo, d, 12, 0, 0, 0, 0, -1))) / 86400.0)
+    except Exception:
+        try:
+            return max(0.0, (now - os.path.getmtime(os.path.join(mem_dir, fn))) / 86400.0)
+        except Exception:
+            return 0.0
 
 
 def _body(mem_dir, fn):
@@ -61,13 +80,14 @@ def _tier(mem_dir, fn, s):
     if "curated" in s["why"]:              return "conscious", "curated"
     if s["backlinks"] >= 2:                return "conscious", f"referenced x{s['backlinks']}"
     if s["type"] in ("user", "feedback"):  return "conscious", s["type"]
-    if s["recency"] >= RECENT_R:           return "conscious", "recent"
+    age = _age_days(mem_dir, fn, s)
+    if age <= RECENT_DAYS:                 return "conscious", "recent"
     if ANCHOR.match(fn):                   return "conscious", "anchor"
     # unconscious: the redundant substrate only
     blen, body = _body(mem_dir, fn)
     if LOGNAME.match(fn) and (BOILER.search(body) or blen < 900):
         return "unconscious", "log-substrate"
-    if s["recency"] < 0.40 and s["backlinks"] == 0 and blen < 750 and s["type"] == "project":
+    if age > STUB_DAYS and s["backlinks"] == 0 and blen < 750 and s["type"] == "project":
         return "unconscious", "old-flat-stub"
     # default: distinct work stays conscious even if un-linked
     return "conscious", "distinct"

@@ -19,6 +19,12 @@ import os, io, re, json
 HOME = os.path.expanduser("~")
 HERE = os.path.dirname(os.path.abspath(__file__))
 SETTINGS = os.path.join(HOME, ".claude", "settings.json")
+# On the Mac settings.json wires only hook_dispatch.py; the hooks it runs are listed here (31 Oct: without it,
+# verify_gate, push_reminder and every other dispatched guard read as "fires nothing")
+DISPATCH_LIST = os.path.join(HOME, ".claude", "dreaming", "hook_dispatch_list.json")
+# Codex's own hook file, and the dream runner, whose step list runs scripts as subprocesses (not imports)
+CODEX_HOOKS = os.path.join(HOME, ".codex", "hooks.json")
+DREAM_RUNNER = os.path.join(HOME, ".claude", "dreaming", "run_dream.py")
 DIRS = [HERE, os.path.join(HERE, "graph_fire")]
 
 # a file is "guard-shaped" if it can act as a hook / gate - it emits one of these decision surfaces
@@ -47,15 +53,16 @@ def _read(path):
 
 
 def _wired_modules():
-    """Module stems named directly in settings.json hooks (args or command)."""
+    """Module stems named directly in settings.json hooks (args or command), the dispatcher's list, Codex's
+    hooks, or the dream runner's steps."""
     mods = set()
-    try:
-        d = json.load(io.open(SETTINGS, encoding="utf-8"))
-    except Exception:
-        return mods
-    blob = json.dumps(d)
-    for m in re.findall(r'([A-Za-z_][\w-]*)\.py', blob):
-        mods.add(os.path.basename(m))
+    for path in (SETTINGS, DISPATCH_LIST, CODEX_HOOKS, DREAM_RUNNER):
+        try:
+            blob = _read(path)
+        except Exception:
+            continue
+        for m in re.findall(r'([A-Za-z_][\w-]*)\.py', blob):
+            mods.add(os.path.basename(m))
     return mods
 
 

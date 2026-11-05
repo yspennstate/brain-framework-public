@@ -18,7 +18,9 @@ Delivery: fleet_inbox_hook.py (SessionStart + UserPromptSubmit) reads FLEET_INBO
 minute and puts every message a session has not seen in front of it, on every computer that has the hook. Codex fleet
 supervisors call `fleet_board.py check --agent <their id>` each tick and relay. A local mesh broadcast goes out too.
 
-    python3 fleet_board.py broadcast --agent <your id> "<the user's message>"    tell the whole fleet, all computers
+    python3 fleet_board.py broadcast --agent <your id> --owner "<the owner's message>"   relay their words to all computers
+    python3 fleet_board.py broadcast --agent <id> --reply-to <msg id> "<answer>"  answer a fleet request, once per computer
+    python3 fleet_board.py broadcast --agent <id> --note "<your own note>"        an agent's note, not headed as the owner's
     python3 fleet_board.py check --agent <id> [--all]                             print messages this agent has not seen
     python3 fleet_board.py ack <msg id> --agent <id>                              record that you got it
     python3 fleet_board.py sync-tasks                                             post this computer's open and finished tasks
@@ -48,7 +50,11 @@ INBOX = "FLEET_INBOX.md"
 MIRROR = os.environ.get("FLEET_BRAIN_MIRROR_PATH", "fleet_board/FLEET_INBOX.md")
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(os.path.expanduser("~"), ".claude", "fleet_board")
-CACHE_S = 60
+# How long the prompt hook trusts its copy of the inbox. At 60 s most prompts on the Mac found it stale (prompts came
+# ~63 s apart machine-wide) and paid a conditional fetch, 0.5-1.0 s (gh token 0.07-0.26 + a REST 304 0.44-0.72):
+# fleet_inbox_hook p50 590 ms on 1 Nov 12:05-12:46. A message from another computer now shows within five minutes;
+# one posted here reaches this computer's agents at once through the mesh, and broadcast() drops the cached copy.
+CACHE_S = 300
 HEAD = ("# Fleet inbox: messages for every agent on every computer\n\n"
         "Newest first. Every agent reads this; the fleet_inbox_hook shows new entries to Claude sessions on its own, "
         "Codex supervisors run `fleet_board.py check` each tick. After reading a message, ack it: "
@@ -197,11 +203,14 @@ def parse(text):
     return out
 
 
-def broadcast(agent, text):
+def broadcast(agent, text, owner=True):
+    """owner=False for an agent's own words (--note, --reply-to). Every message used to be headed "from the owner via",
+    so FM-20261103-073831's pointer to the tests index reached every inbox as his order (3 Nov)."""
     now = time.localtime()
     mid = "FM-%s-%s" % (time.strftime("%Y%m%d-%H%M%S", now), computer())
     when = time.strftime("%Y-%m-%d %H:%M ", now) + time.strftime("%z", now)
-    entry = "## %s | %s | from the user via %s on %s\n\n%s\n\n" % (mid, when, agent, computer(), text.strip())
+    who = ("from the owner via %s on %s" if owner else NOTE_HEAD) % (agent, computer())
+    entry = "## %s | %s | %s\n\n%s\n\n" % (mid, when, who, text.strip())
 
     def add(old):
         old = old or HEAD
@@ -209,7 +218,13 @@ def broadcast(agent, text):
         return (old[:i + 1] + entry + old[i + 1:]) if i >= 0 else old.rstrip("\n") + "\n\n" + entry
 
     ok = put_file(BOARD, INBOX, add, "Fleet message %s [skip ci]" % mid)
-    board_text, _ = get_file(BOARD, INBOX)
+    # One failed readback (3 Nov 21:07, FM-20261103-210714) printed NOT POSTED and skipped the mirror while the
+    # message sat on the board, and the reply claim then refused the retry. Read again before calling it lost.
+    for wait in (0, 2, 5):
+        time.sleep(wait)
+        board_text, _ = get_file(BOARD, INBOX)
+        if board_text is not None and mid in board_text:
+            break
     mirrored = (not BRAIN) or (bool(board_text) and put_file(BRAIN, MIRROR, lambda old: board_text,
                                                           "Fleet inbox mirror %s [skip ci]" % mid))
     try:   # this computer's agents get it at once through the mesh as well
@@ -220,9 +235,49 @@ def broadcast(agent, text):
     except Exception:
         pass
     landed = ok and board_text is not None and mid in board_text
+    if landed:
+        try:
+            os.remove(os.path.join(STATE, "inbox_cache.json"))
+        except OSError:
+            pass
     print("%s %s; board %s, brain mirror %s" % (mid, "POSTED" if landed else "NOT POSTED",
                                                 "ok" if landed else "FAILED", "ok" if mirrored else "FAILED"))
     return 0 if landed else 1
+
+
+MESH = os.environ.get("BRAIN_MESH_CLI") or os.path.normpath(os.path.join(HERE, "..", "mesh", "agent_mesh.py"))
+NOTE_HEAD = "from %s on %s (an agent's note, not the owner's words)"
+# Where the brain repo keeps its index of tests (a URL or a path relative to the board).
+TESTS_INDEX_URL = os.environ.get("FLEET_TESTS_INDEX_URL", "TESTS_INDEX.md")
+
+
+def claim_reply(agent, mid):
+    """One answer per computer to a fleet request. Three Mac agents answered FM-20261101-135228-host1 within one
+    minute (1 Nov 23:00), each with slightly different counts, and the research statement then had three to pick
+    from. With --reply-to the first agent on a computer takes the request; a later one is told that a reply from
+    this computer is on the board, or which agent here holds it. The claim is left to expire after a day."""
+    if not re.match(r"FM-\d{8}-\d{6}-[\w.-]+$", mid):
+        print("--reply-to needs a message id such as FM-20261101-135228-host1")
+        return 2
+    stamp = mid[:18]                     # FM-YYYYMMDD-HHMMSS: replies often quote the id without its computer
+    here = " on " + computer()
+    for m in parse(inbox_cached(max_age=0)):
+        if m["id"] != mid and stamp in m["text"] and (m["sender"].endswith(here) or here + " (" in m["sender"]):
+            print("%s is already this computer's answer to %s (%s). Post again only with something it lacks."
+                  % (m["id"], mid, m["sender"]))
+            return 3
+    if not os.path.exists(MESH):
+        return 0
+    res = "path:" + os.path.join(STATE, "replies", "%s__%s" % (mid, computer()))
+    p = subprocess.run([sys.executable, MESH, "claim", "--agent", agent, "--resource", res, "--mode", "exclusive",
+                        "--ttl", "86400", "--purpose", "fleet reply to " + mid],
+                       capture_output=True, text=True, timeout=60, creationflags=NOWIN)
+    if p.returncode == 3:
+        print("another agent on this computer is answering %s:\n%s" % (mid, (p.stdout + p.stderr)[-800:]))
+        return 3
+    if p.returncode:
+        print("mesh claim not taken (%s); posting anyway" % (p.stdout + p.stderr).strip()[-200:])
+    return 0
 
 
 def seen_path(agent):
@@ -239,19 +294,34 @@ def inbox_cached(max_age=CACHE_S, timeout=4):
     except Exception:
         c = None
     etag = (c or {}).get("etag")
-    st, r, hd = api("GET", "/repos/%s/contents/%s" % (BOARD, INBOX), timeout=timeout,
-                    headers={"If-None-Match": etag} if etag and c.get("text") is not None else None, with_headers=True)
+    # While the account's REST budget is spent (other machines drain it most of each hour), a refused call cost
+    # 0.4-0.6 s and get_file then asked REST again before GraphQL: 1.3-1.5 s on the prompt that found the cache stale
+    # (1 Nov 2026, Mac). Remember the reset time and go to GraphQL directly until then.
+    rest_off = (c or {}).get("rest_off_until") or 0
+    st, r, hd = (0, {}, {}) if time.time() < rest_off else api(
+        "GET", "/repos/%s/contents/%s" % (BOARD, INBOX), timeout=timeout,
+        headers={"If-None-Match": etag} if etag and c.get("text") is not None else None, with_headers=True)
     if st == 304:                        # unchanged, and free: keep the copy, restart its minute
         text, etag = c["text"], etag
     elif st == 200 and "content" in r:
         text, etag = base64.b64decode(r["content"]).decode("utf-8"), hd.get("ETag") or hd.get("etag")
+        rest_off = 0
     else:
-        text, _ = get_file(BOARD, INBOX, timeout=timeout)   # REST refused: GraphQL
+        if st in (403, 429) and str({k.lower(): v for k, v in hd.items()}.get("x-ratelimit-remaining")) == "0":
+            try:
+                rest_off = float({k.lower(): v for k, v in hd.items()}.get("x-ratelimit-reset"))
+            except (TypeError, ValueError):
+                rest_off = time.time() + 600
+        try:                             # REST refused or down: GraphQL, without asking REST a second time
+            text = _gql_file(BOARD, INBOX, timeout)[0]
+        except Exception:
+            text = None
         etag = None
     if text is None:
         return c["text"] if c else None   # offline: the last copy is better than nothing
     tmp = cp + ".%d" % os.getpid()
-    json.dump({"t": time.time(), "text": text, "etag": etag}, open(tmp, "w", encoding="utf-8"))
+    json.dump({"t": time.time(), "text": text, "etag": etag, "rest_off_until": rest_off},
+              open(tmp, "w", encoding="utf-8"))
     os.replace(tmp, cp)
     return text
 
@@ -360,13 +430,77 @@ def post_tasks(name, title, body):
 def sync_tasks():
     """Post this computer's open task-checklist entries (every agent's asks, registered by task_checklist_hook) and the
     ones finished lately to the board, one folder per computer so machines never write the same file. When either
-    file changed, rebuild DASHBOARD.md."""
-    ok1, ch1 = post_tasks("OPEN_TASKS.md", "Open tasks", checklist("--open"))
-    done = entries(checklist(), "done")[:DONE_KEEP]
-    ok2, ch2 = post_tasks("DONE_TASKS.md", "Finished tasks", "\n".join(done) or "(none in the recent list)")
+    file changed, rebuild DASHBOARD.md.
+    A checklist read that fails (on one computer on 3 Nov a timeout's error text parsed as zero tasks and DONE_TASKS.md
+    said none while 3,885 were done) keeps the last good page instead of posting an empty one."""
+    readable = lambda b: bool(re.search(r"^T-\d{8}-\d+\s", b or "", re.M))
+    opened, alltasks = checklist("--open"), checklist()
+    if readable(opened):
+        ok1, ch1 = post_tasks("OPEN_TASKS.md", "Open tasks", opened)
+    else:
+        print("OPEN_TASKS.md kept: checklist unreadable (%s)" % ((opened or "no output")[:120],))
+        ok1, ch1 = False, False
+    if readable(alltasks):
+        done = entries(alltasks, "done")[:DONE_KEEP]
+        ok2, ch2 = post_tasks("DONE_TASKS.md", "Finished tasks", "\n".join(done) or "(none in the recent list)")
+    else:
+        print("DONE_TASKS.md kept: checklist unreadable (%s)" % ((alltasks or "no output")[:120],))
+        ok2, ch2 = False, False
+    ok3 = post_pages()
     if ch1 or ch2:
         dashboard()
-    return 0 if ok1 and ok2 else 1
+    return 0 if ok1 and ok2 and ok3 else 1
+
+
+def post_pages():
+    """OWNER_PROMPTS.md (his prompts and loops, each with the agent that has it) and AGENTS.md (who is in charge of
+    what), built by board_pages.py from this computer's prompt ledger and checklist (owner order 1 Nov 20:15,
+    T-20261101-026). Secret-scanned like the task files; rewritten only when more than the time stamp changed."""
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import board_pages
+    except Exception as e:
+        print("board pages: board_pages.py not importable (%r)" % e)
+        return True   # the task files above still count; a missing module is not a sync failure
+    ok = True
+    pages = [("OWNER_PROMPTS.md", board_pages.owner_prompts_page), ("AGENTS.md", board_pages.agents_page)]
+    if hasattr(board_pages, "results_page"):   # RECENT_RESULTS.md: what this computer found in the last 48 hours
+        pages.append(("RECENT_RESULTS.md", board_pages.results_page))
+    for name, build in pages:
+        try:
+            text = build(computer())
+        except Exception as e:
+            print("%s not built: %r" % (name, e))
+            ok = False
+            continue
+        path = "coordination/computers/%s/%s" % (computer(), name)
+        scan = os.path.join(HERE, "scan_secrets.py")
+        if os.path.exists(scan):
+            tmp = os.path.join(STATE, "page_scan.md")
+            os.makedirs(STATE, exist_ok=True)
+            open(tmp, "w", encoding="utf-8").write(text)
+            try:
+                rc = subprocess.run([sys.executable, scan, tmp], capture_output=True, timeout=300,
+                                    creationflags=NOWIN).returncode
+            except subprocess.TimeoutExpired:
+                rc = "timeout"
+            if rc != 0:
+                print("%s NOT synced: the secret scan said %s" % (path, rc))
+                ok = False
+                continue
+        norm = lambda t: re.sub(r"\) at \d{4}-\d\d-\d\d \d\d:\d\d [+-]\d{4}|at \d{4}-\d\d-\d\d \d\d:\d\d [+-]\d{4}", "",
+                                t or "")
+        changed = []
+
+        def update(old, text=text, changed=changed):
+            if norm(old) == norm(text):
+                return None
+            changed.append(1)
+            return text
+        good = put_file(BOARD, path, update, "%s on %s [skip ci]" % (name[:-3].replace("_", " ").title(), computer()))
+        print("%s %s" % (path, ("synced" if changed else "unchanged") if good else "FAILED"))
+        ok = ok and good
+    return ok
 
 
 DONE_KEEP = 40
@@ -385,11 +519,34 @@ def dashboard():
     if st != 200:
         print("dashboard: cannot list computers (%s)" % st)
         return 1
-    rows, open_parts, done_parts = [], [], []
+    rows, open_parts, done_parts, results, agent_parts = [], [], [], [], []
     for c in sorted(i["name"] for i in items if i.get("type") == "dir"):
+        # The owner, 1 Nov: agents writing grants could not see what other computers' tests found, so the dashboard
+        # names each computer's results pages (ported from the Mac copy, FM-20261103-075954).
+        st, files = api("GET", "/repos/%s/contents/coordination/computers/%s" % (BOARD, c))
+        have = {f["name"] for f in files} if st == 200 and isinstance(files, list) else set()
+        # every page a computer posts beside its task lists is a results page (RECENT_RESULTS, RECALL_LATENCY,
+        # ROUNDTRIP, ...), so a new receipt shows up here without another edit on every computer (3 Nov)
+        machine = {"OPEN_TASKS.md", "DONE_TASKS.md", "AGENTS.md", "OWNER_PROMPTS.md"}
+        links = ["[%s](coordination/computers/%s/%s)" % (n, c, n)
+                 for n in sorted(have) if n.endswith(".md") and n not in machine]
+        results.append("| %s | %s |" % (c, ", ".join(links) or "none posted yet"))
         o, _ = get_file(BOARD, "coordination/computers/%s/OPEN_TASKS.md" % c)
         d, _ = get_file(BOARD, "coordination/computers/%s/DONE_TASKS.md" % c)
         ob, db = _block(o), _block(d)
+        # TOP10 rank 2 (3 Nov): every computer's agents, what each is in charge of, and what is blocked, on one page.
+        a = get_file(BOARD, "coordination/computers/%s/AGENTS.md" % c)[0] if "AGENTS.md" in have else None
+        heads = re.findall(r"^## (\S+) \(last moved ([^)]*)\)", a or "", re.M)
+        cnt = re.search(r"^(\d+) agents, (\d+) open entries", a or "", re.M)
+        blocked = [ln for ln in entries(ob) if re.match(r"^T-\S+\s+blocked\b", ln)]
+        agent_parts.append("### %s\n\n%s. Most recently moved: %s. Detail: [AGENTS.md](coordination/computers/%s/AGENTS.md)."
+                           "\n\nBlocked (%d):\n\n```\n%s\n```\n"
+                           % (c, "%s agents with %s open entries" % cnt.groups() if cnt else
+                              ("AGENTS.md not posted yet" if a is None else "agent count UNKNOWN (page unreadable)"),
+                              ", ".join("%s (%s)" % h for h in heads[:8]) or "none listed", c, len(blocked),
+                              ("\n".join(blocked[:12]) or "(none)") + (
+                                  "\n(and %d older blocked entries in coordination/computers/%s/OPEN_TASKS.md)"
+                                  % (len(blocked) - 12, c) if len(blocked) > 12 else "")))
         when = STAMP.search(o or "")
         rows.append("| %s | %d | %s | %s |" % (c, len(entries(ob)), len(entries(db)) if d else "not posted yet",
                                               when.group(0)[3:] if when else "?"))
@@ -411,9 +568,16 @@ def dashboard():
             "coordination/acks/. Generated; do not edit by hand. Each computer posts its own tasks with "
             "`fleet_board.py sync-tasks`, which also rebuilds this page when they change.\n\n"
             "## Computers\n\n| computer | open | finished (recent) | tasks posted |\n|---|---|---|---|\n%s\n\n"
+            "## Agents and blockers\n\nFrom each computer's AGENTS.md (agents whose open entry moved in the last "
+            "24 hours) and the blocked entries in its OPEN_TASKS.md.\n\n%s\n"
+            "## Where the results are\n\nEvery brain test, newest first, with its result line and the memories that "
+            "name it: [TESTS_INDEX.md](%s). What each computer found in the last 48 hours, and which of its memories "
+            "are not on the brain repo's main yet:\n\n| computer | pages |\n|---|---|\n%s\n\n"
             "## Fleet messages and acks\n\n| message | start | acks by computer |\n|---|---|---|\n%s\n\n"
             "## Open tasks\n\n%s\n## Recently finished\n\n%s"
-            % (time.strftime("%Y-%m-%d %H:%M %z"), computer(), "\n".join(rows), "\n".join(msgs),
+            % (time.strftime("%Y-%m-%d %H:%M %z"), computer(), "\n".join(rows), "\n".join(agent_parts),
+               TESTS_INDEX_URL, "\n".join(results),
+               "\n".join(msgs),
                "\n".join(open_parts), "\n".join(done_parts) or "No computer has posted DONE_TASKS.md yet.\n"))
     norm = lambda t: re.sub(r"Rebuilt by .*? from", "", t or "", count=1)
     ok = put_file(BOARD, "DASHBOARD.md", lambda old: None if norm(old) == norm(text) else text, "Dashboard [skip ci]")
@@ -430,11 +594,37 @@ def main(a):
             return v
         return default
     agent = opt("--agent", os.environ.get("AGENT_MESH_ID", "unknown-agent"))
+    reply_to = opt("--reply-to")
     show_all = "--all" in a
-    a = [x for x in a if x != "--all"]
+    note = "--note" in a
+    owner = "--owner" in a
+    a = [x for x in a if x not in ("--all", "--note", "--owner")]
     cmd = a[0] if a else "check"
+    # "ack --help" once wrote coordination/acks/--help/ and "broadcast --help" sent "--help" to the whole fleet
+    # (FM-20261031-234920-host1): a flag or nothing in place of the argument prints the usage instead.
+    if cmd in ("ack", "broadcast") and (len(a) < 2 or a[1].startswith("-")
+                                        or (cmd == "ack" and not re.match(r"FM-\d{8}-\d{6}-[\w.-]+$", a[1]))):
+        print(__doc__)
+        return 2
     if cmd == "broadcast":
-        return broadcast(agent, " ".join(a[1:]))
+        # A bare broadcast used to be headed "from the owner via", so an agent's own note went to every computer as
+        # his order (FM-20261103-073831 and FM-20261104-002323, two agents, the rule already in the brain). The owner's
+        # heading now takes an explicit --owner; without one of the three a broadcast is refused.
+        if not (owner or note or reply_to):
+            print("broadcast needs one of: --owner (relaying the owner's own words), --note (your own note), "
+                  "--reply-to <msg id> (answering a fleet request). Nothing was posted.")
+            return 2
+        if owner and (note or reply_to):
+            print("--owner cannot go with --note or --reply-to. Nothing was posted.")
+            return 2
+        text = " ".join(a[1:])
+        if reply_to:
+            rc = claim_reply(agent, reply_to)
+            if rc:
+                return rc
+            if reply_to not in text:
+                text = "Reply to %s. %s" % (reply_to, text)
+        return broadcast(agent, text, owner=not (note or reply_to))
     if cmd == "check":
         return check(agent, show_all)
     if cmd == "ack":

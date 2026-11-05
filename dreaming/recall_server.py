@@ -22,10 +22,22 @@ from server_safety import resources, resident
 CAP = int(1.5*1024**3)
 
 def mutex(store):
+    digest = hashlib.sha256(canonical(store).encode('utf-8')).hexdigest()
+    if os.name != 'nt':
+        # one server per store: an advisory lock the kernel drops when the process exits
+        import fcntl
+        import tempfile
+        fh = open(os.path.join(tempfile.gettempdir(), 'R39MathRecall_%s.lock' % digest), 'a')
+        try:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            fh.close()
+            raise RuntimeError('second instance')
+        return fh
     kernel = ctypes.windll.kernel32
     kernel.CreateMutexW.argtypes = [ctypes.c_void_p,ctypes.c_int,ctypes.c_wchar_p]
     kernel.CreateMutexW.restype = ctypes.c_void_p
-    name = 'Global\\R39MathRecall_' + hashlib.sha256(canonical(store).encode('utf-8')).hexdigest()
+    name = 'Global\\R39MathRecall_' + digest
     handle = kernel.CreateMutexW(None,False,name)
     error = kernel.GetLastError()
     if not handle:
@@ -63,6 +75,9 @@ def main():
     ap.add_argument('--max-age',type=float,default=0)
     ap.add_argument('--test-controls',action='store_true')
     args = ap.parse_args()
+    if not args.store:
+        print("no store: set MATHBRAIN_STORE or pass --store", file=sys.stderr)
+        return 2
     # Enforced inside the server too, before resident imports or model creation.
     probe = resources()
     if not probe['allowed']:
@@ -74,7 +89,9 @@ def main():
     try:
         if stop.exists():
             return 5
-        sys.path.insert(0,os.environ.get('MATHBRAIN_BUILD_SRC',DEFAULT_BUILD))
+        build = os.environ.get('MATHBRAIN_BUILD_SRC',DEFAULT_BUILD)
+        if build:
+            sys.path.insert(0,build)
         import math_recall as tool   # serve the live tool; the client's code stamp refuses a server older than it
         import recall_client as _rc
         _rc.try_server = lambda argv: None   # inside the server a call never goes back to the server
@@ -293,6 +310,12 @@ def main():
                     endpoint.unlink()
             except Exception:
                 pass
+        release(handle)
+
+def release(handle):
+    if os.name != 'nt':
+        handle.close()
+    else:
         ctypes.windll.kernel32.CloseHandle(ctypes.c_void_p(handle))
 
 if __name__ == '__main__':

@@ -123,7 +123,20 @@ def settings_integrity():
     except Exception as e:
         return False, "settings.json unreadable: %s" % e
     n, bad = 0, []
-    for _event, groups in d.get("hooks", {}).items():
+    blocks = [d.get("hooks", {})]
+    # On the Mac every settings hook is one command string running hook_dispatch.py, which reads its scripts
+    # from hook_dispatch_list.json (same shape, paths in args); without following it this check counted 0 hooks
+    # and failed vacuously on every run (30 Oct). The dispatcher itself is checked as a script too.
+    if any("hook_dispatch.py" in h.get("command", "") for gs in blocks[0].values() for g in gs for h in g.get("hooks", [])):
+        disp = os.path.join(HERE, "hook_dispatch.py")
+        n += 1
+        if not os.path.exists(disp):
+            bad.append("hook_dispatch.py missing")
+        try:
+            blocks.append(json.load(io.open(os.path.join(HERE, "hook_dispatch_list.json"), encoding="utf-8")))
+        except Exception as e:
+            bad.append("hook_dispatch_list.json unreadable: %s" % e)
+    for _event, groups in ((e, g) for b in blocks for e, g in b.items()):
         for g in groups:
             for h in g.get("hooks", []):
                 for a in h.get("args", []):
@@ -284,6 +297,26 @@ def extra_core():
     return res
 
 
+def metacog_sensitivity(bets=None, floor=0.55, min_each=20):
+    """1000-ways #28 (30 Oct, Mac): does stated confidence still separate the ledger's hits from its misses?
+    Type-2 AUROC over every resolved bet in predict.py's ledger (0.63 at n 218 on 30 Oct, permutation p < 0.001).
+    Report-only: it reads data, not code, so a run of unlucky bets must not fail the hook gate. (ok, detail)."""
+    try:
+        if bets is None:
+            sys.path.insert(0, HERE)
+            import predict
+            bets = predict.score(predict.parse())
+        r = [(b["p"], b["outcome"] == "hit") for b in bets if b.get("outcome") in ("hit", "miss") and b.get("p") is not None]
+        h = [p for p, y in r if y]
+        m = [p for p, y in r if not y]
+        if len(h) < min_each or len(m) < min_each:
+            return True, "too few resolved bets to judge (%d hits, %d misses)" % (len(h), len(m))
+        a = sum((x > y) + 0.5 * (x == y) for x in h for y in m) / (len(h) * len(m))
+        return a >= floor, "type-2 AUROC %.3f over %d resolved (floor %.2f)" % (a, len(r), floor)
+    except Exception as e:
+        return False, "could not read the ledger: %s" % e
+
+
 def check(out, spec):
     if spec == "deny":
         return decision(out) == "deny"
@@ -322,6 +355,9 @@ def main():
         print(("  PASS  " if ok else "  FAIL  ") + name)
         if not ok:
             fails += 1
+    print("\n== METACOGNITION (report only) ==")
+    ok, msg = metacog_sensitivity()
+    print(("  PASS  " if ok else "  FAIL  ") + msg)
     print("\n%d core failure(s)." % fails)
     sys.exit(1 if fails else 0)
 

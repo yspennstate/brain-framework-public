@@ -307,10 +307,21 @@ def _script_candidate(script, cwd):
     return os.path.normcase(os.path.normpath(os.path.abspath(candidate)))
 
 
+# Local GPU exceptions the install allows by name: BRAIN_ALLOWED_GPU_SCRIPTS, paths separated by os.pathsep; a path
+# that ends in a separator allows every script under that folder. A script is allowed only when called by that path
+# (the match is on the joined arguments). Everything else still fails closed under the deny below.
+OWNER_ALLOWED_GPU_SCRIPTS = {
+    os.path.normcase(os.path.normpath(os.path.expanduser(p.strip()))) + (os.sep if p.strip().endswith(("/", "\\")) else "")
+    for p in os.environ.get("BRAIN_ALLOWED_GPU_SCRIPTS", "").split(os.pathsep) if p.strip()
+}
+
 def _python_invocation_is_gpu(args, cwd):
     if not args:
         return False
     joined_args = " ".join(args).replace("/", os.sep).lower()
+    for allowed in OWNER_ALLOWED_GPU_SCRIPTS:
+        if allowed.lower() in joined_args:
+            return False
     if (
         EXACT_CRASH_SCRIPT.lower() in joined_args
         or EXACT_CRASH_MODULE in joined_args.replace("\\", ".")
@@ -658,7 +669,54 @@ def _memory_pressure_context(st, reasons):
     top_private = _fmt_top_private(st.get("top_private"))
     if top_private:
         context += " Top private-memory consumers: %s." % top_private
+    context += _exited_pinned_note(st)
     return context
+
+
+def _exited_pinned_note(st):
+    """Name the share of commit that is dead processes, so nobody tries to shed it.
+
+    A process can report HasExited with zero threads and STILL hold its commit,
+    because something holds an open handle and the kernel cannot free the object.
+    Stop-Process returns success on these and does nothing; taskkill /F says "there
+    is no running instance of the task" while Get-Process still lists the pid. Only
+    a reboot (or closing the handle holder) releases it.
+
+    Measured 2026-08-11 on this PC: 311 such corpses held 11.7GB - 17% of the
+    apparent 69.4GB process total - and every one was a Codex hook shell
+    (codex_help_guard_hook, error_graph/hook.py, codex_reflex_hook,
+    project_memory_hot_hook). They accumulate in bursts across the whole uptime
+    (oldest 391h against a 16.4d uptime), so a long-lived machine carries more of
+    them the longer it goes. That night the injected guidance still read "exit
+    enough restartable model workers to release commit", which no agent could act
+    on, and an agent spent forty minutes re-deriving the mechanism by hand - a
+    mechanism the governor had already documented four days earlier. Same disease
+    as UNSHEDDABLE_HOLDERS above, but a category rather than a named process, so
+    the per-holder check could not see it.
+    """
+    pinned = st.get("exited_pinned") if isinstance(st, dict) else None
+    if not isinstance(pinned, dict):
+        return ""
+    pinned_mb = _nonnegative_number(pinned.get("private_mb"))
+    if pinned_mb is None or pinned_mb < 2000:
+        return ""
+    count = pinned.get("count")
+    who = "%s already-exited process objects" % count if count else "already-exited processes"
+    note = (" NOTE: %sMB of that commit is %s pinned by open handles. Stop-Process"
+            " reports success on these and does nothing - no agent can shed it, and"
+            " it does not shrink by exiting model workers. It needs a reboot, which"
+            " is owner action. Subtract it before judging how much of the pressure"
+            " is actually yours." % (_fmt_number(pinned_mb), who))
+    # per_hour lands once the governor restarts with its 2026-08-13 change: the
+    # pinned set GROWS with fleet hook activity (+21 corpses in 15 min measured
+    # under an 18-session fleet vs ~18/day quiet), so a live rate turns "standing
+    # background" into "the wall is approaching" without an agent re-deriving it.
+    rate = _nonnegative_number(pinned.get("per_hour"))
+    if rate is not None and rate >= 6:
+        note += (" Pinned set is GROWING at ~%s/hour right now - heavy fleet"
+                 " activity feeds it, so the reboot is time-sensitive tonight,"
+                 " not just hygiene." % _fmt_number(rate))
+    return note
 
 
 # Processes agents cannot exit or restart without elevation: exiting agent model
@@ -726,6 +784,26 @@ def _agent_shed_is_futile(st):
     too thin to judge - in which case the caller keeps the standard shed advice,
     because a missing measurement is not evidence of a clean footprint.
     """
+    # AGGREGATE FIRST, ADDED 2026-08-11 21:1x. This function used to reason ONLY from
+    # top_private, and that sample cannot see its own blind spot: on this machine tonight
+    # there were 18 claude.exe sessions holding 10,749MB between them, NONE individually
+    # large enough to enter a top-8 list. The sampled share came out 26-30%, so the verdict
+    # flipped between "NOTHING OF OURS IS HOLDING IT, do not stop" and "shed load now"
+    # depending on which processes happened to land in the sample - same machine state,
+    # opposite advice, and the reassuring branch was wrong: 9,730MB of that sat in 17
+    # sessions older than 12 hours (the oldest 124h) against 9,377MB of headroom.
+    #
+    # The governor ALREADY publishes the true aggregate as ai_tagged_private_mb; nothing
+    # read it. If that aggregate is at least the remaining headroom, then shedding agent
+    # processes CAN fix this and the "nothing of ours" reassurance is false. This check only
+    # ever WITHDRAWS that reassurance - it never manufactures one - so the failure direction
+    # is a needless shed rather than a missed one.
+    if isinstance(st, dict):
+        ai_mb = _nonnegative_number(st.get("ai_tagged_private_mb"))
+        headroom = _nonnegative_number(st.get("commit_avail_mb"))
+        if ai_mb is not None and headroom is not None and ai_mb >= headroom > 0:
+            return None
+
     top = st.get("top_private") if isinstance(st, dict) else None
     if not isinstance(top, (list, tuple)) or len(top) < 3:
         return None
@@ -920,7 +998,7 @@ def main():
                     ctx = ("[compute-instinct] The compute governor process is ALIVE but its heartbeat is %dmin old "
                            "on %s, and no recent resume-from-standby explains the gap - it may be wedged. Do NOT "
                            "blind-restart it: a second governor racing the first is worse than a late one. Read "
-                           "%USERPROFILE%\\.claude\\compute\\governor.log, confirm the process is really stuck "
+                           "~/.claude/compute/governor.log, confirm the process is really stuck "
                            "(watch compute_state.json's ts for ~30s), and only then stop the old one before starting "
                            "a new one." % (int(age // 60), st.get("host", "this machine")))
             elif alive is False:
@@ -928,7 +1006,7 @@ def main():
                     ctx = ("[compute-instinct] The compute governor is DOWN on %s (no live process for the pid in "
                            "governor.pid; heartbeat %dmin old). The watchdog that protects the owner's responsiveness "
                            "and the protected stack is not running. Check "
-                           "%USERPROFILE%\\.claude\\compute\\governor.log, restart it (wscript //B "
+                           "~/.claude/compute/governor.log, restart it (wscript //B "
                            "launch_compute_governor.vbs in 12_cognitive_architecture/compute_governor/), fix what "
                            "killed it, and improve the apparatus before returning to your task."
                            % (st.get("host", "this machine"), int(age // 60)))
@@ -1018,8 +1096,8 @@ def main():
         if not ctx:
             return
         if ev == "PreToolUse":
+            # a note, not an approval: the context reaches the model without a permissionDecision (29 Sep)
             out = {"hookSpecificOutput": {"hookEventName": "PreToolUse",
-                                          "permissionDecision": "allow",
                                           "additionalContext": ctx}}
         else:
             out = {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",

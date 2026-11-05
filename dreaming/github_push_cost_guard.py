@@ -51,7 +51,7 @@ HOOK_TEXT = """#!/bin/sh
 # Cost guard: a push that would start billed GitHub Actions runs on a private repo is refused
 # unless the head commit says [skip ci] or ALLOW_CI_PUSH=1 is set. Source: %s
 PY="%s"
-[ -x "$PY" ] || PY=python
+[ -x "$PY" ] || PY=$(command -v python3 || command -v python)   # the Mac has only python3
 exec "$PY" -X utf8 "%s" "$@"
 """ % (os.path.abspath(__file__).replace("\\", "/"), sys.executable.replace("\\", "/"),
        os.path.abspath(__file__).replace("\\", "/"))
@@ -248,6 +248,78 @@ def mass_delete_check(remote_url, lines, env=None, cwd=None):
     return True, []
 
 
+# Public repositories whose ADDED text must carry nothing private (1 Nov 2026: a public repo's first commit had
+# copied whole run folders - voice briefs, raw prompts, setup notes - and the only gate looked for keys). Which
+# repositories, and what counts as private, belong to the install: BRAIN_PRIVATE_TEXT_REPOS (comma-separated
+# owner/name) and one regex in ~/.brain-framework/private/private_text_rx.txt. Without the file the pattern is home
+# paths only; without the variable no repository is guarded.
+PRIVATE_TEXT_GUARDED = {s.strip() for s in os.environ.get("BRAIN_PRIVATE_TEXT_REPOS", "").split(",") if s.strip()}
+
+
+def _private_text_rx():
+    try:
+        with open(os.path.expanduser("~/.brain-framework/private/private_text_rx.txt"), encoding="utf-8") as fh:
+            pat = fh.read().strip()
+    except OSError:
+        pat = ""
+    return re.compile(pat or r"(?i)([cC]:[\\/]+Users[\\/]+\w+|/c/Users/\w+|/Users/\w+/|/home/\w+/)")
+
+
+PRIVATE_TEXT_RX = _private_text_rx()
+PRIVATE_TEXT_SCAN_CAP = 40 * 1024 * 1024        # bytes of diff read; past it the push is refused as unscanned
+
+
+def private_text_check(remote_url, lines, env=None, cwd=None):
+    """Refuse a push to a guarded public repository whose added lines carry private text (owner's addresses, home
+    paths, his quoted words, trading vocabulary). ALLOW_PRIVATE_TEXT=1 lets a reviewed push through (logged)."""
+    env = os.environ if env is None else env
+    slug = repo_slug(remote_url)
+    if slug not in PRIVATE_TEXT_GUARDED:
+        return True, []
+    if str(env.get("ALLOW_PRIVATE_TEXT", "")).strip() == "1":
+        log("allow ALLOW_PRIVATE_TEXT %s" % slug)
+        return True, ["[push-privacy] ALLOW_PRIVATE_TEXT=1: added text on %s was not checked." % slug]
+    for line in lines:
+        parts = line.split()
+        if len(parts) != 4:
+            continue
+        local_ref, local_sha, remote_ref, remote_sha = parts
+        if local_sha == ZERO:
+            continue
+        base = push_base(local_sha, remote_ref, remote_sha, cwd=cwd)
+        args = ["diff", "-U0", "--no-color", "--no-renames", "--no-ext-diff", base, local_sha] if base else \
+            ["show", "-U0", "--no-color", "--format=", local_sha]
+        p = subprocess.run(["git"] + args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        if p.returncode != 0:
+            log("REFUSE private-text %s %s: diff failed" % (slug, remote_ref))
+            return False, ["[push-privacy] REFUSED: could not read the diff of this push to %s; nothing private may "
+                           "reach it unscanned." % slug]
+        if len(p.stdout) > PRIVATE_TEXT_SCAN_CAP:
+            log("REFUSE private-text %s %s: diff %d bytes over cap" % (slug, remote_ref, len(p.stdout)))
+            return False, ["[push-privacy] REFUSED: this push to %s adds %d MB, more than the %d MB the privacy scan "
+                           "reads. Push it in smaller pieces." % (slug, len(p.stdout) >> 20,
+                                                                  PRIVATE_TEXT_SCAN_CAP >> 20)]
+        hits, path = [], "?"
+        for raw in p.stdout.decode("utf-8", "replace").split("\n"):
+            if raw.startswith("+++ "):
+                path = raw[6:] if raw.startswith("+++ b/") else raw[4:]
+                continue
+            if raw.startswith("+") and not raw.startswith("+++"):
+                m = PRIVATE_TEXT_RX.search(raw)
+                if m:
+                    hits.append("    %s: %r" % (path, m.group(0)))
+                    if len(hits) >= 12:
+                        break
+        if hits:
+            log("REFUSE private-text %s %s: %d hit(s), first %s" % (slug, remote_ref, len(hits), hits[0].strip()))
+            return False, ["[push-privacy] REFUSED: this push to the PUBLIC repository %s adds private text:\n%s\n"
+                           "Remove it (names, private emails, home paths, quoted owner words, trading words) and "
+                           "push again. If a hit is reviewed and safe (a deny-list pattern, say): "
+                           "ALLOW_PRIVATE_TEXT=1 git push ..." % (slug, "\n".join(hits))]
+        log("allow private-text-clean %s %s" % (slug, remote_ref))
+    return True, []
+
+
 def decide(remote_url, lines, env=None, cwd=None):
     """Return (allow, messages). lines are the pre-push stdin lines."""
     env = os.environ if env is None else env
@@ -256,6 +328,10 @@ def decide(remote_url, lines, env=None, cwd=None):
     ok, deletion_msgs = mass_delete_check(remote_url, lines, env=env, cwd=cwd)
     if not ok:
         return False, deletion_msgs
+    ok, privacy_msgs = private_text_check(remote_url, lines, env=env, cwd=cwd)
+    if not ok:
+        return False, privacy_msgs
+    msgs.extend(privacy_msgs)
     if slug in PUBLIC:
         log("allow public %s" % slug)
         return True, msgs
@@ -271,7 +347,7 @@ def decide(remote_url, lines, env=None, cwd=None):
             continue                                  # a branch deletion starts nothing
         changed = None
         if remote_sha != ZERO and git("cat-file", "-e", remote_sha + "^{commit}", cwd=cwd)[0] == 0:
-            rc, out = git("diff", "--name-only", remote_sha, local_sha, cwd=cwd)
+            rc, out = git("diff", "--name-only", "--no-renames", remote_sha, local_sha, cwd=cwd)
             changed = [f for f in out.split("\n") if f.strip()] if rc == 0 else None
         hits = would_start_runs(workflows_at(local_sha, cwd=cwd), remote_ref, changed, default_branch)
         if not hits:
@@ -328,6 +404,7 @@ def install(clones):
                 continue
         with io.open(target, "w", encoding="utf-8", newline="\n") as fh:
             fh.write(HOOK_TEXT)
+        os.chmod(target, 0o755)   # git skips a hook without the execute bit, silently, on the Mac and Linux
         print("installed: %s" % target)
 
 
@@ -434,6 +511,16 @@ def main():
     try:
         remote_url = sys.argv[2] if len(sys.argv) > 2 else (sys.argv[1] if len(sys.argv) > 1 else "")
         lines = [l for l in sys.stdin.read().splitlines() if l.strip()]
+        # Paper guard (owner, 2 Nov 2026): a paper pushed to a public repo needs funding, competing-interest and AI
+        # declarations and no overfull line. It runs first and writes its own messages; see paper_release_guard.py.
+        try:
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            import paper_release_guard
+            if not paper_release_guard.pre_push(remote_url, lines):
+                return 1
+        except Exception as exc:
+            log("paper guard ERROR (push not judged for papers): %r" % (exc,))
+            sys.stderr.write("[paper-guard] guard error %r - run paper_release_guard.py check <paper> by hand.\n" % (exc,))
         allow, msgs = decide(remote_url, lines)
         for m in msgs:
             sys.stderr.write(m + "\n")

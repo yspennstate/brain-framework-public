@@ -14,7 +14,7 @@ local copy of a production file is fine - the danger is RUNNING/changing the liv
 (Bash/PowerShell/Edit/Write) and UserPromptSubmit; fail-safe silent otherwise. Never hard-blocks (the
 owner acts through this brain) - it raises caution, it doesn't lock the door.
 """
-import sys, os, io, json, re, time
+import sys, os, io, json, re, time, fnmatch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -61,9 +61,145 @@ def _backslash_line(data):
         return ""
 
 
+# ARGMAX GUARD (2026-11-01, Mac). The memory folder holds ~29,100 .md files whose paths total ~3.7 MB, past the
+# 1 MB kernel argument limit, so an unquoted `*.md` there never runs: the shell prints "argument list too long" and a
+# `2>/dev/null` hides even that, leaving an empty result that reads as "no match". Eight recorded slips, the rule
+# already in the brain each time. Replayed over 28,704 Mac Bash calls since 30 Oct: 34 shell refusals, 31 caught;
+# of the 49 fires with no refusal line 48 had stderr hidden and the last was a refusal whose message the transcript
+# lost. It lists only real directories named by a glob word (or the cwd / a `cd` earlier in the command).
+_AM_HEREDOC = re.compile(r"<<-?[ \t]*(['\"]?)(\w+)\1[^\n]*\n.*?(?:\n[ \t]*\2[ \t]*(?=\n|$)|\Z)", re.S)
+_AM_ARITH = re.compile(r"\$\(\([^()]*\)\)")
+_AM_QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"")
+_AM_ASSIGN = re.compile(r"(?:^|[\s;&|(])([A-Za-z_][A-Za-z0-9_]*)=([^\s;&|()]+)")
+_AM_VAR = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
+_AM_WORD = re.compile(r"[^\s;&|()<>]+")
+_AM_CD = re.compile(r"(?:^|[;&|(]\s*|\s)cd\s+([^\s;&|()]+)")
+_ARG_MAX = 1048576
+try:
+    _ARG_MAX = os.sysconf("SC_ARG_MAX")
+except (ValueError, OSError, AttributeError):
+    pass
+
+
+_AM_SUBST = re.compile(r"\$\(([^()]*)\)")
+
+
+def _am_unquote(m):
+    s = m.group(0)
+    if s[0] == '"' and "$(" in s:
+        # a command substitution runs even inside double quotes; keep its words, drop its own quoted strings
+        return " ; ".join(_AM_SUBST.findall(re.sub(r"'[^']*'", " ", s))) or " "
+    # a quoted glob never expands, so it goes; a quoted path stays (cd "$M" still moves the shell)
+    return " " if "*" in s or " " in s.strip("'\"") else s[1:-1]
+
+
+def _am_dir(d, cwd, env):
+    d = _AM_VAR.sub(lambda v: env.get(v.group(1), v.group(0)), d)
+    d = os.path.expanduser(d.replace("$HOME", "~").replace("${HOME}", "~"))
+    if "$" in d:
+        return ""
+    return os.path.normpath(os.path.join(cwd or os.getcwd(), d))
+
+
+def _argmax_trap(cmd, cwd=""):
+    """'' unless an unquoted glob in a Bash command expands past the argument limit, else the glob and its size."""
+    if "*" not in (cmd or ""):
+        return ""
+    rest = _AM_QUOTED.sub(_am_unquote, _AM_ARITH.sub(" ", _AM_HEREDOC.sub(" ", cmd)))
+    if "*" not in rest:
+        return ""
+    env = {}
+    for a in _AM_ASSIGN.finditer(rest):
+        env.setdefault(a.group(1), _AM_VAR.sub(lambda v: env.get(v.group(1), v.group(0)), a.group(2)))
+    cds = [(m.start(), m.group(1)) for m in _AM_CD.finditer(rest)]
+    for w in _AM_WORD.finditer(rest):
+        word = w.group(0)
+        if "*" not in word or word.startswith("-") or "=" in word.split("/")[0]:
+            continue
+        base = cwd or ""
+        for at, d in cds:
+            if at < w.start():
+                base = _am_dir(d, base, env) or base
+        head, pat = os.path.split(word)
+        if "*" in head or "*" not in pat:
+            continue
+        directory = _am_dir(head, base, env) if head else base
+        try:
+            names = os.listdir(directory) if directory else []
+        except OSError:
+            continue
+        hit = [n for n in fnmatch.filter(names, pat) if pat.startswith(".") or not n.startswith(".")]
+        size = sum(len(os.path.join(directory, n)) + 1 for n in hit)
+        if size > _ARG_MAX * 0.9:
+            return "%s (%d names, %.1f MB of a %.1f MB limit)" % (word, len(hit), size / 1e6, _ARG_MAX / 1e6)
+    return ""
+
+
+def _argmax_line(data):
+    """The guard's one line for a PreToolUse Bash call, or ''. ARGMAX_GUARD=0 turns it off. Fail-safe."""
+    try:
+        if os.environ.get("ARGMAX_GUARD", "1") == "0" or data.get("tool_name") != "Bash":
+            return ""
+        where = _argmax_trap(((data.get("tool_input") or {}).get("command")) or "", data.get("cwd") or "")
+        if not where:
+            return ""
+        return ("[argmax-guard] the unquoted glob %s expands past the kernel argument limit, so the shell will refuse "
+                "that command with 'argument list too long' and run nothing (a 2>/dev/null hides even that, and the "
+                "empty output reads as 'no match'). Let the tool walk the folder instead: grep -rl --include='*.md' "
+                "PATTERN DIR, or find DIR -name '*.md' -print0 | xargs -0 ..." % where)
+    except Exception:
+        return ""
+
+
 def _emit_guard(ev, guard):
     if guard:
         sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": ev, "additionalContext": guard}}))
+
+
+# MESH LITERAL DOLLAR (30 Sep 2026). A mesh claim, assert or release whose --resource builds a Windows path with a
+# backslash in front of a shell variable - "C:\\...\\memory\\$f" typed in a Bash command - reaches the mesh as the
+# literal text '...memory$f': the Bash tool halves the double backslash, and bash then reads backslash-dollar as an
+# escaped dollar. The lease covers no file, the command exits 0, and the write it was meant to guard goes ahead with
+# no claim over it. It happened on 14 Sep, on 27 Sep (thirty claims in one batch) and on 30 Sep, each time with the
+# reflex for it on record; a PreToolUse note is read only after the command has run, so the note could not stop it.
+# No one means a literal "$name" as a resource, so this refuses the command. A variable holding the whole path, a
+# path with forward slashes, and a logical resource (memory:, topic:) pass untouched.
+# 2 Oct 2026: the same slip arrived one step removed - W="C:\\...\\memory\\$S.md" assigned in the command, then
+# --resource "$W". The assignment already made the dollar literal, so a resource that is only a variable is judged by
+# that variable's assignments in the same command; a variable set elsewhere still passes.
+_MESH_CMD = re.compile(r"agent_mesh\.py[\"']?\s+(?:--json\s+)?(?:claim|assert|release)\b")
+_RESOURCE_ARG = re.compile(r"--resource(?:=|\s+)(\"(?:[^\"\\]|\\.)*\"|'[^']*'|[^\s;&|]+)")
+_DOLLAR = re.compile(r"(\\*)\$(?=[A-Za-z_{])")
+_VAR_ONLY = re.compile(r"^[\"']?\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))[\"']?$")
+_ASSIGN = re.compile(r"(?:^|[\s;&|(])(?:export\s+|local\s+)?([A-Za-z_][A-Za-z0-9_]*)=(\"(?:[^\"\\]|\\.)*\"|'[^']*'|[^\s;&|]+)")
+
+
+def _literal_dollar_in(value):
+    """True when bash will pass this word on (as typed into the Bash tool) with a literal '$name' in it."""
+    if value.startswith("'"):
+        return bool(re.search(r"\$(?=[A-Za-z_{])", value))   # single quotes never expand
+    for d in _DOLLAR.finditer(value):
+        # the Bash tool turns each double backslash into one (k -> ceil(k/2)); an odd count left escapes the dollar
+        if (len(d.group(1)) + 1) // 2 % 2 == 1:
+            return True
+    return False
+
+
+def _mesh_literal_dollar(cmd):
+    """The first --resource of a mesh claim, assert or release that bash will pass on with a literal '$name', or ''."""
+    if "agent_mesh" not in (cmd or "") or "$" not in cmd or not _MESH_CMD.search(cmd):
+        return ""
+    for m in _RESOURCE_ARG.finditer(cmd):
+        value = m.group(1)
+        if _literal_dollar_in(value):
+            return value
+        v = _VAR_ONLY.match(value)
+        if v:
+            name = v.group(1) or v.group(2)
+            for a in _ASSIGN.finditer(cmd):
+                if a.group(1) == name and _literal_dollar_in(a.group(2)):
+                    return "%s (set in the command as %s=%s)" % (value, name, a.group(2))
+    return ""
 
 # (label, regex, weight). Action-on-live and secrets are weight 3; irreversible / phone 2; mention 1.
 # The process/host names below are EXAMPLES - populate the rosters for your deployment (the live
@@ -135,6 +271,47 @@ SECRET_VALUE = re.compile(
     re.I)
 
 
+# python with '-' as its script reads the program from stdin; under Git Bash an empty heredoc or /dev/null is a
+# character device (NUL), Python 3.14 takes it for a console and opens pyrepl, which loops on WinError 123 writing
+# tracebacks and hangs the whole command (memory python_dash_with_dev_null_opens_a_looping_repl_on_windows_2026_10_19:
+# six recurrences across four sessions on 19-20 Oct, each after the memory was in the index). So it is refused, not
+# warned. claude-5693aca3, 20 Oct 2026. PYDASH_GUARD=0 turns it off.
+_PY = re.compile(r"^(?:py|python[0-9.]*)(?:\.exe)?$", re.I)
+
+
+def _python_dash(cmd):
+    """The first command segment that runs python with '-' as the script, or ''."""
+    import shlex
+    # PY=.../python.exe; $PY - : the interpreter behind a variable set in the same command (shell state does not
+    # persist between calls). It walked past this guard on 1 Nov 17:57 and spun for 90 s. claude-ebf5f521.
+    py_vars = {n for n, v in re.findall(r"(?:^|[\s;&|])([A-Za-z_][A-Za-z0-9_]*)=[\"']?([^\s\"';|&]+)", cmd or "")
+               if _PY.match(os.path.basename(v.replace("\\", "/")))}
+    for seg in re.split(r"\n|;|&&|\|\||\|", cmd or ""):
+        try:
+            toks = shlex.split(seg.strip(), posix=True)
+        except ValueError:
+            continue
+        while toks and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", toks[0]):   # VAR=x python ...
+            toks = toks[1:]
+        if toks and toks[0] in ("timeout", "nohup", "time", "exec") and len(toks) > 1:
+            toks = toks[2:] if toks[0] == "timeout" and len(toks) > 2 else toks[1:]
+        if toks:
+            m = re.match(r"^\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?$", toks[0])
+            if m and m.group(1) in py_vars:
+                toks[0] = "python"
+        if not toks or not _PY.match(os.path.basename(toks[0].replace("\\", "/"))):
+            continue
+        i = 1
+        while i < len(toks):
+            t = toks[i]
+            if t == "-":
+                return seg.strip()[:120]
+            if t in ("-c", "-m") or not t.startswith("-"):
+                break
+            i += 2 if t in ("-X", "-W") else 1
+    return ""
+
+
 def _score(text):
     hits = {}
     live_action = False
@@ -187,12 +364,35 @@ def main():
                     "asked to run one on the LIVE production host, do that there with their "
                     "confirmation - not here.")}}))
             return
+        # REFUSED, not warned: a mesh lease on a literal "$name" (see _mesh_literal_dollar). MESH_DOLLAR_GUARD=0 turns it off.
+        if ev == "PreToolUse" and data.get("tool_name") == "Bash" and os.environ.get("MESH_DOLLAR_GUARD", "1") != "0":
+            _res = _mesh_literal_dollar((data.get("tool_input", {}) or {}).get("command", "") or "")
+            if _res:
+                sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": ("REFUSED (mesh literal dollar): the resource %s would reach the mesh as "
+                        "a literal '$name'. The Bash tool halves a double backslash and bash then reads backslash-dollar "
+                        "as an escaped dollar, so the lease would cover no file while the command exits 0. Write the path "
+                        "with forward slashes (~/...), or keep the whole path in the variable, or put the "
+                        "loop in a script file." % _res[:160])}}))
+                return
+        # REFUSED, not warned: python with '-' as its script (see _python_dash).
+        if ev == "PreToolUse" and data.get("tool_name") == "Bash" and os.environ.get("PYDASH_GUARD", "1") != "0":
+            _seg = _python_dash((data.get("tool_input", {}) or {}).get("command", "") or "")
+            if _seg:
+                sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": ("REFUSED (python dash): '%s' runs python with '-' as the script. Under "
+                        "Git Bash an empty heredoc or /dev/null reads as a console, Python opens its REPL and loops on "
+                        "WinError 123, hanging the whole command (six times on 19-20 Oct). Write the script with the Write "
+                        "tool and run it by file name, or use python -c for one line." % _seg)}}))
+                return
         # On an EDIT/WRITE, the danger is not the text mentioning money/secrets/production - it's writing
         # a real credential VALUE (the token-leak shape). Score edits on that alone, so the gut stops
         # crying wolf on every memory/hook edit that quotes a risky word or the word "secret" (the dream's
         # anti-wallpaper finding). Commands and prompts still get the full mention-aware scoring below.
         tool = data.get("tool_name", "")
-        guard = _backslash_line(data) if ev == "PreToolUse" else ""
+        guard = "\n".join(x for x in (_backslash_line(data), _argmax_line(data)) if x) if ev == "PreToolUse" else ""
         if ev == "PreToolUse" and tool in ("Edit", "Write", "MultiEdit"):
             hits = {"a secret / security credential": 3} if SECRET_VALUE.search(text) else {}
         else:
@@ -241,10 +441,10 @@ def main():
         else:
             body = ("heightened caution - this touches " + cats + ". Verify the real state and prefer the "
                     "reversible path; a mistake here costs more than usual, so trade speed for care.")
+        # No permissionDecision: until 29 Sep a PreToolUse warning here also said "allow", which skips the permission
+        # prompt of the very call it warns about. The context reaches the model without a decision.
         out = {"hookSpecificOutput": {"hookEventName": ev,
                                       "additionalContext": "[danger-sense] " + body + ("\n" + guard if guard else "")}}
-        if ev == "PreToolUse":
-            out["hookSpecificOutput"]["permissionDecision"] = "allow"
         sys.stdout.write(json.dumps(out))
     except Exception:
         return

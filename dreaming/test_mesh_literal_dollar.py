@@ -26,33 +26,33 @@ MESH = "python ~/ai-memories-and-functionality/12_cognitive_architecture/agent_m
 
 REFUSE = {
     # the 30 Sep command, as typed: two backslashes before the variable
-    "P1 the 30 Sep claim": MESH + r' claim --agent a --resource os.path.expanduser(r"~/memory/$f") --mode write --purpose p',
-    "P2 one backslash": MESH + r' claim --agent a --resource os.path.expanduser(r"~/memory/$f") --purpose p',
-    "P3 single quotes never expand": MESH + r" claim --agent a --resource os.path.expanduser(r'~/memory/$f') --purpose p",
-    "P4 braces, equals form": MESH + r' claim --agent a --resource=os.path.expanduser(r"~/${name}.py") --purpose p',
-    "P5 assert": MESH + r' assert --agent a --resource os.path.expanduser(r"~/dreaming/$n.py")',
-    "P6 release": MESH + r' release --agent a --resource os.path.expanduser(r"~/dreaming/$n.py")',
+    "P1 the 30 Sep claim": MESH + r' claim --agent a --resource "D:\\brain\\memory\\$f" --mode write --purpose p',
+    "P2 one backslash": MESH + r' claim --agent a --resource "D:\brain\memory\$f" --purpose p',
+    "P3 single quotes never expand": MESH + r" claim --agent a --resource 'D:\brain\memory\$f' --purpose p",
+    "P4 braces, equals form": MESH + r' claim --agent a --resource="D:\\brain\\${name}.py" --purpose p',
+    "P5 assert": MESH + r' assert --agent a --resource "D:\\brain\\dreaming\\$n.py"',
+    "P6 release": MESH + r' release --agent a --resource "D:\\brain\\dreaming\\$n.py"',
     "P7 --json first, quoted script path": r'python "C:/x/agent_mesh.py" --json claim --agent a --resource "C:\\x\\$f"',
     "P8 bare, in a loop": "for f in a b; do " + MESH + r" claim --agent a --resource C:\\x\\$f --purpose p; done",
     "P9 second resource of two": MESH + r' claim --agent a --resource "C:/ok/file.py" --resource "C:\\x\\$f"',
     # 2 Oct: the path went into a variable first, then the variable was the resource
-    "P10 assigned in the command, 2 Oct": (r'for S in a b; do W=os.path.expanduser(r"~/memory/$S.md"); ' + MESH +
+    "P10 assigned in the command, 2 Oct": (r'for S in a b; do W="D:\\brain\\memory\\$S.md"; ' + MESH +
                                             r' claim --agent a --resource "$W" --mode write --purpose p; done'),
     "P11 braces both sides, assert": r'R="C:\\x\\${f}.py"; ' + MESH + r' assert --agent a --resource "${R}"',
     "P12 single-quoted assignment": r"W='C:\x\$f.md'; " + MESH + r' release --agent a --resource "$W"',
 }
 PASS = {
-    "N1 forward slashes": MESH + ' claim --agent a --resource os.path.expanduser(r"~/memory/$f") --purpose p',
+    "N1 forward slashes": MESH + ' claim --agent a --resource "D:/brain/memory/$f" --purpose p',
     "N2 the whole path in the variable": MESH + ' claim --agent a --resource "$RES" --purpose p',
     "N3 a logical resource": MESH + ' claim --agent a --resource "memory:$slug" --purpose p',
     "N4 four backslashes leave one and expand": MESH + r' claim --agent a --resource "C:\\\\x\\\\$f" --purpose p',
     "N5 not a mesh command": r'echo "costs \$5 and \$HOME"',
     "N6 a mesh command that takes no resource": MESH + r' pulse --agent a --task "path C:\\x\\$f"',
-    "N7 no dollar": MESH + r" claim --agent a --resource os.path.expanduser(r'~/file.py') --purpose p",
+    "N7 no dollar": MESH + r" claim --agent a --resource 'D:\brain\file.py' --purpose p",
     "N8 a dollar that names no variable": MESH + r" claim --agent a --resource 'C:\share\C$\x' --purpose p",
     "N9 command substitution": MESH + r' claim --agent a --resource "C:/x/$(date +%F).log" --purpose p',
-    "N10 assigned with forward slashes": r'W=os.path.expanduser(r"~/memory/$S.md"); ' + MESH + r' claim --agent a --resource "$W"',
-    "N11 assigned with no variable inside": (r'W=os.path.expanduser(r"~/memory/file.md"); ' + MESH +
+    "N10 assigned with forward slashes": r'W="D:/brain/memory/$S.md"; ' + MESH + r' claim --agent a --resource "$W"',
+    "N11 assigned with no variable inside": (r'W="D:\\brain\\memory\\file.md"; ' + MESH +
                                              r' claim --agent a --resource "$W" --purpose p'),
     "N12 the bad assignment is another variable": (r'X="C:\\x\\$f"; W="C:/ok/$f"; ' + MESH +
                                                    r' claim --agent a --resource "$W" --purpose p'),

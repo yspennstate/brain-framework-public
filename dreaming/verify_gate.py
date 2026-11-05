@@ -50,7 +50,7 @@ _DIR = os.environ.get("VERIFY_HOOKS_STATE_DIR") or HERE
 STATE = os.path.join(_DIR, ".verify_gate_state.json")
 LOG = os.path.join(_DIR, "verify_gate_log.jsonl")
 SHADOW = os.path.join(HERE, "verify_gate_SHADOW")
-LEAN_CHECK = "python " + os.path.join(os.path.expanduser("~"), ".claude", "dreaming", "lean_check.py").replace(chr(92), "/")
+LEAN_CHECK = ("python " if os.name == "nt" else "python3 ") + os.path.join(os.path.expanduser("~"), ".claude", "dreaming", "lean_check.py").replace(chr(92), "/")
 
 CODE_EXT = re.compile(r"\.(?:py|pyw|lean|js|mjs|cjs|ts|tsx|jsx|rs|go|java|kt|c|cc|cpp|h|hpp|cs|rb|php|ps1|psm1|sh|bash|"
                       r"jl|r|m|swift|scala|sql|vbs|bat|cmd)$", re.I)
@@ -201,25 +201,21 @@ def _unwrap(cmd):
     return cmd
 
 
+# a quoted run (to its close, or to the end if never closed), a separator (; newline | && ||), plain text, or a lone &
+_TOK = re.compile(r'"[^"]*"?|\'[^\']*\'?|&&|\|\||[;\n|]|[^"\';\n|&]+|&')
+
+
 def _parts(cmd):
-    s, out, cur, q, i = _unwrap(cmd or ""), [], [], None, 0
-    while i < len(s):
-        c = s[i]
-        if q:
-            cur.append(c)
-            if c == q:
-                q = None
-        elif c in "\"'":
-            q = c
-            cur.append(c)
-        elif c in ";\n|&" and (c not in "|&" or s[i:i + 2] in ("&&", "||") or c == "|"):
+    """The command split at ; newline | && || outside quotes. A regex walk, not a char loop: same parts on 20,652
+    transcript commands, about 6x faster (31 Oct)."""
+    out, cur = [], []
+    for m in _TOK.finditer(_unwrap(cmd or "")):
+        t = m.group(0)
+        if t in (";", "\n", "|", "&&", "||"):
             out.append("".join(cur))
             cur = []
-            if s[i:i + 2] in ("&&", "||"):
-                i += 1
         else:
-            cur.append(c)
-        i += 1
+            cur.append(t)
     out.append("".join(cur))
     return [p.strip() for p in out if p.strip()]
 
@@ -243,7 +239,8 @@ def _read_tail(path, first=2_000_000, cap=48_000_000):
         with open(path, "rb") as fh:
             fh.seek(max(0, size - span))
             raw = fh.read()
-        yield raw.decode("utf-8", "replace").splitlines()[(1 if span < size else 0):]
+        # split on \n only: splitlines() also cuts at a raw U+2028/U+2029 inside a JSON string, losing that record
+        yield raw.decode("utf-8", "replace").split("\n")[(1 if span < size else 0):]
         if span >= size or span >= cap:
             return
         span *= 4
@@ -333,6 +330,175 @@ def claude_turn(path):
                                        "err": bool(b.get("is_error")), "exit": 1 if b.get("is_error") else 0})
         return events, final, True, key
     return [], "", False, ""
+
+
+# claude_turn re-reads up to 128 MB and re-parses the whole turn at every stop; a session kept going by Stop-hook
+# continuations stays in one turn for days (1 Nov: 0.4-3.4 s a stop on the eight newest transcripts, 85-233 MB). The
+# cache keeps the turn's start offset and its events per transcript and parses only the bytes appended since. Same
+# result as claude_turn, except that tool output text is kept only for Lean commands: evaluate reads no other.
+TURN_CACHE = os.path.join(_DIR, ".verify_gate_turns")
+_FIRST, _CAP = 2_000_000, 48_000_000
+_MAX_SPAN = _FIRST
+while _MAX_SPAN < _CAP:
+    _MAX_SPAN *= 4                      # the widest window _read_tail reaches (128 MB)
+
+
+def _prompt_key(ln):
+    """claude_turn's test for a prompt of his: the turn key, or None."""
+    if '"type":"user"' not in ln and '"type": "user"' not in ln:
+        return None
+    try:
+        o = json.loads(ln)
+    except Exception:
+        return None
+    if o.get("type") != "user" or o.get("isMeta") or o.get("isCompactSummary") or o.get("toolUseResult"):
+        return None
+    m = o.get("message") if isinstance(o.get("message"), dict) else {}
+    c = m.get("content")
+    if isinstance(c, list) and any(isinstance(b, dict) and b.get("type") == "tool_result" for b in c):
+        return None
+    txt = _text_of(c).strip()
+    if not txt or HARNESS.match(txt):
+        return None
+    return str(o.get("uuid") or o.get("timestamp") or "") or _line_key(ln)
+
+
+def _feed(ln, events, lean_ids, final):
+    """claude_turn's forward pass over one line; returns the turn's final text so far."""
+    try:
+        o = json.loads(ln)
+    except Exception:
+        return final
+    m = o.get("message") if isinstance(o.get("message"), dict) else {}
+    c = m.get("content")
+    if o.get("type") == "assistant" and isinstance(c, list):
+        texts = [b.get("text", "") for b in c if isinstance(b, dict) and b.get("type") == "text"]
+        if any(t.strip() for t in texts):
+            final = "\n".join(texts)
+        for b in c:
+            if not isinstance(b, dict) or b.get("type") != "tool_use":
+                continue
+            name, inp = b.get("name") or "", b.get("input") or {}
+            if name in ("Bash", "PowerShell"):
+                cmd = str(inp.get("command") or "")
+                lean = _runs(cmd, LEAN_CMD)
+                events.append({"k": "cmd", "cmd": cmd, "id": b.get("id"), "chk": _runs(cmd, CHECK_CMD), "lean": lean})
+                if lean:
+                    lean_ids.add(b.get("id"))
+                for p in SHELL_EDIT.findall(cmd):
+                    events.append({"k": "edit", "path": p, "via": "shell"})
+            elif name in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
+                events.append({"k": "edit", "path": str(inp.get("file_path") or inp.get("notebook_path") or "")})
+    elif o.get("type") == "user" and isinstance(c, list):
+        for b in c:
+            if isinstance(b, dict) and b.get("type") == "tool_result":
+                tid = b.get("tool_use_id")
+                events.append({"k": "out", "id": tid, "text": _text_of(b.get("content"))[:6000] if tid in lean_ids else "",
+                               "err": bool(b.get("is_error")), "exit": 1 if b.get("is_error") else 0})
+    return final
+
+
+def _lines_at(raw, base):
+    """(offset, text) for each complete line of raw, which starts at file offset base, and the offset after the last."""
+    out, o = [], base
+    parts = raw.split(b"\n")
+    for p in parts[:-1]:
+        out.append((o, p.decode("utf-8", "replace")))
+        o += len(p) + 1
+    return out, o, parts[-1]
+
+
+def _cold_start(path, size):
+    """claude_turn's backward search with byte offsets: (offset, key) of the newest prompt in reach, or (None, "")."""
+    span = _FIRST
+    while True:
+        lo = max(0, size - span)
+        with open(path, "rb") as fh:
+            fh.seek(lo)
+            raw = fh.read(size - lo)
+        lines, _, tail = _lines_at(raw, lo)
+        if tail:
+            lines.append((size - len(tail), tail.decode("utf-8", "replace")))
+        for off, ln in reversed(lines[1:] if lo > 0 else lines):
+            key = _prompt_key(ln)
+            if key:
+                return off, key
+        if span >= size or span >= _CAP:
+            return None, ""
+        span *= 4
+
+
+def _marks(path, end):
+    """Hashes of the file's first 4 KB and of the 4 KB before end: a transcript rewritten in place fails them."""
+    with open(path, "rb") as fh:
+        head = fh.read(4096)
+        fh.seek(max(0, end - 4096))
+        before = fh.read(min(end, 4096))
+    return hashlib.sha1(head).hexdigest()[:16], hashlib.sha1(before).hexdigest()[:16]
+
+
+def _prune_turn_cache(days=7):
+    try:
+        cut = time.time() - days * 86400
+        for e in os.scandir(TURN_CACHE):
+            if e.name.endswith(".json") and e.stat().st_mtime < cut:
+                os.remove(e.path)
+    except OSError:
+        pass
+
+
+def claude_turn_cached(path):
+    """claude_turn's (events, final, found, key), reading only what the transcript gained since the last stop."""
+    st = os.stat(path)
+    cpath = os.path.join(TURN_CACHE, hashlib.sha1(os.path.abspath(path).encode("utf-8")).hexdigest()[:20] + ".json")
+    c = None
+    try:
+        with io.open(cpath, encoding="utf-8") as fh:
+            c = json.load(fh)
+        if (c.get("v") != 2 or c.get("ino") != st.st_ino or c.get("dev") != st.st_dev or st.st_size < c.get("end", 0)
+                or list(_marks(path, c["end"])) != c.get("marks")):
+            c = None
+    except Exception:
+        c = None
+    if c is None:
+        _prune_turn_cache()
+        start, key = _cold_start(path, st.st_size)
+        c = {"v": 2, "ino": st.st_ino, "dev": st.st_dev, "start": start, "key": key,
+             "end": start if start is not None else st.st_size, "events": [], "lean": [], "final": "", "marks": None}
+    with open(path, "rb") as fh:
+        fh.seek(c["end"])
+        raw = fh.read(st.st_size - c["end"])
+    lines, end, tail = _lines_at(raw, c["end"])
+    # a prompt of his among the new lines starts a new turn there (the newest one wins, as in claude_turn)
+    for i in range(len(lines) - 1, -1, -1):
+        key = _prompt_key(lines[i][1])
+        if key:
+            c.update(start=lines[i][0], key=key, events=[], lean=[], final="")
+            lines = lines[i + 1:]
+            break
+    else:
+        if c["start"] is not None and c["start"] == c["end"]:
+            lines = lines[1:]           # a cold start: the first new line is the prompt itself
+    events, lean_ids, final = c["events"], set(c["lean"]), c["final"]
+    for _, ln in lines:
+        final = _feed(ln, events, lean_ids, final)
+    if end != c["end"] or c["final"] != final or c.get("marks") is None:
+        c.update(end=end, final=final, lean=sorted(x for x in lean_ids if isinstance(x, str)),
+                 marks=list(_marks(path, end)))
+        try:
+            os.makedirs(TURN_CACHE, exist_ok=True)
+            tmp = "%s.%d.tmp" % (cpath, os.getpid())
+            with io.open(tmp, "w", encoding="utf-8") as fh:
+                json.dump(c, fh, ensure_ascii=False)
+            os.replace(tmp, cpath)
+        except Exception:
+            pass
+    if c["start"] is None or (st.st_size > _MAX_SPAN and c["start"] <= st.st_size - _MAX_SPAN):
+        return [], "", False, ""        # out of claude_turn's reach: it would find no turn either
+    if tail:                            # a last line with no newline yet: read now, cached next time it is complete
+        events = list(events)
+        final = _feed(tail.decode("utf-8", "replace"), events, set(lean_ids), final)
+    return events, final, True, c["key"]
 
 
 def _codex_prompt_key(lines):
@@ -428,10 +594,11 @@ def evaluate(events, final):
             last_edit = i
             edited.append(e["path"])
         elif e["k"] == "cmd" and e.get("id") in outs:   # a command with no result never finished: it checked nothing
-            if _runs(e["cmd"], CHECK_CMD):
+            # "chk"/"lean": the same two tests, made once when claude_turn_cached first read the command
+            if e["chk"] if "chk" in e else _runs(e["cmd"], CHECK_CMD):
                 last_check, n_checks = i, n_checks + 1
                 checks.append(e["cmd"].lower())
-            if _runs(e["cmd"], LEAN_CMD):
+            if e["lean"] if "lean" in e else _runs(e["cmd"], LEAN_CMD):
                 last_lean, n_lean = i, n_lean + 1
     if last_edit > last_check >= 0:
         # which files changed after the last check, and had an earlier check run them?
@@ -561,8 +728,13 @@ def decide(data, runtime):
     if runtime == "codex":
         tp = tp if tp and os.path.exists(tp) else _codex_rollout(sess)
         events, final, ok, turn = codex_turn(tp) if tp and os.path.exists(tp) else ([], "", False, "")
+    elif tp and os.path.exists(tp):
+        try:
+            events, final, ok, turn = claude_turn_cached(tp)
+        except Exception:
+            events, final, ok, turn = claude_turn(tp)
     else:
-        events, final, ok, turn = claude_turn(tp) if tp and os.path.exists(tp) else ([], "", False, "")
+        events, final, ok, turn = [], "", False, ""
     final = final_payload or final
     if not final.strip():
         return None

@@ -40,7 +40,12 @@ def consistent_hits(hits, database, *, deadline, reader=read_current_note,
             continue
         metadata=node.metadata or {}
         declared=any(k in metadata for k in ('artifact_path','artifact_digest'))
+        # A store copied without its objects/ folder (the Mac clone, 30 Oct) cannot check any artifact; refusing
+        # there silenced 7,225 of 11,999 cards. The body is in the database, so read it with the artifact
+        # NOT_REQUESTED. A present folder with a missing or altered file still refuses.
         root=Path(database).parent/'objects' if declared else None
+        if root is not None and not root.is_dir():
+            root=None
         try:
             full=reader(database,node.id,artifact_root=root)
         except NoteReadError as exc:

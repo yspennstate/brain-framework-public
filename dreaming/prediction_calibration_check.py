@@ -31,6 +31,9 @@ DO NOT FIRE scope is result at any band           (overall -0.027, inside noise 
 DO NOT FIRE a cell with fewer than MIN_N resolved bets - an unmeasured cell gets UNKNOWN, never a
             warning invented from a neighbouring cell.
 
+30 Oct: those cells have since recovered (owner 0.50-0.70 gap about -0.06 at n 38 each), and a verdict now needs
+the Wilson 95% interval of the hit rate to sit wholly below the stated p as well as the gap.
+
 Recomputes the table from the live ledger every run rather than trusting the constants above, so it
 cannot keep warning from a record that has since changed. Usage:
     python prediction_calibration_check.py                 lint the OPEN bets
@@ -41,6 +44,7 @@ Read-only.
 from __future__ import annotations
 
 import io
+import math
 import os
 import re
 import sys
@@ -111,12 +115,23 @@ def verdict(cell):
     if cell is None or cell["n"] < MIN_N:
         return "UNKNOWN", ("no measured track record for this scope and confidence band "
                            "(fewer than %d resolved bets) - not a warning, an absence" % MIN_N)
-    if cell["gap"] <= GAP_WARN:
-        return "OVERCONFIDENT", ("this cell states %.3f and lands %.3f over %d resolved bets "
-                                 "(gap %+.3f)" % (cell["stated"], cell["actual"],
+    lo, hi = wilson(round(cell["actual"] * cell["n"]), cell["n"])
+    # A gap alone is not a verdict: 30 Oct, verdicts from the first 127 bets flipped sign on the next 128 in 4 of 5
+    # cells (1000-ways D4 #22, w08_checks/d4_22_wilson.py). Say OVERCONFIDENT only when the interval excludes the stated p.
+    if cell["gap"] <= GAP_WARN and hi < cell["stated"]:
+        return "OVERCONFIDENT", ("this cell states %.3f and lands %.3f [95%% %.3f-%.3f] over %d resolved bets "
+                                 "(gap %+.3f)" % (cell["stated"], cell["actual"], lo, hi,
                                                   cell["n"], cell["gap"]))
-    return "OK", ("stated %.3f against %.3f over %d resolved bets (gap %+.3f)"
-                  % (cell["stated"], cell["actual"], cell["n"], cell["gap"]))
+    return "OK", ("stated %.3f against %.3f [95%% %.3f-%.3f] over %d resolved bets (gap %+.3f)"
+                  % (cell["stated"], cell["actual"], lo, hi, cell["n"], cell["gap"]))
+
+
+def wilson(k, n, z=1.96):
+    """Wilson score interval for k hits in n."""
+    p = k / n
+    c = (p + z * z / (2 * n)) / (1 + z * z / n)
+    h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
+    return c - h, c + h
 
 
 def main():
@@ -166,11 +181,14 @@ def selftest():
             fails.append(label)
         print("  %-5s %-34s -> %-14s (%s)" % ("PASS" if ok else "FAIL", label, v, why[:70]))
 
+    # Fixed cells, not live ones: the live table moves (the 17 Aug owner cells it used to name had recovered by 30 Oct).
+    t[("ctl", "bad")] = {"n": 20, "stated": 0.65, "actual": 0.25, "gap": -0.40}
+    t[("ctl", "noisy")] = {"n": 11, "stated": 0.41, "actual": 3 / 11, "gap": 3 / 11 - 0.41}
     print("POSITIVE CONTROL - must fire:")
-    show("owner p=0.65", ("owner", "0.60-0.70"), "OVERCONFIDENT")
-    show("owner p=0.55", ("owner", "0.50-0.60"), "OVERCONFIDENT")
+    show("stated .65, 5 of 20 hit", ("ctl", "bad"), "OVERCONFIDENT")
     print()
     print("NEGATIVE CONTROLS - must stay silent:")
+    show("stated .41, 3 of 11 hit (inside noise)", ("ctl", "noisy"), "OK")
     show("owner p=0.75 (best cell)", ("owner", ">=0.70"), "OK")
     show("infra p=0.55", ("infra", "0.50-0.60"), "OK")
     show("infra p=0.75", ("infra", ">=0.70"), "OK")

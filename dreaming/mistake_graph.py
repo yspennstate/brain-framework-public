@@ -165,6 +165,31 @@ WRONG_MARK = re.compile(r"wrong:\s*", re.I)
 LESSON_MARK = re.compile(r"lesson:\s*", re.I)
 REFLEX_MARK = re.compile(r"reflex:\s*", re.I)
 HEADER = re.compile(r"^\s*-\s*\*\*(?P<hdr>.+?)\*\*(?P<rest>.*)$", re.S)
+# Since August the corrections are dated prose bullets - "- 2026-09-27 05:2x his clock (agent, topic): what happened ...
+# Rule: what to do next time" - not the bold wrong:/lesson: form, and until 27 Sep this parser saw none of them (175
+# bullets, 172 of them from September; scheduled audit account02/B13). The header ends at the first colon followed by a
+# space, so a clock like 05:2x stays in it; the lesson starts at a rule-like marker, and a bullet without one is all
+# 'wrong' with an empty lesson - still a correction, still tokens for the families.
+DATED = re.compile(r"^\s*-\s*(?P<hdr>20\d\d-\d\d-\d\d.{0,200}?):\s(?P<rest>.*)$", re.S)
+PROSE_LESSON = re.compile(r"\b(?:the rule|rule for next time|rule|lesson|fix|how to apply)\s*:\s*", re.I)
+
+
+def _lead(s, limit=300):
+    """The first sentence (at least 40 characters), at most `limit` characters."""
+    s = re.sub(r"\s+", " ", s).strip()
+    m = re.search(r"(?<=.{40})[.;](?:\s|$)", s)
+    return (s[:m.start()] if m else s)[:limit]
+
+
+def prose_fields(rest):
+    """(wrong, lesson, '') for a dated prose correction: its first sentence and its rule, each at most 300 characters.
+    A prose correction runs to a median 43 distinct stems against 10 for a bold one, and the overlap measure divides by
+    the smaller set, so the whole text linked nearly everything (7,340 edges instead of 864, 27 Sep); the lead sentence
+    and the rule are the shape. The reflexes it names are found by the same scan as the rest."""
+    m = PROSE_LESSON.search(rest)
+    wrong, lesson = (rest[:m.start()], rest[m.end():]) if m else (rest, "")
+    clean = lambda s: re.sub(r"[;.\s]+$", "", s).strip()
+    return clean(_lead(wrong)), clean(_lead(lesson)), ""
 
 
 def extract_fields(rest):
@@ -407,13 +432,39 @@ def parse_corrections(reflex_ids, raw=None):
     if cur:
         bullets.append("\n".join(cur))
 
+    # The dated prose entries are read in a second pass of their own, so the grouping above - and with it the text and
+    # the content id of every bold record - stays exactly what it was: two bold entries have a dated entry right under
+    # them with no blank line, which the first pass joins to them, and the watch would read a changed id as a removal.
+    # A dated entry starts at column 0 ("- 2026-09-27 ..."); its continuation lines are indented.
+    dated_bullets, cur = [], None
+    for ln in raw.splitlines():
+        if re.match(r"^-\s*20\d\d-\d\d-\d\d", ln):
+            if cur:
+                dated_bullets.append("\n".join(cur))
+            cur = [ln]
+        elif cur is not None and ln.strip() and ln[:1] in (" ", "\t"):
+            cur.append(ln)
+        else:
+            if cur:
+                dated_bullets.append("\n".join(cur))
+            cur = None
+    if cur:
+        dated_bullets.append("\n".join(cur))
+
     recs = []
-    for b in bullets:
-        hm = HEADER.match(b)
-        if not hm:
-            continue
-        hdr, rest = hm.group("hdr"), hm.group("rest")
-        fields = extract_fields(rest)
+    for b, form in [(x, "bold") for x in bullets] + [(x, "dated") for x in dated_bullets]:
+        if form == "bold":
+            hm = HEADER.match(b)
+            if not hm:
+                continue
+            hdr, rest = hm.group("hdr"), hm.group("rest")
+            fields = extract_fields(rest)
+        else:
+            dm = DATED.match(b)
+            if not dm:
+                continue
+            hdr, rest = dm.group("hdr"), dm.group("rest")
+            fields = prose_fields(rest)
         if not fields:
             continue  # not a wrong/lesson-structured correction (prose note); skip for the graph
         wrong, lesson, reflex_field = fields

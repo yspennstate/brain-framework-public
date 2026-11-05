@@ -29,6 +29,7 @@ import json
 import ntpath
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -60,8 +61,17 @@ PROJECT_MEMORY_NAME = "project_memory_hook.py"
 PROJECT_MEMORY_HOT_NAME = "project_memory_hot_hook.py"
 
 
+_RAW_SCRIPT_PATHS: dict[str, str] = {}
+
+
 def _norm_script(path: str) -> str:
-    return ntpath.normcase(ntpath.normpath(path.strip().strip('"\'')))
+    raw = path.strip().strip('"\'')
+    norm = ntpath.normcase(ntpath.normpath(raw))
+    # 2026-10-29 (Mac port): ntpath turns /Users/x/... into \users\x\..., which no POSIX open() can read, so every
+    # expected script read as missing and the selftest's rejections all came from that one cause. Compare in the
+    # normalized form, read from the first raw spelling seen (the module's own Path.home() tables).
+    _RAW_SCRIPT_PATHS.setdefault(norm, raw)
+    return norm
 
 
 EXPECTED_SCRIPTS = {
@@ -231,13 +241,101 @@ def _handlers(config: dict[str, Any], event: str) -> list[dict[str, Any]]:
     return out
 
 
+# 2026-10-30 (Mac): everything above is the Windows hook-host contract (commandWindows, C:\Python314, the
+# ~/.brain-framework/runtime layout, one error-graph observer per event). On macOS Codex runs `command`, the
+# project-memory hooks live in ~/.claude/dreaming and the error graph is not enabled, so the Windows contract
+# reported 50 failures against a correct install. Off Windows the contract is: every event has handlers, each
+# handler is a positive-timeout command whose scripts exist and compile, and the core hooks sit on their events.
+POSIX_CORE = {
+    "UserPromptSubmit": (REFLEX_NAME, STOP_GUARD_NAME, PROJECT_MEMORY_NAME),
+    "PreToolUse": (REFLEX_NAME, HELP_GUARD_NAME, PROJECT_MEMORY_HOT_NAME),
+    "PostToolUse": (),
+    "Stop": (STOP_GUARD_NAME,),
+}
+
+
+def validate_posix(config: Any) -> list[str]:
+    problems: list[str] = []
+    if not isinstance(config, dict) or not isinstance(config.get("hooks"), dict):
+        return ["top-level hooks object missing or invalid"]
+    for event, core in POSIX_CORE.items():
+        handlers = _handlers(config, event)
+        if not handlers:
+            problems.append(f"{event}: no handlers")
+            continue
+        seen: set[str] = set()
+        for index, handler in enumerate(handlers):
+            command = str(handler.get("command") or "")
+            if handler.get("type") != "command":
+                problems.append(f"{event}[{index}]: handler type must be command")
+            timeout = handler.get("timeout")
+            if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or timeout <= 0:
+                problems.append(f"{event}[{index}]: timeout must be positive")
+            if not command:
+                problems.append(f"{event}[{index}]: command missing")
+                continue
+            try:
+                argv = shlex.split(command)
+            except ValueError:
+                problems.append(f"{event}[{index}]: command does not parse")
+                continue
+            for arg in argv:
+                if not arg.endswith(".py"):
+                    continue
+                seen.add(os.path.basename(arg))
+                try:
+                    compile(Path(arg).read_text(encoding="utf-8-sig"), arg, "exec")
+                except Exception as exc:  # noqa: BLE001
+                    problems.append(f"{event}[{index}]: script missing or invalid: {arg} ({type(exc).__name__})")
+        for name in core:
+            if name not in seen:
+                problems.append(f"{event}: core hook {name} missing")
+    return problems
+
+
+def _selftest_posix() -> int:
+    d = Path.home() / ".claude" / "dreaming"
+    py = sys.executable
+
+    def h(name: str) -> dict[str, Any]:
+        return {"type": "command", "timeout": 30, "command": "%s -B %s" % (py, d / name)}
+
+    good = {"hooks": {"UserPromptSubmit": [{"hooks": [h(REFLEX_NAME), h(STOP_GUARD_NAME), h(PROJECT_MEMORY_NAME)]}],
+                      "PreToolUse": [{"matcher": "*", "hooks": [h(REFLEX_NAME), h(HELP_GUARD_NAME), h(PROJECT_MEMORY_HOT_NAME)]}],
+                      "PostToolUse": [{"matcher": "*", "hooks": [h("live_inbox_hook.py")]}],
+                      "Stop": [{"hooks": [h(STOP_GUARD_NAME)]}]}}
+    failures = []
+    if validate_posix(good):
+        failures.append("known-good POSIX contract rejected: %s" % validate_posix(good))
+    no_stop = copy.deepcopy(good)
+    no_stop["hooks"]["Stop"] = []
+    gone = copy.deepcopy(good)
+    gone["hooks"]["PostToolUse"][0]["hooks"][0]["command"] = "%s -B %s" % (py, d / "no_such_hook_xyz.py")
+    zero = copy.deepcopy(good)
+    zero["hooks"]["Stop"][0]["hooks"][0]["timeout"] = 0
+    no_reflex = copy.deepcopy(good)
+    no_reflex["hooks"]["PreToolUse"][0]["hooks"].pop(0)
+    for label, cfg, want in (("missing Stop", no_stop, "Stop: no handlers"),
+                             ("missing script", gone, "script missing or invalid"),
+                             ("zero timeout", zero, "timeout must be positive"),
+                             ("missing core reflex", no_reflex, "core hook %s missing" % REFLEX_NAME)):
+        if not any(want in p for p in validate_posix(cfg)):
+            failures.append("%s not rejected" % label)
+    for f in failures:
+        print("FAIL", f)
+    print("POSIX selftest: %d failure(s)" % len(failures))
+    return 1 if failures else 0
+
+
 def validate(config: Any) -> list[str]:
+    if os.name != "nt":
+        return validate_posix(config)
     problems: list[str] = []
     if not isinstance(config, dict) or not isinstance(config.get("hooks"), dict):
         return ["top-level hooks object missing or invalid"]
     for script in tuple(EXPECTED_SCRIPTS.values()) + SUPPORT_SCRIPTS:
         try:
-            source = Path(script).read_text(encoding="utf-8-sig")
+            source = Path(_RAW_SCRIPT_PATHS.get(script, script)).read_text(encoding="utf-8-sig")
             compile(source, script, "exec")
         except Exception as exc:
             problems.append(f"expected hook script missing or invalid: {ntpath.basename(script)} ({type(exc).__name__})")
@@ -382,6 +480,8 @@ def _sample_config() -> dict[str, Any]:
 
 
 def _selftest() -> int:
+    if os.name != "nt":
+        return _selftest_posix()
     failures: list[str] = []
     good = _sample_config()
     if validate(good):

@@ -1,4 +1,4 @@
-"""Windowless worker policy: BelowNormal, with execution-speed throttling disabled."""
+"""Worker policy: windowless at BelowNormal with execution-speed throttling disabled on Windows; nice 10 elsewhere."""
 import ctypes
 import os
 import subprocess
@@ -30,8 +30,17 @@ def policy():
         ok = bool(k.SetPriorityClass(handle, 0x00004000))
         unthrottle(handle)
         return ok
+    else:
+        try:
+            if os.getpriority(os.PRIO_PROCESS, 0) < 10:
+                os.setpriority(os.PRIO_PROCESS, 0, 10)
+        except (AttributeError, OSError):
+            pass
 
 def spawn(argv, **kwargs):
+    if os.name != 'nt':
+        # its own session, so the child outlives the shell that started it
+        return subprocess.Popen(argv, start_new_session=True, **kwargs)
     p = subprocess.Popen(argv, creationflags=FLAGS, **kwargs)
     try:
         unthrottle(p._handle)

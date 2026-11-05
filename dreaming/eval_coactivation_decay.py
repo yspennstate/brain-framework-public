@@ -4,8 +4,10 @@
 from __future__ import print_function
 
 import io
+import math
 import os
 import tempfile
+import time
 
 import coactivation_end as coact
 import sys
@@ -13,11 +15,19 @@ import sys
 
 STAMP = "2099-01-02T03:04:05"
 HEADER = "a\tb\tweight\n"
+# The decay is by elapsed time since the table was last rewritten (2026-09-26). This much age is exactly
+# one step of the old per-fold rule (a factor of 0.98), so the fixture's original numbers still hold.
+OLD_STEP_S = coact.HALF_LIFE_DAYS * 86400.0 * math.log(1 / 0.98, 2)
 
 
 def _write(path, text):
     with io.open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
+
+
+def _age(path, seconds, now=None):
+    t = (time.time() if now is None else now) - seconds
+    os.utime(path, (t, t))
 
 
 def _bytes(path):
@@ -39,7 +49,7 @@ def _weights(path):
     return out
 
 
-def _multi_fixture(root, reverse_targets=False):
+def _multi_fixture(root, reverse_targets=False, now=None):
     os.makedirs(root)
     tsv = os.path.join(root, "coactivation.tsv")
     audit = os.path.join(root, "coactivation_folds.log")
@@ -51,10 +61,14 @@ def _multi_fixture(root, reverse_targets=False):
     _write(focused, "old_b\nold_a\nold_a\n")
     _write(survey, "\n".join("s%d" % i for i in reversed(range(8))) + "\n")
     _write(singleton, "alone\nalone\n")
+    # One pinned clock for the age and the fold (28 Sep): weights are now stored at full precision, so the
+    # milliseconds between aging the table and the fold's own clock read would show in the last digits and the
+    # two fixtures below would differ by them. With %.3f they were rounded away.
+    _age(tsv, OLD_STEP_S, now)
     targets = [focused, survey, singleton]
     if reverse_targets:
         targets.reverse()
-    result = coact.fold_targets(targets, tsv=tsv, foldlog=audit, stamp=STAMP)
+    result = coact.fold_targets(targets, tsv=tsv, foldlog=audit, stamp=STAMP, now=now)
     return result, tsv, audit, targets
 
 
@@ -95,13 +109,15 @@ def main():
 
         # Two foldable logs plus one singleton produce one decay, 29 pair updates, and one audit
         # row. The eight-memory survey is focus-weighted to 6/8; the weak old edge is pruned.
-        result_a, tsv_a, audit_a, logs_a = _multi_fixture(os.path.join(td, "multi-a"))
+        pinned = time.time()
+        result_a, tsv_a, audit_a, logs_a = _multi_fixture(os.path.join(td, "multi-a"), now=pinned)
         weights = _weights(tsv_a)
         assert result_a == {
             "result": "decay", "targets": 3, "foldable": 2, "pairs": 29, "removed": 3,
         }
-        assert weights[("old_a", "old_b")] == 2.960  # one decay, then +1 focused
-        assert weights[("a", "literal_edge")] == 0.980  # exact header row only; slug `a` survives
+        # full-precision weights: the decay factor is 0.98 to about 1e-16, no longer rounded to three places
+        assert abs(weights[("old_a", "old_b")] - 2.960) < 1e-9  # one decay, then +1 focused
+        assert abs(weights[("a", "literal_edge")] - 0.980) < 1e-9  # exact header row only; slug `a` survives
         assert ("weak_a", "weak_b") not in weights  # 0.510 * 0.98 < 0.5
         survey_pairs = [v for (a, b), v in weights.items() if a.startswith("s") and b.startswith("s")]
         assert len(survey_pairs) == 28 and set(survey_pairs) == {0.750}
@@ -116,7 +132,7 @@ def main():
         # (see coactivation_end._receipt), which differs between the multi-a and multi-b temp dirs. So
         # the meaningful invariant is edge-equality, not byte-equality - compare weights, which skip receipts.)
         result_b, tsv_b, _audit_b, _logs_b = _multi_fixture(
-            os.path.join(td, "multi-b"), reverse_targets=True
+            os.path.join(td, "multi-b"), reverse_targets=True, now=pinned
         )
         assert result_b == result_a and _weights(tsv_b) == _weights(tsv_a)
         checks += 1
@@ -173,6 +189,38 @@ def main():
         assert io.open(unreadable_audit, encoding="utf-8").read().strip() == (
             STAMP + "\tv2\tfailed\t2\t1\t1"
         )
+        checks += 1
+
+        # THE 25 SEP BUG: fifty sessions ending within seconds must not erode a link. Under the old
+        # per-fold rule this edge fell to 0.98**50 = 0.36 and the floor deleted it; now it keeps ~1.0.
+        burst = os.path.join(td, "burst")
+        os.makedirs(burst)
+        burst_tsv = os.path.join(burst, "coactivation.tsv")
+        burst_audit = os.path.join(burst, "coactivation_folds.log")
+        _write(burst_tsv, HEADER + "keep_a\tkeep_b\t1.000\n")
+        for i in range(50):
+            log = os.path.join(burst, "s%02d.log" % i)
+            _write(log, "n%02d_a\nn%02d_b\n" % (i, i))
+            r = coact.fold_targets([log], tsv=burst_tsv, foldlog=burst_audit, stamp=STAMP)
+            assert r["result"] == "decay", r
+        kept = _weights(burst_tsv).get(("keep_a", "keep_b"))
+        assert kept is not None and kept >= 0.999, kept
+        checks += 1
+
+        # And disuse over TIME still fades a link: 0.9 of a half-life leaves 0.5 ** 0.9 = 0.536 of it,
+        # and a 0.900 link falls to 0.482, under the floor.
+        idle = os.path.join(td, "idle")
+        os.makedirs(idle)
+        idle_tsv = os.path.join(idle, "coactivation.tsv")
+        idle_audit = os.path.join(idle, "coactivation_folds.log")
+        idle_log = os.path.join(idle, "later.log")
+        _write(idle_tsv, HEADER + "p\tq\t1.000\nr\ts\t0.900\n")
+        _write(idle_log, "later_a\nlater_b\n")
+        _age(idle_tsv, 0.9 * coact.HALF_LIFE_DAYS * 86400.0)
+        coact.fold_targets([idle_log], tsv=idle_tsv, foldlog=idle_audit, stamp=STAMP)
+        idle_w = _weights(idle_tsv)
+        assert 0.535 <= idle_w[("p", "q")] <= 0.537, idle_w
+        assert ("r", "s") not in idle_w and idle_w[("later_a", "later_b")] == 1.0
         checks += 1
 
     print("eval_coactivation_decay: PASS (%d isolated transaction checks)" % checks)

@@ -12,7 +12,10 @@ the hook.
                                  [--jobs 4] [--env MATHBRAIN_GATE_FLOOR=25 ...] [--long-prompts SAMPLE.json]
 
 Scoring is the fresh bank's: theorem-level, a served title carrying one of the target's stems; rank-1 = the FIRST
-served title carries a stem; silent = no block. For the unanswerable targets: false fire = any block. The
+served title carries a stem; silent = no block. For the unanswerable targets: false fire = any block. A row is scored
+only when the hook finished and exited 0 and every card it served is complete (a claim id and a trust tag); a timeout,
+a nonzero exit, a launch error, output that is not the hook's JSON, an incomplete card or a block with no readable card
+is counted apart and kept out of every rate. The
 optional --long-prompts file (a plit SAMPLE.json or any JSON list of {"item_id","prompt"|"argument"|"text"}) is a
 control for the proof-audit shape the on-topic gate was tuned on: it reports how many long prompts get a block and
 which node ids, so a change meant for short questions can be shown not to move the long ones.
@@ -34,12 +37,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 HOOK = os.path.join(HERE, "math_sense.py")
 STATE = os.path.join(HERE, "state")
 BANK = os.path.join(STATE, "math_probe_fresh_20260903.json")
-# 2026-09-13: the card header dropped its ", score N.N" tag, so a pattern that REQUIRED the score read
-# every block as silent - 0 of 15 served with 100 pct silent on a hook that was serving correctly.
-# Match the kind bracket itself, which both the old and the new header carry.
-_BS = chr(92)
-TITLE_RE = re.compile("^- (.+?) " + _BS + "[[^" + _BS + "]]{1,60}" + _BS + "]:", re.M)
-SRC_RE = re.compile('^[ ]*[(](?:source-id:[ ]*)?([A-Za-z0-9_]{16,})[ ]*(?:[|]|[)])', re.M)  # id, not label prose: the label lost "source-id:" on 2026-09-13
+# The block is read by the shared parser (math_block_parse), which reads both card formats. This file kept a
+# private pair of patterns until 30 Sep (account02/B07, B07-R79-MATH-HOOKPATH-EVALUATOR-IGNORES-CHILD-EXIT-056);
+# on 238 blocks the live hook served on 29 Sep (577 cards) the two gave the same titles and ids on every block.
+sys.path.insert(0, HERE)
+from math_block_parse import card_is_complete, delivery_problem, iter_cards  # noqa: E402
+
+
+import os as _ko_os, sys as _ko_sys  # noqa: E402
+_ko_sys.path.insert(0, _ko_os.path.join(_ko_os.path.expanduser("~"), ".claude", "brain_graph", "bin"))
+from quarantine_rows import keep_old  # noqa: E402  a rerun keeps the previous output (R13 trap 1, 27 Sep): brain data is never deleted
 
 
 def _key(text):
@@ -48,28 +55,83 @@ def _key(text):
     return " ".join("".join(out).split())
 
 
+CALL_TIMEOUT_S = 90   # one hook call; a call that runs past it is asked once more (ask, below)
+
+
+def _call(prompt, e):
+    """(stdout, exit code, stderr tail) of one hook call."""
+    out = subprocess.run([sys.executable, HOOK], input=json.dumps({"prompt": prompt}),
+                         capture_output=True, text=True, encoding="utf-8", errors="replace",
+                         timeout=CALL_TIMEOUT_S, env=e)
+    return out.stdout.strip(), out.returncode, (out.stderr or "")[-300:]
+
+
 def ask(prompt, env):
     e = dict(os.environ)
     e.update(env)
     e["PYTHONIOENCODING"] = "utf-8"
     t0 = time.time()
+    # 2026-09-25: a call that times out is asked once more, and a row whose second call times out too is MARKED
+    # (timed_out) and counted in the summary. Before, a timeout scored the question silent: in a stall of the laptop
+    # (25 Sep 22:2x-22:4x) 27 answerable rows of one arm came back empty at 90-103 s each and read as misses, though a
+    # paired re-run served every one. The gate reads a counted timeout as contention, as it reads an instrument
+    # timeout (INCONCLUSIVE), never as a regression.
+    retried = timed_out = False
+    raw, rc, err, launch = "", None, "", ""
     try:
-        out = subprocess.run([sys.executable, HOOK], input=json.dumps({"prompt": prompt}),
-                             capture_output=True, text=True, encoding="utf-8", errors="replace",
-                             timeout=90, env=e)
-        raw = out.stdout.strip()
+        raw, rc, err = _call(prompt, e)
     except subprocess.TimeoutExpired:
-        raw = ""
+        retried = True
+        try:
+            raw, rc, err = _call(prompt, e)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+        except OSError as x:
+            launch = repr(x)[:160]
+    except OSError as x:
+        launch = repr(x)[:160]
     dt = time.time() - t0
-    block = ""
-    if raw:
+    # 30 Sep (account02/B07, B07-R79-MATH-HOOKPATH-EVALUATOR-IGNORES-CHILD-EXIT-056): a block counts only from a hook
+    # that finished and exited 0 - Claude Code uses a UserPromptSubmit hook's output only on exit 0, so a valid-looking
+    # block from a hook that then exited 7 was scored as served here and never reached a session. A nonzero exit, a
+    # launch error or output that is not the hook's JSON makes the row invalid: its content is not scored, and the
+    # summary keeps it out of every rate and counts it.
+    invalid, block = "", ""
+    if launch:
+        invalid = "launch error: " + launch
+    elif not timed_out and rc != 0:
+        invalid = "hook exited %s" % rc
+    elif raw:
         try:
             block = json.loads(raw)["hookSpecificOutput"]["additionalContext"]
         except Exception:
-            block = ""
-    titles = TITLE_RE.findall(block)
-    ids = SRC_RE.findall(block)
-    return {"block_chars": len(block), "titles": titles, "ids": ids, "seconds": round(dt, 2)}
+            invalid = "hook output is not the hook's JSON"
+    # 30 Sep (account04/B07, B07-R79-INCOMPLETE-CARD-PASSES-REGRESSION-GATES): a card that lost its id or trust line, or
+    # a block with text but no readable card, reached the session broken. Until now the header's title still scored a
+    # hit; such a row is a delivery failure, kept out of every rate like a crashed call and counted.
+    broken = [] if invalid else [c for c in iter_cards(block) if not card_is_complete(c)]
+    if not invalid:
+        invalid = delivery_problem(block)
+    if invalid:
+        block = ""
+    cards = list(iter_cards(block))
+    r = {"block_chars": len(block), "titles": [c.title for c in cards], "ids": [c.node_id for c in cards if c.node_id],
+         "seconds": round(dt, 2), "hook_rc": rc}
+    if invalid:
+        r["invalid"] = invalid
+        r["stderr_tail"] = err[-200:]
+        if broken:
+            r["incomplete_titles"] = [c.title[:80] for c in broken][:3]
+    if retried:
+        r["retried"] = True
+    if timed_out:
+        r["timed_out"] = True
+    return r
+
+
+def valid(r):
+    """A row scored as an outcome: the hook finished, exited 0 and printed nothing or its JSON."""
+    return not r.get("invalid") and not r.get("timed_out")
 
 
 def stem_hit(titles, stems):
@@ -129,35 +191,68 @@ def main():
     with ThreadPoolExecutor(max_workers=args.jobs) as ex:
         for r in ex.map(run, jobs):
             rows.append(r)
-    with open(args.out, "w", encoding="utf-8") as fh:
+    with open(keep_old(args.out), "w", encoding="utf-8") as fh:
         for r in rows:
             fh.write(json.dumps(r, ensure_ascii=False) + "\n")
+    summary, lines = summarize(rows, env, args.bank)
+    for line in lines:
+        print(line)
+    with open(keep_old(args.out + ".summary.json"), "w", encoding="utf-8") as fh:
+        json.dump(summary, fh, indent=2)
 
+
+def summarize(rows, env, bank):
+    """(summary, printed lines). Every rate is over the rows that were scored (valid); a row whose hook call timed
+    out twice, exited nonzero, failed to launch or printed something other than its JSON is kept out of every rate
+    and counted beside it (not_scored per form; invalid and timed_out overall)."""
     def pct(n, d):
         return "%d/%d (%.1f%%)" % (n, d, 100.0 * n / d) if d else "0/0"
-    summary = {"env": env, "bank": os.path.basename(args.bank), "rows": len(rows)}
+    lines = []
+    summary = {"env": env, "bank": os.path.basename(bank), "rows": len(rows)}
     for form in ("q_content", "q_hinted"):
-        sub = [r for r in rows if r["kind"] == "answerable" and r["form"] == form]
+        sub_all = [r for r in rows if r["kind"] == "answerable" and r["form"] == form]
+        sub = [r for r in sub_all if valid(r)]
         hit = sum(1 for r in sub if r["hit"]); r1 = sum(1 for r in sub if r["rank1"]); sil = sum(1 for r in sub if not r["titles"])
-        summary[form] = {"n": len(sub), "hit": hit, "rank1": r1, "silent": sil}
-        print("%-10s served-theorem %s  rank-1 %s  silent %s" % (form, pct(hit, len(sub)), pct(r1, len(sub)), pct(sil, len(sub))))
-    un = [r for r in rows if r["kind"] == "unanswerable"]
+        summary[form] = {"n": len(sub), "hit": hit, "rank1": r1, "silent": sil, "not_scored": len(sub_all) - len(sub)}
+        lines.append("%-10s served-theorem %s  rank-1 %s  silent %s%s" % (
+            form, pct(hit, len(sub)), pct(r1, len(sub)), pct(sil, len(sub)),
+            ("  (%d not scored)" % (len(sub_all) - len(sub))) if len(sub_all) > len(sub) else ""))
+    un_all = [r for r in rows if r["kind"] == "unanswerable"]
+    un = [r for r in un_all if valid(r)]
     ff = sum(1 for r in un if r["titles"])
     present = sum(1 for r in un if r.get("target_served"))
     summary["unanswerable"] = {"n": len(un), "false_fire": ff, "target_served": present,
-                               "strict_false_fire": ff - present, "strict_n": len(un) - present}
-    print("unanswerable false fire %s | strict (targets the store now holds excluded: %d) %s"
-          % (pct(ff, len(un)), present, pct(ff - present, len(un) - present)))
-    lg = [r for r in rows if r["kind"] == "long"]
-    if lg:
+                               "strict_false_fire": ff - present, "strict_n": len(un) - present,
+                               "not_scored": len(un_all) - len(un)}
+    lines.append("unanswerable false fire %s | strict (targets the store now holds excluded: %d) %s%s"
+                 % (pct(ff, len(un)), present, pct(ff - present, len(un) - present),
+                    ("  (%d not scored)" % (len(un_all) - len(un))) if len(un_all) > len(un) else ""))
+    lg_all = [r for r in rows if r["kind"] == "long"]
+    lg = [r for r in lg_all if valid(r)]
+    if lg_all:
         served = sum(1 for r in lg if r["titles"])
-        summary["long"] = {"n": len(lg), "served": served, "notes": sum(len(r["titles"]) for r in lg)}
-        print("long prompts served %s  notes %d" % (pct(served, len(lg)), summary["long"]["notes"]))
+        summary["long"] = {"n": len(lg), "served": served, "notes": sum(len(r["titles"]) for r in lg),
+                           "not_scored": len(lg_all) - len(lg)}
+        lines.append("long prompts served %s  notes %d" % (pct(served, len(lg)), summary["long"]["notes"]))
+    n_retry = sum(1 for r in rows if r.get("retried"))
+    n_to = sum(1 for r in rows if r.get("timed_out"))
+    summary["retried"], summary["timed_out"] = n_retry, n_to
+    if n_retry:
+        lines.append("hook calls over the %d s cap: %d asked again, %d timed out again (marked timed_out, not scored)"
+                     % (CALL_TIMEOUT_S, n_retry, n_to))
+    bad = [r for r in rows if r.get("invalid")]
+    summary["invalid"] = len(bad)
+    if bad:
+        reasons = {}
+        for r in bad:
+            reasons[r["invalid"]] = reasons.get(r["invalid"], 0) + 1
+        summary["invalid_reasons"] = dict(sorted(reasons.items(), key=lambda kv: -kv[1])[:5])
+        lines.append("hook calls not delivered whole: %d, not scored (%s)" % (
+            len(bad), "; ".join("%s: %d" % kv for kv in summary["invalid_reasons"].items())))
     secs = [r["seconds"] for r in rows]
     summary["median_seconds"] = sorted(secs)[len(secs) // 2] if secs else None
-    print("median hook seconds", summary["median_seconds"])
-    with open(args.out + ".summary.json", "w", encoding="utf-8") as fh:
-        json.dump(summary, fh, indent=2)
+    lines.append("median hook seconds %s" % summary["median_seconds"])
+    return summary, lines
 
 
 if __name__ == "__main__":

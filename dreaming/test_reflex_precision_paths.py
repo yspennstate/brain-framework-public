@@ -77,6 +77,18 @@ class PerPathPrecision(unittest.TestCase):
         self.assertEqual(out["reflexes"]["r2"]["n"], 5)
         self.assertEqual(out["reflexes"]["r2"]["paths"], {})
 
+    def test_an_unknown_path_label_is_no_route(self):
+        # the 2 Sep hand sheet put its source in the path field (27 Sep): the rows count overall, no route is made
+        rows = [_row("h%d" % i, "r6", "yes", "session 7dcb21b8 (vixramp), 2026-09-02 12:0x-19:4xZ", stratum="hand")
+                for i in range(4)]
+        rows += [_row("g%d" % i, "r6", "no", "graph") for i in range(4)]
+        out = self._build(rows)
+        v = out["reflexes"]["r6"]
+        self.assertEqual(v["n"], 4)
+        self.assertEqual(v["on_domain"], 4)
+        self.assertEqual(sorted(v["paths"]), ["graph"])
+        self.assertEqual(out["rows_with_unknown_path_label"], 4)
+
     def test_suppressed_rows_never_enter_a_path(self):
         rows = [_row("s%d" % i, "r3", "yes", "graph", stratum="suppressed", reason="precision_graph") for i in range(4)]
         out = self._build(rows)

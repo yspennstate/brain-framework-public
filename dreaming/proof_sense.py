@@ -6,7 +6,7 @@ sentence steps: a proof under audit, a lemma being checked, a derivation), it in
 to three CLASS CHECKS chosen by what the argument contains - named results (hypotheses, direction, rate),
 inequality chains, paired operators (sup/inf, limsup/liminf, union/intersection, forall/exists), index and
 constant arithmetic, load-bearing hypothesis words, limit targets - plus the machine-check route (numerics,
-then Lean against the local Mathlib). It is general: written from the classes of one-token error a proof
+then Lean against the local Mathlib through lean_check.py). It is general: written from the classes of one-token error a proof
 can carry, never from any test item, so it applies to any argument in any paper.
 
 Why a separate lane (2026-09-07): the general gut caps at two fires ranked by scar charge, so on a proof the
@@ -701,16 +701,31 @@ _WRX = {w: re.compile(r"(?<![a-z-])" + re.escape(w) + r"(?![a-z-])", re.I) for w
         set(w for w, _ in WEAKER) | set(x for _, xs in WEAKER for x in xs)}
 
 
-def _weaker_flags(claim_text, steps):
-    """[(step_num, weak, strong)] - the weaker word used in a step after the stronger was granted earlier."""
+def _weaker_flags(claim_text, steps, gate_text=None):
+    """[(step_num, weak, strong)] - the weaker word used in a step after the stronger was granted earlier.
+
+    `claim_text` GRANTS strong words (the labelled claim, as before); `gate_text` (the labelled claim, or the
+    preamble of an unlabelled proof) only SUPPRESSES: a weaker word that is the claim's own conclusion never
+    flags. Granting from the preamble was tried on 2026-09-22 and added two unjudged flags on the harder-35 bank
+    while removing one false alarm, so the preamble is read for suppression alone."""
     granted = set()
     for _, xs in WEAKER:
         for x in xs:
             if _WRX[x].search(claim_text or ""):
                 granted.add(x)
+    # CLAIM GATE (2026-09-22, brain study F60): a step that uses the weaker word is not a fault when the weaker
+    # property is what the CLAIM itself asserts or asks for - "show the process is a supermartingale" makes every
+    # later "supermartingale" the conclusion, not a slip. Judged on the harder-35 bank the flag fired three times
+    # and was wrong three times, twice aiming the reader at a sound step while the planted fault sat elsewhere
+    # (Agent D). A weaker word that appears in the claim line therefore does not flag. PROOF_WEAKER_CLAIM_GATE=0
+    # restores the old behaviour.
+    _gate = os.environ.get("PROOF_WEAKER_CLAIM_GATE", "1") != "0"
+    _in_claim = set(w for w, _ in WEAKER if _gate and _WRX[w].search((gate_text if gate_text is not None else claim_text) or ""))
     out = []
     for num, body in steps:
         for weak, strongs in WEAKER:
+            if weak in _in_claim:
+                continue
             if _WRX[weak].search(body) and not any(_WRX[x].search(body) for x in strongs):
                 g = [x for x in strongs if x in granted]
                 if g:
@@ -731,9 +746,20 @@ def step_inventory(text, max_chars=6000):
     cline, regime = claim_line(text)
     out = [cline] if cline else []
     cm = CLAIM_RE.search(text)
+    # the claim text for the WEAKER flags: the labelled claim when there is one, else the PREAMBLE before the first
+    # step - "Let ... Prove that Z is a nonnegative local martingale and a supermartingale" is the claim of a proof
+    # that never writes the word "Claim" (all three of the harder-35 false alarms were such proofs, F60)
+    _claim_txt = cm.group(1) if cm else ""
+    _gate_txt = _claim_txt
+    if not _gate_txt:
+        _m0 = STEP_SPLIT_LINE.search(text)
+        _gate_txt = text[:_m0.start()] if _m0 else text[:600]
     weak_by_step = {}
-    for num, weak, strong in _weaker_flags(cm.group(1) if cm else "", steps):
-        weak_by_step.setdefault(num, []).append("'%s' where '%s' was granted" % (weak, strong))
+    for num, weak, strong in _weaker_flags(_claim_txt, steps, gate_text=_gate_txt):
+        # Test B (2026-09-22): all three inventory cues served on the harder-35 bank were false alarms - the
+        # step legitimately CONCLUDED the weaker property (a supermartingale, continuity, closedness). Say so.
+        weak_by_step.setdefault(num, []).append(
+            "'%s' where '%s' was granted (fine if the step concludes the weaker property; a fault only if the step needs the stronger one)" % (weak, strong))
     for num, body in steps:
         parts = []
         for name, rx in INV:
@@ -805,12 +831,20 @@ POSTURE_HEAD = (
     'against for applicability, never evidence the step is right or wrong. The checks for this argument come '
     'first, the general rules last. (lane v9: specific first)'
 )
+# Lean is installed on the laptop only; elsewhere the hint would send an agent to a checker that is not there.
+_LEAN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lean_check.py").replace("\\", "/")
+_LEAN_HINT = (('Lean on this machine: python %s --stmt "example ... := by ..." (Mathlib; --core for a '
+               'Nat/Int/List statement); COMPILED is not a certificate and COMPILE_FAILED is not a '
+               'counterexample. ') % _LEAN
+              if os.path.isdir(os.path.expanduser("~/.elan")) or os.environ.get("LEAN_CHECK_FORCE") else
+              'No Lean toolchain on this machine (no ~/.elan): do not claim a Lean check here. ')
 POSTURE_REST = (
     '  - general rules: an example refutes a universal claim only if it meets ALL its hypotheses; passing sampled '
     'cases do not establish untested cases, while exhaustive certified verification can establish every case in a '
     'rigorously finite domain. Distinguish an invalid inference from an unfamiliar but valid one: a step is not '
     'wrong because it skips the theorem you expected. Use bounded, windowless machine checks only after fresh '
-    'compute admission. Compiler acceptance alone is not a proof certificate. Require the exact named theorem and '
+    'compute admission. ' + _LEAN_HINT +
+    'Compiler acceptance alone is not a proof certificate. Require the exact named theorem and '
     'declaration kind, transitive dependencies limited to propext, Classical.choice and Quot.sound (reject sorryAx '
     'and other axioms), and evidence bound to exact source bytes and a trusted compiler/dependency environment. A '
     'review hash records the caller assertion; it does not independently establish review, and executable '

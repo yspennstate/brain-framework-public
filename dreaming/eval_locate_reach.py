@@ -40,11 +40,19 @@ DEFAULT_BANK = os.path.join(STATE, "locate_reach_bank_20260911.json")
 SRC_RE = re.compile('^[ ]*[(](?:source-id:[ ]*)?([A-Za-z0-9_]{16,})[ ]*(?:[|]|[)])', re.M)  # id, not label prose: the label lost "source-id:" on 2026-09-13
 
 
+HOOK = os.path.join(HERE, "math_sense.py")   # --hook replaces it (a rehearsal runs this bank on an arm; MATHBRAIN_STORE picks the store)
+
+
+import os as _ko_os, sys as _ko_sys  # noqa: E402
+_ko_sys.path.insert(0, _ko_os.path.join(_ko_os.path.expanduser("~"), ".claude", "brain_graph", "bin"))
+from quarantine_rows import keep_old  # noqa: E402  a rerun keeps the previous output (R13 trap 1, 27 Sep): brain data is never deleted
+
+
 def run_hook(question, sess):
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
     t0 = time.time()
     try:
-        out = subprocess.run([sys.executable, os.path.join(HERE, "math_sense.py")],
+        out = subprocess.run([sys.executable, HOOK],
                              input=json.dumps({"prompt": question, "session_id": sess}),
                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180, env=env)
         raw = (out.stdout or "").strip()
@@ -67,6 +75,12 @@ def main(argv=None):
         bank = argv[argv.index("--bank") + 1]
     if "--jobs" in argv:
         jobs = int(argv[argv.index("--jobs") + 1])
+    global HOOK
+    if "--hook" in argv:
+        HOOK = argv[argv.index("--hook") + 1]
+    if not os.path.isfile(HOOK):
+        # a missing hook scores every question silent - a quiet zero, never a measurement
+        raise SystemExit("eval_locate_reach: no such hook: %s" % HOOK)
     items = json.load(open(bank, encoding="utf-8"))["items"]
     stamp = time.strftime("%Y%m%d_%H%M%S")
 
@@ -95,7 +109,7 @@ def main(argv=None):
     summary["median_seconds"] = round(statistics.median(r["seconds"] for r in rows), 2) if rows else None
     os.makedirs(STATE, exist_ok=True)
     outp = os.path.join(STATE, "locate_reach_%s.json" % stamp)
-    with io.open(outp, "w", encoding="utf-8") as fh:
+    with io.open(keep_old(outp), "w", encoding="utf-8") as fh:
         json.dump({"summary": summary, "rows": rows}, fh, ensure_ascii=False, indent=1)
     line = "REACH " + " ".join("%s %d/%d" % (f, summary["families"][f]["reach"], summary["families"][f]["n_with_source"]) for f in fams)
     line += " | served " + " ".join("%s %d/%d" % (f, summary["families"][f]["served"], summary["families"][f]["n"]) for f in fams)

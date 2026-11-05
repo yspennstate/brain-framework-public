@@ -46,6 +46,8 @@ def harvest(n_files=25, lo=25, hi=600):
     for fp in files[-n_files:]:
         try:
             for ln in io.open(fp, encoding="utf-8", errors="replace"):
+                if '"user"' not in ln:  # every user record carries "type":"user"; skip the rest unparsed
+                    continue
                 try:
                     o = json.loads(ln)
                 except Exception:
@@ -70,6 +72,50 @@ def harvest(n_files=25, lo=25, hi=600):
                 out.append(t)
         except Exception:
             pass
+    try:
+        from prompt_archive import redact
+        out = [redact(t)[0] for t in out]
+    except Exception:
+        print("WARNING: prompt_archive.redact unavailable - prompts UNREDACTED; scan before persisting.")
+    return out
+
+
+ARCHIVE = os.path.join(HOME, "brain", "ai-memories-and-functionality", "01_ai_consciousness", "claude", "memory",
+                       "prompts", "archive")
+
+
+def harvest_archive(n, exclude=(), lo=25, hi=600):
+    """Up to n owner prompts from the prompt archive shards, newest first, with harvest()'s filters.
+
+    2026-10-29: the Mac keeps one transcript (most sessions write none), so harvest() found 8 prompts and the
+    regression gate's recall check sat INCOMPLETE. The archive holds the owner's words from every machine; this
+    tops a sample up from it. harvest() itself is unchanged for its other callers."""
+    seen = {t[:60].lower() for t in exclude}
+    out = []
+    for fp in sorted(glob.glob(os.path.join(ARCHIVE, "PROMPTS_2*.jsonl")), reverse=True):
+        try:
+            lines = io.open(fp, encoding="utf-8", errors="replace").read().splitlines()
+        except OSError:
+            continue
+        for ln in reversed(lines):
+            try:
+                o = json.loads(ln)
+            except Exception:
+                continue
+            if o.get("origin") != "owner" or o.get("repeat_of"):
+                continue
+            t = " ".join(str(o.get("text", "")).split())
+            if not (lo <= len(t) <= hi) or any(t.startswith(b) for b in BAD_STARTS):
+                continue
+            key = t[:60].lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(t)
+            if len(out) >= n:
+                break
+        if len(out) >= n:
+            break
     try:
         from prompt_archive import redact
         out = [redact(t)[0] for t in out]

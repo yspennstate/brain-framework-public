@@ -28,7 +28,8 @@ A subagent's compaction reaches the hook with its parent's session and no agent_
 agent's own compact record can land in its transcript after PostCompact fires; so the sweep also runs attribute(), which
 finds each unattributed row's summary in the session's agent transcripts, files the row under that agent and re-chains
 `previous` within each identity (12 Oct). `--attribute [--days N] [--dry]` runs that pass alone; `--refresh-gists
-[--dry]` rewrites the anchors whose description ended in a bare <summary> tag (the gist before 12 Oct).
+[--stale] [--dry]` rewrites the anchors whose description ended in a bare <summary> tag (the gist before 12 Oct), and with
+--stale every anchor whose description lacks the gist the current rule gives.
 
 The compactions tree is brain data under the 26 Sep law: never deleted. A hook must never break a compaction, so every
 error is swallowed and logged to compactions/errors.log. COMPACT_NODES_ROOT overrides the store and COMPACT_ANCHOR_DIR
@@ -477,6 +478,20 @@ _ASK_LINE = re.compile(r"^(?:#{1,6}\s*)?(?:\d{1,2}[.)]\s*)?[*_]*Primary Request 
 _SECTION_TITLES = frozenset(("primary request and intent", "key technical concepts", "files and code sections",
                              "errors and fixes", "problem solving", "all user messages", "pending tasks", "current work",
                              "optional next step", "summary"))
+# Custom-format summaries put the ask under their own headings, and open with machine notes. On 30 Oct 74 of 137 Mac
+# gists were a line like "Python is python3. There is no timeout and no PowerShell." and only 68 were distinct; a loop
+# session repeats its ask in every compaction, so the first NEXT/in-progress line is added to tell them apart
+# (ask + next: 113 distinct, 0 plumbing, 88 naming the ask or a task id).
+_ASK_HEAD = re.compile(r"\b(?:primary request|open asks?|owner'?s? asks?|user'?s? asks?|the asks?|open owner asks?|"
+                       r"what i was told|the request|current task)\b", re.I)
+_ASK_INLINE = re.compile(r"^(?:task|the ask|ask|his words|owner'?s? ask|the owner asked|he asked)\s*[:(]", re.I)
+_ORDER_HEAD = re.compile(r"\b(?:owner'?s? orders?|orders in force|open tasks?|pending tasks?)\b", re.I)
+_NOW_HEAD = re.compile(r"^(?:next\b|.*\bnext line\b|in progress\b|current work\b|running now\b|last tick\b|"
+                       r"optional next step\b)", re.I)
+_NEXT_HEAD = re.compile(r"^(?:next\b|.*\bnext line\b|optional next step\b)", re.I)   # wins over 'last tick' etc.
+_PLUMBING = re.compile(r"^(?:python3?\b|python:|there is no\b|no powershell|mesh (?:tool|cli)\b|local (?:clock|time)\b|"
+                       r"machine:|use /usr/bin|zsh\b|the shell\b|s = |scratchpad\b|environment\b|github: logged\b|"
+                       r"always stamp\b|stamp times\b|the hook refuses\b)", re.I)
 
 # The text the linker reads (14 Oct, LINK_VERSION x1). A summary opens its ask with session plumbing - who the agent
 # is, the clock, the crash, the keeper and its resume prompt, the contract, the mesh claims, the standing rules - and
@@ -632,25 +647,40 @@ def _summary_part(summary):
     return m.group(1) if m and m.group(1).strip() else summary
 
 
+def _gist_line(line):
+    g = re.sub(r"^(?:[-*+]|\d{1,2}[.)])\s+", "", line)
+    return re.sub(r"\s+", " ", re.sub(r"[*_`\"\[\]<>]", "", g)).strip()
+
+
+def _first_under(lines, head_ok, inline_ask=False):
+    """The first line of substance (not machine plumbing) under the first heading head_ok accepts."""
+    for i, line in enumerate(lines):
+        m = _ASK_LINE.match(line) if inline_ask else None
+        if m or (_is_heading(line) and head_ok(_core(line))):
+            rest = m.group(1).strip() if m else ""
+            pick = next((c for c in ([rest] if len(rest) >= 20 else []) + lines[i + 1:i + 8]
+                         if _substance(c) and not _PLUMBING.match(_core(c))), "")
+            if pick:
+                return pick
+    return ""
+
+
 def _gist(summary):
     """One line that tells a compaction from its neighbours: the ask when the summary names it ("Primary Request and
-    Intent", any markdown), else its first line of substance - never a bare tag, a heading, the transcript's preface or
-    an identity line."""
+    Intent", "Owner's open asks", any markdown), else the owner's orders, else its first line of substance - never a bare
+    tag, a heading, the transcript's preface, an identity line or machine plumbing - then '; next: ' and the first line
+    of its NEXT / in-progress section when it has one."""
     lines = [l.strip() for l in _summary_part(summary).splitlines() if l.strip() and not _TAG_LINE.match(l)]
-    pick = ""
-    for i, line in enumerate(lines):
-        m = _ASK_LINE.match(line)
-        if m:
-            rest = m.group(1).strip()
-            pick = next((c for c in ([rest] if len(rest) >= 20 else []) + lines[i + 1:i + 8] if _substance(c)), "")
-            break
-    if not pick:
-        pick = next((l for l in lines if _substance(l)), "")
-    if not pick:
-        pick = next(iter(lines), "")
-    g = re.sub(r"^(?:[-*+]|\d{1,2}[.)])\s+", "", pick)
-    g = re.sub(r"\s+", " ", re.sub(r"[*_`\"\[\]<>]", "", g)).strip()
-    return g[:150] or "summary text not parsed"
+    pick = (_first_under(lines, _ASK_HEAD.search, inline_ask=True)
+            or next((l for l in lines if _ASK_INLINE.match(_core(l)) and len(_core(l)) >= 30), "")
+            or _first_under(lines, _ORDER_HEAD.search)
+            or next((l for l in lines if _substance(l) and not _PLUMBING.match(_core(l))), "")
+            or next((l for l in lines if _substance(l)), "") or next(iter(lines), ""))
+    ask = _gist_line(pick)
+    now = _gist_line(_first_under(lines, _NEXT_HEAD.match) or _first_under(lines, _NOW_HEAD.match))
+    if now and now != ask:
+        return (ask[:90].rstrip() + (" ... next: " if len(ask) > 90 else "; next: ") + now)[:200]
+    return ask[:150] or "summary text not parsed"
 
 
 _AGENT_ID_RX = re.compile(r"^[A-Za-z0-9_-]{4,64}$")
@@ -1299,6 +1329,14 @@ def _codex_capture_scope(identity):
     actor = os.path.basename(os.path.normpath(cwd))
     if re.fullmatch(r"w[0-9]+", actor) and norm(cwd) == norm(os.path.join(HOME, "brain_workers", actor)):
         return "pool_worker_cwd"
+    # The Mac fleet (29 Oct) runs each worker in ~/codex_fleet/<run>/workers/<name>; until then every one was withheld
+    fleet = os.path.relpath(norm(cwd), norm(os.path.join(HOME, "codex_fleet"))).split(os.sep)
+    if len(fleet) == 3 and fleet[1] == "workers" and fleet[0] != "..":
+        return "mac_fleet_worker_cwd"
+    # A single-worker lane runs in ~/codex_fleet/<lane> itself, launched by a script that writes launch.json there
+    # (recall_warm, 30 Oct: both its compactions were withheld as scope_not_allowed)
+    if len(fleet) == 1 and fleet[0] not in ("..", ".") and os.path.isfile(os.path.join(cwd, "launch.json")):
+        return "mac_fleet_lane_cwd"
     if _campaign_agent(identity):
         return "campaign_agent_cwd"
     if _open_tasks(identity["session_id"], "codex"):
@@ -1427,6 +1465,13 @@ def _spawn_late_attribution(delay=45):
     if os.environ.get("COMPACT_SPAWN_LOG"):
         _append(os.environ["COMPACT_SPAWN_LOG"], {"args": args})
         return args
+    if os.name != "nt":   # macOS/Linux: own session (outlives the hook), niced like BelowNormal
+        try:
+            subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             close_fds=True, start_new_session=True, preexec_fn=lambda: os.nice(10))
+            return args
+        except OSError:
+            return None
     base = 0x00000008 | 0x00004000 | 0x08000000   # DETACHED_PROCESS | BELOW_NORMAL | CREATE_NO_WINDOW
     for flags in (base | 0x01000000, base):       # break away from the hook's job when it is allowed
         try:
@@ -1713,11 +1758,13 @@ def attribute(days=1.0, state=None, settle_s=1800, dry=False):
     return n
 
 
-def refresh_gists(dry=False):
-    """Rewrite every anchor whose description ended in a bare <summary>/<analysis> tag (the gist before 12 Oct)."""
+def refresh_gists(dry=False, stale=False):
+    """Rewrite every anchor whose description ended in a bare <summary>/<analysis> tag (the gist before 12 Oct); with
+    stale, also every anchor whose description does not carry the gist _gist now gives its summary (30 Oct rule)."""
     n = 0
     for r in _index_rows():
-        if r.get("capture_kind") == "manual_checkpoint" or not r.get("name") or not r.get("node"):
+        if r.get("capture_kind") in ("manual_checkpoint", "codex_boundary_metadata") or not r.get("name") \
+                or not r.get("node"):
             continue
         apath = os.path.join(MEM, r["name"] + ".md")
         try:
@@ -1725,7 +1772,13 @@ def refresh_gists(dry=False):
                 desc = next((ln for ln in fh if ln.startswith("description:")), "")
         except OSError:
             continue
-        if BARE_DESC_RX.search(desc.rstrip("\n")):
+        redo = BARE_DESC_RX.search(desc.rstrip("\n"))
+        if not redo and stale and "content withheld" not in desc:
+            try:
+                redo = _gist(_node_parts(r["node"])[1].strip()).replace("\"", "'") not in desc
+            except OSError:
+                redo = False
+        if redo:
             if dry:
                 n += 1
                 continue
@@ -2089,7 +2142,9 @@ def main():
                 if not dry:
                     _save_state(st)
             if "--refresh-gists" in sys.argv:
-                print("anchors with a bare-tag gist %s:" % ("to rewrite" if dry else "rewritten"), refresh_gists(dry))
+                stale = "--stale" in sys.argv
+                print("anchors with a %s gist %s:" % ("stale" if stale else "bare-tag", "to rewrite" if dry else "rewritten"),
+                      refresh_gists(dry, stale))
         finally:
             try:
                 os.remove(lock)
@@ -2142,6 +2197,8 @@ if __name__ == "__main__":
         main()
     except Exception as exc:
         try:
-            _append(os.path.join(ROOT, "errors.log"), {"at": _now().isoformat(timespec="seconds"), "error": _clean(repr(exc))[:500]})
+            import traceback   # 29 Oct: a bare IndexError row (11:41) could not be traced to a mode or a line
+            _append(os.path.join(ROOT, "errors.log"), {"at": _now().isoformat(timespec="seconds"), "error": _clean(repr(exc))[:500],
+                                                      "argv": sys.argv[1:6], "where": _clean(traceback.format_exc()[-900:])})
         except Exception:
             pass

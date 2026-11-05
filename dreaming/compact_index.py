@@ -44,6 +44,40 @@ def trim(line):
     return prefix + shorten_index_text(old, max(0, MAXLINE - len(prefix)))
 
 
+def _memory_write_lock(timeout=20.0):
+    """Hold the sidecar lock brain.py remember holds while it rewrites MEMORY.md (31 Oct, q1534): unlocked, a
+    row filed between the read below and the write at the end was lost. Returns the open handle, or None on
+    timeout (then nothing is written)."""
+    import time
+    h = open(os.environ.get("BRAIN_WRITE_LOCK", os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                                               "memory_write.lock")), "a+b")
+    h.seek(0, os.SEEK_END)
+    if h.tell() == 0:
+        h.write(b"\0")
+        h.flush()
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            if os.name == "nt":
+                import msvcrt
+                h.seek(0)
+                msvcrt.locking(h.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(h.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return h
+        except OSError:
+            if time.monotonic() >= deadline:
+                h.close()
+                return None
+            time.sleep(0.05)
+
+
+_lock = _memory_write_lock() if APPLY else None
+if APPLY and _lock is None:
+    print("SKIPPED: the shared memory write lock stayed busy for 20 s; nothing written")
+    raise SystemExit(0)
+
 s = io.open(IDX, encoding="utf-8").read()
 lines = s.split("\n")
 title = lines[0] if lines and lines[0].startswith("#") else "# Memory Index"
@@ -77,8 +111,20 @@ if overflow:
 print(("APPLIED" if APPLY else "DRY-RUN"),
       f"entries={len(entries)} kept={len(kept)} archived={archived} "
       f"size {before}B -> {after}B (cap {CAP})")
+def _atomic_write(path, text):
+    # tmp + fsync + replace, as remember does: readers that skip the lock (session load, recall) never see a
+    # half-written file, and a crash leaves the old file whole
+    tmp = "%s.tmp.%d" % (path, os.getpid())
+    with io.open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
 if APPLY and (new_idx != s or archived):
-    io.open(IDX, "w", encoding="utf-8", newline="\n").write(new_idx)
+    # archive first: a crash between the two writes then leaves a row in both files, never in neither
     if overflow:
-        io.open(ARC, "w", encoding="utf-8", newline="\n").write(new_arc)
+        _atomic_write(ARC, new_arc)
+    _atomic_write(IDX, new_idx)
     print("  wrote MEMORY.md" + (" + INDEX_ARCHIVE.md" if overflow else ""))

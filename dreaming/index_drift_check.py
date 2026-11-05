@@ -22,7 +22,10 @@ import os
 import re
 import sys
 
-MEM = os.path.join(os.path.expanduser("~"), ".claude", "projects", "{{BRAIN_SLUG}}", "memory")
+MEM = os.environ.get("BRAIN_MEM_DIR") or os.path.join(
+    os.path.expanduser("~"), ".claude", "projects",
+    os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-"),
+    "memory")
 IDX = os.path.join(MEM, "MEMORY.md")
 
 # A file carrying one of these while its index row does not is the dangerous case: the row is
@@ -45,10 +48,23 @@ def rows():
 def desc(fn):
     p = os.path.join(MEM, fn)
     if not os.path.exists(p):
-        return None
+        return None, ""
     t = io.open(p, encoding="utf-8", errors="replace").read()
     m = re.search(r'^description:\s*"?(.*?)"?\s*$', t, re.M)
-    return m.group(1).strip() if m else None
+    s = re.search(r'^\s*status:\s*"?([A-Za-z_-]+)', t, re.M)
+    sup = re.search(r'^\s*superseded_by:\s*\S', t, re.M)
+    status = "SUPERSEDED" if sup else (s.group(1).upper() if s else "")
+    return (m.group(1).strip() if m else None), status
+
+
+def markers(d, status):
+    # A correction is written as a capitals marker ("RETRACTED", "HALF RETRACTED") or carried in
+    # the frontmatter. Matching any case flagged descriptions that merely talk about corrections
+    # ("of 561 superseded_by links 0 cycles"): 2 of 2 flags on 1 Nov were that.
+    hits = [w for w in CORRECTION_WORDS if w in d]
+    if any(w in status for w in ("SUPERSED", "RETRACT", "WITHDRAWN", "CANCELLED")):
+        hits.append("status:" + status.lower())
+    return hits
 
 
 def main():
@@ -59,11 +75,11 @@ def main():
         return 3
     danger, cosmetic = [], []
     for fn, row in r.items():
-        d = desc(fn)
+        d, status = desc(fn)
         if not d:
             continue
-        du, ru = d.upper(), row.upper()
-        hits = [w for w in CORRECTION_WORDS if w in du and w not in ru]
+        ru = row.upper()
+        hits = [w for w in markers(d, status) if w.split(":")[-1].upper()[:8] not in ru]
         if hits:
             danger.append((fn, hits, row, d))
         elif d[:40].lower() not in row.lower():

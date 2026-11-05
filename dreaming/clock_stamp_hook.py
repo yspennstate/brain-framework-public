@@ -26,7 +26,7 @@ import os
 import re
 import sys
 
-LOG = os.path.expanduser(r"~/.claude/compute/clock_stamp_hook.log")
+LOG = os.path.expanduser("~/.claude/compute/clock_stamp_hook.log")
 
 SLACK_MIN = 5
 HORIZON_MIN = 180          # a stamp dated today
@@ -38,6 +38,16 @@ EXACT = re.compile(r"(?im)(?:^[ \t>*#-]*|\(\s*|\b(?:measured|landed|written|wrot
                    r"finished|verified|checked|corrected|repaired|re-audited|observed|recorded|noted|as of|"
                    r"clock[- ]?read)\s+(?:~\s*)?)"
                    r"([01]?\d|2[0-3]):([0-5]\d)(?![\d:])(?!\.\d)")
+# an exact stamp right after a date ("1 Nov 2026 12:20 +04", "measured 1 Nov 12:20", "2026-11-01 12:20"): a dated
+# time is a record wherever it sits (1 Nov: three such stamps went out 8 min fast and the EXACT form saw none)
+_MON = r"(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*"
+DATED = re.compile(r"(?i)(?:\b20\d\d-\d\d-\d\d|\b\d{1,2}\s+" + _MON + r"(?:\s+20\d\d)?|\b" + _MON +
+                   r"\.?\s+\d{1,2}(?:,?\s+20\d\d)?)[ ,]+([01]?\d|2[0-3]):([0-5]\d)(?![\d:])(?!\.\d)")
+# the pattern half of a sed substitution (s/OLD/new/) is the stamp being corrected, not a record
+# (the s opens a quoted sed script, so "1.4 s/source, finishes 08:2x" is not one)
+SED_PATTERN = re.compile(r"(?:['\"]|;\s*)(?:\$|\d+)?\s*s([/#|,])(?:(?!\1).)*$", re.S)
+# a compact UTC run id, 20261101T0820Z: agents name runs by the time they start them
+RUNID = re.compile(r"(?<!\d)(20\d\d)(\d\d)(\d\d)T([01]\d|2[0-3])([0-5]\d)Z")
 # the far end of a range written right after a stamp ("09:27-09:29Z"): its zone is the range's zone, and its time is
 # checked too (2 Oct: a peer report said "observed 09:27-09:29Z"; the first end was read as local time, the second
 # was never looked at)
@@ -82,6 +92,17 @@ def check(text, now=None, utc_now=None):
     out, seen = [], set()
     cands = [(m, m.group(1), int(m.group(2)) * 10, "x") for m in X_STAMP.finditer(text)]
     cands += [(m, m.group(1), int(m.group(2)), "exact") for m in EXACT.finditer(text)]
+    cands += [(m, m.group(1), int(m.group(2)), "exact") for m in DATED.finditer(text)]
+    for m in RUNID.finditer(text):
+        if (int(m.group(1)), int(m.group(2)), int(m.group(3))) != (utc_now.year, utc_now.month, utc_now.day):
+            continue
+        ahead = (utc_now.replace(hour=int(m.group(4)), minute=int(m.group(5)), second=0, microsecond=0)
+                 - utc_now).total_seconds() / 60.0
+        if (SLACK_MIN < ahead <= HORIZON_MIN and m.start() not in seen
+                and not SED_PATTERN.search(text[max(0, m.start() - 200):m.start()])):
+            seen.add(m.start())
+            out.append({"stamp": m.group(0), "ahead_min": int(round(ahead)), "kind": "runid",
+                        "context": text[max(0, m.start() - 40):m.end() + 16].replace("\n", " / ")})
     for m, hh, mm, kind in cands:
         start = m.start(1)
         if start in seen:
@@ -94,7 +115,7 @@ def check(text, now=None, utc_now=None):
                 or OTHER_DAY.search(pre + post)):
             continue
         near = text[max(0, start - 6):m.end() + 6]
-        if "\\|" in near or NOT_A_RECORD.search(pre):
+        if "\\|" in near or NOT_A_RECORD.search(pre) or SED_PATTERN.search(text[max(0, start - 200):start]):
             continue
         q = text[start - 1:start] if start > 0 else ""
         if q and q in "'\"`" and text[m.end():m.end() + 1] == q:
@@ -147,6 +168,17 @@ def _selftest():
         ("observed 2 Oct 14:35-14:39Z", 0), ("observed 14:35-14:39Z", 1), ("observed 14:05-14:10Z", 0),
         ("checked 14:10-14:35Z", 1), ("checked 14:10-14:15Z", 0), ("(17:0x-17:4x his clock)", 1),
         ("from 14:10 to 14:35Z", 0), ("window 17:30-17:45", 0),
+        # v5 (1 Nov): a dated exact stamp anywhere, and a compact UTC run id
+        ("Mac mini, 24 Sep 2026 17:40 +03, claude-x.", 1), ("Measured 24 Sep 17:40 by claude-x", 1),
+        ("checked on 2026-09-24 17:45, all", 1), ("registered 24 Sep 17:10 before the run", 0),
+        ("bets resolve by 24 Sep 17:50", 0), ("23 Sep 17:50 his clock", 0), ("at 2026-09-24T17:40:11Z", 0),
+        ("runs/M01/20260924T1440Z_M01_REVIEW", 1), ("runs/M01/20260924T1410Z_M01_REVIEW", 0),
+        ("runs/M01/20260923T1440Z_M01_REVIEW", 0),
+        ("sed -i '' 's/24 Sep 17:40 by/24 Sep 17:12 by/' x.md", 0), ("sed 's#runs/20260924T1440Z_A#runs/B#'", 0),
+        ("sed -i '' 's/24 Sep 17:12 by/24 Sep 17:40 by/' x.md", 1), ("if t < '2026-09-24T17:40'", 0),
+        ("about 1.4 s/source, measured 24 Sep 17:40 on the Mac", 1), ("sed -i '' '$ s/relaunched 17:40/relaunched 17:10/'", 0),
+        ("sed -i '' 's/a/b/; s/^Update 24 Sep 17:40\\./Update 24 Sep 17:10./' f", 0),
+        ("sed -i '' '550s/^24 Sep 17:40 W04/24 Sep 17:10 W04/' f", 0),
     ]
     bad = 0
     for text, want in cases:
@@ -210,9 +242,11 @@ def main():
             if h["stamp"] not in [u["stamp"] for u in uniq]:
                 uniq.append(h)
         shown = ", ".join("'%s' is %d min ahead" % (h["stamp"], h["ahead_min"]) for h in uniq[:2])
-        ctx = ("[clock] %s of the real clock (now %s local, UTC+03:00). Nothing already done can be stamped in the "
+        # the machine's own offset: this said UTC+03:00 as a constant, and the Mac runs at +04:00
+        off = now.astimezone().strftime("%z") or "+0000"
+        ctx = ("[clock] %s of the real clock (now %s local, UTC%s:%s). Nothing already done can be stamped in the "
                "future: the inner clock runs fast. Put the time a shell printed (date), or drop the stamp. If it names a "
-               "plan or another day, ignore this." % (shown, now.strftime("%H:%M:%S")))
+               "plan or another day, ignore this." % (shown, now.strftime("%H:%M:%S"), off[:3], off[3:5]))
         if not os.environ.get("CLOCK_STAMP_HOOK_NOLOG"):
             try:
                 with open(LOG, "a", encoding="utf-8") as f:

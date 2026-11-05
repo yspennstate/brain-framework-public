@@ -124,6 +124,25 @@ def lock_of(sid):
     return LM._state_path(sid) + ".lock"
 
 
+def lock_held(sid):
+    """True while some descriptor holds the session's lock. Windows removes the file at unlock; elsewhere the file
+    stays (unlock_session explains why), so the lock itself is tried from a descriptor of our own."""
+    p = lock_of(sid)
+    if not os.path.exists(p):
+        return False
+    if os.name == "nt" or not hasattr(LM, "_os_lock"):
+        return True
+    fd = os.open(p, os.O_RDWR)
+    try:
+        LM._os_lock(fd, True)
+    except OSError:
+        os.close(fd)
+        return True
+    LM._os_lock(fd, False)
+    os.close(fd)
+    return False
+
+
 def log_text():
     p = os.path.join(tmp, "logs", "live.log")
     return open(p, encoding="utf-8").read() if os.path.exists(p) else ""
@@ -131,7 +150,7 @@ def log_text():
 
 # T0
 r1, r2 = call("s0"), call("s0")
-check(r1 == "[brain] x" and r2 == "" and len(rows(LM.SERVED, "s0")) == 1 and not os.path.exists(lock_of("s0")),
+check(r1 == "[brain] x" and r2 == "" and len(rows(LM.SERVED, "s0")) == 1 and not lock_held("s0"),
       "T0 in sequence: served once, refractory holds, no lock left (%r, %r, %d rows)" % (r1, r2, len(rows(LM.SERVED, "s0"))))
 
 # T1
@@ -181,7 +200,7 @@ for tag, sid, patch in (("T2 every rename refused", "s2", ("replace", Permission
     withheld = bool(ev) and bool(ev[-1].get("withheld")) and not ev[-1].get("served")
     left = [f for f in os.listdir(LM.SESS) if f.endswith(".tmp")] if os.path.isdir(LM.SESS) else []
     check(r == "" and not rows(LM.SERVED, sid) and withheld and not left and not os.path.exists(LM._state_path(sid))
-          and log_text().count("state write failed") == before + 1 and not os.path.exists(lock_of(sid)),
+          and log_text().count("state write failed") == before + 1 and not lock_held(sid),
           "%s: line %r, served rows %d, withheld logged %s, tmp left %d" % (
               tag, r, len(rows(LM.SERVED, sid)), withheld, len(left)))
 
@@ -192,7 +211,7 @@ with open(lock_of("s5"), "w") as fh:
 old = time.time() - 120
 os.utime(lock_of("s5"), (old, old))
 r = call("s5")
-check(r == "[brain] x" and not os.path.exists(lock_of("s5")), "T5 a dead call's lock is taken over (%r)" % r)
+check(r == "[brain] x" and not lock_held("s5"), "T5 a dead call's lock is taken over (%r)" % r)
 
 # T6. Since 28 Sep (interactive audit IA-20260928-03) the lock is the operating system's, held on an open file: a file on
 # its own is no longer a lock, so a live holder is simulated by holding the session through the module's own lock_session

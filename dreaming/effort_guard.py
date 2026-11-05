@@ -14,7 +14,10 @@ PreToolUse (Bash, PowerShell, Write, Edit, MultiEdit) refuses:
     CLAUDE_CODE_EXTRA_BODY carrying an effort (the cap does not see it);
   - a write to a launcher, script or settings file (.ps1 .py .cmd .bat .vbs .sh .json .toml) whose new text does
     any of the above or sets maxEffortLevel to anything but high.
-Codex is not covered (his order names Claude; Codex keeps its own model_reasoning_effort). Markdown is not checked,
+Since his order of 2 Nov 2026 23:3x ("all the cluade tmerinals here and headless agents work on opu 5.5 hgh thinking
+nothing mroe then that, and all codex work on 6.1 high thinking nothing more then that") it also refuses a claude
+launch with --model fable, and a Codex launch or launcher/config write that names a model outside gpt-6.1-* or sets
+model_reasoning_effort to xhigh, max or ultra. The Codex homes default to gpt-6.1-sol at high. Markdown is not checked,
 so notes and memories may quote the old values. Refusals are logged to ~/.claude/brain_graph/logs/effort_guard.log.
 
 SessionStart (run with --session-start) prints one line only when the settings lock has drifted.
@@ -43,6 +46,11 @@ ENV_ABOVE = re.compile(r"(?i)CLAUDE_CODE_EFFORT_LEVEL[\"']?\s*(?:=|:|,)\s*[\"']?
 SOURCES = re.compile(r"(?i)--setting-sources(?:\s+|=)[\"']?([a-z,]+)")
 EXTRA_BODY = re.compile(r"(?i)CLAUDE_CODE_EXTRA_BODY[^\n]*effort")
 CAP_WRONG = re.compile(r"(?i)[\"']maxEffortLevel[\"']\s*:\s*[\"'](?!high[\"'])\w+")
+# 2 Nov 2026 23:3x his order: Claude on Opus 5.5 at high, Codex on 6.1 at high, "nothing more then that".
+CLAUDE_MODEL_ABOVE = re.compile(r"(?i)--model(?:\s+|=|[\"']\s*,\s*)[\"']?(?:claude-)?fable")
+CODEX_WORD = re.compile(r"(?i)(?:^|[\s\"'`;&|(\\/])codex(?:\.exe|\.cmd)?(?=[\s\"'`;&|)]|$)")
+CODEX_EFFORT_ABOVE = re.compile(r"(?i)model_reasoning_effort[\"']?\s*=\s*\\?[\"']?(?:xhigh|max|ultra)\b")
+CODEX_MODEL = re.compile(r"(?i)(?:(?<![\w-])-m|--model)(?:\s+|=|[\"']\s*,\s*)[\"']?(gpt-[\w.-]+)|(?m:^\s*model\s*=\s*[\"'](gpt-[\w.-]+))")
 GUARDED_EXT = (".ps1", ".psm1", ".py", ".cmd", ".bat", ".vbs", ".sh", ".json", ".toml")
 
 
@@ -62,6 +70,22 @@ def problems(text, launches=True):
             out.append("launches claude with --setting-sources that skips user settings (and the cap)")
     if EXTRA_BODY.search(text):
         out.append("passes an effort through CLAUDE_CODE_EXTRA_BODY, which the cap does not clamp")
+    if CLAUDE_MODEL_ABOVE.search(text):
+        out.append("launches claude on a model above Opus 5.5 (Fable)")
+    return out
+
+
+def codex_problems(text, launches=True):
+    """Reasons this text would run (or write) a Codex agent above gpt-6.1 at high (his order of 2 Nov 2026 23:3x)."""
+    out = []
+    if CODEX_EFFORT_ABOVE.search(text):
+        out.append("sets Codex model_reasoning_effort above high")
+    if launches and not CODEX_WORD.search(text):
+        return out
+    for m in CODEX_MODEL.finditer(text):
+        name = m.group(1) or m.group(2)
+        if not name.lower().startswith("gpt-6.1-"):
+            out.append("runs Codex on %s, not a gpt-6.1 model" % name)
     return out
 
 
@@ -129,6 +153,13 @@ def main():
     if not text:
         return
     hit = problems(text, launches)
+    codex_hit = codex_problems(text, launches)
+    if codex_hit:
+        sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+            "permissionDecisionReason": "EVERY CODEX AGENT RUNS gpt-6.1-sol AT HIGH, NOTHING ABOVE (his order, 2 Nov 2026 "
+            "23:3x: 'all codex work on 6.1 high thinking nothing more then that'). This %s %s. Use -m gpt-6.1-sol with "
+            "model_reasoning_effort high, medium or low." % ("write" if path else "command", "; ".join(codex_hit + hit))}}))
+        return
     if not hit:
         return
     reason = ("EVERY CLAUDE AGENT RUNS AT HIGH EFFORT, NOT MAX (a standing rule: terminals and subagents alike). "

@@ -38,6 +38,25 @@ sid = "save-test-session"
 p = LM._state_path(sid)
 
 
+_held = []
+if os.name != "nt":
+    # POSIX lets a rename replace a file another handle has open, so the Windows sharing violation the save retries
+    # through is stood in for: the rename onto the state file raises Access denied while the hold lasts.
+    _real_replace = os.replace
+
+    def _replace(src, dst, *a, **k):
+        if _held and os.path.abspath(dst) == os.path.abspath(p):
+            raise PermissionError(13, "Access is denied")
+        return _real_replace(src, dst, *a, **k)
+
+    LM.os.replace = _replace
+
+
+def _release(fh):
+    _held.clear()
+    fh.close()
+
+
 def state_on_disk():
     with open(p, encoding="utf-8") as fh:
         return json.load(fh)
@@ -54,7 +73,8 @@ if not (ok is True and state_on_disk().get("calls") == 1 and not tmp_left()):
 
 # B
 fh = open(p, encoding="utf-8")
-threading.Timer(0.06, fh.close).start()
+_held.append(1)
+threading.Timer(0.06, _release, (fh,)).start()
 t0 = time.time()
 ok = LM.save_state(sid, {"calls": 2})
 dt = time.time() - t0
@@ -63,6 +83,7 @@ if not (ok is True and state_on_disk().get("calls") == 2 and not tmp_left()):
 
 # C
 fh = open(p, encoding="utf-8")
+_held.append(1)
 t0 = time.time()
 try:
     ok = LM.save_state(sid, {"calls": 3})
@@ -70,7 +91,7 @@ try:
 except Exception as e:
     ok, raised = None, e
 dtc = time.time() - t0
-fh.close()
+_release(fh)
 log = open(os.path.join(tmp, "logs", "live.log"), encoding="utf-8").read() if os.path.exists(
     os.path.join(tmp, "logs", "live.log")) else ""
 if not (ok is False and raised is None and dtc < 1.0 and state_on_disk().get("calls") == 2 and not tmp_left()

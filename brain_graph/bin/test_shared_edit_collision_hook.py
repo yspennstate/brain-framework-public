@@ -54,7 +54,7 @@ def main():
             env = dict(os.environ, SHARED_EDIT_LEDGER=led, SHARED_EDIT_NOW=str(NOW))
             if mode == "process":
                 r = subprocess.run([sys.executable, HOOK], input=pl, capture_output=True, text=True, env=env,
-                                   creationflags=0x08000000)
+                                   creationflags=0x08000000 if os.name == "nt" else 0)
                 outs.append((r.returncode, r.stdout.strip(), open(led, encoding="utf-8").read()))
             else:
                 saved = dict(os.environ)

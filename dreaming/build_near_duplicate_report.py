@@ -55,6 +55,20 @@ def superseded_by(path: str):
     return m.group(1) if m else None
 
 
+def filing_stamp(path: str):
+    """The memory's filing stamp (supersession.memory_stamp over its closed frontmatter); {} on any error.
+
+    2026-09-22 (round 5 W4, F54): the proposed direction was the slug date, so two near-twins filed the same day
+    were ordered by whichever the cosine loop met first - the cause of all nine inverted verdicts of the 200-pair
+    owner-order judge. `created_at` (written by brain.py remember since that day) orders them exactly; a pair
+    without it on both sides keeps the old key and, when that key cannot tell the two apart, says so."""
+    try:
+        import supersession
+        return supersession.memory_stamp(supersession.frontmatter_block(path))
+    except Exception:
+        return {}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--threshold", type=float, default=0.97)
@@ -98,10 +112,16 @@ def main() -> int:
         if sb1 == s2 or sb2 == s1:
             linked += 1
             continue
-        d1 = slug_date(s1) or os.path.getmtime(p1)
-        d2 = slug_date(s2) or os.path.getmtime(p2)
-        older, newer = (s1, s2) if d1 <= d2 else (s2, s1)
-        rows.append({"cosine": round(cos, 4), "older": older, "newer": newer,
+        st1, st2 = filing_stamp(p1), filing_stamp(p2)
+        if st1.get("at") is not None and st2.get("at") is not None:
+            older, newer = (s1, s2) if st1["at"] <= st2["at"] else (s2, s1)
+            order = "created_at"
+        else:
+            d1 = slug_date(s1) or os.path.getmtime(p1)
+            d2 = slug_date(s2) or os.path.getmtime(p2)
+            older, newer = (s1, s2) if d1 <= d2 else (s2, s1)
+            order = "same_day_unordered" if d1 == d2 else "date"
+        rows.append({"cosine": round(cos, 4), "older": older, "newer": newer, "order": order,
                      "proposal": "%s superseded_by %s" % (older, newer)})
         if len(rows) >= a.max:
             break
@@ -115,14 +135,18 @@ def main() -> int:
     lines = ["# Near-duplicate report (pattern separation)", "",
              "Built %s over %d embedded memories; cosine >= %.2f; %d pairs above threshold, %d already linked by "
              "superseded_by, %d proposals below. Nothing here has been applied: a proposal is accepted by adding "
-             "`superseded_by: <newer>` to the OLDER memory's frontmatter (brain.py remember --supersedes), and only when the "
+             "`superseded_by: <newer>` to the OLDER memory's frontmatter (`brain.py supersede <older> --by <newer>`; "
+             "`supersede-part --clause` when only one clause moved), and only when the "
              "newer one really replaces the older; twins that are distinct records (two watchdog windows, two audit findings) "
              "stay as they are." % (time.strftime("%Y-%m-%d %H:%M"), n, a.threshold, len(pairs), linked, len(rows)), ""]
     if fam:
         lines.append("Families with the most proposals: " + ", ".join("%s (%d)" % kv for kv in sorted(fam.items(), key=lambda kv: -kv[1])[:8]))
         lines.append("")
     for r in rows:
-        lines.append("- %.4f  `%s`  ->  `%s`" % (r["cosine"], r["older"], r["newer"]))
+        lines.append("- %.4f  `%s`  ->  `%s`%s" % (
+            r["cosine"], r["older"], r["newer"],
+            "  (same day, filing order not recorded - check the direction)"
+            if r.get("order") == "same_day_unordered" else ""))
     with io.open(out_md, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     print("near-duplicates: %d memories, %d pairs >= %.2f, %d already linked, %d proposals -> %s" % (

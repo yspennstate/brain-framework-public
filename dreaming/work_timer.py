@@ -26,6 +26,7 @@ import sys, os, io, json, re, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.environ.get("WORK_TIMER_STATE", os.path.join(HERE, "work_session.json"))
+REPEAT_S = 24 * 3600   # the same order text again within this long of its last sighting is a re-fire, not a new order
 
 DUR_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h)\b", re.I)
 LENGTH_AFTER = re.compile(r"[\s-]*(?:and\s+(?:a\s+)?(?:half|\d+\s*min\w*)\s+)?(?:long|lon\b|lnog|movie|moive|mvoie|"
@@ -231,6 +232,12 @@ def main():
             # not anywhere in a long prompt.
             if re.search(r"Hook failed|hook timed out after|ctrl \+ t to view transcript|\n\s*[•◦└↳]", prompt):
                 return
+            # 2026-10-18 15:4x (claude-5aab5938): a cron loop re-fires its own text every 10 minutes, and that text quotes
+            # the order ("keep working for the next 20 hours ... until 15:37"). Each tick restarted a fresh 20 h clock, so
+            # five sessions were Stop-blocked into the next morning, hours past the deadline the tick itself names. The
+            # order started the clock when he gave it; a loop tick never starts or restarts one.
+            if re.match(r"\s*loop tick\b", prompt, re.I):
+                return
             m = None
             for cand in DUR_RE.finditer(prompt):
                 # 2026-10-04: a prompt saying new films "should be 2 hours long unless
@@ -248,6 +255,20 @@ def main():
             if m and 0 < float(m.group(1)) <= 24:
                 hours = float(m.group(1))
                 s = _prune(_load())
+                # 2026-10-31 (claude-a52370f8, 1000-ways D5 #84): a cron made by /loop fires the owner's own words, and
+                # "fire this every 5 minutes for the next 10 hours" given once at 23:03 UTC restarted this session's
+                # clock from its scheduled re-fires at 09:03 and 19:00, so the session was Stop-blocked until 08:59
+                # local, about 20 h past the order. The same order text seen again within REPEAT_S of its last
+                # sighting in this session never starts or restarts a clock; only new words do.
+                key = re.sub(r"\s+", " ", _clean_task(prompt)).strip().lower()[:160]
+                seen = {k: t for k, t in (s.get("started", {}).get(sid) or {}).items() if now - t < REPEAT_S}
+                repeat = key in seen
+                seen[key] = now
+                s.setdefault("started", {})[sid] = seen
+                s["started"] = {k: v for k, v in s["started"].items() if v}
+                if repeat:
+                    _save(s)
+                    return
                 s["clocks"][sid] = {"start": now, "target_hours": hours,
                                     "task": _clean_task(prompt)[:160], "blocks": []}
                 _save(s)
@@ -315,7 +336,17 @@ def main():
             # escalation kept demanding "run a full dream now" while dream.lock was held
             # by the running dream it had itself demanded). When a dream runs, keep the
             # block but say so and never escalate to launching another.
-            if os.path.exists(os.path.join(HERE, "dream.lock")):
+            # A held lease is never empty: Open-DreamLease writes "pid=...started_utc=..." the
+            # moment it opens the file with FileShare.None. An EMPTY dream.lock is a marker left
+            # by a power-off or a pre-lease run, and it blocked every timed session's Stop (so
+            # their cron loops never fired) on 2026-10-18 00:58-02:1x with no runner alive. Size
+            # only - opening the file to test it could collide with a lease being acquired.
+            _dl = os.path.join(HERE, "dream.lock")
+            try:
+                _dream_held = os.path.getsize(_dl) > 0
+            except OSError:
+                _dream_held = False
+            if _dream_held:
                 sys.stdout.write(json.dumps({"decision": "block", "reason":
                     ("[work-session] now %s; ~%s of %gh remain (until %s). A dream is IN "
                      "FLIGHT (dream.lock held) - ride it or do zero-footprint work "
@@ -345,7 +376,7 @@ def main():
                                                     _until(c["start"], c["target_hours"])))
             if churning:
                 base += (" You've cycled several times quickly - stop improvising in tiny steps: either run a "
-                         "full dream now (python ~\\.claude\\dreaming\\dream.py) and push, or pick "
+                         "full dream now (python " + os.path.join(HERE, "dream.py") + ") and push, or pick "
                          "ONE concrete audit and complete it end to end before stopping again.")
             else:
                 base += " Worst case: run a dream, push, and write up what you found."

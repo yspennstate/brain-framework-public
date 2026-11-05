@@ -81,6 +81,16 @@ OWN_RE = re.compile(r"\b(fail(ed|ing|ure)?|error(s|ed|ing)?|couldn'?t|could not|
                     r"was ?n'?t able|unable|blocked|skipped|stale|wrong|incorrect|bug|didn'?t|"
                     r"gave up|partial|incomplete|flag(ged|ging)?|to be safe|note that|however|"
                     r"but (it|the|there)|does not|is not)\b", re.I)
+# ...and OWNS A REFUTATION of its own earlier claim (1000-ways D8 #81, 2026-11-02): "I had written 03:58",
+# "appended a correction", "my first count was wrong". First person only - the loose form (any "correction",
+# "superseded") hit 10 of 20 hand-read reports; this one 19 of 20, on 140 of 11,602 Mac reports in 3 days.
+# Credited whether or not a tool errored: catching yourself is the identity-affirming act, not the error.
+REFUTE_RE = re.compile(r"\b(i had (said|written|reported|given|told)|i first (said|told|wrote|reported|gave)|"
+                       r"(than|from|in) my (earlier|first|last|previous) (report|line|note|move|count|number)|"
+                       r"(appended|posted|sent|filed|pushed|recorded) (a|one|the|my) correction|"
+                       r"correction to (the line above|my)|flaw in my own|my (own )?(\w+ )?(was|were) wrong|"
+                       r"i was wrong|i (miscounted|misread|misstated|overstated|understated)|"
+                       r"my counts? (in [^.]{0,30})?(was|were) wrong|two of my \w+ [^.]{0,30}were wrong)\b", re.I)
 
 
 def _read_last_assistant(tp):
@@ -237,6 +247,10 @@ def main():
             credits.append(f"owned the session's {n_err} rough spot(s) honestly instead of papering over them.")
         if verified:
             credits.append("backed a runtime claim with an actual look before sign-off (craft).")
+        refuted = REFUTE_RE.search(summary) if summary else None
+        if refuted:
+            credits.append(f"owned a refutation of its own earlier claim (\"{refuted.group(0)}\") - catching "
+                           f"yourself is the value, not a blemish (truth over comfort).")
 
         if not debts and not credits:
             return  # clean and unremarkable - leave the ledger alone

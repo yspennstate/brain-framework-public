@@ -28,7 +28,9 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(HERE, "state")
 PY = sys.executable
-MESH = os.path.expanduser(r"~/brain-repo/12_cognitive_architecture/agent_mesh/agent_mesh.py")
+sys.path.insert(0, HERE)
+from math_block_parse import delivery_problem  # noqa: E402
+MESH = os.path.expanduser("~/brain-repo/12_cognitive_architecture/agent_mesh/agent_mesh.py")
 
 # floors (fresh bank of 2026-09-03, through the hook): 74.2 / 91.0 served, 14.6 / 4.5 silent on 09-11
 THRESH = {
@@ -55,20 +57,153 @@ THRESH = {
     # the cost-gate anchors landed (12 / 10 before them; 9 / 0 before the result nodes existed). Floors carry ~4 items of
     # slack. The rotated-key negative control (every question scored against its neighbour's key) read 1 of 30 on the
     # same run - a ceiling of 2, so a "hit" that any served block would satisfy cannot pass as a result.
+    # 2026-09-25: a result node the block names on its "same result on record" line counts as reached. The hook's
+    # same-result rule (landed 25 Sep 02:46) serves our memory-born card of a result pair and names the ledger card
+    # (the one carrying "(our id KEY)") on that line; counted on served cards alone the 25 Sep run read 11/30 against
+    # 22/30 the day before with every block still carrying the result. The served-cards count stays in the row as
+    # result_strict. The floor did not move.
     "ownvoice_served_min": 0.60,
     "ownvoice_result_min": 0.50,
     "ownvoice_rotated_max": 2,
+    # REAL PROOFS (2026-09-25, the landing that made a pasted proof an argument - arm cand46 of campaign mb10d): the results a
+    # pasted proof cites by name, reached in a served card's title. Held-out bank of other papers' proofs (FEI, QSO, paper23,
+    # Benjamini-Schramm): 20 of 32 after the landing, 1 of 32 before; the quadratic-form papers' proofs: 21 of 57 after, 4
+    # before. Floors carry about five items of slack; a landing that stops reading proofs as arguments falls to the old numbers.
+    # raised 2026-09-25 after cand65 landed (on the live hook: other papers 0.72, quadratic-form papers 0.91, held-out 0.45)
+    "proofbank_named_min": 0.60,
+    "proofbank_qform_min": 0.75,
+    "proofbank_heldout_min": 0.33,
+    # the same keys scored against shuffled prompts: a hit there means the instrument is not key-specific (0 at landing)
+    "proofbank_shuffled_max": 2,
 }
+
+
+def _invalid_to_row(row, inst, out, name):
+    """Read an evaluator line's '| invalid N (reason: k; ...)' tail into the row. A hook call that exited nonzero, failed
+    to launch or printed something other than its JSON delivers nothing in a session, so any such call is a breach; a
+    call that timed out makes the row inconclusive (an error), not a breach. A line with no invalid count comes from an
+    evaluator that does not check its calls, and is an error too (account03/B01, 30 Sep 2026)."""
+    m = re.search(r"\| invalid (\d+)(?: \(([^)]*)\))?", out or "")
+    if not m:
+        row["errors"].append("%s: the summary carries no invalid-call count" % name)
+        return
+    total, why = int(m.group(1)), m.group(2) or ""
+    t = re.search(r"(?:^|; )timeout: (\d+)", why)
+    timeouts = int(t.group(1)) if t else 0
+    inst["invalid_rows"], inst["timed_out_rows"] = total - timeouts, timeouts
+    if total - timeouts:
+        row["breaches"].append("%s: %d hook calls did not finish cleanly (%s)" % (name, total - timeouts, why))
+    if timeouts:
+        row["errors"].append("%s: %d hook calls timed out, so the row is inconclusive" % (name, timeouts))
+
+
+# 2026-10-04: the whole run keeps inside GATE_BUDGET_S. regression_gate_launcher.vbs runs the gate under run_bounded.py
+# with a 6600 s cap that kills the tree; the stage caps below add to about 11,000 s, so on a loaded box the 4 Oct run
+# was killed at 07:01:32 with no row, no verdict and its lock left behind, and every stage printed only at the end.
+# Each stage now gets at most the time left (less ROW_RESERVE_S for the row); a stage with none left is skipped and
+# named, so the run ends INCONCLUSIVE with a row. The budget leaves 600 s of the cap for the unbudgeted calls (the
+# 300 s production hook call and the mesh notice).
+GATE_BUDGET_S = 6000
+ROW_RESERVE_S = 120
+_GATE = {"t0": None, "skipped": []}
 
 
 def run(cmd, timeout):
     t0 = time.time()
+    name = os.path.basename(cmd[1]) if len(cmd) > 1 else str(cmd[0])
+    if _GATE["t0"] is not None:
+        left = GATE_BUDGET_S - (t0 - _GATE["t0"]) - ROW_RESERVE_S
+        if left < 5:
+            _GATE["skipped"].append(name)
+            print("[gate %s] %s skipped: the run is out of time" % (time.strftime("%H:%M:%S"), name), flush=True)
+            return 124, "", "SKIPPED: the gate ran out of time before this stage", 0.0
+        timeout = min(timeout, int(left))
+    print("[gate %s] %s started (cap %ss)" % (time.strftime("%H:%M:%S"), name, timeout), flush=True)
     try:
         p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
                            timeout=timeout, cwd=HERE, env=dict(os.environ, PYTHONIOENCODING="utf-8"))
-        return p.returncode, p.stdout, p.stderr, round(time.time() - t0, 1)
+        result = p.returncode, p.stdout, p.stderr, round(time.time() - t0, 1)
     except subprocess.TimeoutExpired:
-        return 124, "", "TIMEOUT after %ss" % timeout, round(time.time() - t0, 1)
+        result = 124, "", "TIMEOUT after %ss" % timeout, round(time.time() - t0, 1)
+    print("[gate %s] %s rc %s in %ss" % (time.strftime("%H:%M:%S"), name, result[0], result[3]), flush=True)
+    return result
+
+
+GATE_LOCK = os.path.join(STATE, "regression_gate.lock")
+GATE_LOCK_STALE_S = 3 * 3600          # a gate still holding after three hours is wedged, not working
+
+
+def _holder_alive(pid):
+    """True unless we can PROVE the holder is gone - on doubt we refuse rather than collide."""
+    if pid <= 0:
+        return False
+    try:
+        import ctypes
+        h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+        if not h:
+            return False
+        code = ctypes.c_ulong()
+        ctypes.windll.kernel32.GetExitCodeProcess(h, ctypes.byref(code))
+        ctypes.windll.kernel32.CloseHandle(h)
+        return code.value == 259      # STILL_ACTIVE
+    except Exception:
+        pass
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError as exc:
+        import errno as _errno
+        return exc.errno != _errno.ESRCH
+    except Exception:
+        return True
+
+
+def _acquire_gate_lock():
+    """One gate at a time. Returns (True, None) or (False, why).
+
+    2026-09-13: FOUR gate runs in one day returned INCONCLUSIVE / ERROR / INCONCLUSIVE / INCONCLUSIVE and not one
+    of them was a verdict about the brain. Two agents were running the gate by hand while the
+    BrainMathRegressionGate scheduled task fired as well; concurrent gates starve each other, stages hit their wall
+    clocks (rc=124), and the box's own load becomes the measurement - one run recorded "BREACH:
+    math_sense_healthcheck rc=1" that was a timeout, with the health check green on a calm box minutes later. A
+    false BREACH in this history is worse than no run, because the next reader may revert good work over it. A mesh
+    claim cannot fix it: the scheduled task reads no mesh. A lock file is what both a person and a cron respect.
+
+    A REFUSAL IS NEVER A PASS. This returns a distinct exit code (4) and writes no gate row, so nothing downstream
+    can mistake "did not run" for "ran and passed".
+    """
+    try:
+        with io.open(GATE_LOCK, encoding="utf-8") as fh:
+            held = json.load(fh)
+    except Exception:
+        held = None
+    if held:
+        pid = int(held.get("pid", 0) or 0)
+        started = float(held.get("started", 0) or 0)
+        age = time.time() - started
+        if pid == os.getpid():
+            return True, None
+        if _holder_alive(pid) and age < GATE_LOCK_STALE_S:
+            return False, "another gate is running (pid %d, started %s, %.0f min ago)" % (
+                pid, time.strftime("%H:%M:%S", time.localtime(started)), age / 60.0)
+    tmp = "%s.tmp.%d" % (GATE_LOCK, os.getpid())
+    with io.open(tmp, "w", encoding="utf-8") as fh:
+        json.dump({"pid": os.getpid(), "started": time.time()}, fh)
+    os.replace(tmp, GATE_LOCK)
+    return True, None
+
+
+def _release_gate_lock():
+    try:
+        with io.open(GATE_LOCK, encoding="utf-8") as fh:
+            if int(json.load(fh).get("pid", 0) or 0) != os.getpid():
+                return            # someone else's lock - never remove it
+    except Exception:
+        return
+    try:
+        os.remove(GATE_LOCK)
+    except OSError:
+        pass
 
 
 GATE_LOCK = os.path.join(STATE, "regression_gate.lock")
@@ -154,7 +289,7 @@ def main():
         # answer "another gate is running" - a help request that reads as a verdict on the fleet.
         # (script_help_flag_can_execute_work, fifth recurrence.)
         print(__doc__ or os.path.basename(__file__))
-        print("\nusage: math_brain_regression_gate.py [--quick] [--full]")
+        print("\nusage: math_brain_regression_gate.py [--quick | --selftest] [--full]")
         return 0
     held, why = _acquire_gate_lock()
     if not held:
@@ -167,20 +302,72 @@ def main():
         _release_gate_lock()
 
 
+def production_math_block(pout):
+    """(served, problem) for the dispatcher's stdout on the production-flags probe. Until 30 Sep the probe passed on the
+    literal marker alone, so a block whose cards had lost their id and trust lines read as served (account04/B07,
+    B07-R79-INCOMPLETE-CARD-PASSES-REGRESSION-GATES). The math section of the dispatcher's context - the marker to the
+    next hook's tag line; the block's own '[math-brain: N note(s) omitted ...]' line belongs to it - must hold at least
+    one card and every card whole. The dispatcher's cut, when the hooks overflow its cap, works at line boundaries and
+    can leave a header without its id line; that is a delivery failure too."""
+    try:
+        ctx = json.loads(pout)["hookSpecificOutput"]["additionalContext"] if (pout or "").strip() else ""
+    except Exception:
+        return False, "dispatcher output is not the hook JSON"
+    at = ctx.find("[math-brain]")
+    if at < 0:
+        return False, "no [math-brain] block"
+    section = ctx[at:]
+    nxt = re.search(r"\n\[(?!math-brain)", section)
+    section = section[:nxt.start()] if nxt else section
+    problem = delivery_problem(section)
+    return not problem, problem
+
+
 def _main_locked():
-    quick = "--quick" in sys.argv
+    _GATE["t0"], _GATE["skipped"] = time.time(), []
+    # --selftest is what work_finders' W86 and the referee pass to every gate; this script never knew it, so each of
+    # those checks ran the FULL gate (bank recall, 500+ s at load 260) - 29 Oct, several agents every 12 min. It means
+    # the quick self-check: health check + proof-sense selftest.
+    quick = "--quick" in sys.argv or "--selftest" in sys.argv
     stamp = time.strftime("%Y%m%d_%H%M%S")
     row = {"as_of": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "quick": quick, "instruments": {}, "breaches": [], "errors": []}
 
     rc, out, err, dt = run([PY, os.path.join(HERE, "math_sense_healthcheck.py")], 600)
     row["instruments"]["healthcheck"] = {"rc": rc, "seconds": dt, "tail": (out or err)[-300:]}
-    if rc != THRESH["healthcheck_rc"]:
+    # rc 3 (2026-10-03): the hook did not answer a row in time, twice. That is the box's load, not a verdict on the
+    # brain, so it is an instrument error (the run reads INCONCLUSIVE), never a BREACH and never a PASS.
+    if rc == 3:
+        row["errors"].append("math_sense_healthcheck could not judge (rc=3): a row timed out twice")
+    elif rc != THRESH["healthcheck_rc"]:
         row["breaches"].append("math_sense_healthcheck rc=%s" % rc)
 
     rc, out, err, dt = run([PY, os.path.join(HERE, "proof_sense.py"), "--selftest"], 300)
     row["instruments"]["proof_selftest"] = {"rc": rc, "seconds": dt, "tail": (out or err)[-200:]}
     if rc != THRESH["proof_selftest_rc"]:
         row["breaches"].append("proof_sense --selftest rc=%s" % rc)
+
+    # PRODUCTION FLAGS (2026-09-22). Every instrument above runs the hook under plain `python`; production runs it
+    # through `python -s hook_dispatch.py` (settings.json), and from 2026-09-15 to 2026-09-22 that path died on
+    # import (numpy is user-site only; -s drops the user site) while this gate stayed green for a week. This
+    # instrument asks one question the store answers, through the real dispatcher with the real flags, with a fresh
+    # session id so the per-session dedup cannot hide a card, and breaches when no [math-brain] block comes back.
+    try:
+        payload = json.dumps({"hook_event_name": "UserPromptSubmit", "session_id": "regression-gate-%s" % stamp,
+                              "prompt": "what is the best known constant in the read-once formula version of the "
+                                        "Fourier entropy influence conjecture"})
+        t0 = time.time()
+        p = subprocess.run([PY, "-s", os.path.join(HERE, "hook_dispatch.py")], input=payload.encode("utf-8"),
+                           capture_output=True, timeout=300)
+        pout = (p.stdout or b"").decode("utf-8", "replace")
+        served, problem = production_math_block(pout)
+        row["instruments"]["production_flags"] = {"rc": p.returncode, "seconds": round(time.time() - t0, 1),
+                                                  "served": served, "problem": problem,
+                                                  "stderr_tail": (p.stderr or b"").decode("utf-8", "replace")[-200:]}
+        if not served:
+            row["breaches"].append("production flags: `python -s hook_dispatch.py` served no whole math-brain block "
+                                   "(%s; rc=%s)" % (problem, p.returncode))
+    except Exception as exc:
+        row["errors"].append("production flags instrument: %s" % repr(exc)[:160])
 
     if not quick:
         outp = os.path.join(STATE, "hookpath_gate_%s.jsonl" % stamp)
@@ -190,10 +377,21 @@ def _main_locked():
             s = json.load(open(outp + ".summary.json", encoding="utf-8"))
             for form in ("q_content", "q_hinted"):
                 n = s[form]["n"]
-                inst[form + "_hit"] = round(s[form]["hit"] / n, 3)
-                inst[form + "_rank1"] = round(s[form]["rank1"] / n, 3)
-                inst[form + "_silent"] = round(s[form]["silent"] / n, 3)
-            inst["absent_fire"] = round(s["unanswerable"]["false_fire"] / s["unanswerable"]["n"], 3)
+                inst[form + "_hit"] = round(s[form]["hit"] / n, 3) if n else 0.0
+                inst[form + "_rank1"] = round(s[form]["rank1"] / n, 3) if n else 0.0
+                inst[form + "_silent"] = round(s[form]["silent"] / n, 3) if n else 0.0
+                inst[form + "_not_scored"] = s[form].get("not_scored", 0)
+            _un_n = s["unanswerable"]["n"]
+            inst["absent_fire"] = round(s["unanswerable"]["false_fire"] / _un_n, 3) if _un_n else 0.0
+            # 2026-09-30 (account02/B07, B07-R79-MATH-HOOKPATH-EVALUATOR-IGNORES-CHILD-EXIT-056): the evaluator scores a
+            # block only from a hook that exited 0 and counts the calls that exited nonzero, failed to launch or printed
+            # something other than the hook's JSON. Such a call delivers nothing in a session, so it is a breach.
+            # Since 30 Sep (account04/B07-R79) a block with an incomplete card or no readable card is counted the same way:
+            # the session received it broken.
+            inst["invalid_rows"] = s.get("invalid", 0)
+            if inst["invalid_rows"]:
+                row["breaches"].append("hook path: %d hook calls not delivered whole (%s)" % (
+                    inst["invalid_rows"], "; ".join("%s: %s" % kv for kv in (s.get("invalid_reasons") or {}).items())))
             # 2026-09-12: the ceiling judges the STRICT rate when the evaluator reports it - a fire that serves the
             # named target is the store answering a question whose target has since entered the store (11 of the 40
             # 09-03 absent targets matched a node title by 09-12), not a false fire. The raw rate is still recorded.
@@ -205,6 +403,10 @@ def _main_locked():
             if _judged > THRESH["absent_fire_max"]:
                 row["breaches"].append("absent-target fires %.3f > %.2f" % (_judged, THRESH["absent_fire_max"]))
             inst["median_seconds"] = s.get("median_seconds")
+            # 2026-09-25: the evaluator asks a timed-out hook call once more and counts the calls that time out twice;
+            # the verdict below reads those as contention, like an instrument timeout
+            inst["retried_rows"] = s.get("retried", 0)
+            inst["timed_out_rows"] = s.get("timed_out", 0)
             for form in ("q_content", "q_hinted"):
                 if inst[form + "_hit"] < THRESH[form + "_hit_min"]:
                     row["breaches"].append("%s served-theorem %.3f < %.2f" % (form, inst[form + "_hit"], THRESH[form + "_hit_min"]))
@@ -235,7 +437,10 @@ def _main_locked():
                     return out
 
                 a, b = _rows(prev), _rows(outp)
-                shared = set(a) & set(b)
+                # a row the evaluator did not score (a timeout or a call that did not finish cleanly) is no outcome to
+                # gain or lose
+                shared = {k for k in set(a) & set(b) if not (a[k].get("invalid") or a[k].get("timed_out")
+                                                           or b[k].get("invalid") or b[k].get("timed_out"))}
                 gained, lost = [], []
                 for k in shared:
                     for field in ("hit", "rank1"):
@@ -320,18 +525,21 @@ def _main_locked():
                          "all_vib": round(a_vib / max(a_n, 1), 3), "n": a_n})
         else:
             row["errors"].append("value-in-block summary line not found (rc=%s): %s" % (rc, (err or out)[-200:]))
+        _invalid_to_row(row, inst, out, "value-in-block")
         row["instruments"]["vib"] = inst
 
         # 2026-09-13: the owner-voice probability bank through the hook (state/bank_ownvoice_prob.json, keys are node
         # NAMES not answers), then the rotated-key negative control on the same recorded run. ~1 min.
         _ov_out = os.path.join(HERE, "state", "ownvoice_%s.jsonl" % time.strftime("%Y%m%d_%H%M%S"))
-        _store = os.path.expanduser(r"~/math-brain-build/local/population/brain.sqlite3")
+        _store = os.path.expanduser("~/math-brain-build/local/population/brain.sqlite3")
         rc, out, err, dt = run([PY, os.path.join(HERE, "eval_ownvoice.py"), "--store", _store, "--out", _ov_out, "--tag", "gate"], 900)
         inst = {"rc": rc, "seconds": dt, "rows": _ov_out}
-        mo = re.search(r"OWNVOICE\[gate\] n=(\d+) served (\d+) hit_result (\d+) hit_any (\d+)", out or "")
+        mo = re.search(r"OWNVOICE\[gate\] n=(\d+) served (\d+) hit_result (\d+) hit_any (\d+)(?: strict (\d+))?", out or "")
         if mo:
-            o_n, o_srv, o_res, o_any = map(int, mo.groups())
+            o_n, o_srv, o_res, o_any = map(int, mo.groups()[:4])
             inst.update({"n": o_n, "served": round(o_srv / max(o_n, 1), 3), "result": round(o_res / max(o_n, 1), 3), "any": round(o_any / max(o_n, 1), 3)})
+            if mo.group(5) is not None:
+                inst["result_strict"] = round(int(mo.group(5)) / max(o_n, 1), 3)
             if inst["served"] < THRESH["ownvoice_served_min"]:
                 row["breaches"].append("owner-voice probability served %.3f < %.2f" % (inst["served"], THRESH["ownvoice_served_min"]))
             if inst["result"] < THRESH["ownvoice_result_min"]:
@@ -348,20 +556,82 @@ def _main_locked():
             row["errors"].append("owner-voice summary line not found (rc=%s): %s" % (rc, (err or out)[-200:]))
         row["instruments"]["ownvoice"] = inst
 
+        # 2026-09-25: real proofs through the hook (state/bank_named_proofs_v1.json, bank_qform_proofs_v1.json). ~2 min.
+        rc, out, err, dt = run([PY, os.path.join(HERE, "eval_proof_banks.py"), "--jobs", "2"], 900)
+        inst = {"rc": rc, "seconds": dt}
+        mp = re.search(r"PROOFBANKS named n=(\d+) served (\d+) title (\d+)/(\d+) items (\d+) \| qform n=(\d+) served (\d+) "
+                       r"title (\d+)/(\d+) items (\d+)(?: \| heldout n=(\d+) served (\d+) title (\d+)/(\d+) items (\d+))? "
+                       r"\| shuffled (\d+)", out or "")
+        if mp:
+            g = mp.groups()
+            nn, ns, nt, nk, ni, qn, qs, qt, qk, qi = map(int, g[:10])
+            sh = int(g[15])
+            if g[10] is not None:
+                hn, hs, ht, hk, hi = map(int, g[10:15])
+                inst.update({"heldout_title": round(ht / max(hk, 1), 3), "heldout_items": hi, "heldout_n": hn, "heldout_served": hs})
+                if inst["heldout_title"] < THRESH["proofbank_heldout_min"]:
+                    row["breaches"].append("real-proof bank (held-out papers) title reach %.3f < %.2f" % (inst["heldout_title"], THRESH["proofbank_heldout_min"]))
+            inst.update({"named_title": round(nt / max(nk, 1), 3), "named_items": ni, "named_n": nn, "named_served": ns,
+                         "qform_title": round(qt / max(qk, 1), 3), "qform_items": qi, "qform_n": qn, "qform_served": qs,
+                         "shuffled": sh})
+            if inst["named_title"] < THRESH["proofbank_named_min"]:
+                row["breaches"].append("real-proof bank (other papers) title reach %.3f < %.2f" % (inst["named_title"], THRESH["proofbank_named_min"]))
+            if inst["qform_title"] < THRESH["proofbank_qform_min"]:
+                row["breaches"].append("real-proof bank (quadratic-form papers) title reach %.3f < %.2f" % (inst["qform_title"], THRESH["proofbank_qform_min"]))
+            if sh > THRESH["proofbank_shuffled_max"]:
+                row["breaches"].append("real-proof bank shuffled control: %d hits > %d (the instrument is not key-specific)" % (sh, THRESH["proofbank_shuffled_max"]))
+        else:
+            row["errors"].append("proof-bank summary line not found (rc=%s): %s" % (rc, (err or out)[-200:]))
+        _invalid_to_row(row, inst, out, "real-proof bank")
+        row["instruments"]["proofbanks"] = inst
+
+        # 2026-09-25: the ledger questions in other words (state/bank_locate_l2_paraphrase_v1.json), stored wording beside
+        # them. Recorded, NOT floored: the first reading (cand65) is stored 40 of 40 against paraphrase 11 of 40 answer nodes
+        # served, and a floor under a number that low would only freeze it; it is here so a change that moves recall in
+        # other words - either way - shows in the nightly row. ~3 min.
+        # 2026-10-04: the same 40 descriptions also go in two natural framings (eval_paraphrase_reach.NATURAL): the template
+        # alone halves recall - 14 of 40 against 27 for "where is the open problem about X posed" - and "what is known about
+        # X" (12) shows the entry-gate weakness. Twice the calls, hence 1500 s. Also recorded, never floored.
+        rc, out, err, dt = run([PY, os.path.join(HERE, "eval_paraphrase_reach.py"), "--jobs", "2"], 1500)
+        inst = {"rc": rc, "seconds": dt}
+        mp = re.search(r"PARAPHRASE stored n=(\d+) served (\d+) node (\d+) value (\d+) \| paraphrase n=(\d+) served (\d+) "
+                       r"node (\d+) value (\d+)", out or "")
+        if mp:
+            sn, ss, sno, sv, pn, psv, pno, pv = map(int, mp.groups())
+            inst.update({"stored_n": sn, "stored_node": sno, "stored_value": sv, "stored_served": ss,
+                         "para_n": pn, "para_node": pno, "para_value": pv, "para_served": psv})
+            for _nm in ("natural_where", "natural_known"):
+                _mn = re.search(r"\| %s n=(\d+) served (\d+) node (\d+) value (\d+)" % _nm, out or "")
+                if _mn:
+                    _n, _s, _no, _v = map(int, _mn.groups())
+                    inst.update({_nm + "_n": _n, _nm + "_served": _s, _nm + "_node": _no, _nm + "_value": _v})
+        else:
+            row["errors"].append("paraphrase summary line not found (rc=%s): %s" % (rc, (err or out)[-200:]))
+        if mp:
+            _invalid_to_row(row, inst, out, "paraphrase")
+        row["instruments"]["paraphrase"] = inst
+
     # 2026-09-12: is content still flowing into the store? Count inbox bundles the integration ledger has never seen and
     # the store's newest node. Recorded, never floored: whether a lane's bundles enter the store is a quality decision
     # (found 946 of 1,121 unintegrated on 09-12, the 09-07 corpus lanes, ~157k entries against 7,451 nodes).
     try:
         import glob as _glob
         import sqlite3 as _sqlite3
-        _led = os.path.expanduser(r"~/math-brain-build/local/population/integration_ledger.jsonl")
-        _inbox = os.path.expanduser(r"~/math-brain-inbox")
+        _led = os.path.expanduser("~/math-brain-build/local/population/integration_ledger.jsonl")
+        _inbox = os.path.expanduser("~/math-brain-inbox")
         _seen = {json.loads(l).get("draft") for l in io.open(_led, encoding="utf-8") if l.strip()} if os.path.exists(_led) else set()
         _bundles = _glob.glob(os.path.join(_inbox, "*", "bundle_*.json"))
         _never = [p for p in _bundles if os.path.relpath(p, _inbox).replace("\\", "/") not in _seen]
-        _con = _sqlite3.connect("file:~/math-brain-build/local/population/brain.sqlite3?mode=ro", uri=True)
+        # 2026-09-23: the 946 deliberate exclusions hid four bundles of 09-13..09-15 that nobody had integrated (three with
+        # a license string off the allowlist, one never run); a bundle written after the 09-12 count is not part of that
+        # decision, so it is counted on its own and named - one stuck bundle must be visible, not one in 950.
+        _cut = time.mktime((2026, 9, 12, 12, 0, 0, 0, 0, -1))
+        _new = sorted(os.path.relpath(p, _inbox).replace("\\", "/") for p in _never if os.path.getmtime(p) >= _cut)
+        _con = _sqlite3.connect("file:" + os.path.expanduser("~/math-brain-build/local/population/brain.sqlite3") + "?mode=ro", uri=True)
         _nodes, _newest = _con.execute("select count(*), max(created_at) from nodes").fetchone()
-        row["instruments"]["inflow"] = {"inbox_bundles": len(_bundles), "never_in_ledger": len(_never), "store_nodes": _nodes, "newest_node": _newest}
+        row["instruments"]["inflow"] = {"inbox_bundles": len(_bundles), "never_in_ledger": len(_never),
+                                        "new_pending": len(_new), "new_pending_names": _new[:10],
+                                        "store_nodes": _nodes, "newest_node": _newest}
     except Exception as e:  # noqa: BLE001
         row["instruments"]["inflow"] = {"error": str(e)[:120]}
 
@@ -372,9 +642,18 @@ def _main_locked():
     # once with that word, and the panel keeps the last decided verdict beside it.
     timed_out = any(v.get("rc") == 124 for v in row["instruments"].values())
     slow_health = float(row["instruments"]["healthcheck"].get("seconds") or 0) > 120
-    if timed_out or slow_health:
+    # 2026-09-25: hook calls that timed out twice inside the hook-path pass are the same contention at row level: the
+    # pass exits 0 and scores those questions silent, which read as a served-theorem breach before the evaluator counted them
+    rows_timed_out = int((row["instruments"].get("hookpath") or {}).get("timed_out_rows") or 0)
+    health_unjudged = row["instruments"]["healthcheck"].get("rc") == 3
+    if timed_out or slow_health or rows_timed_out or health_unjudged:
         row["verdict"] = "INCONCLUSIVE"
-        row["inconclusive_because"] = ("instrument timeout" if timed_out else "") + (" health check %.0f s" % row["instruments"]["healthcheck"]["seconds"] if slow_health else "")
+        row["inconclusive_because"] = (("instrument timeout" if timed_out else "")
+                                       + (" health check %.0f s" % row["instruments"]["healthcheck"]["seconds"] if slow_health else "")
+                                       + (" health check could not judge a row (timed out twice)" if health_unjudged else "")
+                                       + (" %d hook-path calls timed out twice" % rows_timed_out if rows_timed_out else "")
+                                       + (" the run was out of time before %s" % ", ".join(_GATE["skipped"])
+                                          if _GATE["skipped"] else "")).strip()
     else:
         row["verdict"] = "ERROR" if row["errors"] else ("BREACH" if row["breaches"] else "PASS")
     os.makedirs(STATE, exist_ok=True)
@@ -406,14 +685,30 @@ def _main_locked():
     if vib and "all_vib" in vib:
         md.append("- value in block (the stored number reached the served text): campaign %s (served %s), saw %s, open-problem %s, all %s (n=%s)"
                   % (vib.get("campaign_vib"), vib.get("campaign_served"), vib.get("saw_vib"), vib.get("openproblem_vib"), vib.get("all_vib"), vib.get("n")))
+    pb = row["instruments"].get("proofbanks", {})
+    if pb and "named_title" in pb:
+        md.append("- real proofs (the results a pasted proof cites, in a served title): other papers %s (%s of %s proofs), quadratic-form papers %s (%s of %s), held-out papers %s (%s of %s); shuffled control %s"
+                  % (pb.get("named_title"), pb.get("named_items"), pb.get("named_n"), pb.get("qform_title"), pb.get("qform_items"), pb.get("qform_n"),
+                     pb.get("heldout_title"), pb.get("heldout_items"), pb.get("heldout_n"), pb.get("shuffled")))
+    pp = row["instruments"].get("paraphrase", {})
+    if pp and "para_node" in pp:
+        md.append("- the ledger questions in other words (answer node served, recorded not floored): paraphrase %s of %s (served %s, "
+                  "value %s), stored wording %s of %s" % (pp.get("para_node"), pp.get("para_n"), pp.get("para_served"),
+                                                          pp.get("para_value"), pp.get("stored_node"), pp.get("stored_n")))
+        if "natural_where_node" in pp or "natural_known_node" in pp:
+            md.append("- the same descriptions in natural questions (template above): 'where is the open problem about X posed' "
+                      "%s of %s, 'what is known about X' %s of %s" % (pp.get("natural_where_node"), pp.get("natural_where_n"),
+                                                                     pp.get("natural_known_node"), pp.get("natural_known_n")))
     ov = row["instruments"].get("ownvoice", {})
     if ov and "served" in ov:
-        md.append("- owner-voice probability bank (his words, the campaign's own results): served %s, result nodes %s, any %s; rotated-key control %s (n=%s)"
-                  % (ov.get("served"), ov.get("result"), ov.get("any"), ov.get("rotated_key_hits"), ov.get("n")))
+        md.append("- owner-voice probability bank (his words, the campaign's own results): served %s, result nodes %s (served cards alone %s), any %s; rotated-key control %s (n=%s)"
+                  % (ov.get("served"), ov.get("result"), ov.get("result_strict"), ov.get("any"), ov.get("rotated_key_hits"), ov.get("n")))
     inf = row["instruments"].get("inflow", {})
     if inf and "error" not in inf:
-        md.append("- inflow: store %s nodes, newest %s; inbox bundles %s, never in the ledger %s"
-                  % (inf.get("store_nodes"), str(inf.get("newest_node"))[:16], inf.get("inbox_bundles"), inf.get("never_in_ledger")))
+        md.append("- inflow: store %s nodes, newest %s; inbox bundles %s, never in the ledger %s (%s since 09-12, the "
+                  "rest the deliberate corpus exclusion%s)"
+                  % (inf.get("store_nodes"), str(inf.get("newest_node"))[:16], inf.get("inbox_bundles"), inf.get("never_in_ledger"),
+                     inf.get("new_pending"), (": " + ", ".join(inf.get("new_pending_names") or [])) if inf.get("new_pending") else ""))
     for b in row["breaches"]:
         md.append("- BREACH: " + b)
     for e in row["errors"]:

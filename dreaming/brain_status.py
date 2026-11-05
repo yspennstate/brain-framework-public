@@ -113,7 +113,7 @@ def graph_health():
     _NOISE = _re.compile(r"_W\d+_quiet_\d{4}_\d{2}_\d{2}$|^build_watchdog_W\d+")
     try:
         _allmem = [f[:-3] for f in os.listdir(MEM)
-                   if f.endswith(".md") and f[:-3] not in _sub and not f.startswith("dream_")
+                   if f.endswith(".md") and f[:-3] not in _sub and not re.fullmatch(r"dream_\d{4}_\d{2}_\d{2}", f[:-3])
                    and not f[:-3].isupper()]   # all-caps = a substrate page (RECONSOLIDATION_QUEUE etc), not a
                                                # recall-memory; the hardcoded _sub above had gone stale and missed some
         auto_logs = sum(1 for m in _allmem if _NOISE.search(m))
@@ -151,6 +151,44 @@ def graph_health():
               % (_q, len(_c)))
     except Exception:
         pass
+
+
+def identity_health():
+    """D8 #89: the self at a glance. Anchor integrity comes from wake_brain.anchor_problems() itself, so this panel
+    and the wake's gate cannot disagree; freshness is when the story files were last rewritten and the newest date
+    the autobiography actually tells."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_wake_brain", os.path.join(HOME, ".claude", "wake_brain.py"))
+    wb = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(wb)
+    bad = wb.anchor_problems()
+    n = len(wb.ANCHORS)
+    print("\nIDENTITY  %d/%d anchors intact" % (n - len(bad), n) + ("  <-- " + "; ".join(bad[:3]) if bad else ""))
+    story = [d for d in wb.ANCHORS if d[0].isupper()]
+    ages = [(time.time() - os.path.getmtime(os.path.join(MEM, d))) / 86400 for d in story
+            if os.path.exists(os.path.join(MEM, d))]
+    if ages:
+        print("        story files (%d) last rewritten %.0f-%.0f days ago" % (len(ages), min(ages), max(ages)))
+    try:
+        auto = io.open(os.path.join(MEM, "AUTOBIOGRAPHY.md"), encoding="utf-8").read()
+        ds = sorted(re.findall(r"20\d\d-\d\d-\d\d", auto))
+        if ds:
+            told = (time.time() - time.mktime(time.strptime(ds[-1], "%Y-%m-%d"))) / 86400
+            print("        newest date the autobiography tells: %s (%.0f days ago)" % (ds[-1], told))
+    except (OSError, ValueError):
+        pass
+    # the type count comes from the dream's salience.tsv (its why column names "user"): opening all ~31k memories
+    # here doubled this observer's run time, 8.8 s to 17.4 s
+    sal = os.path.join(DR, "salience.tsv")
+    if os.path.exists(sal):
+        k = 0
+        with io.open(sal, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                p = line.rstrip("\n").split("\t")
+                if len(p) >= 5 and "user" in p[4].split(","):
+                    k += 1
+        print("        %d memories typed user (who he is, who I am, standing rules), as of the %s dream"
+              % (k, time.strftime("%d %b %H:%M", time.localtime(os.path.getmtime(sal)))))
 
 
 def dream_health():
@@ -219,6 +257,11 @@ def main():
         pass
 
     _print_mistake_watch_status()
+
+    try:
+        identity_health()
+    except Exception:
+        pass
 
     # association-graph health (reachability of the corpus by spreading activation)
     try:

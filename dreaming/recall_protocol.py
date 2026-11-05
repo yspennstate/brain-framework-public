@@ -7,8 +7,11 @@ import socket
 import struct
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_STORE = str(Path.home() / 'math-brain-build/local/population/brain.sqlite3')
-DEFAULT_BUILD = str(Path.home() / 'math-brain-build/src')
+# Same defaults as math_recall.py: the store comes from MATHBRAIN_STORE (or --store), and math_brain from
+# MATHBRAIN_BUILD_SRC when set, else the installed package. A server on other defaults would answer for
+# code or a store the in-process path never reads.
+DEFAULT_STORE = ''
+DEFAULT_BUILD = ''
 MAX_FRAME = 16 * 1024 * 1024
 CONTROL_ENV = {'MATH_RECALL_SERVER_DISABLE', 'MATH_RECALL_SERVER_TIMEOUT',
                'MATH_RECALL_CLIENT_AUDIT_FILE'}
@@ -24,16 +27,29 @@ def env_key():
                  and k not in CONTROL_ENV)]
     return hashlib.sha256(json.dumps(pairs,ensure_ascii=True).encode('ascii')).hexdigest()
 
+def package_dir():
+    """The math_brain package the in-process path imports, located without importing it."""
+    build = os.environ.get('MATHBRAIN_BUILD_SRC',DEFAULT_BUILD)
+    if build:
+        return Path(build) / 'math_brain'
+    import importlib.util
+    try:
+        spec = importlib.util.find_spec('math_brain')
+    except (ImportError, ValueError):
+        spec = None
+    if spec is None or not spec.origin:
+        return HERE / 'math_brain_not_installed'
+    return Path(spec.origin).parent
+
 def code_files():
     # fastrecall_delta.py since 4 Nov: the server runs its extend() on every store change, and without it in the
     # stamp a fix to it never reached the resident server (claude-c462c100)
     files = [HERE / name for name in ('candidate_manifest.json','baseline_math_recall.py','math_recall.py','fastrecall.py',
-                                     'fastrecall_delta.py','math_strength.py','recall_protocol.py','recall_client.py',
-                                     'recall_server.py')]
-    package = Path(os.environ.get('MATHBRAIN_BUILD_SRC',DEFAULT_BUILD)) / 'math_brain'
-    files += sorted(package.glob('*.py'))
-    files.append(Path.home()/'.claude/dreaming/query_embed.py')
-    return files
+                                     'fastrecall_delta.py','math_strength.py','recall_protocol.py',
+                                     'recall_client.py','recall_server.py')]
+    files += sorted(package_dir().glob('*.py'))
+    files.append(HERE/'query_embed.py')
+    return [path for path in files if path.exists()]   # an install without the eval candidates stamps what it has
 
 def code_stamp(extra=()):
     rows=[]
@@ -58,7 +74,7 @@ def requested_store(argv):
             path = argv[index+1]
         elif arg.startswith('--store='):
             path = arg.split('=',1)[1]
-    return canonical(path)
+    return canonical(path) if path else None
 
 def send_frame(sock, payload):
     data = json.dumps(payload,ensure_ascii=True,separators=(',',':')).encode('ascii')

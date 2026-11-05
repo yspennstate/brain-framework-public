@@ -23,6 +23,7 @@ from collections import defaultdict
 HOME = os.path.expanduser("~")
 MEM = os.path.join(HOME, ".claude", "projects", "{{BRAIN_SLUG}}", "memory")
 OQ = os.path.join(MEM, "OPEN_QUESTIONS.md")
+OQA = os.path.join(MEM, "OPEN_QUESTIONS_ANSWERED.md")
 
 STOP = set(("about above across after again against because before being below between both cannot could "
             "does doing during each else ever every from have here into just like made make many more most "
@@ -79,6 +80,17 @@ def _questions():
                 pass
         text = re.sub(r"\[\[[^\]]+\]\]|https?://\S+|`[^`]+`", " ", q)
         out.append({"text": re.sub(r"\s+", " ", q).strip(), "toks": _toks(text), "links": links, "origin": origin})
+    # 31 Oct: while OPEN_QUESTIONS.md cannot be edited (GIT_SYNC_APPROVED), answers are recorded in
+    # OPEN_QUESTIONS_ANSWERED.md as '- <start of the question> -> [[slug]]'. An answered question has nothing
+    # left to incubate, and on 31 Oct all 8 surfaced pairs were questions already answered this way.
+    try:
+        done = [re.sub(r"\s+", " ", m.group(1)).strip() for m in
+                re.finditer(r"(?m)^- (.+?) -> \[\[[^\]]+\]\]\s*$",
+                            io.open(OQA, encoding="utf-8", errors="replace").read())]
+    except Exception:
+        done = []
+    if done:
+        out = [q for q in out if not any(re.sub(r"^\s*- \[ \]\s*", "", q["text"]).startswith(p) for p in done)]
     return out
 
 

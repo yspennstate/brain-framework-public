@@ -30,6 +30,30 @@ CONTRACT_CACHE = os.path.expanduser(r"~/.brain-framework/state/project_memory/ho
 EXCLUDED_TREE = os.path.expanduser(r"~/brain-repo")
 SCRATCH = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser(r"~/AppData/Local")), "Temp", "claude")
 CREATE_NO_WINDOW = (0x08000000 if os.name == "nt" else 0)
+
+
+# MEASURED UNTHROTTLED (2026-09-25). This probe runs as a windowless scheduled task at BelowNormal, the profile Windows
+# power-throttles (EcoQoS) by default, so it was measuring its own throttle as much as the laptop. Same process, same
+# minute, condition order rotated over six rounds: cold opens read 2.82 ms (scanned) and 0.23 ms (excluded) at the
+# median throttled, with single rounds of 156.5 and 91.2 ms, against 0.04 and 0.04 ms opted out and 0.10 and 0.07 ms at
+# Normal (claude-9209cf81, scratchpad probe_ab_rot.py). His own programs run unthrottled, so the probe opts itself out
+# (priority unchanged) and the PowerShell it starts; history rows from here on carry "unthrottled": true, and a reading
+# on either side of that line is not comparable with the other.
+def _no_power_throttle(handle=None):
+    """SetProcessInformation(ProcessPowerThrottling): the execution-speed policy set, and set to off. True on success."""
+    class _Throttling(ctypes.Structure):
+        _fields_ = [("Version", wt.ULONG), ("ControlMask", wt.ULONG), ("StateMask", wt.ULONG)]
+    try:
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.GetCurrentProcess.restype = ctypes.c_void_p
+        k32.SetProcessInformation.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p, wt.DWORD]
+        h = ctypes.c_void_p(handle) if handle is not None else k32.GetCurrentProcess()
+        state = _Throttling(1, 1, 0)
+        return bool(k32.SetProcessInformation(h, 4, ctypes.byref(state), ctypes.sizeof(state)))
+    except Exception:
+        return False
+
+
 FRAGMENTS = {"sleep.exe", "grep.exe", "sed.exe", "head.exe", "tail.exe", "wc.exe", "find.exe", "cat.exe", "sort.exe", "uniq.exe"}
 
 try:
@@ -164,6 +188,8 @@ def ps_start():
     cmd = [r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe", "-NoProfile", "-NonInteractive", "-Command", "1"]
     t = time.perf_counter()
     p = subprocess.Popen(cmd, creationflags=CREATE_NO_WINDOW, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if hasattr(p, "_handle"):
+        _no_power_throttle(int(p._handle))     # the child inherits the priority, not the opt-out (2026-09-25)
     try:
         p.wait(timeout=PS_START_CAP_S)
     except subprocess.TimeoutExpired:
@@ -538,7 +564,7 @@ def dispatcher_health(here=None, settings=None):
     entries for each wired event, and settings.json really points those events at the dispatcher."""
     import py_compile
     here = here or os.path.dirname(os.path.abspath(__file__))          # overridable so the control can test a scratch copy
-    settings = settings or os.path.expanduser(r"~/.claude/settings.json")     # rather than break the live wiring to prove a branch
+    settings = settings or os.path.expanduser("~/.claude/settings.json")     # rather than break the live wiring to prove a branch
     out = {"wired": [], "ok": True, "why": []}
     enabled = os.path.exists(os.path.join(here, "HOOK_DISPATCH_ENABLED"))
     disp = os.path.join(here, "hook_dispatch.py")
@@ -607,12 +633,38 @@ def disk_rate(window_s=1.0):
         return {}
 
 
+def _spare_live_msys(pids):
+    """Drop fragments whose Git Bash (MSYS) parent is alive (2026-09-25). bash forks, the child execs and the forked
+    Windows process exits, so every sleep, grep or tail a live bash loop starts has a dead WINDOWS parent. Counted by
+    the Windows test alone, this probe read 30 fragments at 22:3x on 25 Sep and told every session to reap them by
+    PID; all 13 sleeps on the box that minute had a dead Windows parent, the sleep of a live dream-watch loop among
+    them. hook_reaper.py (24 Sep) and waste_sense.py already judge by the MSYS parent; this reuses their table so the
+    three agree. Read only when there is a candidate. Returns (kept, basis): basis "msys" when the table was read,
+    "windows" when it could not be and the Windows-parent list is returned as it was - a count known to be inflated
+    (26 Sep 00:16: 37 by that fallback in a minute when the MSYS count was 0), so the verdict never fires on it."""
+    if not pids:
+        return pids, "msys"
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+        if here not in sys.path:
+            sys.path.insert(0, here)
+        from hook_reaper import msys_table, msys_parent_alive
+        table = msys_table()
+    except Exception:
+        return pids, "windows"
+    if not table:
+        return pids, "windows"
+    return [p for p in pids if not msys_parent_alive(int(p), table)], "msys"
+
+
 def orphans_and_pinned():
     n = 0
+    basis = "unknown"
     try:
         rows = _snapshot()
         alive = {pid for pid, _, _ in rows}
-        n = sum(1 for pid, ppid, name in rows if name in FRAGMENTS and ppid not in alive)
+        kept, basis = _spare_live_msys([pid for pid, ppid, name in rows if name in FRAGMENTS and ppid not in alive])
+        n = len(kept)
     except Exception:
         pass
     ep = None
@@ -621,10 +673,10 @@ def orphans_and_pinned():
         ep = cs.get("exited_pinned", {}).get("count")
     except Exception:
         pass
-    return n, ep
+    return n, ep, basis
 
 
-PRODUCERS = {"python.exe", "pythonw.exe", "ffmpeg.exe", "dvisvgm.exe", "blender.exe"}
+PRODUCERS ={"python.exe", "pythonw.exe", "ffmpeg.exe", "dvisvgm.exe", "blender.exe"}
 
 
 def _produced_recently(pr, minutes=35):
@@ -670,6 +722,49 @@ def _produced_recently(pr, minutes=35):
     return False
 
 
+_WAIT_ARG_RE = (r"(?:^|\s)--(not-before|not_before|start|start-at|at|until|after|wait[\w-]*|sleep[\w-]*|gap[\w-]*|every|"
+                r"interval|delay[\w-]*|days|hours|tries|retries|retry[\w-]*)(?=[\s=]|$)")
+_DATE_RE = r"(20\d\d)[-_]?(\d\d)[-_]?(\d\d)"
+
+
+def _waits_by_design(pr, psutil):
+    """Is this orphan WAITING on purpose - a scheduler asleep until its clock, a retry loop between tries, a server
+    holding a port for a client? (2026-09-25) Every producer this detector named at 22:36 that evening was: two
+    publish retries (--not-before 16:20 --tries 24 --gap-min 60), the speeches publish chain (--start 10:30 --days 7),
+    a one-shot job that sleeps until the YouTube quota resets on 26 Sep, and the channel-picture chooser serving
+    127.0.0.1:4213 for his click. The advisory's DO line reads "produced nothing and nothing waits on it: kill it",
+    and all five had produced nothing, by design, with no parent - an agent following it would have killed his
+    publishing. Three narrow signals, each named in the note so a reader can judge it: a wait or schedule argument,
+    a script named for a day not yet past, a listening socket. SUPPRESSOR ONLY, like _produced_recently: it moves a
+    process from "hung" to "waiting" (both are recorded) and never raises a flag."""
+    import datetime
+    import re
+    try:
+        args = pr.cmdline()
+    except Exception:
+        return None
+    m = re.search(_WAIT_ARG_RE, " ".join(args))
+    if m:
+        return "waits by its own arguments (--%s)" % m.group(1)
+    for a in args[1:8]:
+        base = os.path.basename(a)
+        if base.lower().endswith((".py", ".pyw")):
+            for y, mo, d in re.findall(_DATE_RE, base):
+                try:
+                    if datetime.date(int(y), int(mo), int(d)) >= datetime.date.today():
+                        return "a one-shot job named for a day not yet past (%s)" % base
+                except ValueError:
+                    pass
+            break
+    try:
+        for c in pr.net_connections(kind="inet"):
+            if c.status == psutil.CONN_LISTEN:
+                return "serves port %d (waits on a client)" % c.laddr.port
+    except Exception:
+        pass
+    return None
+
+
 def hung_producers(prev):
     """Orphaned render/convert processes that have produced NOTHING for two probe cycles.
 
@@ -703,18 +798,19 @@ def hung_producers(prev):
     try:
         import psutil
     except Exception:
-        return 0, None, watch
+        return 0, None, watch, 0, None
     try:
         rows = _snapshot()
     except Exception:
-        return 0, None, watch
+        return 0, None, watch, 0, None
     alive = {pid for pid, _, _ in rows}
     cand = [pid for pid, ppid, name in rows if name in PRODUCERS and ppid not in alive]
     if not cand:
-        return 0, None, watch
+        return 0, None, watch, 0, None
     old = (prev or {}).get("hung_watch") or {}
     now = time.time()
     hung, worst = 0, None
+    waiting, wworst = 0, None
     for pid in cand[:40]:
         try:
             pr = psutil.Process(pid)
@@ -753,6 +849,12 @@ def hung_producers(prev):
         # flag: a process whose cwd is not its output directory simply gets no suppression and the
         # old behaviour stands, so a wrong guess costs a flag we would have raised anyway.
         if still >= 2 and not _produced_recently(pr):
+            why = _waits_by_design(pr, psutil)
+            if why:
+                waiting += 1
+                if wworst is None or age > wworst[1]:
+                    wworst = (pid, age, why)
+                continue
             hung += 1
             if worst is None or age > worst[1]:
                 try:
@@ -763,7 +865,10 @@ def hung_producers(prev):
     if worst:
         note = ("pid %d %s: orphaned, %.0f min old, it AND ITS CHILDREN produced nothing across %d "
                 "probe cycles" % (worst[0], worst[2], worst[1], 3))
-    return hung, note, watch
+    wnote = None
+    if wworst:
+        wnote = "pid %d, %.0f min old: %s" % (wworst[0], wworst[1], wworst[2])
+    return hung, note, watch, waiting, wnote
 
 
 def scratch_gb(prev):
@@ -1059,6 +1164,7 @@ def main():
     except Exception:
         pass
     st = {"at": time.strftime("%Y-%m-%d %H:%M:%S"), "at_epoch": time.time()}
+    st["unthrottled"] = _no_power_throttle()      # before the first measurement; see _no_power_throttle
     stage = {}
     def mark(name, t0): stage[name] = round(time.perf_counter() - t0, 1)
     t0 = time.perf_counter(); st["open_ms_scanned"], st["open_n_scanned"] = open_latency_ms(SCANNED_TREE); mark("open_scanned", t0)
@@ -1096,8 +1202,8 @@ def main():
     _cc = contract_cache_age_h()
     st["contract_cache_age_h"] = None if _cc is None else round(_cc, 2)
     mark("sysreads", t0)
-    t0 = time.perf_counter(); st["orphan_fragments"], st["exited_pinned"] = orphans_and_pinned(); mark("orphans", t0)
-    t0 = time.perf_counter(); st["hung_producers"], st["hung_producer_note"], st["hung_watch"] = hung_producers(prev); mark("hung", t0)
+    t0 = time.perf_counter(); st["orphan_fragments"], st["exited_pinned"], st["orphan_basis"] = orphans_and_pinned(); mark("orphans", t0)
+    t0 = time.perf_counter(); st["hung_producers"], st["hung_producer_note"], st["hung_watch"], st["waiting_producers"], st["waiting_note"] = hung_producers(prev); mark("hung", t0)
     t0 = time.perf_counter()
     try:
         st["top"], st["counts"], st["cores_busy_sum"], st["top_ops"] = top_consumers()
@@ -1235,7 +1341,8 @@ def main():
     if st["disk_free_gb"] < 40: v.append("disk_low")   # 1.9 TB drive: 32 GB free stalled the pagefile on 09-14; percent misleads here
     if (st.get("exited_pinned") or 0) > 50: v.append("exited_pinned_high")
     if (st.get("hung_producers") or 0) > 0: v.append("hung_producer")
-    if st["orphan_fragments"] > 30: v.append("orphan_fragments")   # BrainWasteSweeper20m reaps the usual 5-15; 30+ is a runaway
+    # BrainWasteSweeper20m reaps the usual 5-15; 30+ is a runaway - but only on a count judged by the MSYS parent
+    if (st.get("orphan_fragments") or 0) > 30 and st.get("orphan_basis") == "msys": v.append("orphan_fragments")
     if (st.get("scratch_gb") or 0) > 10: v.append("scratch_big")
     if st["comfy_listening"]: v.append("comfy_listening")
     if not (st.get("dispatcher") or {}).get("ok", True): v.append("hook_dispatch_broken")

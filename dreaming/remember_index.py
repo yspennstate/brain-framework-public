@@ -48,13 +48,26 @@ def _detach_refresh(bm):
         return 'detached refresh failed: %s' % type(exc).__name__
 
 
+def _leave_running(bm, child, index_path):
+    """The awaited refresh ran past the deadline: let it finish and publish, and record it as the refresh in
+    flight. If it has exited by now, fall back to a detached refresh as before."""
+    if child.poll() is not None:
+        return _detach_refresh(bm)
+    try:
+        bm._mark_spawned(child.pid, index_path)
+    except Exception:
+        pass
+    return 'awaited refresh pid %d left running to publish' % child.pid
+
+
 def ensure_indexed(slugs, *, mem_dir=None, index_path=None,
                    timeout_seconds=12.0, max_attempts=3):
     """Return VERIFIED_CURRENT_BM25_CONTENT or a truthful DEFERRED_* state.
 
 Explicit paths are for isolated fixtures. A freeze is respected. Refresh
-failures never undo the already completed memory write. No background child
-is left behind when this function returns.
+failures never undo the already completed memory write. On a timeout the
+refresh goes on in the background: on POSIX the awaited child itself, left
+running to publish; on Windows a detached refresh after the child is killed.
     """
     import bm25 as bm
     slugs = tuple(dict.fromkeys(slugs))
@@ -114,18 +127,28 @@ is left behind when this function returns.
         if sys.platform == 'win32':
             flags = (subprocess.CREATE_NO_WINDOW
                      | subprocess.BELOW_NORMAL_PRIORITY_CLASS)
+        # On a timeout the child is left running to publish, not killed (1 Nov 2026). subprocess.run's kill
+        # landed mid-publish under load: a SIGKILL skips the temp cleanup, so each one left a 34 MB index temp
+        # and a partial pickle temp, and _detach_refresh then redid the whole publish ~20 s later (6 of the 7
+        # publishes 11:25-12:12 that day). The child is marked as the refresh in flight, so a recall that
+        # finds the memory unindexed meanwhile does not spawn a second one.
         try:
-            result = subprocess.run(
+            child = subprocess.Popen(
                 [sys.executable, '-B', '-c', code, mem_dir, index_path],
                 cwd=str(Path(bm.__file__).resolve().parent),
                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL, creationflags=flags,
-                timeout=remaining, check=False)
-        except subprocess.TimeoutExpired:
-            return receipt('DEFERRED_TIMEOUT', _detach_refresh(bm))
+                stderr=subprocess.DEVNULL, creationflags=flags)
         except OSError as exc:
             return receipt('DEFERRED_CHILD_ERROR', type(exc).__name__)
-        if result.returncode:
+        try:
+            returncode = child.wait(timeout=remaining)
+        except subprocess.TimeoutExpired:
+            if sys.platform == 'win32':     # a job object may end the child with us: kill it and detach, as before
+                child.kill()
+                child.wait()
+                return receipt('DEFERRED_TIMEOUT', _detach_refresh(bm))
+            return receipt('DEFERRED_TIMEOUT', _leave_running(bm, child, index_path))
+        if returncode:
             return receipt('DEFERRED_CHILD_ERROR', 'nonzero_exit')
         # A refresh can legitimately skip under contention. Success is checked
         # from the target content at the top of the loop, never from exit zero.

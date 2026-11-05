@@ -71,6 +71,25 @@ STORE_PATH = os.environ.get("MATHBRAIN_STORE", "")
 WALK_LINKS = 60   # links printed for one walked card (a hub can carry hundreds); the rest are counted
 WHY_PATHS = 2     # spreading paths printed per hit (the strongest); the rest are counted
 SHORT_ID = 14     # shortest printed id prefix (extended until it fits one card)
+# 257 card bodies (31 Oct) carry C0 bytes where PDF extraction kept TeX cmex delimiter codes: 00/01, 10/11, 12/13 come
+# in matched pairs (parens), 02/03 and 14/15 brackets, 08 and 1a/1b braces, 18/19 ceilings. Printed raw, a NUL makes
+# grep call the whole recall binary and show nothing. Output maps them back; the store is left as it is.
+CMEX = str.maketrans({0x00: "(", 0x01: ")", 0x02: "[", 0x03: "]", 0x04: "⌊", 0x05: "⌋", 0x06: "⌈",
+                      0x07: "⌉", 0x08: "{", 0x0b: "⟩", 0x0c: "|", 0x0e: "/", 0x0f: "\\", 0x10: "(", 0x11: ")",
+                      0x12: "(", 0x13: ")", 0x14: "[", 0x15: "]", 0x16: "⌊", 0x17: "⌋", 0x18: "⌈",
+                      0x19: "⌉", 0x1a: "{", 0x1b: "}", 0x1c: "⟨", 0x1d: "⟩", 0x1e: "/", 0x1f: "\\",
+                      0x7f: ""})
+
+
+class _CmexOut:
+    def __init__(self, f):
+        self._f = f
+
+    def write(self, s):
+        return self._f.write(s.translate(CMEX))
+
+    def __getattr__(self, name):
+        return getattr(self._f, name)
 # mathematical relations first, then dependencies and citations, then similarity links
 KIND_ORDER = {k: i for i, k in enumerate(("proves", "refutes", "fails_under", "generalizes", "specializes",
                                            "analogous_to", "bridges_to", "defines", "depends_on", "cites",
@@ -401,10 +420,146 @@ def possessive_variants(queries, lex, ratio=0.005, min_df=2, swap=False):
     return out
 
 
-_TUP = re.compile(r"\(\s*-?\d+(?:\s*,\s*-?\d+)+\s*\)")
+# Number words against digits (31 Oct 2026). math_brain.retrieval.tokenize keeps a hyphenated word whole, so
+# "zero-one" and "0-1" are two terms that never match: "Kolmogorov 0-1 law" missed both Kolmogorov Zero-One cards in
+# its top 3, and "Levy zero-one law" missed the card titled Levy's 0-1 Law. The lexicon holds 49 such pairs in both
+# forms (two-dimensional 103 cards / 2-dimensional 11, zero-one 18 / 0-1 15). Each wording gets the other form of
+# such a term added when that form is indexed. ON by default as "swap" since its A/B (31 Oct, 60 title cases, porting/analysis_20261031/numword_ab.py): appended to the same query (=1) it lifted
+# swapped titles 6/0 and four-word queries 13/0 but cost 3 exact titles their rank 1; as its own wording fused by rank
+# (=swap) it lifted them 11/1 and 13/0 with 0 exact titles moved. MATH_RECALL_NUMWORD=0 turns it off.
+_NUMW = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
+_NUMW_RE = re.compile(r"(?<![a-z0-9])(%s)(?![a-z0-9])" % "|".join(_NUMW))
+_NUMD_RE = re.compile(r"(?<![a-z0-9])(10|[0-9])(?![0-9a-z])")
+
+
+def numword_variants(queries, lex, swap=False):
+    from math_brain.retrieval import tokenize, _content_terms
+    out = []
+    for q in queries:
+        terms = set(_content_terms(tokenize(q)))
+        rep = {}
+        for t in sorted(terms):
+            if "-" not in t:
+                continue
+            o = _NUMW_RE.sub(lambda m: str(_NUMW.index(m.group(1))), t)
+            if o == t:
+                o = _NUMD_RE.sub(lambda m: _NUMW[int(m.group(1))], t)
+            if o != t and o not in terms and o in lex:
+                rep[t] = o
+        if swap:   # one wording with each such term in its other form, in place; none when nothing swapped
+            sw = q
+            for t, o in rep.items():
+                sw = re.sub(r"(?<![\w-])%s(?![\w-])" % re.escape(t), o, sw, flags=re.I)
+            if sw != q:
+                out.append(sw)
+            continue
+        out.append(q + " " + " ".join(rep.values()) if rep else q)
+    return out
+
+
+# Names that live inside a compound (3 Nov 2026). The same whole-hyphen tokenizer indexes "Azuma-Hoeffding" as one
+# term, so "Azuma's inequality" or "Azuma inequality" never meets the Azuma-Hoeffding card (not in the top 8; tensor
+# and matrix Azuma cards and Minkowski's inequality outrank it), while "Azuma Hoeffding inequality" ranks it 1st
+# because both parts are named. Of the lexicon's 30,311 terms, 7,197 are alphabetic compounds and 1,531 of the 3,879
+# words they are made of have a compound at least half as frequent as the word alone (azuma 4 / azuma-hoeffding 4,
+# paley 5 / paley-zygmund 12, cantelli 1 / borel-cantelli 23; borel 134 / borel-cantelli 23 does not qualify). Such a
+# word gets one wording with it swapped for its most frequent compound, fused by rank. Affix compounds (hoeffding-type,
+# non-negative) and parts over 100 cards are skipped. MATH_RECALL_COMPOUND=swap turns it on. OFF after its A/B
+# (3 Nov, porting/analysis_20261103/compound_ab.py, n 40, seed 11): titles cut to one name improved 7 and fell 2
+# (9 -> 1 three times; 1 -> 3 once), exact titles 0/0 of 40, bare-name titles 0/0 of 40. The rule fixed beforehand asked
+# for a net gain of 10, and 27 of the 40 cut titles were already at rank 1 without it. Run 2 (compound_ab2.py, seed 23): 10 of 30
+# misses reached rank 3 or better, 0 worse of 120 controls; its rule asked for 15, so it stays off.
+_COMPOUND_AFFIX = {"type", "like", "based", "free", "valued", "order", "non", "sub", "semi", "multi", "self", "well",
+                   "anti", "pre", "post", "quasi", "pseudo", "super", "dimensional", "invariant", "style"}
+_COMPOUND_PARTS = None
+
+
+def compound_variants(queries, lex, ratio=0.5, max_part_df=100):
+    from math_brain.retrieval import tokenize, _content_terms
+    global _COMPOUND_PARTS
+    import fastrecall
+
+    def df(t):
+        b = lex.get(t)
+        return 0 if b is None else len(fastrecall._unints(b)) // 2
+    if _COMPOUND_PARTS is None:
+        parts = {}
+        for k in lex:
+            ps = k.split("-") if "-" in k else ()
+            if len(ps) >= 2 and all(p.isalpha() and len(p) >= 3 for p in ps) and not _COMPOUND_AFFIX & set(ps):
+                for p in set(ps):
+                    parts.setdefault(p, []).append(k)
+        _COMPOUND_PARTS = parts
+    out = []
+    for q in queries:
+        terms = set(_content_terms(tokenize(q)))
+        rep = {}
+        for t in sorted(terms):
+            base = t[:-2] if t.endswith("'s") else t
+            if "-" in base or len(base) < 4 or base in _POSS_SKIP:
+                continue
+            best, bd = None, 0
+            for c in _COMPOUND_PARTS.get(base, ()):
+                others = [p for p in c.split("-") if p != base]
+                if c in terms or any(p in terms or df(p) > max_part_df for p in others):
+                    continue
+                d = df(c)
+                if d >= 2 and d > bd:
+                    best, bd = c, d
+            if best and bd >= ratio * max(1, df(base)):
+                rep[t] = best
+        sw = q
+        for t, c in rep.items():
+            sw = re.sub(r"(?<![\w-])%s(?![\w-])" % re.escape(t), c, sw, flags=re.I)
+        if sw != q:
+            out.append(sw)
+    return out
+
+
+_TUP =re.compile(r"\(\s*-?\d+(?:\s*,\s*-?\d+)+\s*\)")
 _NUM = re.compile(r"(?<![\w.])-?\d+(?![\w.])")
 LIT_MAX = int(os.environ.get("MATH_RECALL_LITERAL", "3") or 0)   # cards the literal lane may put first; 0 turns it off
 LIT_POOL = 40   # a tuple set held by more cards than this says too little to pick one
+
+
+# The title lane (30 Oct 2026). A wording that is a card's whole title, once case, punctuation and a possessive 's are
+# set aside, puts that card ahead of the word-ranked ones: "Chernoff bound" ranked the card titled Chernoff bound 12th
+# and "Kolmogorov Zero-One Law" ranked its card 3rd, under longer cards that use the same words more often.
+# A title shared by more than TITLE_POOL cards, or shorter than TITLE_MIN characters, says too little to pick one.
+TITLE_MAX = int(os.environ.get("MATH_RECALL_TITLE", "3") or 0)   # cards the title lane may put first; 0 turns it off
+TITLE_POOL, TITLE_MIN = 8, 6
+_TITLE_IDX = {}
+
+
+def _title_key(text):
+    t = re.sub(r"['\u2019]s\b", "", (text or "").lower())
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", t).split())
+
+
+def title_lane(queries, title, superseded_by, found_by):
+    """(card id, wording number) for cards whose whole title is a wording, best word rank first."""
+    if TITLE_MAX <= 0:
+        return []
+    idx = _TITLE_IDX.get(id(title))
+    if idx is None:
+        idx = {}
+        for cid, t in title.items():
+            if cid not in superseded_by:
+                idx.setdefault(_title_key(t), []).append(cid)
+        _TITLE_IDX.clear()
+        _TITLE_IDX[id(title)] = idx
+    out, seen = [], set()
+    for qi, q in enumerate(queries, 1):
+        k = _title_key(q)
+        ids = idx.get(k, []) if len(k) >= TITLE_MIN else []
+        if not ids or len(ids) > TITLE_POOL:
+            continue
+        rank = lambda c: min([r for _q, r in found_by.get(c, []) if r > 0] or [10 ** 6])  # noqa: E731
+        for cid in sorted(ids, key=lambda c: (rank(c), c)):
+            if cid not in seen:
+                seen.add(cid)
+                out.append((cid, qi))
+    return out[:TITLE_MAX]
 
 
 class _LitHit(object):
@@ -528,7 +683,16 @@ def tuple_tip(queries, hits, P, nodes, store_path):
 
 
 def main(argv=None):
+    try:  # optional resident recall server; without it every call runs in-process
+        from recall_client import try_server
+    except ImportError:
+        try_server = None
+    remote = try_server(sys.argv[1:] if argv is None else argv) if try_server else None
+    if remote is not None:
+        return remote
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if not isinstance(sys.stdout, _CmexOut):
+        sys.stdout = _CmexOut(sys.stdout)
     ap = argparse.ArgumentParser(
         description="One-call recall from the math store: ids, whole cards, linked ids.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -648,6 +812,14 @@ def main(argv=None):
         elif P is not None and _poss == "swap":   # the other form as its own wording: fused by rank, never summed
             queries = queries + [v for v in possessive_variants(queries, P.s.get("lex") or {}, swap=True)
                                  if v not in queries]
+        _numw = os.environ.get("MATH_RECALL_NUMWORD", "swap")
+        if P is not None and _numw == "1":
+            queries = numword_variants(queries, P.s.get("lex") or {})
+        elif P is not None and _numw == "swap":   # the other form as its own wording, fused by rank
+            queries = queries + [v for v in numword_variants(queries, P.s.get("lex") or {}, swap=True)
+                                 if v not in queries]
+        if P is not None and os.environ.get("MATH_RECALL_COMPOUND", "0") == "swap":   # own wording, fused by rank
+            queries = queries + [v for v in compound_variants(queries, P.s.get("lex") or {}) if v not in queries]
         found_by, best, results = {}, {}, []
         for qi, q in enumerate(queries, 1):
             kw = dict(edges=edges_s, limit=a.limit * 2, min_support_score=0.0, min_margin=0.0, graph_depth=a.depth,
@@ -670,6 +842,9 @@ def main(argv=None):
             if h.node.id in lit_pos:   # the literal lane's own order, ahead of every word-ranked card
                 key = (lit_pos[h.node.id] - 1000, 0, 0)
                 return key if a.full else key + (h.node.id,)
+            if h.node.id in ttl_pos:   # the title lane next, then the word-ranked cards
+                key = (ttl_pos[h.node.id] - 500, 0, 0)
+                return key if a.full else key + (h.node.id,)
             key = (min(r for _, r in fb), -len(fb), min(q for q, _ in fb))
             return key if a.full else key + (h.node.id,)
         lit = literal_lane(queries, P, nodes, title, superseded_by, a.store, found_by)
@@ -681,6 +856,17 @@ def main(argv=None):
                 best[cid] = _LitHit(node)
             found_by[cid] = [(qi, 0)] + [x for x in found_by.get(cid, []) if x[1] > 0]
         lit_pos = {c: j for j, (c, _q) in enumerate(lit)}
+        ttl = title_lane(queries, title, superseded_by, found_by)
+        for cid, qi in ttl:   # a card whose whole title is a wording; the literal lane keeps its place ahead
+            if cid in lit_pos:
+                continue
+            if cid not in best:
+                node = by_id[cid] if by_id is not None else next((n for n in nodes if n.id == cid), None)
+                if node is None:
+                    continue
+                best[cid] = _LitHit(node)
+            found_by[cid] = [(qi, 0)] + [x for x in found_by.get(cid, []) if x[1] > 0]
+        ttl_pos = {c: j for j, (c, _q) in enumerate(c for c in ttl if c[0] not in lit_pos)}
         hits = sorted(best.values(), key=order)[:a.limit]
         hit_learned = int(os.environ.get("MATH_RECALL_LEARNED", "2") or 0)
         if S is not None and not a.list:
@@ -711,6 +897,8 @@ def main(argv=None):
             if n.id in lit_pos:
                 print("    found by its coordinate tuples: it lists every tuple of wording %d, in any order"
                       % found_by[n.id][0][0])
+            elif n.id in ttl_pos:
+                print("    found by its title: wording %d is this card's whole title" % found_by[n.id][0][0])
             for line in why_lines(h, title, why_edges, why_kinds, sid, compact=not a.full, S=S):
                 print("    " + line)
             body = " ".join((n.body or "").split())
@@ -765,5 +953,42 @@ def main(argv=None):
             enc.wait()   # the encoder thread ends before the process does
 
 
+def _exit(code):
+    """sys.exit(code), except when onnxruntime was loaded in this process (the query encoder): then the exit handlers
+    run and stdio is flushed here, and the process ends with os._exit, so onnxruntime's C++ teardown never runs. In
+    1.31.1 that teardown (OneDsTelemetry::Shutdown, called from exit()) can spin on sched_yield for good: two brain.py
+    recalls from 30 Oct were still in it 22 h later, about 220 CPU-minutes each. A search here loads it too (31 Oct)."""
+    if "onnxruntime" not in sys.modules:
+        sys.exit(code)
+    if code is None:
+        rc = 0
+    elif isinstance(code, int):
+        rc = code
+    else:
+        print(code, file=sys.stderr)
+        rc = 1
+    try:
+        import atexit
+        atexit._run_exitfuncs()
+    except Exception:
+        pass
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.flush()
+        except Exception:
+            pass
+    os._exit(rc)
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        _rc = main()
+    except SystemExit as e:
+        _rc = e.code
+    except KeyboardInterrupt:
+        _rc = 130
+    except BaseException:
+        import traceback
+        traceback.print_exc()
+        _rc = 1
+    _exit(_rc)

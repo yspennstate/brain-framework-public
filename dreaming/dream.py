@@ -191,8 +191,24 @@ except Exception:
 # historical date in prose from manufacturing consolidation pressure.
 def is_recent(m):
     return m["birth_epoch"] is not None and now - m["birth_epoch"] <= 8*86400
-recent = sorted((fn for fn, m in mems.items() if is_recent(m) and not m["transient"]),
-                key=lambda fn: trusted_recency_key(fn, mems[fn]["birth_epoch"]))
+# Birth is the created day's noon, so a whole day ties and the name tiebreak picked section A's 30: on 1 Nov 2026
+# the newest day held 788 memories and the 30 shown were all a_* slugs. Inside a tie, newest created_at goes first
+# (birth and age stay as they are). Measured over 8 day-ends: a_* slugs in the 30 shown 184 -> 47 of 240, adjacent
+# topic changes 44 -> 208 of 232 (1000-ways D3 #79, porting/w08_checks/d3_79_interleaving.py).
+_CREATED_AT = re.compile(r"^\s*created_at:\s*[\"']?(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)", re.M)
+def created_at_epoch(m):
+    hit = _CREATED_AT.search(m["body"][:1600])
+    if hit:
+        try:
+            import datetime as _dtm
+            return _dtm.datetime.fromisoformat(hit.group(1).replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            pass
+    return 0.0
+def recent_key(fn):
+    k = trusted_recency_key(fn, mems[fn]["birth_epoch"])
+    return (k[0], k[1], -created_at_epoch(mems[fn]), k[2])
+recent = sorted((fn for fn, m in mems.items() if is_recent(m) and not m["transient"]), key=recent_key)
 transient_recent = sum(1 for fn, m in mems.items() if is_recent(m) and m["transient"])
 
 # pairs co-cited by ONE connector note (daydream_*/gist_*): a daydream that links [[A]] and [[B]] in
@@ -222,6 +238,10 @@ for t, fs in inv.items():
         fs = sorted(fs)
         for i in range(len(fs)):
             for j in range(i+1, len(fs)):
+                # 31 Oct: same-series pairs (a session's compaction chain, a catalogue's cards) took 395 of the
+                # best 600 and all 175 candidates; skip them before the cut (first 12 characters agree, as in 2b)
+                if len(fs[i]) >= 15 and len(fs[j]) >= 15 and fs[i][:12] == fs[j][:12]:
+                    continue
                 pairs[(fs[i], fs[j])] += 1
 assoc = []
 for (a, b), shared in pairs.most_common(600):
@@ -304,13 +324,29 @@ try:
                  if s in mems and not mems[s]["transient"] and _tier.get(s) != "unconscious"]
         if _keep:
             _V = _vecs[_keep]
-            _cal = (_V @ _V.T - _bias) / (1.0 - _bias)
-            _iu = _np.triu_indices(len(_keep), 1)
-            _ord = _np.argsort(-_cal[_iu])
-            for _k in _ord[:4000]:
-                _i, _j = int(_iu[0][_k]), int(_iu[1][_k])
-                _c = float(_cal[_i, _j])
-                if _c < 0.72 or len(sem_assoc) >= 10:
+            # 30 Oct: same-series pairs (one session's compaction chain, one catalogue's cards) sit near 1.0 and
+            # filled the whole best-4000 window, so the loop below turned all 4000 away and B got no semantic
+            # pair at all. Drop them before the cut, by the same test as _same_series (first 12 characters agree)
+            _pre = {}
+            _pid = _np.array([_pre.setdefault(_slugs[i][:-3][:12], len(_pre)) if len(_slugs[i]) >= 15 else -1 - n
+                              for n, i in enumerate(_keep)])
+            # 30 Oct: the full N x N matrix, its triu index pairs and their argsort came to 15+ GB at 27,916 memories
+            # and swapped the Mac. Only pairs at 0.72 or above are ever used and only the best 4000 of those, so go
+            # block by block and keep each block's best 4000 (the global best 4000 lie in that union)
+            _cand = []
+            for _s in range(0, len(_keep), 1024):
+                _blk = (_V[_s:_s + 1024] @ _V.T - _bias) / (1.0 - _bias)
+                _r, _q = _np.nonzero(_blk >= 0.72)
+                _up = (_q > _r + _s) & (_pid[_r + _s] != _pid[_q])
+                _r, _q = _r[_up], _q[_up]
+                _cv = _blk[_r, _q]
+                if len(_cv) > 4000:
+                    _top = _np.argpartition(-_cv, 4000)[:4000]
+                    _r, _q, _cv = _r[_top], _q[_top], _cv[_top]
+                _cand.extend(zip(_cv.tolist(), (_r + _s).tolist(), _q.tolist()))
+            _cand.sort(key=lambda t: -t[0])
+            for _c, _i, _j in _cand[:4000]:
+                if len(sem_assoc) >= 10:
                     break
                 _a, _b = _slugs[_keep[_i]], _slugs[_keep[_j]]
                 _an, _bn = _a[:-3], _b[:-3]
@@ -347,13 +383,17 @@ for fn, m in mems.items():
 # meta-words like [[links]] - is tokenizer noise, not a memory the brain wants
 # (the 08-06 19:30 agenda's top ten was nine parts this junk). Filtered at the
 # REPORT only: extraction, association edges, and orphan logic are untouched.
+# 31 Oct (q1676): every memory name holds an underscore or a dash (the seven that do not, MEMORY,
+# MISTAKES and the like, always resolve), so a separator is required; that and the template names
+# below dropped 16 of the 25 targets only the agenda counted (memory, target, wiki-link, memo_name...).
 _LINK_NOISE = {"link", "links", "name", "names", "subject", "slug", "slugs",
-               "their_slug", "todo", "tbd"}
+               "their_slug", "todo", "tbd", "memo_name", "memo-name", "other-memory-name",
+               "their_name", "slug_name", "wiki-link", "wiki-links"}
 def _sluglike(t):
     t = t.strip()
     if t.lower() in _LINK_NOISE:
         return False
-    return bool(re.match(r"^[A-Za-z][A-Za-z0-9_-]{3,}$", t))
+    return bool(re.match(r"^[A-Za-z][A-Za-z0-9_-]{3,}$", t)) and bool(re.search(r"[_-]", t))
 dangling = Counter()
 for fn, m in mems.items():
     for l in m["links"]:
@@ -518,7 +558,17 @@ _CORRECTION_TELLS = re.compile(
     r"|\bi never (?:said|told|asked|specified)\b|\bi thought i (?:asked|told)\b"
     r"|\bi though?t? it (?:was|were)\b|\b(?:is|was|that'?s) wrong\b|\bnot what i (?:wanted|asked)\b"
     r"|\bwtf\b|\bcome on\b|\bwhy did(?:n'?t)? you\b|\bdon'?t do\b|\bovercomplicat"
-    r"|\bbefore (?:it was|you said)\b|\bnow you are saying\b|\bkeep happening\b", re.I)
+    r"|\bbefore (?:it was|you said)\b|\bnow you are saying\b|\bkeep happening\b"
+    # 31 Oct 2026 (open question 1947): none of his ~7 corrections on the Mac (29-30 Oct) matched the list above,
+    # so the 4-day window fell back to 14-15 Oct. Added from them; on 8,132 older labelled heads the additions
+    # fire 87 more times at about 70% correct (recall 22.4 -> 26.8%, precision 59.5 -> 61.0%).
+    r"|\bwhy (?:are|aren'?t|do|don'?t|did|didn'?t|is|isn'?t|were|was) (?:you|u|they|it|we)\b[^?.\n]{0,60}"
+    r"(?:not|never|stop|idle|still|again|wrong)"
+    r"|\bwh?y? doi? you ever\b|\bi (?:said|told you|asked)(?: you)? (?:multiple|many|several|\d+) times?\b"
+    r"|\bi already (?:said|told|asked)\b|\bdo it (?:correctly|right|properly)\b|\bthat is (?:always )?a mistake\b"
+    r"|\bi (?:do ?n'?t|dont|didn'?t) see (?:any|the|terminal|it|them|that)\b|\bstop asking me\b"
+    r"|\bwhy (?:is|are) (?:it|this|that|they) (?:not|still)\b|\byou (?:forgot|missed|ignored|broke)\b"
+    r"|\bthat'?s not (?:right|true|it|correct)\b|\bit (?:did not|didn'?t|does not|doesn'?t) work\b", re.I)
 _MACHINE_PROMPT = re.compile(
     r"^\s*\[FABLE-1|WATCHDOG, owner directive|^\s*/goal loop wake|Overnight watchdog wake"
     r"|^\s*\[work-session|^\s*\[SYSTEM|^\s*\[campaign|^\s*\[AGENT|10-min cycle\]", re.I)
@@ -770,12 +820,37 @@ with io.open(OUT, "w", encoding="utf-8") as f:
     try:
         _pl = os.path.join(MEM, "prompts", "PROMPTS.jsonl")
         _unc = 0
-        if os.path.exists(_pl):
-            for _ln in io.open(_pl, encoding="utf-8", errors="replace"):
-                if '"class_model"' not in _ln:
-                    _unc += 1
+        _bk = None
+        try:
+            # his rows apart from machine rows, by day (prompt_backlog.py): on 2026-09-23, 37 of the
+            # newest 40 unclassified rows were headless picture-worker prompts, so 360 of his waited
+            # three days behind text whose origin already decides its class
+            import prompt_backlog as _pbk
+            _bk = _pbk.owner_backlog(_pl)
+            _unc = _bk["owner"]
+        except Exception:
+            _bk = None
+            if os.path.exists(_pl):
+                for _ln in io.open(_pl, encoding="utf-8", errors="replace"):
+                    if '"class_model"' not in _ln:
+                        _unc += 1
         if _unc:
-            f.write(f"\n## H. Prompt archive: {_unc} prompts await real classification\n")
+            if _bk:
+                _bkdays = ", ".join("%s: %d" % (_d[5:], _n) for _d, _n in _bk["by_day"])
+                f.write(f"\n## H. Prompt archive: {_unc} of HIS prompts await real classification "
+                        f"(newest days {_bkdays}; {_bk['machine']} machine-origin rows need no read)\n")
+                f.write("Read HIS rows only (recorded origin \"owner\"), newest day first. A machine-origin "
+                        "row is decided by its origin, not by a read: on 2026-09-23, 37 of the newest 40 "
+                        "unclassified rows were headless picture-worker prompts, which is how 360 of his "
+                        "prompts from 09-21..09-23 waited three days. A loop re-sends his words unchanged, "
+                        "so one text can be the prompt he typed and hundreds of re-fires: a verdict with "
+                        "\"scope\": \"heads\" labels only the copy he typed (apply_prompt_classes.py). Some rows stamped his "
+                        "are machine text all the same - a loop tick, a relaunch or reboot notice, a worker brief, anything "
+                        "that speaks of him in the third person (his clock, the owner): give those \"class_model\": "
+                        "\"automation\" and \"origin\": \"automation\" in the verdict (on 09-23, 551 rows like that carried "
+                        "his stamp).\n")
+            else:
+                f.write(f"\n## H. Prompt archive: {_unc} prompts await real classification\n")
             f.write("The owner wants every prompt he gives an agent saved and CLASSIFIED WELL "
                     "(mistake / security / prove / improve / think / run / remember / admin / other; "
                     "automation = machine-authored). Origin takes precedence over action class; missing origin "
@@ -789,7 +864,8 @@ with io.open(OUT, "w", encoding="utf-8") as f:
                     "precisely the coupling the canonical contract (4.1) forbids, because a correction "
                     "inside a prompt classed run or improve was then invisible. The hook's keyword tags "
                     "are provisional.\n"
-                    f"Read up to 40 entries lacking `class_model` from `{_pl}`, judge each from its "
+                    f"Read up to 60 of HIS entries lacking `class_model` from `{_pl}` (his inflow runs "
+                    "about 115 a day, measured 09-09..09-23, so 40 a pass never caught up), judge each from its "
                     "content (what did the owner want done), then write verdicts as jsonl lines "
                     "{sha1?, class_model, confidence, correction_present} - sha1 optional if you "
                     "instead run:\n"

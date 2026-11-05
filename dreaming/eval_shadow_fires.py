@@ -17,11 +17,19 @@ that read come AFTER T)? If a suppressed challenger gets read in-session, the ti
 USEFUL surfacing; if it's rarely read, the gate is correctly filtering marginal ties. Read-only; MEASURE +
 recommend a direction, do not auto-retune (the gate fires every session). Usage: python eval_shadow_fires.py
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import io, os, re, time
 from collections import defaultdict
 DR = os.path.expanduser(r"~/.claude/dreaming")
 SHADOW = os.path.join(DR, "shadow_fires.tsv")
 TRACE = os.path.join(DR, "retrievals.tsv")
+# rows judged by the last run: work_finders W71 asks for a re-run only once the log has grown past this
+STAMP = os.path.join(DR, "state", "shadow_fires_eval.json")
 
 
 def norm_slug(s):
@@ -92,6 +100,13 @@ def main():
     else:
         print(f"  -> only {100*frac:.0f}% of suppressed challengers were read in-session: MARGIN=1.35 is mostly "
               f"filtering marginal ties correctly. Directionally CONFIRMED; keep, and let the shadow log grow.")
+    try:
+        import json
+        os.makedirs(os.path.dirname(STAMP), exist_ok=True)
+        with open(STAMP, "w", encoding="utf-8") as f:
+            json.dump({"rows": n, "read_in_session": read_insess, "at": time.strftime("%Y-%m-%dT%H:%M:%S")}, f)
+    except OSError:
+        pass
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """registry_refresh.py - Stop hook: keep the fleet crash-recovery registry CHECKPOINT fresh.
 
-The recovery apparatus (~\\.claude\\fleet\\) relaunches a crashed agent using the
+The recovery apparatus (~/.claude/fleet/) relaunches a crashed agent using the
 registry's task + checkpoint (relaunch.ps1 builds the resume prompt from them). But register.ps1 is
 MANUAL - agents register at startup and rarely update - so a long-running agent's registry checkpoint
 goes stale/empty, and a crash resumes it with the wrong task and no next-step. Verified 2026-07-11:
@@ -71,6 +71,20 @@ def _last_assistant(tp):
         return ""
 
 
+def _last_text(tp):
+    """_last_assistant's answer, from resume_checkpoint's offset cache when its window is this one (1 Nov 2026).
+    Both pick the newest assistant text line by the same test within the transcript's last 80 MB; resume_checkpoint
+    keeps the answer per transcript and parses only appended lines, where _last_assistant read up to 80 MB at every
+    Stop (0.2-0.4 s on the long sessions). Any error, or a different window, reads the file as before."""
+    try:
+        import resume_checkpoint as rc
+        if rc._MAX_SCAN == 80 * 1024 * 1024:
+            return rc._scan_cached(tp)[0]
+    except Exception:
+        pass
+    return _last_assistant(tp)
+
+
 def _gist(text, n=300):
     """Compress the last turn to a recovery breadcrumb: strip harness XML/markdown, collapse whitespace,
     prefer to keep a trailing 'next step' sentence if present."""
@@ -118,9 +132,10 @@ def _first_user(tp):
     return ""
 
 
-def refresh(session_id, transcript_path, reg_dir=None):
+def refresh(session_id, transcript_path, reg_dir=None, final=""):
     """Pure, testable: update registry/<id>.json's checkpoint+updated if it EXISTS. Returns the path
-    written, or None (no entry / no session / error)."""
+    written, or None (no entry / no session / error). final is the Stop payload's last_assistant_message: the
+    hook runs before that message is on disk, so the transcript alone gives the turn's second-to-last text."""
     reg_dir = reg_dir or REG_DIR
     if not session_id:
         return None
@@ -134,7 +149,10 @@ def refresh(session_id, transcript_path, reg_dir=None):
         obj = json.load(io.open(f, encoding="utf-8-sig"))
     except Exception:
         return None
-    gist = _gist(_last_assistant(transcript_path)) if transcript_path else ""
+    if isinstance(final, str) and final.strip():
+        gist = _gist(final)
+    else:
+        gist = _gist(_last_text(transcript_path)) if transcript_path else ""
     if not gist:
         return None                      # nothing to record - leave the prior checkpoint intact
     obj["checkpoint"] = gist
@@ -208,7 +226,7 @@ def main():
         sid = data.get("session_id") or ""
         tp = data.get("transcript_path") or ""
         ensure_registered(sid, tp)   # auto-register a NEW top-level non-dream session (create-if-missing)
-        refresh(sid, tp)             # keep the checkpoint fresh (existing + just-created entries)
+        refresh(sid, tp, final=data.get("last_assistant_message") or "")   # keep the checkpoint fresh
     except Exception:
         return
 

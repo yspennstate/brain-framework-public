@@ -32,7 +32,7 @@ PROJ = os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.
 
 def own_process(payload):
     p = subprocess.run([sys.executable, "-s", HOOK], input=json.dumps(payload).encode("utf-8"), capture_output=True,
-                       timeout=120, creationflags=0x08000000)
+                       timeout=120, creationflags=0x08000000 if os.name == "nt" else 0)
     return p.returncode, p.stdout.decode("utf-8", "replace")
 
 

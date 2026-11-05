@@ -30,6 +30,7 @@ The store is one folder in the brain tree, ~/brain-repo/12_cognitive_architectur
 Two checkmarks per entry: [x] done (the agent's) and [x] seen (the owner's). Times are the owner's local clock.
 Never blocks, never raises out: any error -> silent exit 0.
 """
+import hashlib
 import io
 import json
 import os
@@ -46,6 +47,10 @@ STATE = os.path.join(STORE, "state.json")
 VIEW = os.path.join(STORE, "CHECKLIST.md")
 LOCK = os.path.join(STORE, ".lock")
 LOG = os.path.join(STORE, "hook.log")
+# 1 Nov: asked words past ASKED_CAP chars live whole in ASKED_FULL (append-only), not in state.json. Loop ticks stored
+# their whole prompt on every entry: asked_words was 23.7 of 31.7 MB, and every hook rewrites state.json under the lock.
+ASKED_FULL = os.path.join(STORE, "asked_full.jsonl")
+ASKED_CAP = 1500
 _LIVE_STORES = {os.path.normcase(os.path.abspath(p)) for p in (_BRAIN_TREE, os.path.join(HOME, ".claude", "task_checklist"))}
 MESH_DB = os.path.join(HOME, ".agents", "coordination", "agent_mesh.sqlite3")
 
@@ -109,21 +114,63 @@ def log(msg):
         pass
 
 
+def _pid_alive(pid):
+    """Whether a process id names a running process. Never os.kill(pid, 0) on Windows: signal 0 there is CTRL_C_EVENT."""
+    if pid <= 0:
+        return False
+    if os.name != "nt":
+        try:
+            os.kill(pid, 0)
+            return True
+        except ProcessLookupError:
+            return False
+        except OSError:
+            return True
+    import ctypes
+    k32 = ctypes.windll.kernel32
+    h = k32.OpenProcess(0x1000, False, pid)          # PROCESS_QUERY_LIMITED_INFORMATION
+    if not h:
+        return ctypes.GetLastError() == 5            # access denied: it exists
+    try:
+        code = ctypes.c_ulong()
+        return bool(k32.GetExitCodeProcess(h, ctypes.byref(code))) and code.value == 259   # STILL_ACTIVE
+    finally:
+        k32.CloseHandle(h)
+
+
+def _lock_holder_alive():
+    """The lock file holds its writer's pid. Unreadable or unparsable counts as alive: a wrong steal costs the list."""
+    try:
+        with io.open(LOCK, "rb") as fh:
+            return _pid_alive(int(fh.read(32).strip() or b"0"))
+    except (OSError, ValueError):
+        return True
+
+
 class _Lock(object):
-    """A lock file with a short wait; a lock older than 60 s is treated as abandoned."""
+    """A lock file with a short wait; a lock older than 60 s is treated as abandoned. A hook waits WAIT seconds; the
+    CLI waits 30 (set in main): with state.json at 31 MB a save holds the lock for seconds on a loaded box, and the
+    4 s wait failed about 2,000 times a day in October, by-hand done/note calls among them (30 Oct)."""
+    WAIT = 4.0
 
     def __enter__(self):
         os.makedirs(STORE, exist_ok=True)
-        deadline = time.time() + 4.0
+        deadline = time.time() + self.WAIT
         while True:
             try:
                 fd = os.open(LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
                 os.write(fd, str(os.getpid()).encode("ascii"))
                 os.close(fd)
+                _LOCK_DEPTH[0] += 1
                 return self
             except FileExistsError:
                 try:
-                    if time.time() - os.path.getmtime(LOCK) > 60:
+                    # A lock older than 60 s was stolen whatever its holder was doing. On 1 Nov a 31 MB save on the loaded
+                    # box ran past 60 s, a second writer took the lock and read state.json mid-replace, the read failed,
+                    # and load_state's fallback saved a day-old copy over the list. Steal only from a dead holder, or
+                    # from one that has held it 15 minutes.
+                    age = time.time() - os.path.getmtime(LOCK)
+                    if age > 900 or (age > 60 and not _lock_holder_alive()):
                         os.remove(LOCK)
                         continue
                 except OSError:
@@ -137,6 +184,26 @@ class _Lock(object):
             os.remove(LOCK)
         except OSError:
             pass
+        _LOCK_DEPTH[0] = max(0, _LOCK_DEPTH[0] - 1)
+        if _LOCK_DEPTH[0] == 0 and _PENDING_VIEW:
+            st, mt = _PENDING_VIEW.pop("st"), _PENDING_VIEW.pop("mtime")
+            _PENDING_VIEW.clear()
+            # 1 Nov: rendering CHECKLIST.md (5.7 MB) under the lock was a third of every hold. It is written after the
+            # lock is released, and only if no later save has landed: the last writer of a burst always writes it.
+            if _state_mtime() == mt:
+                _write_view_now(st)
+
+
+# write_view() inside a held lock leaves its state here for _Lock.__exit__ to render once the lock is released
+_LOCK_DEPTH = [0]
+_PENDING_VIEW = {}
+
+
+def _state_mtime():
+    try:
+        return os.path.getmtime(STATE)
+    except OSError:
+        return None
 
 
 def _backup_path():
@@ -168,11 +235,46 @@ def _fallback_state():
     return {}
 
 
-def load_state():
+def _state_looks_whole(path):
+    """True when the file has the shape of a complete JSON object: its first byte is '{' and its last non-blank byte '}'.
+    A read that failed on such a file failed for a passing reason (another writer's replace, memory), not damage.
+    A file that cannot even be opened counts as whole: falling back on it is the one move that loses the list."""
     try:
-        st = _read_json(STATE)
-    except Exception:
-        st = _fallback_state() if os.path.exists(STATE) and os.path.getsize(STATE) > 0 else {}
+        n = os.path.getsize(path)
+        with io.open(path, "rb") as fh:
+            head = fh.read(1)
+            fh.seek(max(0, n - 64))
+            tail = fh.read()
+        return head == b"{" and tail.rstrip().endswith(b"}")
+    except OSError:
+        return True
+
+
+def load_state():
+    # 1 Nov: 'state.json unreadable' was logged 8 times in 4 hours with the file intact. Each time the hourly copy (or a
+    # leftover temp a day old) was loaded and then SAVED over the list, dropping every change since that copy (19
+    # entries at 03:01). A failed read of a whole file is retried, then refused; only a damaged file falls back.
+    st, last = None, None
+    for k in range(10):
+        try:
+            if not os.path.exists(STATE):
+                st = {}
+                break
+            if os.path.getsize(STATE) == 0:
+                st = {}
+                break
+            st = _read_json(STATE)
+            break
+        except Exception as exc:
+            last = exc
+            if not _state_looks_whole(STATE):
+                log("state.json is damaged (%r); falling back" % (exc,))
+                st = _fallback_state()
+                break
+            time.sleep(0.1 + 0.05 * k)
+    if st is None:
+        log("state.json would not load (%r) though it is whole; refusing, not loading an older copy" % (last,))
+        raise RuntimeError("state.json would not load: %r" % (last,))
     st.setdefault("entries", {})
     st.setdefault("sessions", {})
     st.setdefault("seq", {})
@@ -410,6 +512,54 @@ def _entry(st, tid):
     return e
 
 
+def _ask_key(words):
+    return hashlib.sha1(words.encode("utf-8", "replace")).hexdigest()[:16]
+
+
+def _cap_asked(tid, words):
+    """The asked words for state.json: whole up to ASKED_CAP chars; past it the whole text goes to ASKED_FULL first."""
+    if len(words) <= ASKED_CAP:
+        return words
+    with io.open(ASKED_FULL, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"id": tid, "at": now_iso(), "asked_words": words}, ensure_ascii=False) + "\n")
+    return words[:ASKED_CAP] + " [... %d more chars; whole ask: show %s]" % (len(words) - ASKED_CAP, tid)
+
+
+def same_ask(e, text):
+    """Is this entry the same ask as text? By key, so a capped entry still matches its loop's next tick."""
+    words = " ".join(text.split())
+    k = e.get("asked_key") or _ask_key(e["asked_words"])
+    return k == _ask_key(words) or k == _ask_key(redact(words))
+
+
+def full_asked(tid):
+    """The whole ask from ASKED_FULL, or None."""
+    try:
+        with io.open(ASKED_FULL, encoding="utf-8") as fh:
+            for line in fh:
+                if ('"%s"' % tid) in line:
+                    r = json.loads(line)
+                    if r.get("id") == tid:
+                        return r.get("asked_words")
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def cap_existing(st):
+    """One-time move of long asks already in state: whole text to ASKED_FULL, the cap stays. Returns (n, chars)."""
+    n = chars = 0
+    for tid, e in sorted(st["entries"].items()):
+        w = e.get("asked_words") or ""
+        if "asked_key" not in e:
+            e["asked_key"] = _ask_key(w)
+        if len(w) > ASKED_CAP and not w.endswith("whole ask: show %s]" % tid):
+            e["asked_words"] = _cap_asked(tid, w)
+            n += 1
+            chars += len(w) - len(e["asked_words"])
+    return n, chars
+
+
 def _event(st, kind, tid, by, note=""):
     ev = {"at": now_iso(), "kind": kind, "id": tid, "by": by, "note": redact(note)}
     append_ledger(ev)
@@ -439,10 +589,12 @@ def nudge(st, session, except_id=None):
 
 def add(st, asked, by, runtime, session, working="", asked_at=None, source="hook"):
     tid = new_id(st)
+    full = redact(" ".join(asked.split()))
     e = {
         "id": tid,
         "asked_at": asked_at or now_min(),
-        "asked_words": redact(" ".join(asked.split())),
+        "asked_words": _cap_asked(tid, full),
+        "asked_key": _ask_key(full),
         "agent": by,
         "runtime": runtime or "",
         "session": (session or "")[:12],
@@ -518,7 +670,7 @@ def touch(st, tid, by):
 def repeated_ask(st, session, text):
     """The newest entry of this session with exactly these words, whatever its status; None if there is none."""
     words = " ".join(text.split())
-    cands = [x for x in st["entries"].values() if x["session"] == (session or "")[:12] and x["asked_words"] == words]
+    cands = [x for x in st["entries"].values() if x["session"] == (session or "")[:12] and same_ask(x, words)]
     cands.sort(key=lambda x: x["id"])
     return cands[-1] if cands else None
 
@@ -685,6 +837,13 @@ def render(st):
 
 
 def write_view(st):
+    if _LOCK_DEPTH[0] > 0:
+        _PENDING_VIEW["st"], _PENDING_VIEW["mtime"] = st, _state_mtime()
+        return
+    _write_view_now(st)
+
+
+def _write_view_now(st):
     try:
         tmp = "%s.%d.tmp" % (VIEW, os.getpid())
         with io.open(tmp, "w", encoding="utf-8", newline="\n") as fh:
@@ -713,7 +872,19 @@ def digest(st, session=None, exclude_session=None, max_others=DIGEST_MAX_OTHERS)
     unseen = [e for e in es if e["status"] in ("done", "dropped") and not e["seen"]]
     lines = ["[checklist] %d open task(s) across all agents, %d done and not yet seen by the owner. Full list: %s" % (
         len(open_), len(unseen), VIEW.replace("\\", "/"))]
-    others = [e for e in open_ if not exclude_session or e["session"] != (exclude_session or "")[:12]]
+    # a waking session's own open asks are the top of its goal stack; the fleet's newest eight used to bury them
+    # (30 Oct: 72 of 137 wakes had an open ask of their own that the digest never named)
+    mine = [e for e in open_ if session and not exclude_session and e["session"] == session[:12]]
+    if mine:
+        lines.append("  Yours, open in this session (newest first - the top is what you are on):")
+        for e in mine[:3]:
+            lines.append("  * %s %s: asked \"%s\" -> %s" % (
+                e["id"], e["asked_at"], short(e["asked_words"], 110),
+                short(e["working_on"], 90) or "(working-on not stated)"))
+        if len(mine) > 3:
+            lines.append("  * ... and %d more of yours open." % (len(mine) - 3))
+        lines.append("  Other agents:")
+    others = [e for e in open_ if e not in mine and (not exclude_session or e["session"] != (exclude_session or "")[:12])]
     for e in others[:max_others]:
         lines.append("  %s %s %s (%s): asked \"%s\" -> %s" % (
             e["id"], e["asked_at"], e["agent"], e["runtime"] or "?", short(e["asked_words"], 90),
@@ -881,7 +1052,21 @@ def hook_main(runtime_arg):
                 write_view(st)
                 print("[checklist] The owner's follow-up is on %s (%s): \"%s\"" % (latest["id"], latest["status"], short(text, 80)))
             return 0
-        if latest and latest["asked_words"] == " ".join(text.split()):
+        if latest and same_ask(latest, text):
+            return 0
+        # The same words again from the same session - a /loop tick, a re-ask - is ONE entry with a dated update
+        # log, reopened per tick, not a new line on his list each time (a 3-minute loop would add 480 a day).
+        again = repeated_ask(st, session, text)
+        if again:
+            n = sum(1 for u in again["updates"] if u["note"].startswith("asked again")) + 2
+            if again["status"] != "open":
+                set_status(st, again["id"], "open", agent, "")
+            note(st, again["id"], "asked again (time %d)" % n, agent)
+            st["sessions"].setdefault(session[:12], {})["latest"] = again["id"]
+            save_state(st)
+            write_view(st)
+            print("[checklist] His repeated ask is %s (time %d), reopened: \"%s\"" % (again["id"], n, short(text, 120)))
+            print("  Close each round with: %s done %s \"<result>\" - the rounds stay as dated updates on the one entry." % (CLI, again["id"]))
             return 0
         # The same words again from the same session - a /loop tick, a re-ask - is ONE entry with a dated update
         # log, reopened per tick, not a new line on the owner's list each time (a 3-minute loop would add 480 a day).
@@ -960,6 +1145,7 @@ def cli_main(argv):
     q = sub.add_parser("show", help="one entry in full")
     q.add_argument("id")
     sub.add_parser("render", help="rewrite CHECKLIST.md")
+    sub.add_parser("cap-asked", help="move asks past ASKED_CAP chars to asked_full.jsonl (one-time)")
     sub.add_parser("digest", help="the short block the hooks print")
     sub.add_parser("where", help="print the store path")
     args = ap.parse_args(argv)
@@ -976,6 +1162,9 @@ def cli_main(argv):
             return 0
         if args.cmd == "show":
             e = _entry(st, args.id)
+            whole = full_asked(e["id"]) if "whole ask: show" in e["asked_words"] else None
+            if whole:
+                e = dict(e, asked_words=whole)
             print(json.dumps(e, ensure_ascii=False, indent=1))
             return 0
         es = _sorted(st["entries"].values())
@@ -1025,6 +1214,9 @@ def cli_main(argv):
             print("marked %s: %s" % ("unseen" if args.undo else "seen", ", ".join(ids) or "(none)"))
         elif args.cmd == "render":
             pass
+        elif args.cmd == "cap-asked":
+            n, chars = cap_existing(st)
+            print("capped %d asks, %d chars moved to %s" % (n, chars, ASKED_FULL))
         save_state(st)
         write_view(st)
     return 0
@@ -1035,8 +1227,9 @@ def cli_main(argv):
 def selftest():
     import shutil
     import tempfile
-    global STORE, LEDGER, STATE, VIEW, LOCK, LOG
+    global STORE, LEDGER, STATE, VIEW, LOCK, LOG, ASKED_FULL
     tmp = tempfile.mkdtemp(prefix="checklist_selftest_")
+    ASKED_FULL = os.path.join(tmp, "asked_full.jsonl")
     STORE, LEDGER, STATE, VIEW, LOCK, LOG = (tmp, os.path.join(tmp, "ledger.jsonl"), os.path.join(tmp, "state.json"),
                                              os.path.join(tmp, "CHECKLIST.md"), os.path.join(tmp, ".lock"), os.path.join(tmp, "hook.log"))
     fails = []
@@ -1295,6 +1488,38 @@ def selftest():
     finally:
         sys.stdout = so
     check("garbage on stdin never raises", rc == 0)
+    longask = "keep improving the recall of the brain and the math brain, step %d of the long loop order. " * 60
+    run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "sessL0003", "prompt": longask})
+    eL = [x for x in load_state()["entries"].values() if x["session"] == "sessL0003"]
+    whole = full_asked(eL[0]["id"]) if eL else None
+    check("a long ask is capped in state and kept whole in asked_full.jsonl",
+          len(eL) == 1 and len(eL[0]["asked_words"]) < ASKED_CAP + 80 and whole == " ".join(longask.split()))
+    run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "sessL0003", "prompt": longask})
+    check("the same long ask again (a loop tick) matches its capped entry",
+          len([x for x in load_state()["entries"].values() if x["session"] == "sessL0003"]) == 1)
+    # the view is rendered after the lock is released, and not at all when a later save landed first
+    with _Lock():
+        stv = load_state()
+        note(stv, sorted(stv["entries"])[0], "view probe", "selftest")
+        save_state(stv)
+        before = io.open(VIEW, encoding="utf-8").read()
+        write_view(stv)
+        held = io.open(VIEW, encoding="utf-8").read()
+    after = io.open(VIEW, encoding="utf-8").read()
+    check("write_view under the lock waits for the release, then writes", held == before and after != before
+          and not os.path.exists(LOCK) and not _PENDING_VIEW)
+    marker = "VIEW-STALE-PROBE"
+    with _Lock():
+        stv = load_state()
+        save_state(stv)
+        write_view(stv)
+        time.sleep(0.05)
+        io.open(VIEW, "w", encoding="utf-8").write(marker)
+        os.utime(STATE, (time.time() + 5, time.time() + 5))     # a later writer's save
+    check("a deferred view is skipped when a later save landed", io.open(VIEW, encoding="utf-8").read() == marker)
+    with _Lock():
+        write_view(load_state())
+    check("the next write renders the view again", io.open(VIEW, encoding="utf-8").read() != marker and _LOCK_DEPTH[0] == 0)
     shutil.rmtree(tmp, ignore_errors=True)
     print("selftest: %d control(s) failed" % len(fails))
     return 1 if fails else 0
@@ -1349,6 +1574,7 @@ def main():
             return 0
     # the CLI is a person or an agent at a keyboard: say what went wrong, loudly, and exit 1 - the first version
     # swallowed a KeyError on a purged id into hook.log and exited 0, which reads as success to a script
+    _Lock.WAIT = 30.0
     try:
         return cli_main(argv)
     except KeyError as exc:

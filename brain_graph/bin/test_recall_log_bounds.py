@@ -73,10 +73,16 @@ def main():
     # 2. graph_learn's replay: the first 30 with the bounds equal the whole lists' order
     # the newest file with a sample worth the name: a three-question smoke run (27 Sep 15:22) became the newest file,
     # and control 4, which needs rows whose cut lists differ, could not pass on three rows (30 Sep)
-    rows_path = sys.argv[2] if len(sys.argv) > 2 else next(
+    rows_path = sys.argv[2] if len(sys.argv) > 2 else next((
         p for p in sorted(glob.glob(os.path.join(HOME, "bank_recall_keys_quarantine", "graph_mixture_rows_*.jsonl")),
                           key=os.path.getmtime, reverse=True)
-        if sum(1 for l in open(p, encoding="utf-8") if l.strip()) >= 100)
+        if sum(1 for l in open(p, encoding="utf-8") if l.strip()) >= 100), None)
+    if rows_path is None:
+        # controls 3-5 replay a recorded bank; a machine without one runs 1-2 only and says so
+        print("SKIP 3-5: no graph_mixture_rows_*.jsonl with 100 rows under ~/bank_recall_keys_quarantine "
+              "(pass one as the second argument)")
+        print("%d of 2 controls pass" % (2 - len(FAILS)))
+        return 1 if FAILS else 0
     print("rows: %s" % os.path.basename(rows_path))
     rows = [json.loads(l) for l in open(rows_path, encoding="utf-8") if l.strip()]
     rows = [r for r in rows if r.get("graph") is not None and len(r["body"]) > 30][:200]

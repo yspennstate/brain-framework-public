@@ -21,7 +21,7 @@ regardless of how often they fire - a chronic safety scar must never lose a tier
 vocabulary luck. (Charge strictly dominates the sort anyway; the floor is belt-and-braces.)
 
 Default is a DRY RUN that prints the drift and an eval replaying real co-fire events
-(old top-3 vs new top-3, MAX_FIRE=3, key=(charge, weight) on the fired set - match-count
+(old top-N vs new top-N, N = the hook's MAX_FIRE, key=(charge, weight) on the fired set - match-count
 is unavailable in the log, an acceptable approximation for a tiebreak refresh).
 --write backs up reflex_ranking.json to .bak-<stamp> and replaces surface_weight.
 
@@ -41,14 +41,28 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FIRELOG = os.path.join(HERE, "instinct_fires.tsv")
 TSV = os.path.join(HERE, "instincts.tsv")
 RANKING = os.path.join(HERE, "reflex_ranking.json")
-MAX_FIRE = 3   # keep in lockstep with instinct_prime.MAX_FIRE
+
+
+def _hook_max_fire(default=2):
+    """The hook's own cap, read from instinct_prime.py's source (importing the hook would run it). A hand-kept copy
+    said 3 from 2 Sep to 30 Sep while the hook showed 2, so the dry-run eval ranked a slot nobody sees."""
+    try:
+        with io.open(os.path.join(HERE, "instinct_prime.py"), encoding="utf-8") as fh:
+            m = re.search(r"^MAX_FIRE\s*=\s*(\d+)", fh.read(), re.M)
+        return int(m.group(1)) if m else default
+    except Exception:
+        return default
+
+
+MAX_FIRE = _hook_max_fire()
+KEEP_BAKS = 20  # newest reflex_ranking.json.bak-* files kept after a --write; older ones are removed
 
 # must never lose a tier-2 tie (see docstring); superset of habituation's _NEVER where ranked
 SAFETY_FLOOR_IDS = {
     "no_local_privileged_stack", "secrets_in_git", "preserve_before_destroy",
     "pinned_file_two_tripwires", "his_never_is_machinery", "gate_tool_needs_env",
     "his_desktop_is_not_an_automation_surface", "healer_first_do_no_harm",
-    "no_flashing_windows", "lookahead",
+    "windowless", "lookahead",
 }
 FLOOR = 0.90
 
@@ -231,11 +245,11 @@ def replay_eval(events, charges, old_w, new_w, quiet):
             if r in a and r not in b:
                 safety_fail += 1
     if not quiet:
-        print("eval: %d co-fire events (>%d reflexes), top-3 changed in %d (%.1f%%)"
-              % (len(co), MAX_FIRE, changed, 100.0 * changed / max(1, len(co))))
+        print("eval: %d co-fire events (>%d reflexes), top-%d changed in %d (%.1f%%)"
+              % (len(co), MAX_FIRE, MAX_FIRE, changed, 100.0 * changed / max(1, len(co))))
         fmt = lambda d: ", ".join("%s x%d" % kv for kv in sorted(d.items(), key=lambda x: -x[1])[:6])
-        print("  entering top-3 most: %s" % (fmt(enter) or "-"))
-        print("  exiting  top-3 most: %s" % (fmt(exit_) or "-"))
+        print("  entering top-%d most: %s" % (MAX_FIRE, fmt(enter) or "-"))
+        print("  exiting  top-%d most: %s" % (MAX_FIRE, fmt(exit_) or "-"))
         print("  safety-floor displaced: %d %s" % (safety_fail, "FAIL" if safety_fail else "(PASS)"))
     return safety_fail == 0
 
@@ -300,6 +314,16 @@ def main():
             with io.open(tmp, "w", encoding="utf-8") as f:
                 json.dump(doc, f, indent=1, sort_keys=True)
             os.replace(tmp, RANKING)
+            # keep the newest KEEP_BAKS backups; 217 of them had piled up by 2026-09-13 (one per run
+            # since 07-15, nothing ever pruned them). Oldest first by name = by stamp.
+            try:
+                d = os.path.dirname(RANKING) or "."
+                prefix = os.path.basename(RANKING) + ".bak-"
+                baks = sorted(x for x in os.listdir(d) if x.startswith(prefix))
+                for old in baks[:-KEEP_BAKS] if len(baks) > KEEP_BAKS else []:
+                    os.remove(os.path.join(d, old))
+            except Exception as e:
+                print("build_reflex_ranking: backup prune skipped: %s" % e)
             if not a.quiet:
                 print("wrote %s (%d weights; backup kept)" % (RANKING, len(new_w)))
         except Exception as e:

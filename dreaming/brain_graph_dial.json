@@ -1,0 +1,14 @@
+{
+ "lambda": 0.1,
+ "store": "",
+ "alpha": 0.3,
+ "gamma": 0.5,
+ "co_w": 0.5,
+ "cap": 300,
+ "prf": 5,
+ "fuse": "convex",
+ "links": true,
+ "mix_links": 0.5,
+ "ppr_iters": 8,
+ "_why": "The graph lane is on by default at a weight that is not zero, and graph_learn.py moves it within 0.05..0.4 from recall's own log. 0.1 is the measured starting point: on a held-out bank of 968 reworded questions the link walk at 0.1 gave hit@5 0.348 against bm25's 0.344, the use walk 0.342 (within noise). With no use-grown store (store empty) only the walk over the memories' own links runs. ppr_iters 8 instead of 20 gave the same top 8 on 50 of 50 questions at a third of the time. 0 turns the lane off; BRAIN_GRAPH_LAMBDA overrides; BRAIN_GRAPH_STORE names a store."
+}

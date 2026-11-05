@@ -170,6 +170,10 @@ _DATE_TAIL = re.compile(r"[_-]?20\d\d[_-]\d\d(?:[_-]\d\d)?$")
 TYPE_PERSIST = {"user": 0.90, "feedback": 0.90, "reference": 0.16,
                 "project": 0.07, "transient": 0.03}
 TYPE_PERSIST_DEFAULT = 0.12
+# D8 #87 (2026-11-02): three wake anchors carry no frontmatter, so they fell through to "project" and
+# decayed like a project log (salience 35-44, the corpus median) while the other ten anchors, typed
+# user/feedback, sat in the top 10%. They are the self, not a log: persist them like "user".
+IDENTITY_UNTYPED = {"AUTOBIOGRAPHY.md", "FASCINATIONS.md", "THE_OTHER_MINDS.md"}
 TYPE_PERSIST_V1 = {"user": 0.90, "feedback": 0.90, "reference": 0.40,
                    "project": 0.12, "transient": 0.03}
 TYPE_PERSIST_V1_DEFAULT = 0.12
@@ -201,6 +205,8 @@ def _infer_type(fn, body):
                     ("project_", "project"), ("transient_", "transient"), ("session_", "transient")):
         if low.startswith(pre):
             return ty
+    if fn in IDENTITY_UNTYPED:
+        return "user"
     return "project"
 
 def score_corpus(mem_dir=MEM_DEFAULT, curated_names=None):
@@ -294,6 +300,24 @@ def score_corpus(mem_dir=MEM_DEFAULT, curated_names=None):
             _sessmax[s] = max(_sessmax.get(s, 0.0), _ch[fn])
 
     kern_tau, kern_types, kern_default = _kernel()
+    # UNDATED AFTER A CLONE (2026-10-29, Mac mini). When a copy or clone reset the corpus's mtimes, most memories share one
+    # mtime hour; an undated memory aged by that mtime looks a day old and took 265 of the 500 'most recent' ranks. Such
+    # a memory gets the median age of the dated ones instead (age unknown, not new). No majority hour = mtimes are real
+    # births (Windows), and nothing changes.
+    from collections import Counter as _Counter
+    _hours = _Counter(int(m["mtime"] // 3600) for m in mems.values())
+    _rh, _rc = _hours.most_common(1)[0] if _hours else (None, 0)
+    _reset_hour = _rh if _rc > 0.5 * max(1, len(mems)) else None
+    _dated_ages = []
+    if _reset_hour is not None:
+        for m in mems.values():
+            if m["date"]:
+                try:
+                    y, mo, d = map(int, m["date"].split("-"))
+                    _dated_ages.append(max(0.0, (now - time.mktime((y, mo, d, 12, 0, 0, 0, 0, -1))) / 86400.0))
+                except Exception:
+                    pass
+    _median_age = sorted(_dated_ages)[len(_dated_ages) // 2] if _dated_ages else None
     out = {}
     for fn, m in mems.items():
         # age → recency
@@ -303,6 +327,8 @@ def score_corpus(mem_dir=MEM_DEFAULT, curated_names=None):
                 age = max(0.0, (now - time.mktime((y, mo, d, 12, 0, 0, 0, 0, -1))) / 86400.0)
             except Exception:
                 age = (now - m["mtime"]) / 86400.0
+        elif _median_age is not None and int(m["mtime"] // 3600) == _reset_hour:
+            age = _median_age
         else:
             age = (now - m["mtime"]) / 86400.0
         R = math.exp(-age / kern_tau)

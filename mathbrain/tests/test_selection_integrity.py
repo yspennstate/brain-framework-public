@@ -91,3 +91,31 @@ def test_artifacts_are_checked_only_when_the_objects_folder_exists(tmp_path) -> 
     (tmp_path / "objects").mkdir()
     consistent_hits(hits, db, deadline=float("inf"), reader=_reader(roots=roots))
     assert roots == {"a": tmp_path / "objects", "b": None}
+
+
+def _overlay_store(tmp_path):
+    from math_brain.models import ClaimKind
+    from math_brain.overlay import ContentAddressedTextStore, MathNodeRevision, SourceProvenance, append_revision
+    from math_brain.store import ResearchStore
+
+    # laid out as tools/integrate_drafts.py builds it: the object store's root is <store>/objects, so the files sit
+    # at objects/objects/sha256/.. and every artifact path reads "objects/sha256/.." relative to that root
+    db = tmp_path / "brain.sqlite3"
+    rev = MathNodeRevision("probability", "chebyshev", ClaimKind.THEOREM, "Chebyshev inequality",
+                           "P(|X - EX| >= t) <= Var X / t^2 for t > 0.",
+                           SourceProvenance("textbook", "ed2", "thm 3.1", "test"))
+    with ResearchStore(db) as store:
+        stored = append_revision(store, ContentAddressedTextStore(tmp_path / "objects"), rev)
+    return db, stored
+
+
+def test_a_real_store_with_its_objects_verifies_the_artifact(tmp_path) -> None:
+    db, stored = _overlay_store(tmp_path)
+    hit = SimpleNamespace(node=stored.node)
+    diag = []
+    assert consistent_hits([hit], db, deadline=float("inf"), diagnostics=diag) == [hit]
+    assert diag[-1]["artifact"] == "HASH_MATCHED"
+    (tmp_path / "objects" / stored.artifact.relative_path).write_text("tampered\n", encoding="utf-8")
+    diag = []
+    assert consistent_hits([hit], db, deadline=float("inf"), diagnostics=diag) == []
+    assert diag[-1]["status"] == "REFUSED" and diag[-1]["reason"] == "artifact_digest_mismatch"

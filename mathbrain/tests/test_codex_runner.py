@@ -1944,6 +1944,10 @@ class KeepBytesIO(io.BytesIO):
         pass
 
 
+@pytest.mark.skipif(
+    os.name != "nt",
+    reason="the desktop audit accepts only a Windows initialize response and a Windows-absolute CODEX_HOME",
+)
 def test_standard_runner_uses_sterile_home_and_scrubbed_environment(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

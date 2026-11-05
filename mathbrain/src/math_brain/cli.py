@@ -137,6 +137,24 @@ def _parser() -> argparse.ArgumentParser:
     trigger = sub.add_parser("triggers")
     trigger.add_argument("text")
     trigger.add_argument("--config", type=Path, default=Path("config/triggers.toml"))
+
+    calibration = sub.add_parser(
+        "calibrate-v2",
+        help="run public difficulty and shortcut calibration from a precommitted design",
+    )
+    calibration.add_argument("input", type=Path)
+    calibration.add_argument("--state", type=Path, required=True)
+    calibration.add_argument("--seed-file", type=Path, required=True)
+    calibration.add_argument("--bundle", type=Path, required=True)
+
+    verify_calibration = sub.add_parser(
+        "verify-calibration-v2",
+        help="recompute and verify persisted public calibration evidence",
+    )
+    verify_calibration.add_argument("input", type=Path)
+    verify_calibration.add_argument("--state", type=Path, required=True)
+    verify_calibration.add_argument("--seed-file", type=Path, required=True)
+    verify_calibration.add_argument("--bundle", type=Path, required=True)
     return parser
 
 
@@ -345,6 +363,59 @@ def main(argv: list[str] | None = None) -> int:
                     for match in matches
                 ],
                 ensure_ascii=False,
+            )
+        )
+        return 0
+    if args.command in ("calibrate-v2", "verify-calibration-v2"):
+        # Imported here so recall and the other commands do not pay for the calibration module.
+        from .calibration_v2 import (
+            CalibrationBundle,
+            generate_calibration_report,
+            load_calibration_bundle,
+            load_calibration_freeze,
+            load_calibration_input,
+            publish_calibration_bundle,
+        )
+
+        config, cases = load_calibration_input(args.input.read_text(encoding="utf-8"))
+        state = load_calibration_freeze(args.state.read_text(encoding="utf-8"))
+        seed = args.seed_file.read_text(encoding="utf-8").rstrip("\r\n")
+        report = generate_calibration_report(cases, state=state, seed=seed, config=config)
+        frozen = (
+            state.freeze(report, cases=cases, seed=seed, config=config) if report.accepted else None
+        )
+        bundle = CalibrationBundle(report=report, frozen_state=frozen)
+        if args.command == "calibrate-v2":
+            published = publish_calibration_bundle(args.bundle, bundle)
+            print(
+                json.dumps(
+                    {
+                        "accepted": report.accepted,
+                        "bundle": str(args.bundle),
+                        "bundle_digest": bundle.content_digest,
+                        "published": published,
+                        "report_digest": report.content_digest,
+                    },
+                    ensure_ascii=False,
+                    sort_keys=True,
+                )
+            )
+            return 0 if report.accepted else 2
+        persisted = load_calibration_bundle(args.bundle.read_text(encoding="utf-8"))
+        if persisted.report.content_digest != report.content_digest:
+            raise ValueError("persisted report does not match deterministic recomputation")
+        if persisted.canonical_json() != bundle.canonical_json():
+            raise ValueError("persisted bundle does not match deterministic recomputation")
+        print(
+            json.dumps(
+                {
+                    "accepted": persisted.report.accepted,
+                    "bundle_digest": persisted.content_digest,
+                    "report_digest": persisted.report.content_digest,
+                    "verified": True,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
             )
         )
         return 0

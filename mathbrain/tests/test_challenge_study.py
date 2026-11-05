@@ -47,8 +47,11 @@ def test_study_secrets_are_separate_fresh_caller_held_values() -> None:
 
 
 def test_private_codex_artifact_is_opaque_to_the_generic_ledger_json_parser() -> None:
+    # Leading whitespace is valid JSON but violates the generic ledger's
+    # canonical-byte requirement.  Unlike a historical string-size limit,
+    # this distinguishes opaque media from +json regardless of size budgets.
     encoded = (
-        b'{"stderr":{"data":"","encoding":"base64"},"transcript":{"data":"'
+        b' {"stderr":{"data":"","encoding":"base64"},"transcript":{"data":"'
         + (b"a" * 100_000)
         + b'","encoding":"base64"}}'
     )

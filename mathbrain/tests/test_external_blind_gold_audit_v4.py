@@ -602,7 +602,7 @@ def test_external_witness_cannot_reuse_a_reviewer_key(
         fixture.material.reviewer_a_seed,
         domain=collector.EXTERNAL_GOLD_ANCHOR_SIGNING_DOMAIN_V4,
     )
-    with pytest.raises(ValueError, match="reviewer and witness keys must all be distinct"):
+    with pytest.raises(ValueError, match="reviewer and witness keys, including report authority, must all be distinct"):
         collector.prepare_external_gold_campaign_v4(
             fixture.random.selection,
             fixture.prepared.sealed_vault,

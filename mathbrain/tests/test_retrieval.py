@@ -13,7 +13,15 @@ from math_brain.retrieval import (
 
 
 def test_unicode_tokenization() -> None:
-    assert "poincaré" in tokenize("Poincaré duality")
+    # Accents fold (2026-09-12): the accented and ASCII spellings of a name must be ONE token, or a query typed
+    # the way a mathematician writes it ranks the wrong node. Measured before the fold on an identical candidate
+    # set: "Vitali-Caratheodory" ranked its own node 1st in ASCII and 5th with the accent and en-dash.
+    assert tokenize("Poincaré duality") == tokenize("Poincare duality")
+    assert "poincare" in tokenize("Poincaré duality")
+    assert tokenize("Vitali–Carathéodory theorem") == ("vitali-caratheodory", "theorem")
+    # Greek and other non-Latin letters are not diacritics and survive the fold (a hyphenated word stays one token).
+    assert "λ-calculus" in tokenize("the λ-calculus")
+    assert "λ" in tokenize("the λ calculus")
 
 
 def test_latex_and_unicode_formulae_have_the_same_alpha_normalized_signals() -> None:

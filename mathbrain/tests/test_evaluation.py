@@ -6,7 +6,7 @@ import json
 import os
 from dataclasses import replace
 from fractions import Fraction
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import pytest
 
@@ -356,13 +356,24 @@ def codex_artifact_for_batch(
     batch = plan.batch(pair_id, condition)
     prompt = ev.codex_prompt_for_batch(batch)
     schema_json = ev.codex_output_schema_json(batch)
-    runtime_cwd = str(
-        (ROOT.parent / "evaluation-test-runtime" / f"{pair_id}-{condition.value}").resolve()
-    )
-    codex_home = str(
-        Path(runtime_cwd).parent
-        / f".codex-home-{hashlib.sha256(thread_id.encode()).hexdigest()[:32]}"
-    )
+    if os.name == "nt":
+        runtime_cwd = str(
+            (ROOT.parent / "evaluation-test-runtime" / f"{pair_id}-{condition.value}").resolve()
+        )
+        home_parent = Path(runtime_cwd).parent
+    else:
+        # This is a Windows desktop-v1 wire fixture, not a local directory.
+        # Keep its paths Windows-shaped when the tests execute on POSIX.
+        # A lexical UNC path is absolute to both the native POSIX request
+        # validator and the Windows desktop transcript validator.  No I/O occurs.
+        runtime_path = (
+            PureWindowsPath("//math-brain-tests/fixture-share/evaluation-test-runtime")
+            / f"{pair_id}-{condition.value}"
+        )
+        runtime_cwd = runtime_path.as_posix()
+        home_parent = runtime_path.parent
+    home_path = home_parent / f".codex-home-{hashlib.sha256(thread_id.encode()).hexdigest()[:32]}"
+    codex_home = str(home_path) if os.name == "nt" else home_path.as_posix()
     thread = {
         "id": thread_id,
         "extra": None,

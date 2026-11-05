@@ -116,7 +116,10 @@ def test_alternate_stream_and_device_alias_syntax_is_denied(tmp_path: Path) -> N
 
     assert source_result.code == "unsafe-path-syntax"
     assert output_result.code == "unsafe-path-syntax"
-    assert network_result.code == "unsafe-path-syntax"
+    # A backslash UNC path is a network share only on Windows; elsewhere it is one odd relative name that cannot
+    # be resolved under the approved root. Refused either way.
+    assert not network_result.allowed
+    assert network_result.code == ("unsafe-path-syntax" if os.name == "nt" else "unresolvable")
 
 
 def test_public_output_must_use_public_prefix(tmp_path: Path) -> None:

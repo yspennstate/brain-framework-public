@@ -418,8 +418,11 @@ def _sweep_stale_tmps(keep=2, age=3600):
 def save_state(st):
     tmp = "%s.%d.tmp" % (STATE, os.getpid())     # one temp file per writer: two writers never share a temp
     try:
+        # 5 Nov: one dumps string, one write. json.dump to a file streams ~85k chunks through the pure-Python encoder
+        # (14 ms on a 1.6 MB state); dumps builds the same bytes in C (5 ms, sha equal).
+        text = json.dumps(st, ensure_ascii=False, indent=1, sort_keys=True)
         with io.open(tmp, "w", encoding="utf-8") as fh:
-            json.dump(st, fh, ensure_ascii=False, indent=1, sort_keys=True)
+            fh.write(text)
         _replace_retrying(tmp, STATE)
     except BaseException:
         try:
@@ -441,7 +444,7 @@ def save_state(st):
                 return
             btmp = bak + ".%d.tmp" % os.getpid()
             with io.open(btmp, "w", encoding="utf-8") as fh:
-                json.dump(st, fh, ensure_ascii=False, sort_keys=True)
+                fh.write(json.dumps(st, ensure_ascii=False, sort_keys=True))
                 fh.flush()
                 os.fsync(fh.fileno())
             _replace_retrying(btmp, bak)

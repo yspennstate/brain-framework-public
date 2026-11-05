@@ -26,6 +26,9 @@ compute/waste_census.json
 compute/waste_census_timing.log*
 # a cache of the memory store's frontmatter, written beside supersession.py: private text
 dreaming/supersession_frontmatter_cache*.json
+# the route-name slugs supersession.py keeps across processes, and verify_gate's per-turn state: memory slugs
+dreaming/.sup_route_known*.json
+dreaming/.verify_gate_turns/
 
 # local-only private label rules for check_no_private_labels.py - never publish
 scripts/private_labels.local

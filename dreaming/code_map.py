@@ -123,6 +123,10 @@ def build(roots):
     with io.open(tmp, "w", encoding="utf-8") as fh:
         json.dump(data, fh, separators=(",", ":"))
     os.replace(tmp, MAP)
+    try:
+        os.remove(MAP + ".refresh")
+    except OSError:
+        pass
     return len(files), reparsed
 
 
@@ -136,8 +140,41 @@ def load(quiet=False):
         return None
 
 
+def refresh_if_stale(max_age=3600):
+    """Start a windowless background rebuild when the map is over max_age seconds old.
+
+    The query still answers from the map on disk; the next one sees the new files. A build changing
+    nothing takes about 2 s warm, so this costs the caller only the process start. CODE_MAP_REFRESH=0
+    turns it off; a lock file younger than 10 minutes means a rebuild is already running.
+    """
+    if os.environ.get("CODE_MAP_REFRESH", "1") == "0":
+        return False
+    try:
+        if time.time() - os.path.getmtime(MAP) < max_age:
+            return False
+        lock = MAP + ".refresh"
+        if os.path.exists(lock) and time.time() - os.path.getmtime(lock) < 600:
+            return False
+        io.open(lock, "w").close()
+        import subprocess
+        exe = sys.executable
+        if os.name == "nt":
+            w = os.path.join(os.path.dirname(exe), "pythonw.exe")
+            exe = w if os.path.exists(w) else exe
+        cmd = [exe, os.path.abspath(__file__), "build"]
+        roots = load(quiet=True) or {}
+        cmd += [r for r in roots.get("roots", []) if os.path.isdir(r)]
+        flags = 0x08000000 | 0x00000008 | 0x00000200 if os.name == "nt" else 0  # no window, detached, own group
+        subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         close_fds=True, creationflags=flags)
+        return True
+    except Exception:
+        return False
+
+
 def query(q, budget=800, nfiles=5):
     data = load()
+    refresh_if_stale()
     files = data["files"]
     qw = [w for w in dict.fromkeys(words(q))]
     if not qw:

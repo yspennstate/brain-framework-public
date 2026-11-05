@@ -35,6 +35,10 @@ def _clean_env(**extra):
     env = dict(os.environ)
     env.pop("PYTHONIOENCODING", None)
     env.pop("PYTHONUTF8", None)
+    if os.name != "nt":
+        # A Mac or Linux stdin decodes UTF-8 by default, so here every check passed vacuously (5 Nov 2026). Give the
+        # child the Windows default instead: stdin through cp1252, UTF-8 mode off.
+        env.update(PYTHONIOENCODING="cp1252", PYTHONUTF8="0")
     env.update(extra)
     return env
 

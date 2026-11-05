@@ -22,6 +22,11 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
+try:
+    from shared_read import open_shared as _open_shared_ro
+except Exception:
+    def _open_shared_ro(path, binary=False):
+        return io.open(path, "rb") if binary else io.open(path, encoding="utf-8")
 
 HOME = os.path.expanduser("~")
 STATE_DIR = os.path.join(HOME, ".claude", "compact_hooks", "keep_working")
@@ -62,7 +67,8 @@ def last_boundary(path):
 
 def open_entries(sid):
     try:
-        entries = json.load(io.open(CHECKLIST, encoding="utf-8")).get("entries") or {}
+        with _open_shared_ro(CHECKLIST) as fh:
+            entries = json.load(fh).get("entries") or {}
     except (OSError, ValueError):
         return []
     agent = "claude-" + sid[:8]

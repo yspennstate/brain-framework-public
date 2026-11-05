@@ -275,12 +275,45 @@ def _graph_artifacts(rows):
     return "".join(graph_lines), "".join(related_lines), len(edges), kw_kw, len(topics)
 
 
-def build():
-    prompt_counts = _prompt_terms()
+def _inputs(full=False):
+    """(prompt_counts, texts, vocab). Incremental by default (keyword_corpus_cache, 2026-11-03): the dream runs
+    this step BelowNormal and a full re-read starved past its 2700 s cap; any cache trouble falls back to the
+    full read, which is the original code path unchanged."""
+    if not full:
+        try:
+            import keyword_corpus_cache as kcc
+            texts, vocab, cst = kcc.corpus((MEM, os.path.join(MEM, "dreams")), SKIP, TOKEN)
+            counts, read_any, pst = kcc.prompt_terms(PROMPTS, TOKEN)
+            if not read_any:
+                counts = _prompt_terms()       # the transcripts fallback, as before
+            print("inputs: incremental (files %d, +%d new, %d edited, %d gone; prompts %s %d bytes)"
+                  % (cst["files"], cst["added"], cst["changed"], cst["removed"], pst.get("mode"), pst.get("bytes", 0)))
+            return counts, texts, vocab
+        except Exception as exc:
+            print("inputs: cache failed (%r); full read" % (exc,))
+    texts, vocab = _corpus()
+    return _prompt_terms(), texts, vocab
+
+
+def verify():
+    """Build the inputs both ways and compare the digests the generation's source manifest records."""
+    import time
+    t = time.time(); a = _inputs(full=False); ti = time.time() - t
+    t = time.time(); b = _inputs(full=True); tf = time.time() - t
+    same = True
+    for label, x, y in (("prompt_terms", a[0], b[0]), ("corpus_search", a[1], b[1]), ("corpus_vocab", a[2], b[2])):
+        dx, dy = _mapping_digest(x), _mapping_digest(y)
+        print("%-14s %s %s %s" % (label, dx[:12], dy[:12], "same" if dx == dy else "DIFFERENT"))
+        same = same and dx == dy
+    print("incremental %.1fs, full %.1fs" % (ti, tf))
+    return 0 if same else 3
+
+
+def build(full=False):
+    prompt_counts, texts, vocab = _inputs(full)
     if not prompt_counts:
         print("no owner prompt corpus found; refusing to write an empty artifact", file=sys.stderr)
         return 1
-    texts, vocab = _corpus()
     if not texts:
         print("no memory corpus found; refusing to write an empty artifact", file=sys.stderr)
         return 1
@@ -382,4 +415,8 @@ def build():
 
 
 if __name__ == "__main__":
-    raise SystemExit(build())
+    if "--verify" in sys.argv:
+        raise SystemExit(verify())
+    # Incremental inputs are OPT-IN until --verify has shown identical digests (the 11-03 02:1x verify was
+    # killed by the harness on low memory before it finished). Default = the original full read.
+    raise SystemExit(build(full="--incremental" not in sys.argv))

@@ -39,6 +39,11 @@ import re
 import sys
 import time
 from collections import defaultdict
+try:
+    from shared_read import open_shared as _open_shared_ro
+except Exception:
+    def _open_shared_ro(path, binary=False):
+        return io.open(path, "rb") if binary else io.open(path, encoding="utf-8")
 
 HOME = os.path.expanduser("~")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -151,7 +156,27 @@ def _head_sha(fh):
 def _slim(r):
     from prompt_archive import redact
     return {"ts": r.get("ts"), "session": r.get("session"), "text": redact(str(r.get("text") or ""))[0][:CACHE_TEXT_CAP], "origin": r.get("origin"),
-            "source": r.get("source"), "class_provisional": r.get("class_provisional")}
+            "source": r.get("source"), "class_provisional": r.get("class_provisional"),
+            "_rf": int(r.get("_rf") or 0), "_last_ts": r.get("_last_ts")}
+
+
+def _fold_cache(rows):
+    # 2 Nov 2026: about 2,500 ledger rows a day are loop ticks re-firing the same words in the same session, so the
+    # 8,000 raw rows the cache kept reached back three days and folded into ~314 prompts, not 3000. Fold re-fires here
+    # (same session, same words, same day - the rule owner_prompts uses) into one row carrying the count, so the cap
+    # counts prompts, not ticks.
+    out, at = [], {}
+    for r in rows:
+        key = (str(r.get("session") or "?")[:8], str(r.get("text") or "")[:200], str(r.get("ts") or "")[:10])
+        i = at.get(key)
+        if i is None:
+            at[key] = len(out)
+            out.append(r)
+            continue
+        p = out[i]
+        p["_rf"] = int(p.get("_rf") or 0) + 1 + int(r.get("_rf") or 0)
+        p["_last_ts"] = r.get("_last_ts") or r.get("ts")
+    return out
 
 
 def read_owner_rows(full=False):
@@ -208,7 +233,7 @@ def read_owner_rows(full=False):
                 rows.append(_slim(r))
                 added += 1
         total_seen += added
-        rows = rows[-CACHE_MAX_ROWS:]
+        rows = _fold_cache(rows)[-CACHE_MAX_ROWS:]
         fh.seek(max(0, new_off - 200))
         probe = fh.read(min(200, new_off))
     try:
@@ -283,11 +308,13 @@ def owner_prompts(rows):
         sess = str(r.get("session") or "?")[:8]
         key = (sess, text[:200])
         prev = last_by_key.get(key)
+        rf = int(r.get("_rf") or 0)
+        lts = str(r.get("_last_ts") or ts)[:19]
         if prev is not None and ts[:10] == prev["ts"][:10]:
-            prev["refires"] += 1
-            prev["last_ts"] = ts
+            prev["refires"] += 1 + rf
+            prev["last_ts"] = lts
             continue
-        rec = {"ts": ts, "session": sess, "text": text, "refires": 0, "last_ts": ts,
+        rec = {"ts": ts, "session": sess, "text": text, "refires": rf, "last_ts": lts,
                "cls": r.get("class_provisional") or "", "runtime": "codex" if "codex" in str(r.get("source")) else "claude"}
         out.append(rec)
         last_by_key[key] = rec
@@ -334,7 +361,8 @@ def load_checklist_state():
         p = os.path.join(d, "state.json")
         if os.path.exists(p):
             try:
-                st = json.load(io.open(p, encoding="utf-8"))
+                with _open_shared_ro(p) as fh:
+                    st = json.load(fh)
                 return d, st
             except Exception:
                 return d, None
@@ -513,10 +541,35 @@ def build(full=False):
     return payload
 
 
+def _no_power_throttle():
+    """Opt this process out of Windows power throttling (EcoQoS); priority stays BelowNormal.
+    The task launches windowless at BelowNormal, which Windows throttles by default: on 2026-10-18 with every
+    core busy the 01:05 run had 4.4 cpu-s after 70 minutes and the build went 4 h stale, while the same build
+    unthrottled took 55 s. ctypes only: the task runs python -s, which has no psutil."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        import ctypes.wintypes as w
+
+        class _PPTS(ctypes.Structure):
+            _fields_ = [("Version", w.ULONG), ("ControlMask", w.ULONG), ("StateMask", w.ULONG)]
+
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.GetCurrentProcess.restype = w.HANDLE
+        k32.SetProcessInformation.argtypes = [w.HANDLE, ctypes.c_int, ctypes.c_void_p, w.DWORD]
+        k32.SetProcessInformation.restype = w.BOOL
+        st = _PPTS(1, 0x1, 0)  # EXECUTION_SPEED controlled, state off: never throttle
+        k32.SetProcessInformation(k32.GetCurrentProcess(), 4, ctypes.byref(st), ctypes.sizeof(st))
+    except Exception:
+        pass
+
+
 def main():
     if any(a in ("-h", "--help") for a in sys.argv[1:]):
         print(__doc__)
         return 0
+    _no_power_throttle()
     try:
         p = build(full="--full" in sys.argv[1:])
         print("owner_prompts_hourly: %d owner prompts kept; %d owner rows in the ledger (read %s), %d threads, checklist entries %d, %.1fs%s" % (

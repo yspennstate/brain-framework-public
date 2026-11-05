@@ -135,6 +135,112 @@ def test_public_export_rejects_secret_canary_content(tmp_path: Path) -> None:
     assert decision.code == "privacy-scan-failed"
 
 
+def _slack_webhook_canary() -> str:
+    return "".join(["https://hooks", ".slack", ".com/services/T0", "ABCDEFGH", "/B0", "12345678", "/", "x" * 24])
+
+
+def test_public_export_rejects_a_slack_webhook_in_the_artifact(tmp_path: Path) -> None:
+    artifact, manifest = _write_export(tmp_path, content="post results to " + _slack_webhook_canary())
+
+    decision = check_public_export(artifact, manifest_path=manifest, repository_root=tmp_path)
+
+    assert not decision.allowed
+    assert decision.code == "privacy-scan-failed"
+
+
+def test_public_export_rejects_a_slack_webhook_as_provenance(tmp_path: Path) -> None:
+    artifact, manifest = _write_export(tmp_path, provenance_refs=[_slack_webhook_canary()])
+
+    try:
+        decision = check_public_export(artifact, manifest_path=manifest, repository_root=tmp_path)
+    except PrivacyViolation:
+        return
+    assert not decision.allowed
+
+
+def _fine_grained_github_canary() -> str:
+    return "".join(["github", "_pat_", "1" * 22, "_", "A" * 59])
+
+
+def test_public_export_rejects_fine_grained_github_token_in_the_artifact(tmp_path: Path) -> None:
+    artifact, manifest = _write_export(tmp_path, content=_fine_grained_github_canary())
+
+    decision = check_public_export(
+        artifact,
+        manifest_path=manifest,
+        repository_root=tmp_path,
+    )
+
+    assert not decision.allowed
+    assert decision.code == "privacy-scan-failed"
+
+
+def test_public_export_rejects_fine_grained_github_token_in_the_provenance(
+    tmp_path: Path,
+) -> None:
+    artifact, manifest = _write_export(
+        tmp_path,
+        provenance_refs=["generated:deterministic-algebra-v1", _fine_grained_github_canary()],
+    )
+
+    try:
+        decision = check_public_export(
+            artifact,
+            manifest_path=manifest,
+            repository_root=tmp_path,
+        )
+    except PrivacyViolation:
+        return
+    assert not decision.allowed
+
+
+def _temporary_aws_key_id() -> str:
+    return "".join(["AS", "IA", "IOSF", "ODNN", "7EXA", "MPLE"])
+
+
+def test_public_export_rejects_a_temporary_aws_credential_set_in_the_artifact(tmp_path: Path) -> None:
+    fields = {
+        "".join(["aws", "_access", "_key", "_id"]): _temporary_aws_key_id(),
+        "".join(["aws", "_secret", "_access", "_key"]): "".join(["synthetic", "/", "S" * 31]),
+        "".join(["aws", "_session", "_token"]): "".join(["session", "-", "T" * 60]),
+    }
+    # one line: _write_export writes text mode, so a newline would change the bytes it hashed
+    artifact, manifest = _write_export(tmp_path, content=json.dumps(fields))
+
+    decision = check_public_export(
+        artifact,
+        manifest_path=manifest,
+        repository_root=tmp_path,
+    )
+
+    assert not decision.allowed
+    assert decision.code == "privacy-scan-failed"
+    assert all(value not in decision.reason for value in fields.values())
+
+
+@pytest.mark.parametrize(
+    "wrap",
+    ["{k}", "generated:{k}", "generated:run-{k}-v1"],
+    ids=["bare", "generated", "embedded"],
+)
+def test_a_key_id_in_a_provenance_ref_is_refused_by_the_ref_format(tmp_path: Path, wrap: str) -> None:
+    # the provenance path closes before the scanner runs: a generated: id is a lowercase slug of at
+    # most 64 characters and every other scheme must be a public URL, a DOI or a URN
+    artifact, manifest = _write_export(
+        tmp_path,
+        provenance_refs=["generated:deterministic-algebra-v1", wrap.format(k=_temporary_aws_key_id())],
+    )
+
+    decision = check_public_export(
+        artifact,
+        manifest_path=manifest,
+        repository_root=tmp_path,
+    )
+
+    assert not decision.allowed
+    assert decision.code == "export-provenance"
+
+
 def test_public_export_rejects_hash_mismatch(tmp_path: Path) -> None:
     artifact, manifest = _write_export(tmp_path, artifact_sha256="0" * 64)
 

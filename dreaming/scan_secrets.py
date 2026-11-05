@@ -151,6 +151,10 @@ MAX_REPOSITORY_IDENTITY_FILE_BYTES = 256 * 1024 * 1024
 MAX_SHARED_INDEX_FILES = 64
 MAX_TOTAL_SHARED_INDEX_BYTES = 256 * 1024 * 1024
 GIT_TIMEOUT_SECONDS = 60
+# One non-batch git call (rev-parse, rev-list, diff). 60 s failed a memory sync's push twice in one day on a
+# machine at 95 pct commit that took ~35 s just to start a process; the same calls take 0.3-2.7 s on a
+# quiet box. A longer wait still fails closed with the same message.
+GIT_CALL_TIMEOUT_SECONDS = 180
 GIT_BATCH_IDLE_SECONDS = 60
 GIT_BATCH_SECONDS_PER_OBJECT = 0.5
 GIT_BATCH_CEILING_SECONDS = 4 * 3600
@@ -814,7 +818,7 @@ def _execute_git(
     creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     if input_bytes:
         return _execute_git_batch(arguments, input_bytes, environment, creationflags)
-    timeout_seconds = GIT_TIMEOUT_SECONDS
+    timeout_seconds = GIT_CALL_TIMEOUT_SECONDS
     try:
         process = subprocess.run(
             arguments,

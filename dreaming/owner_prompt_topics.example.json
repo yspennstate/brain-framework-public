@@ -1,0 +1,98 @@
+{
+ "_about": "Topic lexicon for owner_prompts_hourly.py: lowercase substrings, the partner's own spellings included. A prompt belongs to the topic with the most hits; ties go to the earlier topic; no hit lands in \"other\". Copy this file to owner_prompt_topics.json beside the script and put your own vocabulary in it - private names stay out of the code and out of this example. A topic may also carry 'objects' (label -> regex): the named things the partner talks about, so repeated verdicts about the same thing cluster under one name in the wake picture.",
+ "topics": [
+  {
+   "topic": "code and infrastructure",
+   "keys": [
+    "code",
+    "bug",
+    "fix",
+    "deploy",
+    "server",
+    "script",
+    "test",
+    "build",
+    "install",
+    "config",
+    "pipeline",
+    "ci"
+   ]
+  },
+  {
+   "topic": "writing and papers",
+   "keys": [
+    "paper",
+    "draft",
+    "write",
+    "essay",
+    "chapter",
+    "abstract",
+    "proof",
+    "theorem",
+    "cite",
+    "referee",
+    "journal"
+   ]
+  },
+  {
+   "topic": "media and video",
+   "keys": [
+    "video",
+    "film",
+    "render",
+    "movie",
+    "audio",
+    "voice",
+    "image",
+    "animation",
+    "thumbnail",
+    "footage"
+   ],
+   "objects": {
+    "the launch video": "launch",
+    "the intro film": "intro"
+   }
+  },
+  {
+   "topic": "agents, memory and hooks",
+   "keys": [
+    "agent",
+    "memory",
+    "hook",
+    "brain",
+    "prompt",
+    "session",
+    "remember",
+    "checklist",
+    "mesh",
+    "subagent"
+   ]
+  },
+  {
+   "topic": "this computer",
+   "keys": [
+    "computer",
+    "disk",
+    "cpu",
+    "gpu",
+    "ram",
+    "slow",
+    "crash",
+    "restart",
+    "window",
+    "terminal"
+   ]
+  },
+  {
+   "topic": "money and accounts",
+   "keys": [
+    "invoice",
+    "budget",
+    "credit",
+    "billing",
+    "account",
+    "subscription"
+   ]
+  }
+ ]
+}

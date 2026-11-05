@@ -1,0 +1,63 @@
+{
+  "meta": {
+    "model_version": "error-graph-curated-0.1",
+    "alpha": 0.55,
+    "max_hops": 2,
+    "top_k": 96,
+    "cap": 8.0,
+    "status": "shadow"
+  },
+  "relation_gains": {
+    "INDICATES": 1.0,
+    "SUPPORTS": 1.0,
+    "NEAR_SCAR": 0.8,
+    "INHIBITS": 0.9
+  },
+  "half_lives": {
+    "INDICATES": 0,
+    "SUPPORTS": 0,
+    "NEAR_SCAR": 31536000,
+    "INHIBITS": 0
+  },
+  "edges": [
+    {"src": "act:complete", "dst": "concept:completion_claim", "relation": "INDICATES", "weight": 1.0},
+    {"src": "op:write", "dst": "concept:artifact_changed", "relation": "INDICATES", "weight": 0.8},
+    {"src": "op:mutate", "dst": "concept:artifact_changed", "relation": "INDICATES", "weight": 0.6},
+    {"src": "evidence:observation", "dst": "control:verified", "relation": "INDICATES", "weight": 0.8},
+    {"src": "op:verify", "dst": "control:verified", "relation": "INDICATES", "weight": 1.0},
+    {"src": "op:test", "dst": "control:verified", "relation": "INDICATES", "weight": 1.0},
+    {"src": "concept:completion_claim", "dst": "family:done_unverified", "relation": "SUPPORTS", "weight": 1.0},
+    {"src": "concept:artifact_changed", "dst": "family:done_unverified", "relation": "SUPPORTS", "weight": 0.7},
+    {"src": "control:verified", "dst": "family:done_unverified", "relation": "INHIBITS", "weight": 1.0, "polarity": -1},
+
+    {"src": "outcome:failure", "dst": "concept:failed_action", "relation": "INDICATES", "weight": 1.0},
+    {"src": "risk:path_dialect_mismatch", "dst": "concept:failed_action", "relation": "INDICATES", "weight": 0.8},
+    {"src": "concept:failed_action", "dst": "family:repeat_broken_action", "relation": "SUPPORTS", "weight": 1.0},
+    {"src": "op:verify", "dst": "family:repeat_broken_action", "relation": "INHIBITS", "weight": 0.8, "polarity": -1},
+    {"src": "op:brain_recall", "dst": "family:repeat_broken_action", "relation": "INHIBITS", "weight": 0.7, "polarity": -1},
+
+    {"src": "stakes:high", "dst": "concept:high_stakes", "relation": "INDICATES", "weight": 1.0},
+    {"src": "claim:quantified", "dst": "concept:quantified_claim", "relation": "INDICATES", "weight": 1.0},
+    {"src": "act:recommend", "dst": "concept:recommendation", "relation": "INDICATES", "weight": 1.0},
+    {"src": "concept:high_stakes", "dst": "family:unsupported_claim", "relation": "SUPPORTS", "weight": 0.8},
+    {"src": "concept:quantified_claim", "dst": "family:unsupported_claim", "relation": "SUPPORTS", "weight": 1.0},
+    {"src": "concept:recommendation", "dst": "family:proxy_as_truth", "relation": "SUPPORTS", "weight": 0.7},
+    {"src": "control:verified", "dst": "family:unsupported_claim", "relation": "INHIBITS", "weight": 1.0, "polarity": -1},
+    {"src": "gate:discussion_only", "dst": "family:unsupported_claim", "relation": "INHIBITS", "weight": 1.0, "polarity": -1},
+
+    {"src": "risk:possible_temporal_leakage", "dst": "family:temporal_leakage", "relation": "INDICATES", "weight": 1.0},
+    {"src": "risk:destructive_code", "dst": "family:irreversible_without_gate", "relation": "INDICATES", "weight": 0.9},
+    {"src": "risk:dynamic_execution", "dst": "family:irreversible_without_gate", "relation": "INDICATES", "weight": 0.6},
+    {"src": "risk:irreversible", "dst": "family:irreversible_without_gate", "relation": "INDICATES", "weight": 1.0},
+
+    {"src": "context:fixture", "dst": "concept:test_context", "relation": "INDICATES", "weight": 1.0},
+    {"src": "target:brain_ledger", "dst": "concept:live_state", "relation": "INDICATES", "weight": 1.0},
+    {"src": "concept:test_context", "dst": "family:test_pollutes_live_state", "relation": "SUPPORTS", "weight": 1.0},
+    {"src": "concept:live_state", "dst": "family:test_pollutes_live_state", "relation": "SUPPORTS", "weight": 1.0},
+
+    {"src": "op:brain_recall", "dst": "control:retrieved_memory", "relation": "INDICATES", "weight": 1.0},
+    {"src": "control:retrieved_memory", "dst": "family:failed_to_retrieve", "relation": "INHIBITS", "weight": 1.0, "polarity": -1},
+    {"src": "knowledge:retraction_context", "dst": "control:retraction_context", "relation": "INDICATES", "weight": 1.0},
+    {"src": "origin:self_monitor", "dst": "control:self_generated", "relation": "INDICATES", "weight": 1.0}
+  ]
+}

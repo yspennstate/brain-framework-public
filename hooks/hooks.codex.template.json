@@ -1,0 +1,338 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "\"{{PYTHON}}\" -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='codex';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\error_graph\\hook.py --hook-runtime codex",
+            "timeout": 600,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "\"{{PYTHON}}\" -B \"{{DREAMING}}/live_inbox_hook.py\" --runtime codex",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\live_inbox_hook.py --runtime codex",
+            "timeout": 30,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "\"{{PYTHON}}\" -B \"{{DREAMING}}/compact_hooks.py\" --codex",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\compact_hooks.py --codex",
+            "timeout": 60,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "{{PYTHON}} -B {{DREAMING}}\\codex_help_guard_hook.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\codex_help_guard_hook.py",
+            "timeout": 600,
+            "type": "command"
+          },
+          {
+            "command": "\"{{PYTHON}}\" -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='codex';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\error_graph\\hook.py --hook-runtime codex",
+            "timeout": 600,
+            "type": "command"
+          },
+          {
+            "command": "{{PYTHON}} -B {{DREAMING}}\\codex_reflex_hook.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\codex_reflex_hook.py",
+            "timeout": 600,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "{{PYTHON}} -S -B {{DREAMING}}\\project_memory_hot_hook.py",
+            "commandWindows": "{{PYTHON}} -S -B {{DREAMING}}\\project_memory_hot_hook.py",
+            "timeout": 600,
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash|PowerShell|Edit|Write|MultiEdit|apply_patch|shell_command|exec_command|mcp__.*__(?:create|update|delete|remove|write|edit|send|publish|deploy|execute|run|start|stop|add|set|put|post|commit|push|merge|close|resolve|archive|move|rename|upload|install|trigger|launch)(?:_|$).*"
+      },
+      {
+        "matcher": "Bash|PowerShell|shell_command|exec_command",
+        "hooks": [
+          {
+            "command": "{{PYTHON}} -B {{DREAMING}}\\push_reminder.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\push_reminder.py",
+            "timeout": 600,
+            "type": "command"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\voice_guard_hook.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\voice_guard_hook.py",
+            "timeout": 600
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "\"{{PYTHON}}\" -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='codex';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\error_graph\\hook.py --hook-runtime codex",
+            "timeout": 600,
+            "type": "command"
+          },
+          {
+            "command": "{{PYTHON}} -B {{DREAMING}}\\codex_stop_guard.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\codex_stop_guard.py",
+            "timeout": 600,
+            "type": "command"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\summary_hook.py",
+            "timeout": 600,
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\summary_hook.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\task_checklist_hook.py --hook --runtime codex",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\task_checklist_hook.py --hook --runtime codex",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "\"{{PYTHON}}\" -B \"{{DREAMING}}/compact_hooks.py\" --codex",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\compact_hooks.py --codex",
+            "timeout": 60,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\verify_gate.py --runtime codex",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\verify_gate.py --runtime codex",
+            "timeout": 600
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "\"{{PYTHON}}\" -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='codex';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\error_graph\\hook.py --hook-runtime codex",
+            "timeout": 600,
+            "type": "command"
+          },
+          {
+            "command": "{{PYTHON}} -B {{DREAMING}}\\codex_reflex_hook.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\codex_reflex_hook.py",
+            "timeout": 600,
+            "type": "command"
+          },
+          {
+            "command": "{{PYTHON}} -B {{DREAMING}}\\project_memory_hook.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\project_memory_hook.py",
+            "timeout": 600,
+            "type": "command"
+          },
+          {
+            "command": "{{PYTHON}} -B {{DREAMING}}\\codex_stop_guard.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\codex_stop_guard.py",
+            "timeout": 600,
+            "type": "command"
+          },
+          {
+            "command": "{{PYTHON}} -B {{DREAMING}}\\owner_board_hook.py --hook --runtime codex",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\owner_board_hook.py --hook --runtime codex",
+            "timeout": 60,
+            "type": "command"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\proof_sense.py",
+            "timeout": 600,
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\proof_sense.py"
+          },
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\math_sense.py",
+            "timeout": 600,
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\math_sense.py"
+          },
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\waste_sense.py",
+            "timeout": 600,
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\waste_sense.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "{{PYTHON}} -B {{DREAMING}}\\push_reminder.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\push_reminder.py",
+            "timeout": 600,
+            "type": "command"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B \"{{DREAMING}}\\slow_sense.py\"",
+            "commandWindows": "{{PYTHON}} -B \"{{DREAMING}}\\slow_sense.py\"",
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\owner_prompts_hook.py --hook --runtime codex",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\owner_prompts_hook.py --hook --runtime codex",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B \"{{DREAMING}}\\instinct_prime.py\"",
+            "commandWindows": "{{PYTHON}} -B \"{{DREAMING}}\\instinct_prime.py\"",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B \"{{DREAMING}}\\compute_sense.py\"",
+            "commandWindows": "{{PYTHON}} -B \"{{DREAMING}}\\compute_sense.py\"",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B \"{{DREAMING}}\\danger_mode.py\"",
+            "commandWindows": "{{PYTHON}} -B \"{{DREAMING}}\\danger_mode.py\"",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\restart_handoff_hook.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\restart_handoff_hook.py",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\task_checklist_hook.py --hook --runtime codex",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\task_checklist_hook.py --hook --runtime codex",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\prompt_archive.py --runtime codex",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\prompt_archive.py --runtime codex",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "\"{{PYTHON}}\" -B \"{{DREAMING}}/live_inbox_hook.py\" --runtime codex",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\live_inbox_hook.py --runtime codex",
+            "timeout": 30,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "\"{{PYTHON}}\" -B \"{{DREAMING}}/compact_hooks.py\" --codex",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\compact_hooks.py --codex",
+            "timeout": 60,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\verify_sense.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\verify_sense.py",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\primary_hook.py --runtime codex",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\primary_hook.py --runtime codex",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,87 @@
+﻿<!doctype html>
+<html><head>
+<title>CrashGuard Status</title>
+<meta http-equiv="refresh" content="10">
+<style>
+body { font-family: -apple-system, sans-serif; background:#111; color:#ddd; padding: 20px; }
+h1, h2 { color: #fff; }
+.tier { font-size: 2em; font-weight: bold; }
+table { border-collapse: collapse; margin: 10px 0; }
+td { padding: 4px 12px; border-bottom: 1px solid #333; }
+code { background:#222; padding: 2px 6px; border-radius: 3px; }
+.grid { display: grid; grid-template-columns: 200px auto; gap: 8px; }
+.metric { font-weight: bold; color: #0af; }
+</style>
+</head><body>
+<h1>CrashGuard Status</h1>
+<p>Generated: 07/15/2026 10:31:14  (auto-refresh 10s)</p>
+
+<h2>Idle-TDR (0x116) Protection</h2>
+<div class="tier" style="color: #0a0">ACTIVE</div>
+<div class="grid">
+<span>GPU keepalive</span><span class="metric">alive &mdash; engine=torch, 5256min up, hb 4s</span>
+<span>dGPU held in D0</span><span class="metric">yes &mdash; 114MB resident</span>
+<span>PCIe AER (60min)</span><span class="metric">0</span>
+</div>
+<p style="color:#888;font-size:0.85em">Root cause: idle dGPU RTD3/GC6 D3cold&rarr;D0 wake failure on driver 595.97. Fix: hold a CUDA context so the dGPU never powers down. See docs/rootcause-2026-06-01-idle-rtd3-tdr.md</p>
+
+<h2>Sentinel</h2>
+<div class="tier" style="color: #cc0">yellow</div>
+<div class="grid">
+<span>iters</span><span class="metric">58458</span>
+<span>CPU</span><span class="metric">79%</span>
+<span>RAM</span><span class="metric">81%</span>
+<span>GPU temp</span><span class="metric">46C</span>
+<span>GPU util</span><span class="metric">0%</span>
+</div>
+
+<h2>Crash counters since 2026-05-27 15:00</h2>
+<div class="grid">
+<span>BSODs</span><span class="metric">3</span>
+<span>WHEA today</span><span class="metric">0</span>
+<span>Min since last WHEA</span><span class="metric">99999</span>
+<span>Watchdog ticks</span><span class="metric">277</span>
+<span>Cumulative tests</span><span class="metric">703756</span>
+</div>
+
+<h2>Services (22)</h2>
+<table>
+<tr><th>Service</th><th>PID</th><th>Heartbeat age</th></tr>
+<tr><td>sentinel</td><td>35368</td><td style="color:#0a0">2s</td></tr>
+<tr><td>watchdog</td><td>21344</td><td style="color:#0a0">10s</td></tr>
+<tr><td>process-watcher</td><td>49052</td><td style="color:#0a0">7s</td></tr>
+<tr><td>export</td><td>43084</td><td style="color:#0a0">1s</td></tr>
+<tr><td>driver-health</td><td>55784</td><td style="color:#0a0">5s</td></tr>
+<tr><td>pcie-watch</td><td>40108</td><td style="color:#0a0">4s</td></tr>
+<tr><td>ring-recorder</td><td>3908</td><td style="color:#0a0">4s</td></tr>
+<tr><td>dedup-watcher</td><td>4972</td><td style="color:#0a0">1s</td></tr>
+<tr><td>power-watch</td><td>58268</td><td style="color:#0a0">15s</td></tr>
+<tr><td>crisis-correlator</td><td>21856</td><td style="color:#0a0">11s</td></tr>
+<tr><td>power-guard</td><td>22296</td><td style="color:#0a0">35s</td></tr>
+<tr><td>wudfrd-watch</td><td>49564</td><td style="color:#0a0">6s</td></tr>
+<tr><td>hid-watch</td><td>44396</td><td style="color:#0a0">11s</td></tr>
+<tr><td>update-watcher</td><td>55844</td><td style="color:#0a0">31s</td></tr>
+<tr><td>sleep-defender</td><td>23200</td><td style="color:#0a0">12s</td></tr>
+<tr><td>self-heal</td><td>24772</td><td style="color:#0a0">9s</td></tr>
+<tr><td>log-rotate</td><td>44264</td><td style="color:#0a0">51s</td></tr>
+<tr><td>trend-analyzer</td><td>23328</td><td style="color:#aa0">292s</td></tr>
+<tr><td>recovery</td><td>19280</td><td style="color:#aa0">163s</td></tr>
+<tr><td>pulse</td><td>16608</td><td style="color:#0a0">41s</td></tr>
+<tr><td>watchdog2</td><td>5420</td><td style="color:#0a0">15s</td></tr>
+<tr><td>gpu-keepalive</td><td>26384</td><td style="color:#0a0">4s</td></tr>
+</table>
+
+<h2>Last 10 spike-log entries</h2>
+<ul>
+<li>2026-07-15 10:04:41.387 <code></code></li>
+<li>2026-07-15 10:05:30.017 <code></code></li>
+<li>2026-07-15 10:06:21.066 <code>trend-anomaly</code></li>
+<li>2026-07-15 10:11:11.962 <code></code></li>
+<li>2026-07-15 10:11:12.254 <code></code></li>
+<li>2026-07-15 10:11:21.348 <code>trend-anomaly</code></li>
+<li>2026-07-15 10:16:21.549 <code>trend-anomaly</code></li>
+<li>2026-07-15 10:20:38.279 <code></code></li>
+<li>2026-07-15 10:21:21.848 <code>trend-anomaly</code></li>
+<li>2026-07-15 10:26:22.030 <code>trend-anomaly</code></li>
+</ul>
+</body></html>

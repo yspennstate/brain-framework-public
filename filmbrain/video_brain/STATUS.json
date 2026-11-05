@@ -1,0 +1,161 @@
+{
+  "schema": "video_brain.status.v1",
+  "lifecycle": {
+    "documented": "Complete handbook: 10 modules and 53 cards, source-bound to owner corrections; 3Blue1Brown and conditional Blender direction added to five existing cards.",
+    "retrievable": "VERIFIED: main-brain natural query ranks new hub first; live filmbrain returns new cards; full attached handbook hash passes.",
+    "fired": "VERIFIED only for the explicit brief CLI; no global hook installed. Frozen extra controls initially6/8, later8/8 regression.",
+    "acted_on": "VERIFIED bounded adoption: producing lecture agent independently checked source mirror and online commit, read complete handbook and consumed live brief; accepted handoff msg-ebe203a310. No completed-film outcome yet.",
+    "verified": "40 bounded unit tests pass, including plain-documentary and GPU-use wording; media beauty and completed-film quality remain unverified."
+  },
+  "verification": {
+    "current": "evidence/verification_final.json",
+    "initial": "evidence/verification.json",
+    "additional_first_run": "evidence/additional_routing_controls.json",
+    "retrieval": "evidence/live_retrieval.json",
+    "runtime_readback": "evidence/runtime_readback.json",
+    "attachment_sha256": "d00b1fd1f47f3287b66d948bf9e28e81293b75f234e8f08ea3bb74141bcc026f",
+    "producer_feedback": "evidence/producer_feedback.json",
+    "unit_tests": 40,
+    "visual_direction": "evidence/visual_direction_20260905/local_checks.json"
+  },
+  "integration": {
+    "runtime": "~/filmbrain/video_brain",
+    "main_node": "video_making_owner_contract_and_filmbrain_workflow_2026_09_05",
+    "import": "evidence/filmbrain_import.json",
+    "pack_nodes": 63,
+    "pack_edges": 88,
+    "pack_fts_rows": 63,
+    "idempotence": "Second import prior63/88 and after63/88; full graph31319 nodes/35582 edges at10:23Z.",
+    "peer_source_mirror": "existing_filmbrain/SOURCE_MANIFEST.json",
+    "selected_corrections": "evidence/peer_rows_updated.json; evidence/legacy_lessons_corrected.json",
+    "deployment_receipt": "evidence/deployment.json",
+    "visual_direction_import": "evidence/visual_direction_20260905/filmbrain_import.json"
+  },
+  "publication": {
+    "repository": "yspennstate/brain-repo",
+    "visibility": "private, verified before prompt-ledger push",
+    "branch": "codex/video-brain-0905",
+    "initial_pushed_commit": "98c228660b0cf4a19d6f7194118ce81dfea930e1",
+    "current_commit": "Use the Git commit containing this file; no self-referential hash is fabricated."
+  },
+  "open_issues": [
+    "Requested 100 complete video prompts not established: 87 qualified, one missing old paste.",
+    "No completed film has yet passed this new delivery receipt gate.",
+    "Unit tests do not certify beauty, factual accuracy or actual watching.",
+    "Reboot complete and CUDA/NVENC availability verified; sustained driver stability remains under observation.",
+    "Brief routing was tuned after extra6/8 controls; no untouched general-accuracy estimate is claimed."
+  ],
+  "as_of": "2026-09-05T18:16:10.238572+00:00",
+  "counts": {
+    "domains": 10,
+    "craft_cards": 53,
+    "graph_nodes_in_pack": 63
+  },
+  "prompt_review": {
+    "schema": "video_brain.prompt_review.v1",
+    "cutoff_utc": "2026-09-05T08:45:23.999000+00:00",
+    "source_snapshots": [
+      {
+        "path": "~\\.claude\\history.jsonl",
+        "bytes": 4945670,
+        "sha256": "720dc6e6f0de7e05aeffb9c1504847bd90e75cc1e825cd165bbf134d2949374a"
+      },
+      {
+        "path": "~\\.codex\\history.jsonl",
+        "bytes": 4794319,
+        "sha256": "e48ca58662f8982cc0bf76c6fa395d2d2d0e87cbee23666abfc364221d7c0ea1"
+      }
+    ],
+    "candidate_events": 106,
+    "classifications": {
+      "video_instruction": 56,
+      "excluded_detour": 19,
+      "production_context": 31
+    },
+    "requested_video_prompts": 100,
+    "qualified_video_events": 87,
+    "scope_note": "Video instructions plus clearly linked production followups count; unrelated detours do not. A shortfall is not padded with reminders or copied summaries.",
+    "coverage": "Both complete UI histories, the complete redacted prompt archive, and available originals of six video sessions were searched; archive-only lexical matches were copied goals, unrelated data or generated prompts. Not a proof of completeness of unexported chats.",
+    "missing_paste_events": [
+      "CH9066",
+      "CH9085"
+    ],
+    "ledger_sha256": "d1d6b2d02308c73a9599612267091edc7b3ac3c4c7ae9a3ea693b575d3cc6fdd"
+  },
+  "hashes": {
+    "catalog.py": "6301c96d32f115f8bbea15e76c809bd0170eb343cfd8325a5335f35b489e513e",
+    "knowledge.json": "ae6b4c16995087d6a0f82511ff5b6243f8b9007e12b3a952b8e15deb81e08e88",
+    "HANDBOOK.md": "1f9dfa2f88be3e38bdb69a18552a54c0c88c13683423edecb2a0325dff1a1d83",
+    "provenance/PROMPT_REVIEW.jsonl": "d1d6b2d02308c73a9599612267091edc7b3ac3c4c7ae9a3ea693b575d3cc6fdd"
+  },
+  "source": "catalog.py, source-bound prompt ledger, and named verification receipts",
+  "gpu_permission": {
+    "value": "Every video team uses suitable GPU stages; concurrent work targets 80 percent utilization",
+    "observed_at": "2026-09-05T19:38:49.242+03:00",
+    "status": "owner-stated",
+    "stability": "UNVERIFIED",
+    "broadcast_live_recipients": 5,
+    "additional_live_recipients": 2,
+    "current_relu_identity": "950f2eda-1e2b-4b98-b1d2-3d6422535002",
+    "receipt_file": "evidence/gpu_80_percent_20260905/policy_readback.json",
+    "notification": "Current concurrent-use update sent to five producing/coordination identities; insertion is not acknowledgement or measured output.",
+    "source": "provenance/OWNER_GPU_80_PERCENT_20260905.json",
+    "coordination": "Disjoint topic:gpu-workload/<hostname>/<agent-id> claims; no card-wide exclusive job ceiling",
+    "limits": "Fresh actual CPU/UI, physical RAM, commit, VRAM and thermal headroom; stop on driver faults",
+    "initial_permission_broadcast_live_recipients": 11
+  },
+  "visual_direction": {
+    "as_of": "2026-09-05T12:05:20.579843+00:00",
+    "status": "owner-stated",
+    "reference": "3Blue1Brown",
+    "blender": "Use for explanatory 3D visuals where helpful; not a blanket renderer migration.",
+    "provenance": "provenance/OWNER_DIRECTION_20260905_3B1B.json",
+    "supplement": "visual_direction_20260905.md",
+    "documented": true,
+    "retrievable": "VERIFIED: main-brain natural wording ranks the new node first; five live graph cards read back; fresh installed general-video and math-lecture briefs carry 3Blue1Brown and Blender guidance.",
+    "producer_acknowledgement": "VERIFIED: all three producing agents plus relay acknowledged; see completion_receipts.json.",
+    "finished_video_outcome": "UNVERIFIED",
+    "verification": "evidence/visual_direction_20260905/local_checks.json",
+    "graph_readback": "evidence/visual_direction_20260905/graph_readback.json",
+    "producer_reports": "evidence/visual_direction_20260905/producer_reports.json",
+    "attachment_sha256": "2495156d6740c879015ecd4359d4d269b73ebf3eea7b617ae1cecc18eff48628",
+    "changed_cards": 5,
+    "runtime_readback": "evidence/visual_direction_20260905/runtime_readback.json",
+    "main_brain_retrieval": "evidence/visual_direction_20260905/main_brain_retrieval.json",
+    "deployment_receipt": "evidence/visual_direction_20260905/deployment.json",
+    "accepted_handoff": "msg-e684fc3d3f accepted by NMKC after complete node/module read, exact catalog hash match and both current brief routes.",
+    "completion_receipts": "evidence/visual_direction_20260905/completion_receipts.json",
+    "published_guidance_commit": "f5e19be89c1a9053e6491b15d5823ea7adc118bf"
+  },
+  "gpu_use_requirement": {
+    "as_of": "2026-09-05T12:45:07.144865+00:00",
+    "status": "owner-stated",
+    "requirement": "Actively use GPU for suitable production stages; not permission alone.",
+    "provenance": "provenance/OWNER_GPU_USE_20260905.json",
+    "documented": true,
+    "retrievable": "VERIFIED: full shared-brain node and 2360-byte attachment read and hash verified; natural lecture/GPU wording returned policy second with attachment pointer. Two fresh installed general-video/math-lecture briefs carry requirement; both updated filmbrain nodes read back.",
+    "producer_adoption": "Bastogne and NMKC producers plus relay acknowledged the requirement; ReLU direct message queued but its live task announces NVENC transition. NMKC selected next corrected chapter encoding, waiting on ReLU GPU lease/compatibility. No running job inferred from configuration or acknowledgement.",
+    "actual_gpu_use": "Direct NVIDIA samples16:06:12,16:06:23,16:06:39 local: render/encoder/decoder all0percent, VRAM0MiB, temperatures52/52/51C. This snapshot does not describe Intel desktop GPU activity.",
+    "verification": "evidence/active_gpu_20260905/local_checks.json",
+    "graph_readback": "evidence/active_gpu_20260905/graph_readback.json",
+    "attachment_sha256": "9fff37f7ed4ba868eb37f164b19faa4e71399d50a631f50b18adbc5d864f042a",
+    "runtime_readback": "evidence/active_gpu_20260905/runtime_readback.json",
+    "main_brain_retrieval": "evidence/active_gpu_20260905/main_brain_retrieval.json",
+    "deployment_receipt": "evidence/active_gpu_20260905/deployment.json",
+    "producer_receipts": "evidence/active_gpu_20260905/producer_receipts.json",
+    "compatibility": "Bastogne provisional report: tested PATH FFmpeg requires NVENC13.1 while installed driver exposes13.0; other tested builds returned CUDA_ERROR_NO_DEVICE. Compatible-header binary test is coordinated with producers. Primary headers13.0 document Windows minimum570;13.1 minimum610; release number alone is not sufficient. See nvenc_primary_sources.json.",
+    "guidance_handoff": "ACCEPTED: msg-158dc4fcb9 accepted13:12:22Z by NMKC after full compute-module/attachment read, exact catalog SHA, and fresh proof/data/Microsoft/GPU/background brief inspection. GPU job still unrun.",
+    "latest_blocker_report": "Relay reports all tested CUDA/NVENC opens now fail CUDA_ERROR_NO_DEVICE and a compatible FFmpeg7.1.1 is staged; post-reboot verification remains necessary. A reboot is a candidate recovery step, not a guaranteed fix.",
+    "superseded_by": "gpu_concurrent_use"
+  },
+  "gpu_concurrent_use": {
+    "as_of": "2026-09-05T18:16:10.059500+00:00",
+    "owner_source": "provenance/OWNER_GPU_80_PERCENT_20260905.json",
+    "owner_target_pct": 80,
+    "policy": "Concurrent useful GPU stages under disjoint workload accounting claims; current host/GPU resource headroom remains required.",
+    "graph_import": "evidence/gpu_80_percent_20260905/filmbrain_import.json",
+    "runtime_verification": "evidence/gpu_80_percent_20260905/policy_readback.json",
+    "actual_use": "Direct NVML at 21:02 local: five sessions, encoder16%, compute6%, VRAM1599721472 bytes. Sampled, not continuous throughput.",
+    "producer_followthrough": "Bastogne accepted accounting claim and unloaded its held model after pressure. Newest actual-movie throughput receipts remain pending."
+  }
+}

@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "math-research-brain"
+version = "0.1.0"
+description = "A privacy-isolated research memory and verification system for mathematics"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "All rights reserved" }
+authors = [{ name = "Mathematical Research Brain contributors" }]
+# cryptography is a hard requirement, not an extra: canonical_ed25519_v3,
+# three_arm_evaluation and random_external_pilot_evaluation_v4 import it at
+# module scope with no fallback, so an install without it fails at import
+# rather than degrading.
+dependencies = [
+  "cryptography>=46.0.5",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+  "ruff>=0.11",
+]
+# Only mathnet_acquisition_v3 needs these, and it guards the imports, so the
+# corpus-acquisition lane stays optional rather than taxing every install.
+mathnet-acquisition = [
+  "huggingface-hub>=1.8.0,<2",
+  "pyarrow>=23.0.1,<24",
+]
+
+[project.scripts]
+math-brain = "math_brain.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/math_brain"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]

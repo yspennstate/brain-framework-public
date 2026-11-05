@@ -1,0 +1,1148 @@
+{
+  "_note": "Fresh probe bank, 2026-09-03: 89 theorem families the population store holds, each asked once without naming the result (q_content) and once with the name (q_hinted), plus 40 results the store lacks whose questions should draw silence. Scored at the theorem level by title stems; the evaluator re-checks presence and absence against the live store at run time.",
+  "answerable": [
+    {
+      "key": "banach_fixed",
+      "area": "analysis",
+      "stems": [
+        "banach fixed",
+        "contraction mapping"
+      ],
+      "q_content": "I have a map T on a complete metric space with d(Tx, Ty) <= q d(x, y) for some q < 1. I need a unique fixed point and a rate for the iterates x_{n+1} = T x_n.",
+      "q_hinted": "Banach fixed point theorem: the unique fixed point of a contraction on a complete metric space and the geometric rate of Picard iteration."
+    },
+    {
+      "key": "stone_weierstrass",
+      "area": "analysis",
+      "stems": [
+        "stone weierstrass"
+      ],
+      "q_content": "A subalgebra of C(K), K compact Hausdorff, contains the constants and separates points. Is it dense in the sup norm?",
+      "q_hinted": "Stone-Weierstrass theorem: a point-separating subalgebra of C(K) containing the constants is uniformly dense."
+    },
+    {
+      "key": "baire",
+      "area": "analysis",
+      "stems": [
+        "baire"
+      ],
+      "q_content": "A complete metric space is written as a countable union of closed sets. Must one of them have nonempty interior?",
+      "q_hinted": "Baire category theorem for complete metric spaces: a countable union of closed sets with empty interior has empty interior."
+    },
+    {
+      "key": "hahn_banach",
+      "area": "analysis",
+      "stems": [
+        "hahn banach"
+      ],
+      "q_content": "I have a bounded linear functional on a subspace of a normed space and want to extend it to the whole space without increasing its norm.",
+      "q_hinted": "Hahn-Banach extension theorem: norm-preserving extension of a bounded functional from a subspace."
+    },
+    {
+      "key": "closed_graph",
+      "area": "analysis",
+      "stems": [
+        "closed graph"
+      ],
+      "q_content": "A linear operator between Banach spaces whose graph is closed: does that already make it bounded?",
+      "q_hinted": "Closed graph theorem: a closed linear operator between Banach spaces is bounded."
+    },
+    {
+      "key": "dct",
+      "area": "analysis",
+      "stems": [
+        "dominated convergence"
+      ],
+      "q_content": "f_n -> f pointwise and |f_n| <= g with g integrable; I want to pass the limit inside the integral.",
+      "q_hinted": "Lebesgue's dominated convergence theorem: interchange of limit and integral under an integrable dominating function."
+    },
+    {
+      "key": "fatou",
+      "area": "analysis",
+      "stems": [
+        "fatou"
+      ],
+      "q_content": "For nonnegative measurable f_n, how does the integral of liminf f_n compare with the liminf of the integrals?",
+      "q_hinted": "Fatou's lemma: the integral of the liminf is at most the liminf of the integrals for nonnegative functions."
+    },
+    {
+      "key": "radon_nikodym",
+      "area": "analysis",
+      "stems": [
+        "radon nikodym"
+      ],
+      "q_content": "nu is a sigma-finite measure absolutely continuous with respect to mu; I want to write nu as f dmu for a measurable density f.",
+      "q_hinted": "Radon-Nikodym theorem: existence of a density for an absolutely continuous sigma-finite measure."
+    },
+    {
+      "key": "leb_diff",
+      "area": "analysis",
+      "stems": [
+        "lebesgue differentiation"
+      ],
+      "q_content": "For locally integrable f on R^d, do the averages of f over small balls around x converge to f(x) for almost every x?",
+      "q_hinted": "Lebesgue differentiation theorem: averages over shrinking balls converge to f(x) almost everywhere."
+    },
+    {
+      "key": "implicit_fn",
+      "area": "analysis",
+      "stems": [
+        "implicit function"
+      ],
+      "q_content": "F(x, y) = 0 with F smooth and the y-derivative invertible at a solution: can I solve for y as a smooth function of x near that point?",
+      "q_hinted": "Implicit function theorem: solving F(x, y) = 0 for y locally when D_y F is invertible."
+    },
+    {
+      "key": "gronwall",
+      "area": "analysis",
+      "stems": [
+        "gronwall"
+      ],
+      "q_content": "u(t) <= a + integral from 0 to t of b(s) u(s) ds with b >= 0; I need the resulting exponential bound on u.",
+      "q_hinted": "Gronwall's inequality, integral form: the exponential bound from a linear integral inequality."
+    },
+    {
+      "key": "picard",
+      "area": "analysis",
+      "stems": [
+        "picard lindelof",
+        "cauchy lipschitz"
+      ],
+      "q_content": "y' = f(t, y) with f Lipschitz in y and continuous in t: existence and uniqueness of a local solution through a given initial point.",
+      "q_hinted": "Picard-Lindelof theorem (Cauchy-Lipschitz): local existence and uniqueness for a Lipschitz ODE."
+    },
+    {
+      "key": "plancherel",
+      "area": "analysis",
+      "stems": [
+        "plancherel"
+      ],
+      "q_content": "Is the Fourier transform on L^2(R^n) an isometry, and how is it defined there when the defining integral does not converge?",
+      "q_hinted": "Plancherel theorem: the Fourier transform extends to a unitary map on L^2."
+    },
+    {
+      "key": "jensen",
+      "area": "analysis",
+      "stems": [
+        "jensen"
+      ],
+      "q_content": "phi is convex and X is integrable: compare phi(E X) with E phi(X).",
+      "q_hinted": "Jensen's inequality for a convex function of an integrable random variable."
+    },
+    {
+      "key": "kolmogorov01",
+      "area": "probability",
+      "stems": [
+        "zero one law"
+      ],
+      "q_content": "An event measurable with respect to the tail sigma-field of an independent sequence: what values can its probability take?",
+      "q_hinted": "Kolmogorov's zero-one law for tail events of independent random variables."
+    },
+    {
+      "key": "slln",
+      "area": "probability",
+      "stems": [
+        "strong law"
+      ],
+      "q_content": "i.i.d. integrable X_i: does the sample mean converge almost surely to the mean, and is integrability alone enough?",
+      "q_hinted": "Strong law of large numbers for i.i.d. integrable variables (Kolmogorov, Etemadi)."
+    },
+    {
+      "key": "berry_esseen",
+      "area": "probability",
+      "stems": [
+        "berry esseen"
+      ],
+      "q_content": "How fast does the standardized sum of n i.i.d. variables with a finite third moment approach the normal law, in Kolmogorov distance?",
+      "q_hinted": "Berry-Esseen theorem: the C rho / (sigma^3 sqrt n) rate in the central limit theorem."
+    },
+    {
+      "key": "hoeffding",
+      "area": "probability",
+      "stems": [
+        "hoeffding"
+      ],
+      "q_content": "Sum of n independent variables each bounded in [a_i, b_i]: I need an exponential tail bound for the deviation from the mean.",
+      "q_hinted": "Hoeffding's inequality for sums of independent bounded random variables."
+    },
+    {
+      "key": "azuma",
+      "area": "probability",
+      "stems": [
+        "azuma"
+      ],
+      "q_content": "A martingale with bounded increments |M_k - M_{k-1}| <= c_k: I need a sub-Gaussian tail for M_n - M_0.",
+      "q_hinted": "Azuma-Hoeffding inequality for martingales with bounded differences."
+    },
+    {
+      "key": "bernstein",
+      "area": "probability",
+      "stems": [
+        "bernstein s inequality",
+        "bernstein inequality"
+      ],
+      "q_content": "Independent mean-zero variables bounded by M with total variance sigma^2: I want a tail bound that is Gaussian for small deviations and exponential for large ones.",
+      "q_hinted": "Bernstein's inequality for sums of independent bounded variables, with the variance term."
+    },
+    {
+      "key": "talagrand",
+      "area": "probability",
+      "stems": [
+        "convex distance",
+        "talagrand s convex"
+      ],
+      "q_content": "Product measure on a product of n spaces: I need concentration of a set's convex distance, P(A) P(d_T(x, A) >= t) <= exp(-t^2 / 4).",
+      "q_hinted": "Talagrand's convex distance inequality on product spaces."
+    },
+    {
+      "key": "efron_stein",
+      "area": "probability",
+      "stems": [
+        "efron stein"
+      ],
+      "q_content": "Variance of a function of n independent variables: bound it by the sum over coordinates of the expected conditional variances.",
+      "q_hinted": "Efron-Stein inequality for the variance of a function of independent variables."
+    },
+    {
+      "key": "gauss_conc",
+      "area": "probability",
+      "stems": [
+        "gaussian concentration"
+      ],
+      "q_content": "f is L-Lipschitz on R^n and g is a standard Gaussian vector: tail bound for f(g) - E f(g).",
+      "q_hinted": "Gaussian concentration inequality for Lipschitz functions of a standard Gaussian vector."
+    },
+    {
+      "key": "log_sobolev",
+      "area": "probability",
+      "stems": [
+        "logarithmic sobolev",
+        "log sobolev"
+      ],
+      "q_content": "Entropy of f^2 under the standard Gaussian measure bounded by twice the integral of |grad f|^2: what is this inequality and what does it give for tails?",
+      "q_hinted": "Gaussian logarithmic Sobolev inequality (Gross) and the Herbst argument."
+    },
+    {
+      "key": "borell_tis",
+      "area": "probability",
+      "stems": [
+        "borell"
+      ],
+      "q_content": "Supremum of a centred Gaussian process with variances bounded by sigma^2: tail of sup X_t - E sup X_t.",
+      "q_hinted": "Borell-TIS inequality for the supremum of a Gaussian process."
+    },
+    {
+      "key": "mart_conv",
+      "area": "probability",
+      "stems": [
+        "martingale convergence"
+      ],
+      "q_content": "A martingale bounded in L^1: does it converge almost surely, and when also in L^1?",
+      "q_hinted": "Doob's martingale convergence theorem for L^1-bounded martingales, with uniform integrability for L^1 convergence."
+    },
+    {
+      "key": "wald",
+      "area": "probability",
+      "stems": [
+        "wald"
+      ],
+      "q_content": "Sum of i.i.d. integrable variables up to a stopping time with finite mean: what is the expectation of the stopped sum?",
+      "q_hinted": "Wald's identity for the expectation of a randomly stopped sum."
+    },
+    {
+      "key": "girsanov",
+      "area": "probability",
+      "stems": [
+        "girsanov"
+      ],
+      "q_content": "Under which change of measure does a Brownian motion with drift become a standard Brownian motion, and what is the density process?",
+      "q_hinted": "Girsanov's theorem: the change of measure that removes a drift from Brownian motion."
+    },
+    {
+      "key": "ito_lemma",
+      "area": "probability",
+      "stems": [
+        "ito s lemma",
+        "ito formula",
+        "ito s formula"
+      ],
+      "q_content": "f is C^2 and X is an Ito process dX = mu dt + sigma dW: I need the stochastic differential of f(t, X_t).",
+      "q_hinted": "Ito's lemma (Ito's formula) for a C^2 function of an Ito process."
+    },
+    {
+      "key": "skorokhod",
+      "area": "probability",
+      "stems": [
+        "skorokhod"
+      ],
+      "q_content": "X_n converges in distribution to X on a separable metric space; can I realise all of them on one probability space so that the convergence is almost sure?",
+      "q_hinted": "Skorokhod's representation theorem for weak convergence."
+    },
+    {
+      "key": "prokhorov",
+      "area": "probability",
+      "stems": [
+        "prokhorov"
+      ],
+      "q_content": "When does a family of probability measures on a Polish space have a weakly convergent subsequence? I believe tightness is the condition.",
+      "q_hinted": "Prokhorov's theorem: tightness is equivalent to relative compactness in the weak topology."
+    },
+    {
+      "key": "cramer_ldp",
+      "area": "probability",
+      "stems": [
+        "cramer s theorem",
+        "large deviation"
+      ],
+      "q_content": "i.i.d. variables with a finite moment generating function: the exponential decay rate of P(sample mean >= a) for a above the mean.",
+      "q_hinted": "Cramer's theorem in large deviations: the rate function as the Legendre transform of the log moment generating function."
+    },
+    {
+      "key": "sanov",
+      "area": "probability",
+      "stems": [
+        "sanov"
+      ],
+      "q_content": "Empirical distribution of n i.i.d. samples from mu on a finite alphabet: probability that it lies in a set of distributions away from mu, with the exponential rate in relative entropy.",
+      "q_hinted": "Sanov's theorem: large deviations of the empirical measure with the Kullback-Leibler rate."
+    },
+    {
+      "key": "marchenko",
+      "area": "random_matrices",
+      "stems": [
+        "marchenko"
+      ],
+      "q_content": "Limiting spectral distribution of a sample covariance matrix (1/n) X X^T when p/n -> y in (0, 1): what density and what support?",
+      "q_hinted": "Marchenko-Pastur law for sample covariance matrices with aspect ratio y."
+    },
+    {
+      "key": "semicircle",
+      "area": "random_matrices",
+      "stems": [
+        "semicircle"
+      ],
+      "q_content": "Eigenvalue distribution of a symmetric n x n matrix with i.i.d. centred entries of variance 1/n as n grows.",
+      "q_hinted": "Wigner semicircle law for the empirical spectral distribution of Wigner matrices."
+    },
+    {
+      "key": "tracy_widom",
+      "area": "random_matrices",
+      "stems": [
+        "tracy widom"
+      ],
+      "q_content": "Fluctuations of the largest eigenvalue of a GUE or GOE matrix around the spectral edge 2 sqrt n: the n^{-1/6} scale and the limit law.",
+      "q_hinted": "Tracy-Widom law for the largest eigenvalue at the soft edge."
+    },
+    {
+      "key": "bai_yin",
+      "area": "random_matrices",
+      "stems": [
+        "bai yin"
+      ],
+      "q_content": "Almost sure limit of the largest singular value of an n x p matrix with i.i.d. entries of finite fourth moment, as p/n -> y.",
+      "q_hinted": "Bai-Yin theorem: the extreme singular values converge to sqrt n (1 +- sqrt y) under a finite fourth moment."
+    },
+    {
+      "key": "jl",
+      "area": "random_matrices",
+      "stems": [
+        "johnson lindenstrauss"
+      ],
+      "q_content": "Embed N points of a Euclidean space into dimension k = O(log N / eps^2) so that all pairwise distances are preserved up to a factor 1 +- eps.",
+      "q_hinted": "Johnson-Lindenstrauss lemma: random projections preserving pairwise distances."
+    },
+    {
+      "key": "hanson_wright",
+      "area": "random_matrices",
+      "stems": [
+        "hanson wright"
+      ],
+      "q_content": "Concentration of the quadratic form x^T A x for a vector x with independent mean-zero sub-Gaussian coordinates, in terms of the Frobenius and operator norms of A.",
+      "q_hinted": "Hanson-Wright inequality for sub-Gaussian quadratic forms."
+    },
+    {
+      "key": "matrix_bernstein",
+      "area": "random_matrices",
+      "stems": [
+        "matrix bernstein"
+      ],
+      "q_content": "Sum of independent random symmetric matrices, each bounded in operator norm: tail bound for the operator norm of the sum in terms of the matrix variance.",
+      "q_hinted": "Matrix Bernstein inequality for sums of independent bounded random matrices."
+    },
+    {
+      "key": "turan",
+      "area": "combinatorics",
+      "stems": [
+        "turan"
+      ],
+      "q_content": "Maximum number of edges in an n-vertex graph with no complete subgraph on r + 1 vertices, and the extremal graph.",
+      "q_hinted": "Turan's theorem: the extremal number ex(n, K_{r+1}) and the Turan graph."
+    },
+    {
+      "key": "ramsey",
+      "area": "combinatorics",
+      "stems": [
+        "ramsey"
+      ],
+      "q_content": "In any two-colouring of the edges of a large enough complete graph there is a monochromatic clique of size k; how large is large enough?",
+      "q_hinted": "Ramsey's theorem for two colours and the bound R(k, k) <= binom(2k - 2, k - 1)."
+    },
+    {
+      "key": "regularity",
+      "area": "combinatorics",
+      "stems": [
+        "regularity lemma"
+      ],
+      "q_content": "Partition the vertices of any large dense graph into a bounded number of parts so that almost all pairs of parts look like random bipartite graphs.",
+      "q_hinted": "Szemeredi regularity lemma: epsilon-regular partitions."
+    },
+    {
+      "key": "ekr",
+      "area": "combinatorics",
+      "stems": [
+        "erdos ko rado"
+      ],
+      "q_content": "A family of k-subsets of an n-set, n >= 2k, in which any two sets intersect: the maximum size of the family.",
+      "q_hinted": "Erdos-Ko-Rado theorem on intersecting families of k-sets."
+    },
+    {
+      "key": "sperner",
+      "area": "combinatorics",
+      "stems": [
+        "sperner s theorem"
+      ],
+      "q_content": "Largest antichain in the Boolean lattice of subsets of an n-set, no set containing another.",
+      "q_hinted": "Sperner's theorem: the largest antichain in 2^[n] is the middle layer."
+    },
+    {
+      "key": "dilworth",
+      "area": "combinatorics",
+      "stems": [
+        "dilworth"
+      ],
+      "q_content": "In a finite partially ordered set the minimum number of chains covering it equals the size of the largest antichain: which theorem is that and how is it proved?",
+      "q_hinted": "Dilworth's theorem on chain decompositions and antichains, and Mirsky's dual."
+    },
+    {
+      "key": "menger",
+      "area": "combinatorics",
+      "stems": [
+        "menger"
+      ],
+      "q_content": "The minimum number of vertices separating two non-adjacent vertices equals the maximum number of internally disjoint paths between them.",
+      "q_hinted": "Menger's theorem on vertex connectivity and disjoint paths."
+    },
+    {
+      "key": "kuratowski",
+      "area": "combinatorics",
+      "stems": [
+        "kuratowski"
+      ],
+      "q_content": "Which finite graphs are planar, in terms of forbidden subdivisions?",
+      "q_hinted": "Kuratowski's theorem: planarity and subdivisions of K_5 and K_{3,3}."
+    },
+    {
+      "key": "cheeger",
+      "area": "combinatorics",
+      "stems": [
+        "cheeger inequality",
+        "cheeger s inequality",
+        "cheeger constant"
+      ],
+      "q_content": "Relate the edge expansion (isoperimetric constant) of a d-regular graph to the spectral gap of its adjacency or Laplacian matrix, in both directions.",
+      "q_hinted": "Cheeger inequality for graphs: the spectral gap against the Cheeger constant."
+    },
+    {
+      "key": "cayley_formula",
+      "area": "combinatorics",
+      "stems": [
+        "cayley s formula"
+      ],
+      "q_content": "How many labelled trees are there on n vertices?",
+      "q_hinted": "Cayley's formula n^{n-2} for labelled trees."
+    },
+    {
+      "key": "burnside",
+      "area": "combinatorics",
+      "stems": [
+        "burnside s lemma"
+      ],
+      "q_content": "Count the orbits of a finite group acting on a finite set by averaging the number of fixed points over the group.",
+      "q_hinted": "Burnside's lemma (Cauchy-Frobenius) for counting orbits."
+    },
+    {
+      "key": "sauer",
+      "area": "combinatorics",
+      "stems": [
+        "sauer"
+      ],
+      "q_content": "A family of subsets of an n-set that shatters no set of size d: bound on the number of sets in the family.",
+      "q_hinted": "Sauer-Shelah lemma bounding a family of VC dimension d."
+    },
+    {
+      "key": "lagrange_group",
+      "area": "algebra",
+      "stems": [
+        "lagrange s theorem"
+      ],
+      "q_content": "The order of a subgroup of a finite group divides the order of the group: statement and the coset proof.",
+      "q_hinted": "Lagrange's theorem in group theory."
+    },
+    {
+      "key": "sylow",
+      "area": "algebra",
+      "stems": [
+        "sylow"
+      ],
+      "q_content": "Existence, conjugacy and number of subgroups of order p^k in a finite group where p^k is the largest power of p dividing the order.",
+      "q_hinted": "Sylow theorems."
+    },
+    {
+      "key": "fg_abelian",
+      "area": "algebra",
+      "stems": [
+        "finitely generated abelian"
+      ],
+      "q_content": "Structure of a finitely generated abelian group as a direct sum of cyclic groups.",
+      "q_hinted": "Fundamental theorem of finitely generated abelian groups."
+    },
+    {
+      "key": "crt",
+      "area": "algebra",
+      "stems": [
+        "chinese remainder"
+      ],
+      "q_content": "Simultaneous congruences x = a_i mod m_i with pairwise coprime moduli: existence and uniqueness modulo the product.",
+      "q_hinted": "Chinese remainder theorem."
+    },
+    {
+      "key": "fermat_little",
+      "area": "algebra",
+      "stems": [
+        "fermat s little"
+      ],
+      "q_content": "For a prime p and an integer a not divisible by p, what is a^{p-1} modulo p?",
+      "q_hinted": "Fermat's little theorem."
+    },
+    {
+      "key": "quad_recip",
+      "area": "algebra",
+      "stems": [
+        "quadratic reciprocity"
+      ],
+      "q_content": "Relation between the Legendre symbols (p/q) and (q/p) for distinct odd primes.",
+      "q_hinted": "Law of quadratic reciprocity."
+    },
+    {
+      "key": "pnt",
+      "area": "algebra",
+      "stems": [
+        "prime number theorem"
+      ],
+      "q_content": "Asymptotics of the number of primes up to x.",
+      "q_hinted": "Prime number theorem, pi(x) ~ x / log x."
+    },
+    {
+      "key": "nullstellensatz",
+      "area": "algebra",
+      "stems": [
+        "nullstellensatz"
+      ],
+      "q_content": "Polynomials over an algebraically closed field with no common zero: show that 1 lies in the ideal they generate, and give the general radical statement.",
+      "q_hinted": "Hilbert's Nullstellensatz, weak and strong forms."
+    },
+    {
+      "key": "cayley_hamilton",
+      "area": "algebra",
+      "stems": [
+        "cayley hamilton"
+      ],
+      "q_content": "A square matrix satisfies its own characteristic polynomial.",
+      "q_hinted": "Cayley-Hamilton theorem."
+    },
+    {
+      "key": "perron",
+      "area": "algebra",
+      "stems": [
+        "perron"
+      ],
+      "q_content": "A matrix with positive entries has a simple largest eigenvalue that is positive with a positive eigenvector; what survives for irreducible nonnegative matrices?",
+      "q_hinted": "Perron-Frobenius theorem for positive and irreducible nonnegative matrices."
+    },
+    {
+      "key": "courant_fischer",
+      "area": "algebra",
+      "stems": [
+        "courant fischer",
+        "min max"
+      ],
+      "q_content": "Variational characterisation of the k-th eigenvalue of a symmetric matrix as a min over k-dimensional subspaces of the max Rayleigh quotient.",
+      "q_hinted": "Courant-Fischer min-max theorem."
+    },
+    {
+      "key": "gershgorin",
+      "area": "algebra",
+      "stems": [
+        "gershgorin"
+      ],
+      "q_content": "Every eigenvalue of a complex square matrix lies in one of the discs centred at the diagonal entries with radius the off-diagonal row sum.",
+      "q_hinted": "Gershgorin circle theorem."
+    },
+    {
+      "key": "spectral_thm",
+      "area": "algebra",
+      "stems": [
+        "spectral theorem"
+      ],
+      "q_content": "A real symmetric matrix is orthogonally diagonalisable with real eigenvalues, and the version for compact self-adjoint operators.",
+      "q_hinted": "Spectral theorem for real symmetric matrices and for compact self-adjoint operators."
+    },
+    {
+      "key": "brouwer",
+      "area": "topology_geometry",
+      "stems": [
+        "brouwer"
+      ],
+      "q_content": "A continuous map from the closed unit ball in R^n to itself has a fixed point.",
+      "q_hinted": "Brouwer fixed point theorem."
+    },
+    {
+      "key": "urysohn",
+      "area": "topology_geometry",
+      "stems": [
+        "urysohn"
+      ],
+      "q_content": "In a normal space two disjoint closed sets can be separated by a continuous function that is 0 on one and 1 on the other.",
+      "q_hinted": "Urysohn's lemma."
+    },
+    {
+      "key": "tychonoff",
+      "area": "topology_geometry",
+      "stems": [
+        "tychonoff"
+      ],
+      "q_content": "Is an arbitrary product of compact spaces compact in the product topology?",
+      "q_hinted": "Tychonoff's theorem on products of compact spaces."
+    },
+    {
+      "key": "tietze",
+      "area": "topology_geometry",
+      "stems": [
+        "tietze"
+      ],
+      "q_content": "Extend a bounded continuous real function from a closed subset of a normal space to the whole space, keeping the bound.",
+      "q_hinted": "Tietze extension theorem."
+    },
+    {
+      "key": "borsuk",
+      "area": "topology_geometry",
+      "stems": [
+        "borsuk ulam"
+      ],
+      "q_content": "A continuous map from the n-sphere to R^n sends some pair of antipodal points to the same point.",
+      "q_hinted": "Borsuk-Ulam theorem."
+    },
+    {
+      "key": "gauss_bonnet",
+      "area": "topology_geometry",
+      "stems": [
+        "gauss bonnet"
+      ],
+      "q_content": "The integral of the Gaussian curvature over a compact surface without boundary equals 2 pi times its Euler characteristic.",
+      "q_hinted": "Gauss-Bonnet theorem for compact surfaces."
+    },
+    {
+      "key": "hopf_rinow",
+      "area": "topology_geometry",
+      "stems": [
+        "hopf rinow"
+      ],
+      "q_content": "For a connected Riemannian manifold, when is the exponential map defined on the whole tangent space, and how does that relate to metric completeness and minimizing geodesics?",
+      "q_hinted": "Hopf-Rinow theorem: metric completeness, geodesic completeness and minimizing geodesics."
+    },
+    {
+      "key": "brunn_minkowski",
+      "area": "topology_geometry",
+      "stems": [
+        "brunn minkowski"
+      ],
+      "q_content": "Lebesgue measure of the Minkowski sum of two compact sets in R^n: the (1/n)-power inequality.",
+      "q_hinted": "Brunn-Minkowski inequality."
+    },
+    {
+      "key": "isoperimetric",
+      "area": "topology_geometry",
+      "stems": [
+        "isoperimetric"
+      ],
+      "q_content": "Among sets in R^n of given volume, which minimises the surface area, and what is the inequality?",
+      "q_hinted": "Isoperimetric inequality in R^n."
+    },
+    {
+      "key": "fkg",
+      "area": "statmech_learning",
+      "stems": [
+        "fkg inequality",
+        "harris fkg",
+        "harris inequality"
+      ],
+      "q_content": "Two increasing events in Bernoulli percolation, or under any product measure: are they positively correlated?",
+      "q_hinted": "Harris-FKG inequality: positive association of increasing events."
+    },
+    {
+      "key": "kkl",
+      "area": "statmech_learning",
+      "stems": [
+        "kahn kalai"
+      ],
+      "q_content": "A balanced Boolean function on n bits has a coordinate whose influence is at least of order log n / n.",
+      "q_hinted": "Kahn-Kalai-Linial theorem on the maximal influence of a Boolean function."
+    },
+    {
+      "key": "russo",
+      "area": "statmech_learning",
+      "stems": [
+        "russo"
+      ],
+      "q_content": "Derivative in p of the probability of an increasing event under the product measure on {0,1}^n.",
+      "q_hinted": "Russo's formula (Margulis-Russo) for the derivative of an increasing event's probability."
+    },
+    {
+      "key": "griffiths",
+      "area": "statmech_learning",
+      "stems": [
+        "griffiths",
+        "gks"
+      ],
+      "q_content": "Ferromagnetic Ising model with nonnegative couplings and fields: are spin correlations nonnegative and monotone in the couplings?",
+      "q_hinted": "Griffiths (GKS) inequalities for ferromagnetic Ising models."
+    },
+    {
+      "key": "peierls",
+      "area": "statmech_learning",
+      "stems": [
+        "peierls"
+      ],
+      "q_content": "Show that the two-dimensional Ising model has spontaneous magnetisation at low temperature by counting contours around the origin.",
+      "q_hinted": "Peierls argument for a phase transition in the Ising model."
+    },
+    {
+      "key": "kesten_fpp",
+      "area": "statmech_learning",
+      "stems": [
+        "kesten 1993"
+      ],
+      "q_content": "First-passage percolation on Z^d with i.i.d. edge weights: the classical bound on the fluctuations of the passage time to distance n, of order sqrt n.",
+      "q_hinted": "Kesten's 1993 bound on the fluctuations of first-passage times, variance O(n)."
+    },
+    {
+      "key": "bks",
+      "area": "statmech_learning",
+      "stems": [
+        "benjamini"
+      ],
+      "q_content": "Sublinear variance of the passage time in first-passage percolation, Var T(0, x) = O(|x| / log |x|), by hypercontractivity.",
+      "q_hinted": "Benjamini-Kalai-Schramm sublinear variance for first-passage percolation."
+    },
+    {
+      "key": "hopfield",
+      "area": "statmech_learning",
+      "stems": [
+        "hopfield",
+        "hebbian"
+      ],
+      "q_content": "Storage capacity of a Hopfield network with Hebbian weights: how many random patterns per neuron before retrieval fails?",
+      "q_hinted": "Hopfield network capacity, alpha_c = 0.138, and the signal-to-noise crosstalk analysis."
+    },
+    {
+      "key": "ising_perceptron",
+      "area": "statmech_learning",
+      "stems": [
+        "ising perceptron"
+      ],
+      "q_content": "Capacity of the perceptron with binary +-1 weights storing random patterns: the critical ratio of patterns to weights.",
+      "q_hinted": "Ising perceptron storage capacity, alpha_c about 0.83."
+    },
+    {
+      "key": "rademacher",
+      "area": "statmech_learning",
+      "stems": [
+        "rademacher complexity"
+      ],
+      "q_content": "Bound the uniform deviation of empirical means over a function class by the expected supremum of a symmetrized, random-sign empirical process.",
+      "q_hinted": "Rademacher complexity bound on uniform convergence."
+    },
+    {
+      "key": "universal_approx",
+      "area": "statmech_learning",
+      "stems": [
+        "universal approximation"
+      ],
+      "q_content": "Can one-hidden-layer networks with a sigmoidal activation approximate every continuous function on a compact set uniformly?",
+      "q_hinted": "Universal approximation theorem (Cybenko, Hornik)."
+    },
+    {
+      "key": "vc",
+      "area": "statmech_learning",
+      "stems": [
+        "vapnik",
+        "vc dimension"
+      ],
+      "q_content": "Uniform convergence of empirical frequencies over a class of sets: the combinatorial parameter that controls it and the sample-size bound.",
+      "q_hinted": "Vapnik-Chervonenkis dimension and the VC uniform convergence theorem."
+    },
+    {
+      "key": "mercer",
+      "area": "statmech_learning",
+      "stems": [
+        "mercer"
+      ],
+      "q_content": "A continuous symmetric positive semidefinite kernel on a compact set expands as a uniformly convergent series of eigenfunctions.",
+      "q_hinted": "Mercer's theorem for positive definite kernels."
+    },
+    {
+      "key": "kkt",
+      "area": "statmech_learning",
+      "stems": [
+        "karush"
+      ],
+      "q_content": "First-order necessary conditions for a constrained optimum with inequality constraints, with multipliers and complementary slackness.",
+      "q_hinted": "Karush-Kuhn-Tucker conditions."
+    },
+    {
+      "key": "farkas",
+      "area": "statmech_learning",
+      "stems": [
+        "farkas"
+      ],
+      "q_content": "Either Ax = b has a nonnegative solution or there is y with y^T A >= 0 and y^T b < 0: the alternative and its proof.",
+      "q_hinted": "Farkas' lemma."
+    }
+  ],
+  "unanswerable": [
+    {
+      "key": "van_der_waerden",
+      "area": "combinatorics",
+      "stems": [
+        "van der waerden"
+      ],
+      "q": "Any colouring of the integers with r colours contains arbitrarily long monochromatic arithmetic progressions; the finite version with the number W(r, k)."
+    },
+    {
+      "key": "hales_jewett",
+      "area": "combinatorics",
+      "stems": [
+        "hales jewett"
+      ],
+      "q": "Combinatorial lines in [k]^n: for n large enough every r-colouring of the cube has a monochromatic combinatorial line."
+    },
+    {
+      "key": "sylvester_gallai",
+      "area": "combinatorics",
+      "stems": [
+        "sylvester gallai"
+      ],
+      "q": "Finitely many points in the plane, not all collinear: there is a line through exactly two of them."
+    },
+    {
+      "key": "kruskal_katona",
+      "area": "combinatorics",
+      "stems": [
+        "kruskal katona"
+      ],
+      "q": "Given the number of k-sets in a family, the minimum possible number of (k-1)-sets in its shadow."
+    },
+    {
+      "key": "frankl_wilson",
+      "area": "combinatorics",
+      "stems": [
+        "frankl wilson"
+      ],
+      "q": "A family of k-subsets of [n] whose pairwise intersection sizes avoid a set of forbidden residues modulo a prime: the polynomial upper bound on its size."
+    },
+    {
+      "key": "burnside_paqb",
+      "area": "algebra",
+      "stems": [
+        "p a q b",
+        "burnside s theorem"
+      ],
+      "q": "A finite group of order p^a q^b, with p and q primes, is solvable."
+    },
+    {
+      "key": "artin_recip",
+      "area": "algebra",
+      "stems": [
+        "artin reciprocity"
+      ],
+      "q": "The Artin map from the idele class group to the Galois group of an abelian extension of a number field: its kernel and surjectivity."
+    },
+    {
+      "key": "mostow",
+      "area": "topology_geometry",
+      "stems": [
+        "mostow"
+      ],
+      "q": "Two closed hyperbolic manifolds of dimension at least three with isomorphic fundamental groups are isometric."
+    },
+    {
+      "key": "poincare_duality",
+      "area": "topology_geometry",
+      "stems": [
+        "poincare duality"
+      ],
+      "q": "For a closed oriented n-manifold, the k-th cohomology group is isomorphic to the (n-k)-th homology group."
+    },
+    {
+      "key": "ks_test",
+      "area": "probability",
+      "stems": [
+        "kolmogorov smirnov"
+      ],
+      "q": "Limit distribution of the maximum deviation between the empirical and the true distribution function, scaled by sqrt n."
+    },
+    {
+      "key": "pinsker",
+      "area": "probability",
+      "stems": [
+        "pinsker"
+      ],
+      "q": "Total variation distance between two distributions bounded by the square root of half their relative entropy."
+    },
+    {
+      "key": "le_cam",
+      "area": "probability",
+      "stems": [
+        "le cam"
+      ],
+      "q": "Two-point testing lower bound: any test between two distributions errs with probability at least a function of their total variation distance."
+    },
+    {
+      "key": "shearer",
+      "area": "probability",
+      "stems": [
+        "shearer"
+      ],
+      "q": "Entropy of a random vector bounded by a weighted sum of entropies of its projections onto a cover of the coordinates."
+    },
+    {
+      "key": "loomis_whitney",
+      "area": "topology_geometry",
+      "stems": [
+        "loomis whitney"
+      ],
+      "q": "Volume of a set in R^n bounded by the product of the volumes of its (n-1)-dimensional coordinate projections, to the power 1/(n-1)."
+    },
+    {
+      "key": "harnack",
+      "area": "analysis",
+      "stems": [
+        "harnack"
+      ],
+      "q": "A positive harmonic function on a ball: its values on a smaller concentric ball are comparable up to a constant depending only on the radii."
+    },
+    {
+      "key": "de_giorgi",
+      "area": "analysis",
+      "stems": [
+        "de giorgi",
+        "nash moser"
+      ],
+      "q": "Holder continuity of weak solutions of divergence-form elliptic equations with bounded measurable coefficients."
+    },
+    {
+      "key": "hormander",
+      "area": "analysis",
+      "stems": [
+        "hormander"
+      ],
+      "q": "A sum of squares of vector fields whose iterated commutators span the tangent space defines a hypoelliptic operator."
+    },
+    {
+      "key": "phragmen",
+      "area": "analysis",
+      "stems": [
+        "phragmen"
+      ],
+      "q": "Maximum principle for a holomorphic function of controlled growth in an angular sector or a strip."
+    },
+    {
+      "key": "mittag",
+      "area": "analysis",
+      "stems": [
+        "mittag leffler"
+      ],
+      "q": "Construct a meromorphic function with prescribed principal parts at a discrete set of poles."
+    },
+    {
+      "key": "montel",
+      "area": "analysis",
+      "stems": [
+        "montel"
+      ],
+      "q": "A locally uniformly bounded family of holomorphic functions is normal: every sequence has a locally uniformly convergent subsequence."
+    },
+    {
+      "key": "dynkin",
+      "area": "probability",
+      "stems": [
+        "dynkin"
+      ],
+      "q": "A pi-system contained in a lambda-system generates a sigma-algebra contained in that lambda-system; two measures that agree on a pi-system agree on the sigma-algebra it generates."
+    },
+    {
+      "key": "bochner",
+      "area": "analysis",
+      "stems": [
+        "bochner"
+      ],
+      "q": "Characterise the continuous positive-definite functions on R^n as Fourier transforms of finite positive measures."
+    },
+    {
+      "key": "kac_rice",
+      "area": "probability",
+      "stems": [
+        "kac rice",
+        "rice formula"
+      ],
+      "q": "Expected number of zeros of a smooth Gaussian process on an interval in terms of the joint density of the process and its derivative."
+    },
+    {
+      "key": "marcinkiewicz",
+      "area": "probability",
+      "stems": [
+        "marcinkiewicz"
+      ],
+      "q": "The p-th moment of a sum of independent mean-zero variables is comparable to the p/2-th moment of the sum of their squares."
+    },
+    {
+      "key": "rosenthal",
+      "area": "probability",
+      "stems": [
+        "rosenthal"
+      ],
+      "q": "Moment bound for a sum of independent mean-zero variables combining the sum of the p-th moments and the p/2 power of the total variance."
+    },
+    {
+      "key": "dubins",
+      "area": "probability",
+      "stems": [
+        "dubins"
+      ],
+      "q": "A continuous local martingale is a time-changed Brownian motion."
+    },
+    {
+      "key": "freidlin",
+      "area": "probability",
+      "stems": [
+        "freidlin"
+      ],
+      "q": "Large deviations for small-noise diffusions dX = b(X) dt + sqrt(eps) dW, with the action functional as the rate."
+    },
+    {
+      "key": "gartner",
+      "area": "probability",
+      "stems": [
+        "gartner ellis"
+      ],
+      "q": "Large deviation principle for a sequence of random vectors from the limit of the scaled log moment generating functions, under a differentiability condition."
+    },
+    {
+      "key": "dvoretzky",
+      "area": "topology_geometry",
+      "stems": [
+        "dvoretzky"
+      ],
+      "q": "Every high-dimensional convex body has almost spherical sections of dimension about log n."
+    },
+    {
+      "key": "paley_wiener",
+      "area": "analysis",
+      "stems": [
+        "paley wiener"
+      ],
+      "q": "Characterise the Fourier transforms of L^2 functions supported in a bounded interval as entire functions of exponential type."
+    },
+    {
+      "key": "haar",
+      "area": "algebra",
+      "stems": [
+        "haar measure"
+      ],
+      "q": "Existence and uniqueness up to scaling of a left-invariant regular Borel measure on a locally compact group."
+    },
+    {
+      "key": "maschke",
+      "area": "algebra",
+      "stems": [
+        "maschke"
+      ],
+      "q": "Representations of a finite group over a field whose characteristic does not divide the group order are completely reducible."
+    },
+    {
+      "key": "noether_norm",
+      "area": "algebra",
+      "stems": [
+        "noether normalization"
+      ],
+      "q": "A finitely generated algebra over a field is a finite module over a polynomial subalgebra in algebraically independent elements."
+    },
+    {
+      "key": "schwartz_zippel",
+      "area": "combinatorics",
+      "stems": [
+        "schwartz zippel"
+      ],
+      "q": "A nonzero polynomial of total degree d vanishes at a uniformly random point of S^n with probability at most d / |S|."
+    },
+    {
+      "key": "cramer_wold",
+      "area": "probability",
+      "stems": [
+        "cramer wold"
+      ],
+      "q": "Convergence in distribution of random vectors is equivalent to convergence in distribution of every one-dimensional linear projection."
+    },
+    {
+      "key": "hsu_robbins",
+      "area": "probability",
+      "stems": [
+        "hsu robbins"
+      ],
+      "q": "Complete convergence of sample means: the series of P(|S_n / n| > eps) converges for every eps if and only if the second moment is finite."
+    },
+    {
+      "key": "lovasz_theta",
+      "area": "combinatorics",
+      "stems": [
+        "lovasz theta",
+        "lovasz number"
+      ],
+      "q": "A semidefinite-programming quantity of a graph sandwiched between its independence number and the chromatic number of its complement."
+    },
+    {
+      "key": "faltings",
+      "area": "algebra",
+      "stems": [
+        "faltings"
+      ],
+      "q": "A smooth projective curve of genus at least two over a number field has only finitely many rational points."
+    },
+    {
+      "key": "lee_yang",
+      "area": "statmech_learning",
+      "stems": [
+        "lee yang"
+      ],
+      "q": "Zeros of the partition function of the ferromagnetic Ising model in the complex magnetic-field plane lie on the unit circle."
+    },
+    {
+      "key": "gardner",
+      "area": "statmech_learning",
+      "stems": [
+        "gardner"
+      ],
+      "q": "Replica computation of the volume of weights that store random patterns with a given stability, giving the capacity of the spherical perceptron."
+    }
+  ]
+}

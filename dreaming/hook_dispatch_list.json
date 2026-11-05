@@ -1,0 +1,914 @@
+{
+  "PostToolUse": [
+    {
+      "matcher": "Read",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\coactivation_log.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\spread_recall.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "matcher": "Bash|PowerShell",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\error_monitor.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "\"{{PYTHON}}\" -s -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='claude';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "matcher": "Edit|Write",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python -s \"{{DREAMING}}/ps1_guard.py\"",
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\live_inbox_hook.py"
+          ],
+          "timeout": 30,
+          "enabled_if": "~/.agents/live_inbox/HOOK_ON"
+        }
+      ]
+    },
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\compact_hooks.py"
+          ],
+          "timeout": 60
+        }
+      ]
+    },
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\graph_membrane_hook.py"
+          ],
+          "timeout": 60,
+          "enabled_if": "~/.claude/brain_graph/live/HOOK_ENABLED"
+        }
+      ]
+    }
+  ],
+  "PreToolUse": [
+    {
+      "matcher": "Bash|PowerShell|Edit|Write|MultiEdit|mcp__.*__(?:create|update|delete|remove|write|edit|send|publish|deploy|execute|run|start|stop|add|set|put|post|commit|push|merge|close|resolve|archive|move|rename|upload|install|trigger|launch)(?:_|$).*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\instinct_prime.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\clock_stamp_hook.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\danger_mode.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\sourced_memory.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\compute_sense.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{FLEET}}\\mailbox_hook.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\gap_watch_hook.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\proof_deny_hook.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "{{PYTHON}}",
+          "args": [
+            "-S",
+            "-B",
+            "{{DREAMING}}\\project_memory_hot_hook.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "\"{{PYTHON}}\" -s -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='claude';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "matcher": "Bash|PowerShell",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python -s {{DREAMING}}/push_reminder.py",
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python -s {{DREAMING}}/slow_sense.py",
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "matcher": "Edit|Write|MultiEdit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\voice_guard_hook.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "matcher": "Agent|Task|Workflow|Bash|PowerShell",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\agent_launch_save_hook.py"
+          ],
+          "timeout": 60
+        }
+      ]
+    },
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "{{PYTHON}}",
+          "args": [
+            "-S",
+            "-B",
+            "{{DREAMING}}\\frontier_hook.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "matcher": "Bash|PowerShell",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\brain_data_guard.py"
+          ],
+          "timeout": 30
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\brain_checkout_guard.py"
+          ],
+          "timeout": 30
+        }
+      ]
+    },
+    {
+      "matcher": "Bash|PowerShell|Edit|Write|MultiEdit|Agent|Task",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\effort_guard.py"
+          ],
+          "timeout": 30
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\codex_profile_hooks.py"
+          ],
+          "timeout": 60
+        }
+      ]
+    },
+    {
+      "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\shared_edit_collision_hook.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    }
+  ],
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "powershell",
+          "args": [
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "{{CLAUDE_DIR}}\\wake_brain.ps1",
+            "-Part",
+            "1"
+          ],
+          "timeout": 600,
+          "statusMessage": "Consulting the brain (1/2: who you are)"
+        },
+        {
+          "type": "command",
+          "command": "powershell",
+          "args": [
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "{{CLAUDE_DIR}}\\wake_brain.ps1",
+            "-Part",
+            "2"
+          ],
+          "timeout": 600,
+          "statusMessage": "Consulting the brain (2/2: today's mind)"
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\job_cycle\\job_reseed.py"
+          ],
+          "timeout": 600,
+          "statusMessage": "Reloading the last job readme"
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}/task_checklist_hook.py",
+            "--hook",
+            "--runtime",
+            "claude"
+          ],
+          "timeout": 60,
+          "statusMessage": "Reading the task checklist"
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}/fleet_inbox_hook.py"
+          ],
+          "timeout": 30,
+          "statusMessage": "Reading the fleet inbox"
+        }
+      ]
+    },
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\compact_hooks.py"
+          ],
+          "timeout": 60
+        }
+      ]
+    }
+  ],
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\coactivation_end.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\reality_monitor.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\graph_fire\\pre_report_check.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\conscience.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\resume_checkpoint.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\registry_refresh.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\retraction_guard.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\claim_check.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{FLEET}}\\mailbox_hook.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\report_guards_hook.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "\"{{PYTHON}}\" -s -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='claude';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\summary_hook.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\work_timer.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}/task_checklist_hook.py",
+            "--hook",
+            "--runtime",
+            "claude"
+          ],
+          "timeout": 60
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\live_inbox_hook.py"
+          ],
+          "timeout": 30,
+          "enabled_if": "~/.agents/live_inbox/HOOK_ON"
+        }
+      ]
+    },
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\compact_hooks.py"
+          ],
+          "timeout": 60
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\compact_on_task_end.py"
+          ],
+          "timeout": 30
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\verify_gate.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    }
+  ],
+  "UserPromptSubmit": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\brain_switch.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\instinct_prime.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\fok_probe.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\spread_recall.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\canonical_route.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\math_sense.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\danger_mode.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\compute_sense.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\work_timer.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\prompt_archive.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "{{PYTHON}}",
+          "args": [
+            "-B",
+            "{{DREAMING}}\\project_memory_hook.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{FLEET}}\\mailbox_hook.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\proof_sense.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "\"{{PYTHON}}\" -s -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='claude';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\waste_sense.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python -s {{DREAMING}}/push_reminder.py",
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python -s {{DREAMING}}/slow_sense.py",
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}/task_checklist_hook.py",
+            "--hook",
+            "--runtime",
+            "claude"
+          ],
+          "timeout": 60
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}/fleet_inbox_hook.py"
+          ],
+          "timeout": 30,
+          "statusMessage": "Reading the fleet inbox"
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}/owner_board_hook.py",
+            "--hook",
+            "--runtime",
+            "claude"
+          ],
+          "timeout": 60
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\live_inbox_hook.py"
+          ],
+          "timeout": 30,
+          "enabled_if": "~/.agents/live_inbox/HOOK_ON"
+        }
+      ]
+    },
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\compact_hooks.py"
+          ],
+          "timeout": 60
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\codex_profile_hooks.py"
+          ],
+          "timeout": 60
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\graph_membrane_hook.py"
+          ],
+          "timeout": 60,
+          "enabled_if": "~/.claude/brain_graph/live/HOOK_ENABLED"
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\verify_sense.py"
+          ],
+          "timeout": 600
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\primary_hook.py"
+          ],
+          "timeout": 30
+        }
+      ]
+    }
+  ]
+}

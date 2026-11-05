@@ -1,0 +1,78 @@
+schema_version = 1
+default_decision = "deny"
+follow_symlinks = false
+open_archives = false
+allow_hidden = false
+max_file_bytes = 5000000
+
+[allowlist_manifest]
+schema_version = 1
+required_top_level_fields = [
+  "schema_version", "audit_id", "derivation_policy", "no_home_recursion",
+  "local_output_root", "sources"
+]
+required_source_fields = ["id", "label", "root", "rights", "content_class"]
+optional_source_fields = ["max_file_bytes"]
+required_location = "local/audits/<audit_id>/allowlist.toml"
+derivation_policy = "local_only"
+no_home_recursion = true
+
+[committed_output]
+allowed_prefixes = ["data/public", "docs", "src", "tests", "config"]
+forbidden_prefixes = ["local", "data/private", "data/quarantine", "runs"]
+
+[source]
+required_fields = ["id", "label", "root", "rights", "content_class"]
+allowed_content_classes = ["pure_mathematics", "mathematical_physics", "formal_mathematics"]
+local_only_rights = ["unknown", "private", "local_analysis_only"]
+publishable_rights = ["original_public_release", "permissive_license", "public_domain"]
+
+[public_export]
+schema_version = 1
+required_fields = [
+  "schema_version", "artifact", "artifact_sha256", "rights", "license_id",
+  "provenance_refs", "source_ids", "reviewer_id", "reviewed_at",
+  "redistribution_confirmed", "local_material_excluded"
+]
+required_location = "data/public/<artifact>"
+sidecar_suffix = ".provenance.toml"
+provenance_schemes = ["https", "doi", "urn", "generated"]
+publishable_rights = ["original_public_release", "permissive_license", "public_domain"]
+disallowed_license_ids = ["NONE", "NOASSERTION", "unknown", "unlicensed", "all-rights-reserved"]
+redistributable_license_ids = [
+  "0BSD", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "CC-BY-4.0",
+  "CC-BY-SA-4.0", "CC0-1.0", "GPL-3.0-only", "GPL-3.0-or-later",
+  "ISC", "MIT", "MPL-2.0", "ODC-By-1.0", "ODbL-1.0", "PDM-1.0"
+]
+
+[hard_exclusions]
+path_tokens = [
+  "trading", "finance", "financial", "options", "broker", "portfolio",
+  "account", "client", "company", "secrets", "credentials", "private_key",
+  "personal", "archive", "unrelated"
+]
+content_tokens = [
+  "api_key", "access_token", "private key", "account number", "brokerage"
+]
+
+[scanner]
+max_file_bytes = 5000000
+policy_category_contexts = [
+  "AGENTS.md",
+  "README.md",
+  "config/privacy.toml",
+  "docs/campaign-log.md",
+  "docs/design-brief.md",
+  "docs/local-audit-protocol.md",
+  "docs/privacy-boundary.md",
+  "docs/threat-model.md",
+  "src/math_brain/privacy.py",
+  "src/math_brain/privacy_scan.py",
+  "tests/test_privacy.py",
+  "tests/test_privacy_scan.py",
+  "tests/test_publication.py"
+]
+
+[extensions]
+allowed = [".md", ".txt", ".tex", ".lean", ".py", ".ipynb", ".json", ".bib"]
+denied = [".pem", ".key", ".pfx", ".p12", ".env", ".db", ".sqlite", ".sqlite3"]

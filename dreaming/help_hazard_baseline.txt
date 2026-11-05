@@ -1,0 +1,19 @@
+# Scripts that still run real work when given --help.
+# This file is a RATCHET: fix a script, delete its line. Never add a line to
+# silence the test - add the early -h/--help return instead.
+#
+# 2026-08-10: this list went from empty to 37 in one commit, and no script
+# changed. The detector did. It had two blind spots, both of which exempted the
+# most dangerous shapes:
+#   - `if "__main__" not in src: return False` skipped every script that does its
+#     work at module scope, where there is no entry point to guard and the work
+#     runs on import. dream.py is one of these.
+#   - the AST check matched `open(...)` as a Name only, so `io.open(...)` and
+#     `Path(...).open(...)` were invisible: 172 write-mode call sites in this tree
+#     against the 59 it could see.
+# An empty baseline was never proof; it was the shape of the question being wrong.
+#
+# 2026-08-10, later the same night: all 37 now take an early -h/--help return,
+# so this list is empty again - but this time the detector can see both hazard
+# shapes and the attribute form of open(), and its control is a test that plants
+# each of them. An empty file here is only worth as much as the question above it.

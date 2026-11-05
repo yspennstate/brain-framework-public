@@ -1,0 +1,79 @@
+{
+  "schema": "video_brain.delivery.v1",
+  "project": "REPLACE with the actual project name",
+  "kind": "documentary",
+  "policy": {
+    "visual_passes": 2,
+    "audio_passes": 2,
+    "facts_passes": 2,
+    "av_passes": 2
+  },
+  "expected_shot_ids": [
+    "shot001"
+  ],
+  "shots": [
+    {
+      "id": "shot001",
+      "start_seconds": null,
+      "end_seconds": null,
+      "visual": {
+        "kind": "historical_photo",
+        "explanation": "",
+        "asset_ids": [
+          "asset001"
+        ]
+      },
+      "visual_artifact_id": "board001",
+      "audio_artifact_id": "speech001",
+      "source_evidence": "",
+      "narration": {
+        "text": "",
+        "configuration": {
+          "provider": "microsoft",
+          "voice": "en-US-AndrewMultilingualNeural",
+          "rate": "+10%",
+          "language": "en-US",
+          "pronunciation_revision": "",
+          "engine_settings_revision": ""
+        }
+      }
+    }
+  ],
+  "assets": [
+    {
+      "id": "asset001",
+      "source_asset_id": "",
+      "sha256": "",
+      "source_evidence": ""
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "board001",
+      "path": "boards/001.png",
+      "sha256": ""
+    },
+    {
+      "id": "speech001",
+      "path": "audio/001.wav",
+      "sha256": ""
+    },
+    {
+      "id": "cut",
+      "path": "exports/final.mp4",
+      "sha256": ""
+    }
+  ],
+  "recordings": [],
+  "reviews": [],
+  "final": {
+    "artifact_id": "cut",
+    "duration_seconds": null,
+    "probe": {
+      "evidence": "",
+      "video_stream": null,
+      "audio_stream": null,
+      "duration_seconds": null
+    }
+  }
+}

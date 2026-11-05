@@ -1,0 +1,38 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+# deployment-local state that must never ride along
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+network_shadow.tsv
+*.buffer.json
+bootstrap/settings.hooks.generated.json
+
+# build artifacts and runtime state (never commit)
+__pycache__/
+*.pyc
+*.pyo
+.heed_state.json
+*.buffer.json
+.net_shadow.json
+cascade_state.json
+cascade_shadow.tsv
+.pre_report_blocked.json
+.report_guards_blocked.json
+.proof_deny_state.json
+compute/waste_census.json
+compute/waste_census_timing.log*
+# a cache of the memory store's frontmatter, written beside supersession.py: private text
+dreaming/supersession_frontmatter_cache.json
+
+# local-only private label rules for check_no_private_labels.py - never publish
+scripts/private_labels.local
+
+# per-session state the prompts hook writes next to itself when run from a checkout (holds local paths)
+dreaming/owner_prompt_context_state/
+dreaming/.owner_prompts_hook_state/
+
+# the film brain store is built locally from craft/ and ingest/ (filmbrain/README.md); never shipped
+filmbrain/store/

@@ -1,0 +1,56 @@
+{
+  "_comment": "Workload policies. 'criticality' ranges: critical (never touch), high (warn only), medium (throttle), low (suspend), expendable (kill if needed). Process name match is case-insensitive partial. order matters — first match wins.",
+  "rules": [
+    { "match": "^(ExampleGame|ExampleGameClient|ExampleGameClientUx|ExampleLauncherServices|ExampleLauncherUx)$", "criticality": "critical", "label": "ExampleGame + ExampleLauncher" },
+    { "match": "^dwm$",                                  "criticality": "critical",   "label": "Desktop Window Manager" },
+    { "match": "^(csrss|wininit|services|lsass|smss|fontdrvhost|sihost|System|Registry)$", "criticality": "critical", "label": "Windows kernel/critical services" },
+    { "match": "^(nvcontainer|NVDisplay\\.Container|nvsphelper64|nvtelemetrycontainer|nvshrink)$", "criticality": "critical", "label": "NVIDIA driver services" },
+    { "match": "^(IAStorDataMgrSvc|RtkAudUService|IntelCpHDCPSvc|ICPS|esrv)$", "criticality": "critical", "label": "Vendor critical services" },
+
+    { "match": "^(claude|claude-code)$",                 "criticality": "high",       "label": "Claude Code (foreground session preserved by foreground-window check)" },
+    { "match": "^(codex|codex-cli|gpt5)$",                "criticality": "high",       "label": "Codex interactive sessions" },
+    { "match": "^(powershell|pwsh)$",                     "criticality": "high",       "label": "PowerShell sessions and system monitors" },
+    { "match": "^(explorer|ShellExperienceHost|StartMenuExperienceHost|SearchHost|TextInputHost|WindowsTerminal|OpenConsole|conhost|wezterm-gui)$", "criticality": "high", "label": "Interactive Windows shell and terminals" },
+
+    { "match": "^(ExampleProdApp|example-prod-track|python.*example_prod)$", "criticality": "high", "label": "Production track" },
+
+    { "match": "^(restart_all_observers|observer_|watchdog_|inspector_|builder_|models_bot|rec_bot)", "criticality": "medium", "label": "Project observers" },
+    { "match": "^(python|python3|node)$",                  "criticality": "medium",     "label": "Generic interpreter (judged by parent + GPU usage)" },
+
+    { "match": "^(chrome|msedge|brave|firefox|opera|vivaldi)$", "criticality": "medium", "label": "Browsers (interactive — throttle only, NEVER suspend: suspending freezes the page)" },
+    { "match": "^msedgewebview2$",                       "criticality": "medium",     "label": "Edge WebView (interactive — throttle only, never suspend)" },
+    { "match": "^(Discord|Spotify|Slack|zoom|Teams|WhatsApp)$", "criticality": "low",  "label": "Chat/media apps" },
+    { "match": "^Battle\\.net",                          "criticality": "low",        "label": "Battle.net launcher" },
+
+    { "match": "^ollama",                                "criticality": "expendable", "label": "ollama LLM runtime — large GPU consumer" },
+    { "match": "^(lake|lean|elan|leanmake|leanchecker)", "criticality": "expendable", "label": "Lean compilation (Arnold project)" },
+    { "match": "^(M365Copilot|PhoneExperienceHost)$",      "criticality": "expendable", "label": "Optional Windows shell extras" }
+  ],
+  "tier_actions": {
+    "yellow": {
+      "actions": ["throttle:low", "throttle:expendable"],
+      "notify": false
+    },
+    "orange": {
+      "actions": ["throttle:medium", "suspend:low", "suspend:expendable", "lower-gpu-power"],
+      "notify": true
+    },
+    "red": {
+      "actions": ["suspend:low", "kill:expendable", "throttle:medium", "drop-gpu-clocks"],
+      "notify": true
+    },
+    "critical": {
+      "actions": ["kill:expendable", "suspend:low", "throttle:medium", "drop-gpu-clocks-min", "disable-cuda-temporarily"],
+      "notify": true,
+      "audible": true
+    },
+    "_critical_sustained": {
+      "_comment": "Reserved for FUTURE: actions that fire only after critical sustained > 10s. Distinguishes transient CPU spikes (mis-measured) from real impending crash.",
+      "actions": ["kill:expendable", "suspend:low"]
+    }
+  },
+  "foreground_window_bonus": {
+    "_comment": "Whatever app currently owns the foreground window gets a one-level criticality boost. Keeps your active work running.",
+    "enabled": true
+  }
+}

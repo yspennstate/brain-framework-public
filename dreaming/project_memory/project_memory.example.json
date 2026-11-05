@@ -1,0 +1,42 @@
+{
+  "schema": "project-memory-config-v1",
+  "review_interval_seconds": 3600,
+  "review_window_occurrences": 1000,
+  "strict_raw_reread": true,
+  "deny_exact_negative": false,
+  "instant_drift_threshold": 0.05,
+  "drift_min_progress_actions": 5,
+  "drift_min_low_streak": 3,
+  "drift_warning_cooldown_seconds": 900,
+  "max_cache_age_seconds": 7500,
+  "classification_threshold": 2.0,
+  "multi_label_ratio": 0.72,
+  "max_labels_per_clause": 64,
+  "source_ingest_budget_bytes": 256000000,
+  "sources": [
+    {"type": "claude", "root": "$CLAUDE_TRANSCRIPTS_ROOT", "glob": "**/*.jsonl"},
+    {"type": "codex", "root": "$CODEX_ROLLOUTS_ROOT", "glob": "**/rollout-*.jsonl"}
+  ],
+  "replay_sources": [
+    {"type": "claude", "root": "$DURABLE_CLAUDE_TRANSCRIPTS_ROOT", "glob": "**/*.jsonl"},
+    {"type": "codex", "root": "$DURABLE_CODEX_ROLLOUTS_ROOT", "glob": "**/rollout-*.jsonl"}
+  ],
+  "projects": [
+    {
+      "id": "project-alpha",
+      "active": true,
+      "pinned": false,
+      "roots": ["%USERPROFILE%\\work\\project-alpha"],
+      "aliases": ["project-alpha"],
+      "anchors": ["alpha parser", "schema migration"]
+    },
+    {
+      "id": "project-beta",
+      "active": true,
+      "pinned": false,
+      "roots": ["%USERPROFILE%\\work\\project-beta"],
+      "aliases": ["project-beta"],
+      "anchors": ["beta dashboard", "render verification"]
+    }
+  ]
+}

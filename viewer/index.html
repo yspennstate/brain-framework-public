@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Brain Live</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div>
+          <h1>Brain Live</h1>
+          <p id="frame-caption">Current working set</p>
+        </div>
+      </div>
+
+      <div class="metrics" aria-label="Current brain metrics">
+        <div class="metric">
+          <span id="metric-nodes" class="metric-value">—</span>
+          <span class="metric-label">nodes</span>
+        </div>
+        <div class="metric">
+          <span id="metric-edges" class="metric-value">—</span>
+          <span class="metric-label">connections</span>
+        </div>
+        <div class="metric metric-hot">
+          <span id="metric-files" class="metric-value">—</span>
+          <span class="metric-label">active files</span>
+        </div>
+        <div class="metric">
+          <span id="metric-agents" class="metric-value">—</span>
+          <span class="metric-label">live agents</span>
+        </div>
+      </div>
+
+      <div class="freshness" id="freshness" role="status">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span id="freshness-text">Connecting…</span>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="control-panel" aria-label="Graph controls">
+        <label class="field-label" for="layer-select">View</label>
+        <select id="layer-select">
+          <option value="live">Live working set</option>
+          <option value="memory">Memory network</option>
+          <option value="association">Full association layer</option>
+        </select>
+
+        <label class="field-label" for="session-select">Session</label>
+        <select id="session-select">
+          <option value="all">All live sessions</option>
+        </select>
+
+        <label class="field-label" for="search-input">Find a node</label>
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m21 21-4.35-4.35m2.1-5.4a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"></path>
+          </svg>
+          <input id="search-input" type="search" autocomplete="off" placeholder="memory, file, concept…">
+        </div>
+
+        <div class="control-row">
+          <button id="fit-button" type="button">Fit graph</button>
+          <button id="pause-button" type="button" aria-pressed="false">Pause motion</button>
+        </div>
+
+        <section class="legend" aria-labelledby="legend-title">
+          <h2 id="legend-title">What the nodes mean</h2>
+          <ul>
+            <li><span class="legend-shape memory"></span><span><b>Memory</b> durable knowledge</span></li>
+            <li><span class="legend-shape concept"></span><span><b>Concept</b> recurring idea</span></li>
+            <li><span class="legend-shape prompt"></span><span><b>Prompt</b> stored episode</span></li>
+            <li><span class="legend-shape tool"></span><span><b>Tool</b> action class</span></li>
+            <li><span class="legend-shape reflex"></span><span><b>Reflex</b> scar-backed warning</span></li>
+            <li><span class="legend-shape agent"></span><span><b>Agent</b> live collaborator</span></li>
+            <li><span class="legend-shape file"></span><span><b>Bright red file</b> in use now</span></li>
+          </ul>
+          <p class="legend-note">
+            A glowing node is directly active. Moving light on an edge shows excitation flowing through a real stored connection.
+          </p>
+        </section>
+
+        <section class="source-health" aria-labelledby="source-title">
+          <h2 id="source-title">Live sources</h2>
+          <ul id="source-list"></ul>
+        </section>
+      </aside>
+
+      <section class="graph-panel" aria-label="Interactive live brain graph">
+        <canvas id="graph-canvas" role="img" aria-label="Network graph of the current brain"></canvas>
+        <div id="canvas-empty" class="canvas-empty" hidden>
+          <strong>No nodes match this view.</strong>
+          <span>Try a different session or search.</span>
+        </div>
+        <div id="graph-status" class="graph-status" aria-live="polite">
+          <span id="visible-count">—</span>
+          <span class="status-divider"></span>
+          <span id="mode-note">Measured activity + one-hop diffusion</span>
+        </div>
+        <div id="tooltip" class="tooltip" hidden></div>
+      </section>
+
+      <aside class="detail-panel" aria-label="Selected node details">
+        <div id="detail-empty" class="detail-empty">
+          <div class="detail-orbit" aria-hidden="true"><span></span></div>
+          <h2>Select a node</h2>
+          <p>Click any node to see exactly what it represents and why it is active.</p>
+        </div>
+
+        <article id="detail-content" hidden aria-live="polite">
+          <div class="detail-heading">
+            <span id="detail-type" class="type-badge">Node</span>
+            <span id="detail-activity" class="activity-badge" hidden>Active now</span>
+          </div>
+          <h2 id="detail-label"></h2>
+          <p id="detail-meaning" class="detail-meaning"></p>
+          <dl id="detail-facts" class="detail-facts"></dl>
+          <p id="detail-description" class="detail-description" hidden></p>
+          <div id="detail-excerpt-wrap" hidden>
+            <h3>Information held here</h3>
+            <p id="detail-excerpt" class="detail-excerpt"></p>
+          </div>
+          <div class="detail-actions">
+            <button id="neighbors-button" type="button">Show its neighborhood</button>
+          </div>
+          <div id="neighbor-wrap" hidden>
+            <h3>Strongest connections</h3>
+            <ul id="neighbor-list" class="neighbor-list"></ul>
+          </div>
+        </article>
+
+        <section class="activity-feed" aria-labelledby="activity-title">
+          <div class="section-heading">
+            <h2 id="activity-title">Live pulse</h2>
+            <span id="activity-clock">now</span>
+          </div>
+          <ul id="activity-list"></ul>
+        </section>
+
+        <section class="hot-nodes" aria-labelledby="hot-title">
+          <h2 id="hot-title">Hottest nodes</h2>
+          <div id="hot-list"></div>
+        </section>
+      </aside>
+    </main>
+
+    <div id="warning-bar" class="warning-bar" hidden role="alert"></div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

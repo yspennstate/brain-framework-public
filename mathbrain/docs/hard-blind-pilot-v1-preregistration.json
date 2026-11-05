@@ -1,0 +1,81 @@
+{
+  "attempt_ledger_digest": "sha256:ed8e134c76ca8bf42fda619468824ee8ee83297bdbe986867001a82894090369",
+  "attempt_policy": {
+    "all_committed_slots_in_denominator": true,
+    "fresh_process_per_slot": true,
+    "nonselected_smoke_required": true,
+    "retry_count": 0,
+    "usage_limit_after_start": "burned_and_incorrect"
+  },
+  "attempt_universe_commitment": "sha256:0f1abfa5b0d3e3f4401a69c9a6bd46885720c8180759fd88ec289d8c3b7241aa",
+  "balance": {
+    "domains": {
+      "bounded_composition_overlap": 16,
+      "forced_recurrence_resonance": 16,
+      "generalized_crt_period": 16,
+      "negative_edge_finalization": 16
+    },
+    "families": {
+      "alternating_cross_check": 16,
+      "endpoint_first": 16,
+      "forward_invariant": 16,
+      "reverse_back_check": 16
+    },
+    "fault_lines": {
+      "10": 8,
+      "3": 8,
+      "4": 8,
+      "5": 8,
+      "6": 8,
+      "7": 8,
+      "8": 8,
+      "9": 8
+    },
+    "fault_variants": {
+      "duplicated_correction": 32,
+      "single_source_shortcut": 32
+    },
+    "generator_cells": {
+      "constructive": 32,
+      "table_driven": 32
+    },
+    "templates": {
+      "0": 16,
+      "1": 16,
+      "2": 16,
+      "3": 16
+    },
+    "validated_case_count": 64
+  },
+  "calibration_public_commitment_digest": "sha256:1536610c48c26285e63e4168529c383d8298f7d98e310948877603f7bb5a15ed",
+  "case_count": 64,
+  "model_identity_verified": false,
+  "response_contract_digest": "sha256:36c57d084ecb85939dcb5455213e2259a59a1d356d4dd20165f7a91a060c6934",
+  "run_policy": {
+    "base_instruction_digest": "sha256:b05b76638de2b778226f705f4cfab51e531b0e5e7e885f6a65d77ad8cfe1587f",
+    "command_policy_digest": "sha256:fedb122a7059f66e70ecf70a93fef806ac066e28df151ff645cad4f082ed4cc4",
+    "developer_instruction_digest": "sha256:a1df8fa1be9b32faef50a0f05d9116796b1a28245e9223fa15fe4c010bec5b40",
+    "executable": {
+      "sha256_digest": "sha256:2b3c18d9393ed794531ae3da13f43a6de3bcd91dc577222bd31a17c59f7de0aa",
+      "size_bytes": 341251888
+    },
+    "max_workers": 1,
+    "process_isolation_policy_digest": "sha256:074b2ce7ced7f703feb36e29edfce403b6e7b7e1dfc746155c0343a2e1daf78f",
+    "request_policy_digest": "sha256:1f3eb6a28d0160825b914703b706bdecaeac9552539854577d08d5be706ef874",
+    "requested_effort": "ultra",
+    "requested_model": "gpt-5.6-sol",
+    "requested_provider": "openai",
+    "timeout_seconds": 180
+  },
+  "run_spec_digest": "sha256:09468047278a01785680e860bed778de5ce1aac362b6602de7c72e0f0bf954ac",
+  "sample_commitment": "sha256:1e19233204d206bdc17361ce41a014c599b2230874f8d313405f85087ad5f8d6",
+  "schema": "org.math-research-brain/hard-blind-pilot-preregistration",
+  "schema_version": 1,
+  "source_revision": "718f50f2f0c86028ff1f5de538dc42c61aaff533",
+  "thresholds": {
+    "reject_above": 0.85,
+    "reject_below": 0.3,
+    "target_max": 0.75,
+    "target_min": 0.45
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "_comment": "Tiered thresholds. Each metric's 'tier_X' field is the minimum value to enter that tier. Tier escalates to the max of any metric's tier.",
+  "gpu_temp_c": {
+    "tier_yellow": 75,
+    "tier_orange": 82,
+    "tier_red":    87,
+    "tier_critical": 92
+  },
+  "gpu_util_pct": {
+    "tier_yellow": 70,
+    "tier_orange": 85,
+    "tier_red":    95,
+    "tier_critical": 99
+  },
+  "gpu_mem_used_pct": {
+    "tier_yellow": 60,
+    "tier_orange": 75,
+    "tier_red":    88,
+    "tier_critical": 95
+  },
+  "gpu_power_pct_of_limit": {
+    "tier_yellow": 70,
+    "tier_orange": 85,
+    "tier_red":    95,
+    "tier_critical": 100
+  },
+  "cpu_temp_c": {
+    "tier_yellow": 80,
+    "tier_orange": 88,
+    "tier_red":    95,
+    "tier_critical": 99
+  },
+  "cpu_util_pct": {
+    "_comment": "CPU is NOT the crash signal (all 0x116 BSODs had GPU=0%; the real crash is the idle GPU TDR, handled by gpu-keepalive). 2026-06-01: capped CPU at 'yellow' (tier_orange/red/critical unreachable) so routine CPU spikes (opening a browser, codex, compiles) no longer trigger orange suspend mitigations — which were freezing the browser on launch. Yellow only throttles (priority), never suspends.",
+    "tier_yellow": 85,
+    "tier_orange": 101,
+    "tier_red":    101,
+    "tier_critical": 101
+  },
+  "ram_used_pct": {
+    "tier_yellow": 80,
+    "tier_orange": 90,
+    "tier_red":    95,
+    "tier_critical": 98
+  },
+  "_sustain_seconds": {
+    "_comment": "How many consecutive seconds a metric must hold a tier before escalation triggers. Prevents transient spikes.",
+    "tier_yellow":  3,
+    "tier_orange":  3,
+    "tier_red":     2,
+    "tier_critical": 1
+  },
+  "_hysteresis_seconds": {
+    "_comment": "How many consecutive seconds at lower tier before de-escalation and mitigation rollback.",
+    "any": 15
+  },
+  "_poll_interval_ms": 1500,
+  "_telemetry_ring_size": 600,
+  "_log_rotation_mb": 50
+}

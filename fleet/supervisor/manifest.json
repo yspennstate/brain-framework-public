@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "controller": {
+    "max_concurrent": 2,
+    "sample_interval_seconds": 60,
+    "accounting_poll_seconds": 5
+  },
+  "workers": [
+    {
+      "thread_id": "00000000-0000-0000-0000-000000000000",
+      "runtime": "codex",
+      "mesh_agent_id": "example-agent",
+      "task": "Continue the example research program without production mutations or unsafe compute.",
+      "cwd": "{{USERPROFILE}}\\example_project",
+      "enabled": false,
+      "service_until": "2026-07-12T13:52:49Z",
+      "active_seconds_required": 0,
+      "enrollment_id": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "thread_id": "00000000-0000-0000-0000-000000000000",
+      "runtime": "codex",
+      "mesh_agent_id": "example-agent",
+      "task": "Continue the example research program without production mutations or unsafe compute.",
+      "cwd": "{{USERPROFILE}}\\example_project",
+      "enabled": false,
+      "service_until": "2026-07-12T13:52:49Z",
+      "active_seconds_required": 0,
+      "enrollment_id": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "thread_id": "00000000-0000-0000-0000-000000000000",
+      "runtime": "codex",
+      "mesh_agent_id": "example-agent",
+      "task": "Continue the example research program without production mutations or unsafe compute.",
+      "cwd": "{{USERPROFILE}}\\example_project",
+      "enabled": false,
+      "service_until": "2026-07-12T13:52:49Z",
+      "active_seconds_required": 0,
+      "enrollment_id": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "thread_id": "00000000-0000-0000-0000-000000000000",
+      "runtime": "codex",
+      "mesh_agent_id": "example-agent",
+      "task": "Continue the example research program without production mutations or unsafe compute.",
+      "cwd": "{{USERPROFILE}}\\example_project",
+      "enabled": false,
+      "service_until": "2026-07-12T13:52:49Z",
+      "active_seconds_required": 0,
+      "enrollment_id": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "thread_id": "00000000-0000-0000-0000-000000000000",
+      "runtime": "codex",
+      "mesh_agent_id": "example-agent",
+      "task": "Continue the example research program without production mutations or unsafe compute.",
+      "cwd": "{{USERPROFILE}}\\example_project",
+      "enabled": false,
+      "service_until": "2026-07-12T13:52:49Z",
+      "active_seconds_required": 0,
+      "enrollment_id": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "thread_id": "00000000-0000-0000-0000-000000000000",
+      "runtime": "codex",
+      "mesh_agent_id": "example-agent",
+      "task": "Continue the example research program without production mutations or unsafe compute.",
+      "cwd": "{{USERPROFILE}}\\example_project",
+      "enabled": true,
+      "service_until": "2026-07-12T19:31:43Z",
+      "active_seconds_required": 0,
+      "enrollment_id": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "thread_id": "00000000-0000-0000-0000-000000000000",
+      "runtime": "codex",
+      "mesh_agent_id": "example-agent",
+      "task": "Continue the example research program without production mutations or unsafe compute.",
+      "cwd": "{{USERPROFILE}}\\example_project",
+      "enabled": true,
+      "service_until": "2026-07-13T07:21:10Z",
+      "active_seconds_required": 0,
+      "enrollment_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ]
+}

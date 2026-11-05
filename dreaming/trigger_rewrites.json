@@ -1,0 +1,17 @@
+{
+  "_doc": "A trigger rewritten to its referent is a new trigger: judged fires of the OLD form say nothing about it. reflex_precision.py drops trigger-path rows fired before the time recorded here (rows with no fired_at are dropped too - they predate the record). Append an entry whenever a trigger is rewritten; the graph path is untouched (it does not depend on the trigger). Times are local, minute resolution, the commit that landed the rewrite.",
+  "heredoc_verbatim_surgery": "2026-09-02 11:45",
+  "hasty_pattern_match": "2026-09-02 13:40",
+  "no_prewritten_conclusions_in_output": "2026-09-02 13:40",
+  "watched_namespace_write_is_the_act": "2026-09-02 13:40",
+  "ssh_backslash_escape_eater": "2026-09-02 14:21",
+  "voice_human": "2026-09-02 15:47",
+  "law_file_change_runs_the_checklist": "2026-09-02 15:52",
+  "healer_first_do_no_harm": "2026-09-02 15:52",
+  "queues_before_arming_the_law": "2026-09-02 15:58",
+  "read_the_last_batch_before_the_next": "2026-09-02 16:02",
+  "ps1_hook_edit": "2026-09-02 16:09",
+  "money_number_states_its_estimand": "2026-09-03 16:34",
+  "steelman_opposite": "2026-09-03 16:37",
+  "divergent_result_reconciles_before_reporting": "2026-09-05 15:16"
+}

@@ -1,0 +1,2 @@
+[2026-09-21 14:32:15] fire session=selftest-1 event=UserPromptSubmit n=1
+[2026-09-21 14:32:15] fire session=selftest-1 event=PreToolUse n=2

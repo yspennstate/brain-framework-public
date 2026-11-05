@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "version": "error-graph-sequences-0.1",
+    "status": "shadow",
+    "note": "Curated interpretable baselines; mined motifs require independent-session support and chronological validation before promotion."
+  },
+  "patterns": [
+    {
+      "id": "repeat_same_action_after_failure",
+      "family": "repeat_broken_action",
+      "within_seconds": 1800,
+      "steps": [
+        {"all": ["outcome:failure"]},
+        {"any": ["op:execute", "op:mutate"], "same_action_as": 0}
+      ],
+      "forbid_between": ["evidence:observation"],
+      "score": 2.4,
+      "severity": 0.65,
+      "reason_code": "repeat_after_failure_without_diagnosis",
+      "remediation_code": "inspect_failure_before_retry"
+    },
+    {
+      "id": "completion_after_mutation_without_observation",
+      "family": "done_unverified",
+      "within_seconds": 7200,
+      "steps": [
+        {"any": ["op:write", "op:mutate"]},
+        {"all": ["act:complete", "surface:report"]}
+      ],
+      "forbid_between": ["evidence:observation"],
+      "score": 2.2,
+      "severity": 0.7,
+      "reason_code": "completion_without_artifact_observation",
+      "remediation_code": "observe_exact_artifact"
+    },
+    {
+      "id": "report_after_failure_without_verification",
+      "family": "green_not_trusted",
+      "within_seconds": 3600,
+      "steps": [
+        {"all": ["outcome:failure"]},
+        {"any": ["act:complete", "act:assert"], "all": ["surface:report"]}
+      ],
+      "forbid_between": ["evidence:observation"],
+      "score": 2.5,
+      "severity": 0.8,
+      "reason_code": "report_claim_after_unresolved_failure",
+      "remediation_code": "resolve_and_reobserve_failure"
+    },
+    {
+      "id": "repeat_attempt_without_recall",
+      "family": "failed_to_retrieve",
+      "within_seconds": 2700,
+      "steps": [
+        {"all": ["outcome:failure"]},
+        {"all": ["outcome:failure"]},
+        {"any": ["op:execute", "op:mutate"]}
+      ],
+      "forbid_between": ["evidence:observation"],
+      "score": 1.6,
+      "severity": 0.45,
+      "reason_code": "multiple_failures_without_memory_retrieval",
+      "remediation_code": "recall_prior_solution"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# bytes as committed, everywhere: mixed CRLF/LF is intentional (Windows scripts keep
+# CRLF, portable Python keeps LF) and autocrlf rewriting has broken byte-exact
+# verification before. No conversion on checkout or commit.
+* -text

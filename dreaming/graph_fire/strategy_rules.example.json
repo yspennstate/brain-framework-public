@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "skip_checks",
+    "reflex": "never_skip_the_checks",
+    "pattern": "\\b(skip|disable|turn(?:ing)? off|bypass)\\w*\\s+(?:\\w+\\s+){0,3}?(tests?|test suite|checks?|ci|review)\\b",
+    "negation": "\\b(never|don'?t|do not|won'?t|must not)\\s+(skip|disable|turn off|bypass)",
+    "gate": "recommend",
+    "block": "always"
+  }
+]

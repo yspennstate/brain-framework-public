@@ -1,0 +1,5 @@
+[Unit]
+Description=Research/batch compute slice - yields to the trading stack (CPUWeight 25 vs 100)
+
+[Slice]
+CPUWeight=25

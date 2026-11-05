@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+.env
+traces/tickets/*.json
+traces/run_*.json
+.pytest_cache/
+build/
+dist/
+.lake/
+lake-packages/

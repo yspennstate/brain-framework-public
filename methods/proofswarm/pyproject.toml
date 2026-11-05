@@ -1,0 +1,18 @@
+[project]
+name = "proofswarm"
+version = "0.1.0"
+description = "Local-only multi-agent verifiable mathematical discovery"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.9",
+    "numpy>=2.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+]
+
+[project.scripts]
+proofswarm = "proofswarm.orchestrator:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["proofswarm*"]

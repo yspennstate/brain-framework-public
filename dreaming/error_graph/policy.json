@@ -1,0 +1,41 @@
+{
+  "version": "error-graph-policy-0.2",
+  "mode": "shadow",
+  "history_limit": 64,
+  "max_warnings_per_event": 1,
+  "defaults": {
+    "graph_gain": 1.0,
+    "sequence_gain": 1.0,
+    "invariant_gain": 1.0,
+    "activation_half_life": 1200,
+    "burden_half_life": 900,
+    "burden_penalty": 0.22,
+    "refractory_seconds": 600,
+    "fire_threshold": 1.35,
+    "prime_threshold": 1.2,
+    "warning_threshold": 2.0,
+    "block_threshold": 3.5
+  },
+  "families": {
+    "secret_egress": {"fire_threshold": 2.5, "refractory_seconds": 60},
+    "test_pollutes_live_state": {"fire_threshold": 2.5, "refractory_seconds": 120},
+    "repeat_broken_action": {"refractory_seconds": 300},
+    "green_not_trusted": {"refractory_seconds": 900},
+    "failed_to_retrieve": {"refractory_seconds": 1200},
+    "unsupported_claim": {"refractory_seconds": 900},
+    "done_unverified": {"refractory_seconds": 900}
+  },
+  "remediations": {
+    "redirect_fixture_to_temp": "This looks like a test or fixture writing a live brain ledger. Redirect it to an isolated temporary state and rerun the test.",
+    "remove_and_rotate_secret": "A secret-like value is near a mutating or external action. Remove it from the payload, inspect staged/output data, and rotate it if exposure is possible.",
+    "prove_feature_causality": "Prove that every feature was available at the decision timestamp; replay with an as-of cutoff before trusting the result.",
+    "translate_path_for_shell": "Translate the Windows path for the active shell or invoke the command through the correct shell; do not repeat the known path-dialect failure.",
+    "verify_against_ground_truth": "Verify the quantified claim against the actual account, tape, artifact, or authoritative source before reporting it; otherwise label it unverified.",
+    "observe_exact_artifact": "Open or render the exact artifact that changed and inspect what the owner will see before saying it is complete.",
+    "verify_scope_and_authority": "Re-check the exact target, authority, and reversible verification before the irreversible action.",
+    "inspect_failure_before_retry": "Read the actual failure, diagnose it, and change or verify the action before retrying the same command.",
+    "resolve_and_reobserve_failure": "Resolve the prior failure and re-observe the exact result before reporting success.",
+    "recall_prior_solution": "Search the brain for the prior solution before attempting another variation.",
+    "inspect_evidence_path": "Inspect the shortest evidence path and perform the missing verification before continuing."
+  }
+}

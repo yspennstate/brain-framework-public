@@ -1,0 +1,858 @@
+{
+  "schema": "video_brain.knowledge.v1",
+  "domains": [
+    {
+      "id": "owner.video.intent",
+      "title": "Understand the film before making it",
+      "summary": "Choose the audience, object and visual explanation before spending render time."
+    },
+    {
+      "id": "owner.video.geometry",
+      "title": "Teach through pictures and geometry",
+      "summary": "A mathematical picture should carry an inference, with explicit limits on what the picture establishes."
+    },
+    {
+      "id": "owner.video.design",
+      "title": "Make every slide readable and attractive",
+      "summary": "Inspect the actual pixels, preserve visual hierarchy, and make mathematics look like mathematics."
+    },
+    {
+      "id": "owner.video.story",
+      "title": "Build a documentary people want to follow",
+      "summary": "Connect people, places, decisions and consequences using varied, accurate, nonrepeating assets."
+    },
+    {
+      "id": "owner.video.voice",
+      "title": "Use natural Microsoft narration with brisk delivery",
+      "summary": "The latest owner rule is Microsoft natural voices only for videos, with slightly faster speech and fewer artificial pauses."
+    },
+    {
+      "id": "owner.video.timing",
+      "title": "Record first, then synchronize the picture",
+      "summary": "Bind all artifacts to content and configuration, and measure final playback rather than estimating from source length."
+    },
+    {
+      "id": "owner.video.review",
+      "title": "Review the pictures, words and final video repeatedly",
+      "summary": "A view of source code or sampled thumbnails cannot stand in for watching and listening to the current cut."
+    },
+    {
+      "id": "owner.video.compute",
+      "title": "Finish quickly while keeping the computer responsive",
+      "summary": "Reduce redundant work first, use bounded background resources, and treat GPU admission separately from installed drivers."
+    },
+    {
+      "id": "owner.video.delivery",
+      "title": "Deliver the exact reviewed version",
+      "summary": "Keep preview and final states unambiguous, and make every output traceable to the source and review that produced it."
+    },
+    {
+      "id": "owner.video.learning",
+      "title": "Grow a useful film-making memory",
+      "summary": "Retain concrete failures, evidence and corrective mechanisms; graph size alone says little about usefulness."
+    }
+  ],
+  "cards": [
+    {
+      "id": "owner.video.intent.audience",
+      "domain": "intent",
+      "title": "Name the audience and the learning outcome",
+      "practice": "Write the viewer prerequisite, the one capability gained in each chapter, and the exact source paper or historical subject. A probability undergraduate and a documentary viewer need different introductions. The owner wants explanatory videos closer to 3Blue1Brown: geometric intuition, clear pictures and purposeful animation tied to the spoken idea. Consider Blender for useful 3D visuals, while preserving Microsoft-only natural narration. The owner also requires active GPU use for suitable production rendering or encoding stages, with responsive terminals; a CPU-only stage needs a concrete reason and a next GPU-capable step.",
+      "boundary": "The owner asked for undergraduates to follow every proof. Expert shorthand can produce a technically correct but unusable lecture.",
+      "check": "A storyboard row names the prerequisite, claim, source and explanatory visual; the final narration does not recite this planning checklist.",
+      "sources": [
+        "CH16717",
+        "CX3570",
+        "owner-direction:2026-09-05-3blue1brown",
+        "owner-update:2026-09-05-active-gpu-use"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.intent.inventory",
+      "domain": "intent",
+      "title": "Inventory existing work before rebuilding it",
+      "practice": "Read the current chapter order, source versions, rendered scenes, recordings, asset registry and known defects. Compare what exists to the new request before generating another pipeline.",
+      "boundary": "Multiple agents previously built duplicate films and collided on a GPU server. Existing assets may already solve the next scene, but documentary nonreuse still applies.",
+      "check": "One project owner and manifest are named. Each agent has a distinct write scope and any shared GPU job has one current owner.",
+      "sources": [
+        "CH9047",
+        "CH16724",
+        "memory:inventory_the_board_before_you_improve_it_2026_09_05"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.intent.storyboard",
+      "domain": "intent",
+      "title": "Map the complete story into beats",
+      "practice": "Give every beat an ID, spoken point, picture plan, source, estimated duration and dependency. For fiction also map scene location, character state, dialogue and continuity. For a paper map every requested theorem and proof step. For explanatory sequences, the owner now wants a direction closer to 3Blue1Brown: plan a clear visual question, an object and a purposeful transformation tied to the narration. Consider Blender for helpful 3D spatial visuals; retain a simple diagram when it communicates better.",
+      "boundary": "A long runtime with repeated material does not deliver a complete explanation. A source-to-beat map reveals omissions before expensive rendering.",
+      "check": "Every requested source section maps to at least one beat; every beat serves a purpose. Unmapped content is an open obligation.",
+      "sources": [
+        "CH9047",
+        "CH16690",
+        "CH16717",
+        "owner-direction:2026-09-05-3blue1brown"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.intent.pilot",
+      "domain": "intent",
+      "title": "Make a representative pilot early",
+      "practice": "Prepare a short sequence containing a real graph, dense formula, geometric explanation, transition and current Microsoft narration. Review it at the actual export resolution and normal playback speed before scaling.",
+      "boundary": "A title card proves little about the hardest slide. Use the pilot to choose a style and identify costs without rendering hours of a flawed template.",
+      "check": "The pilot includes the hardest expected content and an actual visual/audio review, with measured production time.",
+      "sources": [
+        "CH16600",
+        "CH16653",
+        "CH16657"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.intent.scope",
+      "domain": "intent",
+      "title": "Carry the latest correction without erasing earlier depth",
+      "practice": "Resolve requests by project, date and subject. Brisk speech and a shorter introduction coexist with complete, carefully paced proofs. The Bastogne two-hour duration and ReLU five-hour structure do not transfer to NMKC.",
+      "boundary": "The old request to go slowly concerned explanations; the later correction explicitly speeds narration. Do not silently delete proof steps to accelerate the voice.",
+      "check": "The project brief names its own duration, depth and review-count obligations. Superseded settings point to the newer instruction.",
+      "sources": [
+        "CH16717",
+        "CH16774",
+        "CH16784",
+        "CX3570",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.geometry.visual_first",
+      "domain": "geometry",
+      "title": "Give each mathematical slide a geometric carrier",
+      "practice": "Begin with the object: vectors, a region, transformation, probability mass, trajectory, partition or measured curve. Add the formula that describes the picture, then the inference. Keep labels stable as the argument develops. Aim for the owner-requested 3Blue1Brown-like geometric intuition: picture, transformation, equation, then explanation. Use Manim for precise mathematical animation and consider Blender when actual 3D geometry, surfaces or projections clarify the idea; keep every visual tied to the current argument.",
+      "boundary": "The owner explicitly thinks through pictures and geometry. An unrelated photograph on a formula slide satisfies an image count but does not help him reason.",
+      "check": "Every explanatory math slide records a visual_kind and an explicit sentence about what its geometry or graph explains.",
+      "sources": [
+        "CH16731",
+        "CH16776",
+        "CX3570",
+        "CX3572",
+        "owner-direction:2026-09-05-3blue1brown"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.geometry.examples",
+      "domain": "geometry",
+      "title": "Pair an abstract statement with a small example",
+      "practice": "Use a low-dimensional worked example with actual values, named coordinates and visible operations. Then state which feature survives in the general theorem and which is a simplification.",
+      "boundary": "An attractive two-dimensional cartoon can mislead about high-dimensional concentration or topology. It is an explanatory slice, not numerical evidence for the theorem.",
+      "check": "The slide labels the example regime and the narration identifies the preserved idea and the missing dimensions.",
+      "sources": [
+        "CH16717",
+        "CH16731"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.geometry.proof",
+      "domain": "geometry",
+      "title": "Animate an argument one justified step at a time",
+      "practice": "Highlight the object currently being transformed; reveal the next line only when its premise has been named. Give a picture of a bound, projection, inclusion or limiting process alongside the algebra.",
+      "boundary": "The board once carried an intermediate operation that the voice skipped. Each artifact must preserve the same logical chain independently.",
+      "check": "A listener can reconstruct the operation and its object from the spoken words. Every load-bearing equality or inequality has a stated reason.",
+      "sources": [
+        "CH16717",
+        "memory:the_board_can_be_right_while_the_voice_is_wrong_2026_09_04"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.geometry.dimensions",
+      "domain": "geometry",
+      "title": "Explain high-dimensional structure honestly",
+      "practice": "Use projections, slices, coordinate comparisons, distributions and animations of transformations. Label a projection as a projection. Show the basis or reference directions when they help distinguish what moves and what stays fixed. Blender is a useful candidate for real 3D surfaces, sections and camera views when the spatial relation matters. Build from the mathematical objects and parameters, and inspect a small preview for scale and occlusion before an expensive render.",
+      "boundary": "A 3D rendering is useful only if the viewer understands its axes and what its hidden coordinates represent. A rotating shape without meaning adds work for the viewer.",
+      "check": "Axes, units, dimension and the relation to the theorem are visible or spoken; occlusion never hides the important comparison.",
+      "sources": [
+        "CH16717",
+        "CX3570",
+        "owner-direction:2026-09-05-3blue1brown"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.geometry.data",
+      "domain": "geometry",
+      "title": "Make numerical pictures traceable to real results",
+      "practice": "Render graphs from the current data artifact with source hash, experiment identity, parameters, units and uncertainty. Distinguish measured curves, schematic examples and predictions. Generate displayed numbers from that same source.",
+      "boundary": "Numerics illustrate evidence; they do not prove a theorem. A typed decimal can diverge from the plotted value after a data update.",
+      "check": "The manifest links the plotted dataset and claim. An independent reader checks every headline value and the written/spoken match.",
+      "sources": [
+        "CH16717",
+        "CH16776",
+        "CX3570",
+        "memory:numbers_i_typed_are_the_ones_that_were_wrong_2026_09_04"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.geometry.connections",
+      "domain": "geometry",
+      "title": "Show what two results share and where they differ",
+      "practice": "Build a side-by-side object/assumption/conclusion comparison, then a diagram of the logical connection. Explain the common mechanism and the genuinely different regime before combining results.",
+      "boundary": "The owner requested integrated papers and their complementary roles. A transition that merely announces another theorem is not the requested connection.",
+      "check": "The comparison preserves finite versus asymptotic claims and all assumptions; no arrow asserts an implication that has not been proved.",
+      "sources": [
+        "CH16776",
+        "CH16793"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.design.hierarchy",
+      "domain": "design",
+      "title": "Keep one visual hierarchy per slide",
+      "practice": "Use a short informative title, one primary picture and a compact mathematical or verbal support area. Align panels and labels consistently. Let empty space separate ideas instead of filling every corner.",
+      "boundary": "More relevant pictures does not mean more clutter. Dense content should become a progressive sequence rather than unreadably small text.",
+      "check": "At normal viewing size the title, main object and takeaway can be identified immediately; labels do not compete with the main equation.",
+      "sources": [
+        "CH16776",
+        "CX3570",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.design.math",
+      "domain": "design",
+      "title": "Use real mathematical typesetting",
+      "practice": "Render formulas through the installed LaTeX workflow or a verified math-capable renderer. Use real fractions, indices, radicals and scalable parentheses. Keep formula source separate from spoken expansion.",
+      "boundary": "An old filmbrain note discouraged LaTeX after a historical installation problem. The new lecture lane corrected that local advice. Do not convert an old tool failure into a permanent ban.",
+      "check": "Inspect a full-resolution frame of every equation-bearing slide: no literal underscore syntax, missing glyph boxes, clipped subscripts or incorrect line breaks.",
+      "sources": [
+        "CH16776",
+        "CX3570",
+        "memory:lecture_pipeline_record_first_cut_the_picture_2026_09_03"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.design.fonts",
+      "domain": "design",
+      "title": "Verify every font and symbol in rendered pixels",
+      "practice": "Check both prose and math fonts, including arrows, Greek letters, superscripts and closing cards. Inspect native-resolution crops when a thumbnail looks suspicious, and reopen the corrected frame after rerender.",
+      "boundary": "A small contact sheet previously hid missing arrows on the final recipe card. A supported character in one font says nothing about the adjacent text font.",
+      "check": "Every mixed-font card has a native-resolution visual receipt tied to its current image hash.",
+      "sources": [
+        "CH16776",
+        "scar:MISTAKES_2026-09-04_missing_glyph"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.design.colour",
+      "domain": "design",
+      "title": "Use colour to identify roles consistently",
+      "practice": "Assign a small set of colours to stable mathematical objects or historical sides. Support the distinction with labels or line styles. Preserve adequate contrast on the actual background and after video compression.",
+      "boundary": "Colour should reduce interpretation effort. Reassigning the same colour to a different object midway through a proof can create a false connection.",
+      "check": "A reviewer can follow the important distinction without relying on colour alone; the legend and narration agree.",
+      "sources": [
+        "CH16731",
+        "CH16776",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.design.motion",
+      "domain": "design",
+      "title": "Make movement explain a change",
+      "practice": "Animate the transformation, reveal, map advance or attention cue that matters. Hold the completed state long enough to read it. Use restrained transitions; repair jitter, collisions and accidental remnants from the previous beat. Follow the owner-requested 3Blue1Brown-like clarity in explanatory sequences: each movement and spoken sentence should express the same idea. Blender camera movement is useful when it reveals geometry or a spatial relationship.",
+      "boundary": "Camera motion and frequent cuts are not substitutes for new information. The owner rejected both dull slideshows and glitchy generated scenes.",
+      "check": "Watch each transition in context; no overlay from an earlier scene survives and no important label is unreadable while moving.",
+      "sources": [
+        "CH16690",
+        "CH16753",
+        "memory:lecture_pipeline_record_first_cut_the_picture_2026_09_03",
+        "owner-direction:2026-09-05-3blue1brown"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.story.causality",
+      "domain": "story",
+      "title": "Tell the event through decisions and consequences",
+      "practice": "For each historical sequence identify who acted, where, when, what they knew, what they tried and what followed. Use letters, quotations, maps and named incidents only after checking their source.",
+      "boundary": "The owner asked for detailed stories and strategy without self-introspection. Repeating a summary at greater length does not add those details.",
+      "check": "Each section advances the chronology or explains a causal question; narration states the point directly rather than describing the film-making process.",
+      "sources": [
+        "CH16690",
+        "CH16784"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.story.variety",
+      "domain": "story",
+      "title": "Build a large pool of relevant images",
+      "practice": "Search appropriate archives for people, locations, equipment, terrain, documents and maps. Assign assets to particular beats before editing. Maintain an unused reserve so revisions do not force the same small set back into the film.",
+      "boundary": "A folder containing hundreds of images is not evidence that the final timeline uses them. Relevance and placement matter as much as acquisition.",
+      "check": "Count unique source images actually present in the current export manifest, and inspect a coverage map across chapters.",
+      "sources": [
+        "CH16712",
+        "CH16730",
+        "CH16753",
+        "CH16784"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.story.nonreuse",
+      "domain": "story",
+      "title": "Use each documentary image or clip once",
+      "practice": "Track an asset by original source identity and content hash, not filename. Crops, mirrors, colour treatments and new names remain the same underlying picture. Treat a continuous pan across one image as one use; a later return is reuse.",
+      "boundary": "The owner repeatedly rejected recycled assets. Perceptual similarity can find additional candidates, but a perceptual hash is not infallible and needs review.",
+      "check": "The timeline has no repeated source_asset_id or identical content hash in separate shots. Inspect near-duplicate groups manually.",
+      "sources": [
+        "CH16712",
+        "CH16730",
+        "CH16753"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.story.realism",
+      "domain": "story",
+      "title": "Choose realism by viewing comparable scenes",
+      "practice": "Compare candidate generators or treatments using the same scene brief, output size and duration. Watch motion, anatomy, faces, object permanence, equipment and camera stability. Prefer a verified historical film or faithful photographic treatment when synthetic motion fails.",
+      "boundary": "A nicer still does not establish better video. Do not hide defects with grain or label generated reconstructions as archival footage.",
+      "check": "The comparison records the actual clip hashes, observed defects, runtime and selected treatment. Rejected clips stay out of the final cut.",
+      "sources": [
+        "CH16741",
+        "CH16753",
+        "CH16784"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.story.passages",
+      "domain": "story",
+      "title": "Make battle passages sustain a scene",
+      "practice": "Where the documentary calls for it, create coherent 30-to-60-second passages with orientation, action and consequence. Use multiple distinct shots when necessary, preserving spatial and temporal continuity.",
+      "boundary": "The owner first asked for roughly 30 seconds, later 30 seconds to one minute. Looping a short broken clip to meet that length violates both realism and nonreuse.",
+      "check": "The passage duration is measured from the export. A full playback check confirms no loops, jump cuts, morphing equipment or unexplained changes of place.",
+      "sources": [
+        "CH16712",
+        "CH16784"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.story.sources",
+      "domain": "story",
+      "title": "Separate historical facts, illustrations and rights",
+      "practice": "Record the archive item, caption, date, location, attribution, access date and known usage terms. Verify a factual claim against the underlying record. Label a representative image when it is not the exact described event.",
+      "boundary": "An archive search caption can be wrong, and publicly viewable does not automatically mean freely reusable. Uncertain provenance remains uncertain until checked.",
+      "check": "Every factual assertion and asset has a source entry; unresolved identity or usage questions block the affected final segment.",
+      "sources": [
+        "CH16669",
+        "CH16681",
+        "CH16753",
+        "memory:ww2brain_the_war_part_of_the_brain_2026_09_05"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.voice.microsoft_only",
+      "domain": "voice",
+      "title": "Microsoft natural voices are the video rule",
+      "practice": "Use a Microsoft natural/neural voice. The current working baseline is en-US-AndrewMultilingualNeural at +10%. If that service is unavailable, preserve the work and retry or pause narration; do not silently substitute Kokoro, a clone or another engine.",
+      "boundary": "The latest direct instruction says only Microsoft natural voices. It supersedes the older fallback permission for videos, while unrelated audiobook projects retain their own explicit contracts.",
+      "check": "The recording metadata names Microsoft, the exact approved voice and rate. A new render contains no old engine recordings.",
+      "sources": [
+        "CH16792",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.voice.rotation",
+      "domain": "voice",
+      "title": "Audition alternatives and keep changes intentional",
+      "practice": "Use the same short representative text to compare Microsoft voices, including a natural paragraph, proper names and one spoken formula. Andrew, Brian, Ryan and Guy were the recent sample set. Rotate at an intentional project or chapter boundary after listening.",
+      "boundary": "The owner liked the voice and asked to hear alternatives. A different voice every few seconds is not implied by that request; naturalness is a listening judgment, not a vendor ranking.",
+      "check": "A sample manifest records voice, exact text, rate, file hash and listening notes. Voice changes invalidate old recordings and mix reviews.",
+      "sources": [
+        "CH16800",
+        "CH16801",
+        "CH16794"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.voice.pace",
+      "domain": "voice",
+      "title": "Speak a little faster without rushing the idea",
+      "practice": "Start from the working +10% setting. Remove unnecessary paragraph gaps and shorten introductory setup. Keep pauses that support an actual new diagram or difficult inference, and let the picture hold when needed.",
+      "boundary": "A speech-rate setting is relative to that voice; it is not a guaranteed words-per-minute value. Measure representative recordings and judge comprehensibility in the combined cut.",
+      "check": "Record actual spoken duration and pause distribution, then listen at 1x playback. Do not use the player speed control to conceal a slow final export.",
+      "sources": [
+        "CH16671",
+        "CH16774",
+        "CH16784",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.voice.prose",
+      "domain": "voice",
+      "title": "Write sentences that sound like a person explaining",
+      "practice": "Use direct concrete phrasing, varied sentence lengths and clear referents. Say the mathematical or historical point. Remove repeated promises, inflated importance, unnecessary recaps and remarks about what the agent is doing.",
+      "boundary": "The owner objected to both synthetic delivery and AI-sounding wording. Changing the voice cannot repair a script full of self-commentary.",
+      "check": "Read the script aloud, then listen to the synthesis. Flag awkward emphasis, repetitive cadence and phrases whose object is unclear.",
+      "sources": [
+        "CH16690",
+        "CH16776",
+        "CH16777",
+        "CH16793"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.voice.pronunciation",
+      "domain": "voice",
+      "title": "Make formulas and names unambiguous aloud",
+      "practice": "Maintain a pronunciation and spoken-math map. Name the numerator and denominator clearly, distinguish logarithm-of-half from half-of-logarithm, expand abbreviations appropriately and audition proper names in a sentence.",
+      "boundary": "A formula can be correct on the board and wrong in the listener's interpretation. Do not rely on punctuation to create an audible mathematical distinction.",
+      "check": "An audio-only review reconstructs each load-bearing operation, boundary case and number; fixes change the recording identity and timing.",
+      "sources": [
+        "CH16717",
+        "memory:the_board_can_be_right_while_the_voice_is_wrong_2026_09_04"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.voice.service",
+      "domain": "voice",
+      "title": "Keep service capability separate from wrapper capability",
+      "practice": "The existing narrate_edge.py reaches Microsoft through edge-tts. Use its tested voice/rate path. Check the current official Microsoft voice and SSML documentation before relying on advanced styles, roles or pronunciation support in a particular endpoint.",
+      "boundary": "Azure Speech capabilities are not automatically available in the unofficial Edge wrapper. The owner accepted sending narration text to Microsoft, not arbitrary private archives or credentials.",
+      "check": "Record the actual endpoint/tool version and supported settings; submit only the intended narration text and leave secrets out of scripts and logs.",
+      "sources": [
+        "CH16792",
+        "official:microsoft_voice"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.timing.identity",
+      "domain": "timing",
+      "title": "Bind audio to text and complete synthesis configuration",
+      "practice": "Compute a recording key from the exact spoken text, provider, voice, language, rate, pronunciation-map revision and engine settings. A changed voice must invalidate the cache even when the words have not changed.",
+      "boundary": "Text-only cache keys permit stale voice selection. A WAV filename says nothing about which configuration produced its contents.",
+      "check": "The selected audio entry matches the current recording key and its file hash; mismatches fail closed.",
+      "sources": [
+        "CH16792",
+        "CH16800",
+        "memory:parallel_workers_each_write_their_own_manifest_2026_09_04"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.timing.shards",
+      "domain": "timing",
+      "title": "Resolve all recording manifests by content",
+      "practice": "Read every expected worker shard. Merge by current recording identity; reject conflicting entries for one current key. Never silently choose by filename order or assume the single old durations.json remains authoritative.",
+      "boundary": "Seven narrators wrote seven manifests while a reader loaded only one, projecting five hours as 24 minutes. A later filename-order merge selected stale durations.",
+      "check": "Expected beat IDs and manifest shards are complete. Sum actual durations independently and compare the projected total with the requested length.",
+      "sources": [
+        "memory:parallel_workers_each_write_their_own_manifest_2026_09_04"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.timing.record_first",
+      "domain": "timing",
+      "title": "Cut the picture to the measured recording",
+      "practice": "Finish a beat's current narration before giving its visuals a final duration. Lay out animation holds and transitions against measured audio. If the script changes, invalidate dependent timing, scene render, chapter and final cut.",
+      "boundary": "Replacing a WAV with a different duration after rendering makes later pictures drift. Stretching or truncating speech to fit an old scene hides the bug.",
+      "check": "The shot duration covers the current audio and intended transition; inspect synchronization at every beat boundary and at the end of each chapter.",
+      "sources": [
+        "memory:lecture_pipeline_record_first_cut_the_picture_2026_09_03"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.timing.order",
+      "domain": "timing",
+      "title": "Derive all chapter labels from final playback order",
+      "practice": "Maintain one ordered chapter list. Derive spoken chapter numbers, title cards, filenames used for assembly and cross-references from it. Validate the final concatenation order explicitly.",
+      "boundary": "Registration keys are not playback numbers. Earlier films announced chapter numbers that differed from the order in which viewers heard them.",
+      "check": "Opening and closing labels, chapter metadata and spoken cross-references agree with the actual export.",
+      "sources": [
+        "memory:lecture_pipeline_record_first_cut_the_picture_2026_09_03"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.timing.concurrent",
+      "domain": "timing",
+      "title": "Use one writer per beat and atomic outputs",
+      "practice": "Claim each beat before recording; refresh completed identities before work begins. Write media and manifests through temporary files and atomic replacement. Cap concurrency at the producer entry point across all passes.",
+      "boundary": "Per-chapter claims prevent two workers sharing a chapter; they do not cap nine simultaneously launched render passes. A parent-child Python chain is not a duplicate job.",
+      "check": "There is one live producer per beat, a bounded global worker count, and no partially written media accepted as complete.",
+      "sources": [
+        "memory:parallel_workers_each_write_their_own_manifest_2026_09_04",
+        "scar:MISTAKES_2026-09-03_python_parent_child"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.review.multiple",
+      "domain": "review",
+      "title": "Give every slide and every cut multiple real passes",
+      "practice": "Use separate passes for factual/mathematical content, full-resolution visuals, audio-only explanation and combined playback. Repeat after corrections. A generic project needs at least two visual and two audio passes per explanatory unit and two full audiovisual passes per final cut.",
+      "boundary": "Those are minimum implementation defaults, not a reduction of a stronger project order. The ReLU order requested over ten watches and over one hundred audits; its own brief must retain and track those obligations.",
+      "check": "Receipts identify pass number, reviewer, actual method, scope, current artifact hash, evidence and result. No missing or stale receipt is treated as a pass.",
+      "sources": [
+        "CH16678",
+        "CH16681",
+        "CH16684",
+        "CH16717",
+        "CH16723",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.review.visual",
+      "domain": "review",
+      "title": "Look at every rendered slide at useful resolution",
+      "practice": "Inspect composition, label collisions, clipping, line breaks, source images, plots and all symbols on every slide. Use contact sheets for navigation, then native-resolution frames for text and mathematical details.",
+      "boundary": "Sampling a few slides cannot establish every-slide coverage. A 420-pixel thumbnail previously concealed missing arrow glyphs.",
+      "check": "The review ledger covers every expected slide ID and records the actual rendered artifact, not just the source LaTeX or Python.",
+      "sources": [
+        "CH16776",
+        "CX3572",
+        "scar:MISTAKES_2026-09-04_missing_glyph"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.review.audio",
+      "domain": "review",
+      "title": "Audit the recording independently from the board",
+      "practice": "Listen without using the slide as a crutch. Check pronunciation, natural phrasing, pauses, numbers, omitted premises and ambiguous formula scope. Re-derive important quantities through another path.",
+      "boundary": "A slide containing the right step can falsely reassure a reviewer while the spoken instruction gives the wrong constant.",
+      "check": "Audio receipts name the current recording hash and specific observations. Numeric waveform metrics do not count as listening.",
+      "sources": [
+        "CH16717",
+        "CH16777",
+        "memory:the_board_can_be_right_while_the_voice_is_wrong_2026_09_04"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.review.final",
+      "domain": "review",
+      "title": "Watch the final encoded video in its entirety",
+      "practice": "Review every moment of the actual exported file, including beginnings, transitions, end cards, credits and chapter boundaries. Record watched time intervals for each full pass so coverage can be checked for gaps.",
+      "boundary": "Scene-level passes do not catch wrong concatenation order, late audio drift, missing chapters or an older file copied to Downloads.",
+      "check": "Each full pass covers from zero to measured duration with no unreviewed interval; every receipt is tied to the final export hash.",
+      "sources": [
+        "CH16684",
+        "CH16717",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.review.facts",
+      "domain": "review",
+      "title": "Try to break the load-bearing claims",
+      "practice": "Re-derive numerical claims by an independent method, check historical assertions against sources, and look for the strongest counterexample or alternative reading. Separate an illustration from evidence and a heuristic from a theorem.",
+      "boundary": "Multiple identical checks can repeat one blind spot. A correct script does not prove a corresponding plot, caption or spoken number is correct.",
+      "check": "Each important claim has evidence and an explicit second check; unresolved discrepancies block the affected final artifact.",
+      "sources": [
+        "CH16681",
+        "CH16717",
+        "CH16753"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.review.receipts",
+      "domain": "review",
+      "title": "Invalidate reviews when their artifact changes",
+      "practice": "Bind a review to the SHA-256 of the artifact actually inspected. Changing narration invalidates audio and combined-cut reviews; changing a picture invalidates visual and combined-cut reviews. Recheck the affected unit and every dependent final cut.",
+      "boundary": "Copying a green receipt into the next revision is not a repeat audit. Distinct pass IDs alone are insufficient if they refer to the same review event.",
+      "check": "The checker rejects stale hashes, repeated event IDs, missing evidence, incomplete intervals and source-only methods.",
+      "sources": [
+        "CX3572",
+        "memory:gist_the_check_that_read_a_proxy_2026_09_05"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.compute.reuse",
+      "domain": "compute",
+      "title": "Go faster by avoiding redundant production",
+      "practice": "Cache by content and configuration; rerender the changed beat and its real dependents. Reuse source geometry, fonts and scene templates while preserving documentary asset nonreuse. Produce an early representative preview.",
+      "boundary": "Faster work does not require maximizing every CPU. Avoided re-recording and re-rendering can save more time than extra workers on a saturated machine.",
+      "check": "A change-impact manifest explains why each task ran or was reused. A reused artifact matches its complete current identity.",
+      "sources": [
+        "CH16657",
+        "CH16724",
+        "CX3567",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.compute.background",
+      "domain": "compute",
+      "title": "Keep video workers in the protected background pool",
+      "practice": "Use the already-tested background_video.py launcher: BelowNormal, background logical CPUs 4,5,6,7,8,9,14,15 (0xc3f0), bounded library threads and windowless process creation. Keep the terminal pool 0,1,2,3,10,11,12,13 (0x3c0f) available to the UI.",
+      "boundary": "These masks are specific to this machine and topology. Affinity does not isolate shared RAM, disk, thermals or GPU composition, and a thread hint is not a hard total CPU quota.",
+      "check": "Read current guard policy and native child affinity/priority. Stop adding load when the user reports freezes, even if one instantaneous metric looks comfortable.",
+      "sources": [
+        "CX3567",
+        "memory:nvidia_59706_installed_dual_video_gpu_cpu_policy_2026_09_05"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.compute.gpu",
+      "domain": "compute",
+      "title": "Actively use the GPU for suitable production stages",
+      "practice": "The owner wants every video team using suitable GPU acceleration and targets 80 percent utilization (September 5, 19:38 Jerusalem). Concurrent NVENC encoding and useful CUDA or Blender work may run when they fit current VRAM, physical RAM and commit budgets. Retire the one-exclusive-GPU-job convention: each producer records a disjoint topic:gpu-workload/<hostname>/<agent-id> claim. Use NVENC through FFmpeg 7.1.1 or the verified PyAV 18.1 route. Keep exact mathematical construction on its appropriate renderer.",
+      "boundary": "The 80 percent target is useful production demand, not an idle stress test, a guaranteed speedup or permission to ignore memory pressure. GPU compute and dedicated encoder utilization are different counters. Do not rerender completed media merely to raise a counter. CUDA availability is repaired; sustained driver stability remains under observation. Stop and preserve evidence on Display 4101 or nvlddmkm faults.",
+      "check": "Record actual input/output, renderer or encoder, device, PID plus birth, sampled compute/encode utilization, VRAM and end-to-end usable output per time. Check recent RAM/commit low-water headroom before model staging; unload a cancelled model at a safe boundary. Preserve BelowNormal background workers, CPU mask 0xc3f0 and responsive terminals. Reduce load on actual UI, thermal or memory pressure.",
+      "sources": [
+        "CX3567",
+        "owner_update:2026-09-05T09:26:46Z",
+        "owner-update:2026-09-05-active-gpu-use",
+        "owner-update:1788626329242",
+        "memory:owner_order_use_80_percent_of_the_gpu_everyone_2026_09_05"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.compute.memory",
+      "domain": "compute",
+      "title": "Budget peaks, not a single comfortable sample",
+      "practice": "Allow for a co-tenant model's peak RAM and commit use, monitor a recent window, and leave the UI headroom. Avoid reload storms and duplicate model servers. Pause the newest optional work first during actual pressure.",
+      "boundary": "ComfyUI previously swung about 20 GB between samples, defeating a one-shot free-memory guard. A peer collision was also mistaken for a driver failure.",
+      "check": "Before a heavy stage and during it, inspect current telemetry and ownership. A stale or incomplete required signal is not permission to scale up.",
+      "sources": [
+        "scar:MISTAKES_2026-09-03_memory_guard",
+        "scar:MISTAKES_2026-09-04_duplicate_film"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.compute.measure",
+      "domain": "compute",
+      "title": "Measure a representative cost before scaling",
+      "practice": "Time the same small representative scene with candidate settings, including warm-up, encoding and transfer. Compare completed usable output per elapsed time and observed resource pressure. Separate initialization from steady work.",
+      "boundary": "A fast failed render or a warm-up-contaminated benchmark can produce a false lesson. Do not turn a single sample into a reliable two-hour production forecast.",
+      "check": "The receipt includes scene identity, settings, valid output, wall time and pressure. Keep estimates as ranges until more observations exist.",
+      "sources": [
+        "CH16657",
+        "CH9087",
+        "memory:filmbrain_the_movie_making_part_of_the_brain_2026_09_04"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.delivery.manifest",
+      "domain": "delivery",
+      "title": "Make the manifest describe the actual export",
+      "practice": "Keep ordered shots, assets, source evidence, recordings, timings, renderer settings, outputs and review receipts together. Verify actual encoded duration and the presence of expected audio/video streams.",
+      "boundary": "Exit code zero and a playable MP4 are necessary but weak evidence. Neither proves the right scene list, voice or runtime.",
+      "check": "An independent media probe agrees with manifest duration and stream expectations; expected beat and chapter sets match exactly.",
+      "sources": [
+        "memory:parallel_workers_each_write_their_own_manifest_2026_09_04"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.delivery.preview",
+      "domain": "delivery",
+      "title": "Show progress in a clearly named preview",
+      "practice": "Put a useful current preview in the requested location with its version and completeness stated outside the movie itself. Include a voice sample when asked. Preserve the previous known-good cut during a revision.",
+      "boundary": "The owner repeatedly asked to see the newest result and sometimes received the wrong short. A renamed old file is not a new deliverable.",
+      "check": "Open or inspect the exact copied file and compare its hash with the intended source. Report missing chapters and unreviewed sections plainly.",
+      "sources": [
+        "CH16664",
+        "CH16665",
+        "CH16666",
+        "CH16725",
+        "CH16794"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.delivery.export",
+      "domain": "delivery",
+      "title": "Check the technical file without confusing it with quality",
+      "practice": "Use a compatible export profile for the intended viewer, verify dimensions, frame rate, colour and audio format, then inspect the final file. Automated probes for black spans, freezes, silence and loudness can point to defects for review.",
+      "boundary": "Silence may be intentional and motion may be intentionally static. Automated thresholds are diagnostic starting points, not objective judgments of a beautiful or human-sounding video.",
+      "check": "The delivery record distinguishes technical integrity, aesthetic review, factual review and owner feedback; none is inferred from another.",
+      "sources": [
+        "CX3572",
+        "official:ffmpeg_filters"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.delivery.publish",
+      "domain": "delivery",
+      "title": "Publish only the intended version and material",
+      "practice": "Keep working sources and the private preference ledger in their authorized repositories. A public video or paper repo receives only the intended publishable material and lawful assets. Use an explicit publication instruction for uploading or messaging others.",
+      "boundary": "Video production and a public YouTube upload are different actions. Private raw prompts, credentials and unpublished work do not belong in a generic public brain.",
+      "check": "Secret scan and publication manifest pass; the uploaded or copied artifact hash matches the reviewed output.",
+      "sources": [
+        "CH16686",
+        "CH9047",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.learning.hints",
+      "domain": "learning",
+      "title": "Store each lesson with its evidence and limits",
+      "practice": "For a useful outcome record the observed failure, cause hypothesis, correction, tested result and the circumstance where it applies. Use owner-stated for preferences, verified only for checked observations, and provisional for craft hypotheses.",
+      "boundary": "A metric, an attractive clip or an agent's confidence is not universal evidence. The next reader needs the uncertainty that belongs to the lesson.",
+      "check": "Every card has provenance and a check; measured claims point to a run. No generated conclusion promotes itself to verified.",
+      "sources": [
+        "CH16724",
+        "CH16786",
+        "CH16796"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.learning.connections",
+      "domain": "learning",
+      "title": "Connect the existing specialist brains",
+      "practice": "Use filmbrain for craft and tool details, ww2brain for battle records and sources, the lecture project for theorem/data dependencies, and the main brain for owner preferences and recurring scars. Add typed edges to the useful existing nodes.",
+      "boundary": "Duplicating the same memory in disconnected directories fragments maintenance. A giant harvested graph is not proof that its advice is correct or retrievable.",
+      "check": "Realistic task queries reach the new guidance; graph edge endpoints exist and provenance survives deployment.",
+      "sources": [
+        "CH16724",
+        "CH16786",
+        "CH16796",
+        "CX3570",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.learning.sparse",
+      "domain": "learning",
+      "title": "Fire a small relevant warning at the point of risk",
+      "practice": "Route a brief when there is clear video-making intent; choose the relevant domain cards. Before a final delivery, surface the current-artifact review and recording-identity scars. Do not inject the full handbook into unrelated work.",
+      "boundary": "Too much generic warning text trains agents to ignore it. Recall is a hint to compare with the actual task, not authority to override a direct instruction.",
+      "check": "Positive production queries reach the required cards; unrelated held-out prompts remain silent. Keep the negative wording out of indexed memory bodies.",
+      "sources": [
+        "CX3570",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.learning.lifecycle",
+      "domain": "learning",
+      "title": "Distinguish written, retrieved, used and verified",
+      "practice": "Track documented, retrievable, fired, acted_on and verified independently. A graph import proves storage; a query proves one retrieval; a delivery manifest can prove check execution; only actual viewed/listened outcomes support quality improvement.",
+      "boundary": "Node count, a green dashboard or sending a mesh message cannot prove another agent read or followed the guidance.",
+      "check": "The status file records evidence references and unknowns for each stage, plus explicit peer acknowledgement and downstream adoption when observed.",
+      "sources": [
+        "CH16724",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    },
+    {
+      "id": "owner.video.learning.grow",
+      "domain": "learning",
+      "title": "Feed back the viewer-visible result after each film",
+      "practice": "Add the exact successful treatment, the rejected alternative and the defect it fixed. Measure recurrence on later films and reduce emphasis on advice that repeatedly misfires. Keep the baseline and owner feedback attached to the comparison.",
+      "boundary": "A large useful video brain grows from production experience. Do not manufacture thousands of near-identical cards to satisfy a quantity aspiration.",
+      "check": "A new lesson links to the affected scene, before/after evidence and a later independent outcome; unresolved results stay provisional.",
+      "sources": [
+        "CH16724",
+        "CH16796",
+        "CX3572"
+      ],
+      "status": "owner-grounded engineering guidance",
+      "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."
+    }
+  ],
+  "source_sha256": "6301c96d32f115f8bbea15e76c809bd0170eb343cfd8325a5335f35b489e513e",
+  "official_sources": {
+    "3blue1brown_animation_workflow": "https://www.3blue1brown.com/about/",
+    "blender_rendering": "https://www.blender.org/features/rendering/",
+    "microsoft_voice": "https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice",
+    "microsoft_catalogue": "https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts",
+    "ffmpeg_filters": "https://ffmpeg.org/ffmpeg-filters.html"
+  }
+}

@@ -1,0 +1,41 @@
+schema_version = 1
+
+[[trigger]]
+id = "division-nonzero"
+keywords = ["divide", "division", "cancel", "denominator", "/"]
+action = "List every denominator and prove it is nonzero on the stated domain."
+
+[[trigger]]
+id = "square-root-branch"
+keywords = ["sqrt", "square root", "root"]
+action = "Check domain, branch, sign, and whether squaring introduced extraneous solutions."
+
+[[trigger]]
+id = "exchange-limit-integral"
+keywords = ["interchange", "limit", "integral", "sum", "expectation"]
+action = "Name and verify the exact convergence theorem and each hypothesis."
+
+[[trigger]]
+id = "induction-boundary"
+keywords = ["induction", "base case", "inductive step"]
+action = "Check the first admissible index and ensure the step proves the next case without strengthening silently."
+
+[[trigger]]
+id = "quantifier-negation"
+keywords = ["for all", "there exists", "unique", "without loss of generality"]
+action = "Rewrite the quantified statement symbolically and negate it explicitly."
+
+[[trigger]]
+id = "finite-numeric-universal"
+keywords = ["numerically", "simulation", "samples", "therefore", "for every"]
+action = "Do not promote finite evidence to a universal claim; search for boundary and adversarial counterexamples."
+
+[[trigger]]
+id = "citation-entailment"
+keywords = ["cite", "citation", "theorem", "according to", "proved by"]
+action = "Open the exact source and locator; verify assumptions, statement, and attribution."
+
+[[trigger]]
+id = "formalization-fidelity"
+keywords = ["Lean", "formalized", "machine checked", "kernel"]
+action = "Compare the formal theorem with the prose claim, including assumptions, definitions, and quantifiers."

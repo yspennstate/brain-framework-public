@@ -1,0 +1,33 @@
+{
+  "diagnostic_smoke": {
+    "mathematical_output_present": false,
+    "selected_ledger_used": false,
+    "status": "usage_limit_exceeded"
+  },
+  "disposition": "superseded_before_selected_collection",
+  "preregistration_commit": "0e27ecacc460eb56a44038b5c88b42b133542938",
+  "preregistration_digest": "sha256:cfa9d6e86b3be3441cf35f6ccf8db1be485a96389397ba0d88be61cbbe2fa210",
+  "reason": {
+    "case_count": 320,
+    "code": "solver_visible_relational_shortcut",
+    "fault_line_accuracy": 1.0,
+    "mechanism_accuracy": 1.0,
+    "mathematical_recomputation_used": false
+  },
+  "replacement_requirements": [
+    "matched_clean_uses_for_every_suspicious_source_role",
+    "source_role_schedule_not_recoverable_from_public_case_surface",
+    "relational_decoder_fault_line_accuracy_at_most_0.15",
+    "relational_decoder_mechanism_accuracy_at_most_0.55",
+    "fail_stop_collector_on_first_operational_failure",
+    "outcome_free_interleaved_dispatch_order"
+  ],
+  "schema": "org.math-research-brain/hard-blind-pilot-disposition",
+  "schema_version": 1,
+  "selected_state_at_disposition": {
+    "pending": 64,
+    "started": 0,
+    "terminal": 0
+  },
+  "source_revision": "718f50f2f0c86028ff1f5de538dc42c61aaff533"
+}

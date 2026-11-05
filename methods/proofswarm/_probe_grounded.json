@@ -1,0 +1,7 @@
+{
+  "disabled": true,
+  "policy": "local-only-zero-cloud-fallback",
+  "inference_backend": "local",
+  "remote_requests_allowed": false,
+  "reason": "Historical remote probe neutralized; use the loopback ProofSwarm runtime."
+}

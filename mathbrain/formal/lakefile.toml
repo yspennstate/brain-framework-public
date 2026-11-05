@@ -1,0 +1,6 @@
+name = "MathBrain"
+version = "0.1.0"
+defaultTargets = ["MathBrain"]
+
+[[lean_lib]]
+name = "MathBrain"

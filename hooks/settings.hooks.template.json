@@ -1,0 +1,175 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -s {{DREAMING}}/hook_dispatch.py",
+            "timeout": 600
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -s {{DREAMING}}/hook_dispatch.py",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}/owner_prompts_hook.py",
+              "--hook",
+              "--runtime",
+              "claude"
+            ],
+            "timeout": 600,
+            "statusMessage": "Reading queued owner context"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell",
+            "args": [
+              "-NoProfile",
+              "-NonInteractive",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{CLAUDE_DIR}}\\wake_brain.ps1",
+              "-Part",
+              "1"
+            ],
+            "timeout": 600,
+            "statusMessage": "Consulting the brain (1/2: who you are)"
+          },
+          {
+            "type": "command",
+            "command": "powershell",
+            "args": [
+              "-NoProfile",
+              "-NonInteractive",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{CLAUDE_DIR}}\\wake_brain.ps1",
+              "-Part",
+              "2"
+            ],
+            "timeout": 600,
+            "statusMessage": "Consulting the brain (2/2: today's mind)"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\job_cycle\\job_reseed.py"
+            ],
+            "timeout": 600,
+            "statusMessage": "Reloading the last job readme"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -s {{DREAMING}}/hook_dispatch.py",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}/keep_working_after_compact.py"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -s {{DREAMING}}/hook_dispatch.py",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}/owner_prompts_hook.py",
+              "--hook",
+              "--runtime",
+              "claude"
+            ],
+            "timeout": 600,
+            "statusMessage": "Reading his prompts"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -s {{DREAMING}}/compact_nodes.py",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -s {{DREAMING}}/compact_nodes.py",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

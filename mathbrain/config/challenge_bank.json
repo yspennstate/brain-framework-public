@@ -1,0 +1,288 @@
+{
+  "schema": "org.math-research-brain/challenge-bank-config",
+  "schema_version": 1,
+  "generator_version": "sealed-challenge-v1",
+  "bank_id": "paired-challenge-bank-v1",
+  "reference_cards": [
+    {
+      "card_id": "C01",
+      "family": "quantifier_scope",
+      "title": "Quantifier scope",
+      "guidance": "Preserve quantifier order and allow later witnesses to depend only on information already quantified.",
+      "retrieval_cues": ["universal witness", "dependency order"]
+    },
+    {
+      "card_id": "C02",
+      "family": "illegal_cancellation",
+      "title": "Cancellation domains",
+      "guidance": "Record domains and prove a factor nonzero before cancelling it from an equation or expression.",
+      "retrieval_cues": ["cancel factor", "cancels a factor", "product equals zero", "zero divisor"]
+    },
+    {
+      "card_id": "C03",
+      "family": "branch_loss",
+      "title": "Branches after squaring",
+      "guidance": "A square root of a square gives an absolute value; retain sign branches and recheck candidates.",
+      "retrieval_cues": ["square root", "x squared", "every integer solution", "lost branch"]
+    },
+    {
+      "card_id": "C04",
+      "family": "induction_reachability",
+      "title": "Induction reachability",
+      "guidance": "An induction stride reaches only residue classes connected to the supplied base cases.",
+      "retrieval_cues": ["induction stride", "residue class"]
+    },
+    {
+      "card_id": "C05",
+      "family": "index_region",
+      "title": "Index regions",
+      "guidance": "When sums are swapped, preserve the same lattice region and derive every dependent boundary.",
+      "retrieval_cues": ["swap sums", "order of summation", "integer pairs", "lattice boundary"]
+    },
+    {
+      "card_id": "C06",
+      "family": "norm_spectral_radius",
+      "title": "Matrix size notions",
+      "guidance": "Keep spectral radius, eigenvalues, singular values, operator norm, and rank as distinct quantities.",
+      "retrieval_cues": ["spectral radius", "operator norm"]
+    },
+    {
+      "card_id": "C07",
+      "family": "local_global",
+      "title": "Local versus global control",
+      "guidance": "Radial or coordinate-axis control does not by itself establish a global Lipschitz estimate.",
+      "retrieval_cues": ["global bound", "two point test"]
+    },
+    {
+      "card_id": "C08",
+      "family": "feasible_boundary",
+      "title": "Feasible boundaries",
+      "guidance": "Optimize over the full feasible set, including origins and faces, and distinguish balls from spheres.",
+      "retrieval_cues": ["boundary optimum", "feasible face"]
+    },
+    {
+      "card_id": "C09",
+      "family": "asymptotic_scale",
+      "title": "Multiplicity and scale",
+      "guidance": "Retain combinatorial multiplicity and distinguish an exact count, a bound, and an asymptotic rate.",
+      "retrieval_cues": ["multiplicity", "asymptotic rate"]
+    },
+    {
+      "card_id": "C10",
+      "family": "implication_equivalence",
+      "title": "Both implications",
+      "guidance": "An equivalence needs each implication; proving one direction cannot establish the reverse direction.",
+      "retrieval_cues": ["if and only if", "same truth value", "truth table", "reverse implication"]
+    },
+    {
+      "card_id": "C11",
+      "family": "modular_cancellation",
+      "title": "Modular cancellation",
+      "guidance": "Cancelling a modular factor can change the modulus unless that factor is invertible there.",
+      "retrieval_cues": ["linear congruence", "residues modulo", "congruent modulo", "modular inverse"]
+    },
+    {
+      "card_id": "C12",
+      "family": "candidate_validation",
+      "title": "Candidate replay",
+      "guidance": "Replay transformed candidates in the original equation and enforce every original domain condition.",
+      "retrieval_cues": ["extraneous candidate", "original equation"]
+    },
+    {
+      "card_id": "C13",
+      "family": "overlap_omission",
+      "title": "Overlap correction",
+      "guidance": "Inclusion-exclusion corrects overlap so each object contributes exactly once to the union.",
+      "retrieval_cues": ["double count", "inclusion exclusion"]
+    },
+    {
+      "card_id": "C14",
+      "family": "missing_coprimality",
+      "title": "Coprimality hypotheses",
+      "guidance": "Divisibility cancellation requires the correct coprimality or primality hypothesis before drawing a conclusion.",
+      "retrieval_cues": ["divides product", "dividing a product", "forces divisibility", "coprime factor"]
+    },
+    {
+      "card_id": "C15",
+      "family": "linear_invariant",
+      "title": "Rank and nullity",
+      "guidance": "Rank-nullity uses the domain dimension; rank is not merely a count of nonzero eigenvalues.",
+      "retrieval_cues": ["kernel dimension", "rank nullity"]
+    },
+    {
+      "card_id": "C16",
+      "family": "independence_assumption",
+      "title": "Mutual independence",
+      "guidance": "Marginals or pairwise independence do not establish mutual independence of the full collection.",
+      "retrieval_cues": ["joint probability", "outcome triples", "all coordinates", "pairwise independence"]
+    },
+    {
+      "card_id": "C17",
+      "family": "sign_case",
+      "title": "Sign cases",
+      "guidance": "Variable-sign inequality operations require separate interval cases around every zero and pole.",
+      "retrieval_cues": ["multiply inequality", "real line inequality", "excluding the pole", "sign chart"]
+    },
+    {
+      "card_id": "C18",
+      "family": "initial_data",
+      "title": "Initial data sufficiency",
+      "guidance": "A recurrence needs as many independent initial values as its order before forward replay is unique.",
+      "retrieval_cues": ["recurrence order", "initial values"]
+    },
+    {
+      "card_id": "C19",
+      "family": "aggregate_pointwise",
+      "title": "Aggregate versus pointwise",
+      "guidance": "An aggregate parity, average, or sum statement does not imply the corresponding pointwise statement.",
+      "retrieval_cues": ["average condition", "pointwise claim"]
+    },
+    {
+      "card_id": "C20",
+      "family": "degree_threshold",
+      "title": "Polynomial sample threshold",
+      "guidance": "A bounded-degree polynomial identity needs enough distinct samples to force the difference polynomial to vanish.",
+      "retrieval_cues": ["polynomial identity", "distinct samples"]
+    }
+  ],
+  "development_specs": [
+    {
+      "family": "quantifier_scope",
+      "gold_card": "C01",
+      "difficulty": "medium",
+      "development": {"case_id": "D01", "parameters": {"domain": [0, 2], "offset": 1}}
+    },
+    {
+      "family": "illegal_cancellation",
+      "gold_card": "C02",
+      "difficulty": "medium",
+      "development": {"case_id": "D02", "parameters": {"left_root": 0, "right_root": 3}}
+    },
+    {
+      "family": "branch_loss",
+      "gold_card": "C03",
+      "difficulty": "medium",
+      "development": {"case_id": "D03", "parameters": {"root": 3}}
+    },
+    {
+      "family": "induction_reachability",
+      "gold_card": "C04",
+      "difficulty": "medium",
+      "development": {"case_id": "D04", "parameters": {"base": 0, "step": 2}}
+    },
+    {
+      "family": "index_region",
+      "gold_card": "C05",
+      "difficulty": "medium",
+      "development": {"case_id": "D05", "parameters": {"upper": 4}}
+    },
+    {
+      "family": "norm_spectral_radius",
+      "gold_card": "C06",
+      "difficulty": "medium",
+      "development": {"case_id": "D06", "parameters": {"scale": 3}}
+    },
+    {
+      "family": "local_global",
+      "gold_card": "C07",
+      "difficulty": "medium",
+      "development": {"case_id": "D07", "parameters": {"left": [5, 5], "right": [6, 5]}}
+    },
+    {
+      "family": "feasible_boundary",
+      "gold_card": "C08",
+      "difficulty": "medium",
+      "development": {"case_id": "D08", "parameters": {"objective": [3, 2], "points": [[0, 0], [4, 0], [0, 4]]}}
+    },
+    {
+      "family": "asymptotic_scale",
+      "gold_card": "C09",
+      "difficulty": "medium",
+      "development": {"case_id": "D09", "parameters": {"size": 4}}
+    },
+    {
+      "family": "implication_equivalence",
+      "gold_card": "C10",
+      "difficulty": "medium",
+      "development": {"case_id": "D10", "parameters": {"context": "definition", "variables": 2}}
+    },
+    {
+      "family": "modular_cancellation",
+      "gold_card": "C11",
+      "difficulty": "hard",
+      "development": {"case_id": "D11", "parameters": {"a": 6, "b": 6, "modulus": 15}}
+    },
+    {
+      "family": "candidate_validation",
+      "gold_card": "C12",
+      "difficulty": "hard",
+      "development": {"case_id": "D12", "parameters": {"pole": 1}}
+    },
+    {
+      "family": "overlap_omission",
+      "gold_card": "C13",
+      "difficulty": "hard",
+      "development": {"case_id": "D13", "parameters": {"a": 2, "b": 3, "limit": 12}}
+    },
+    {
+      "family": "missing_coprimality",
+      "gold_card": "C14",
+      "difficulty": "hard",
+      "development": {"case_id": "D14", "parameters": {"a": 6, "b": 2, "c": 3}}
+    },
+    {
+      "family": "linear_invariant",
+      "gold_card": "C15",
+      "difficulty": "hard",
+      "development": {"case_id": "D15", "parameters": {"matrix": [[1, 1, 0], [0, 0, 1]]}}
+    },
+    {
+      "family": "independence_assumption",
+      "gold_card": "C16",
+      "difficulty": "hard",
+      "development": {"case_id": "D16", "parameters": {"outcomes": [[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]]}}
+    },
+    {
+      "family": "sign_case",
+      "gold_card": "C17",
+      "difficulty": "hard",
+      "development": {"case_id": "D17", "parameters": {"numerator": 1, "right": 1}}
+    },
+    {
+      "family": "initial_data",
+      "gold_card": "C18",
+      "difficulty": "hard",
+      "development": {"case_id": "D18", "parameters": {"coefficients": [1, 1], "initials": [0], "order": 2}}
+    },
+    {
+      "family": "aggregate_pointwise",
+      "gold_card": "C19",
+      "difficulty": "hard",
+      "development": {"case_id": "D19", "parameters": {"values": [-1, 1]}}
+    },
+    {
+      "family": "degree_threshold",
+      "gold_card": "C20",
+      "difficulty": "hard",
+      "development": {"case_id": "D20", "parameters": {"degree": 3}}
+    }
+  ],
+  "holdout_seal": {
+    "bank_id": "paired-challenge-bank-v1",
+    "case_count": 20,
+    "difficulty_counts": {"hard": 10, "medium": 10},
+    "family_count": 20,
+    "manifest_digest": "sha256:773eb99151e312c2d785a083a52e88c674ef7e40d5094498661c24edfbef0418",
+    "merkle_root": "sha256:641b15ea2745107c08f6b7603815b40b1aed49083b84573ce92dfb4fe6d73a2d",
+    "schema": "org.math-research-brain/challenge-split-seal",
+    "schema_version": 1,
+    "split": "holdout"
+  },
+  "expected_commitments": {
+    "bank_seal_digest": "sha256:8c2d20bb683fc48856aab7ff17192103b42dfa0f5dde64f55355851cc88bb0c0",
+    "development_manifest_digest": "sha256:4048697ae2c46cff56b5c12d77021ce131e53f699cc33ff445ff8d5d87e140d4",
+    "holdout_payload_digest": "sha256:ec4bee17f5b19613976c49891a7cad25feadcc793bc9876191c65e85198b1588",
+    "reference_cards_digest": "sha256:73df48b9943d6434080e1c4521d1077ed4c6e3a039bd633ca07b2a1a677409e1"
+  },
+  "content_digest": "sha256:dc6370bdcbb55380b5777c41a41d166330bc98f316e1f9538569e7f13d9b44aa"
+}

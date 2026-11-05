@@ -1,0 +1,9 @@
+[Unit]
+Description=Compute health sentinel (observes trading stack, renices only user.slice research)
+Documentation=file:///srv/<prod>/COMPUTE_DOCTRINE.md
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/bin/compute_sentinel.py
+Nice=5
+TimeoutStartSec=30

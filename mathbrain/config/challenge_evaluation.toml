@@ -1,0 +1,57 @@
+schema_version = 2
+design_mode = "full"
+pair_count = 10
+timeout_seconds = 900
+max_output_tokens = 6000
+network_allowed = false
+brain_writable = false
+cross_case_memory = false
+sham_retrieval_for_brain_off = true
+invalid_probability_threshold = 0.5
+tie_rule = "invalid_at_or_above"
+
+[runtime]
+requested_model = "gpt-5.6-sol"
+requested_provider = "openai"
+requested_reasoning_effort = "ultra"
+require_accepted_config = true
+require_served_identity = true
+allow_provider_model_fallback = false
+
+[isolation]
+classification = "instruction_blinded_event_audited"
+require_complete_event_audit = true
+maximum_tool_calls = 0
+maximum_followups = 0
+maximum_policy_violations = 0
+
+[response_limits]
+maximum_bytes = 524288
+maximum_depth = 12
+maximum_nodes = 12000
+maximum_string_bytes = 16384
+maximum_integer_abs = 1000000000000
+
+# The challenge traces always place their mutation on line 3, so localization
+# cannot support a treatment claim.  Its preregistered weight is exactly zero.
+[primary_score_weights]
+balanced_validity_accuracy = 0.45
+exact_first_error_localization = 0.00
+verified_repair = 0.25
+verified_witness = 0.20
+error_family = 0.10
+
+[benefit_gate]
+minimum_primary_delta = 0.03
+minimum_nonnegative_pairs = 8
+maximum_clean_specificity_loss = 0.02
+# Difficulty is confounded with family in this fixed bank. Retain the generic
+# field for schema compatibility but do not interpret it as a subgroup claim.
+maximum_domain_tier_regression = 1.00
+maximum_randomization_p = 0.05
+
+[inference]
+bootstrap_repetitions = 2000
+confidence_level = 0.95
+randomization_alternative = "greater"
+maximum_exact_pairs = 20

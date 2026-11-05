@@ -1,0 +1,557 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\coactivation_log.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\spread_recall.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\error_monitor.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"{{PYTHON}}\" -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='claude';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\ps1_guard.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\instinct_prime.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\danger_mode.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\sourced_memory.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\compute_sense.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{FLEET}}\\mailbox_hook.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\gap_watch_hook.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\proof_deny_hook.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"{{PYTHON}}\" -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='claude';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\push_reminder.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell",
+            "args": [
+              "-NoProfile",
+              "-NonInteractive",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{CLAUDE_DIR}}\\wake_brain.ps1"
+            ],
+            "timeout": 600,
+            "statusMessage": "Consulting the brain"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\task_checklist_hook.py",
+              "--hook",
+              "--runtime",
+              "claude"
+            ],
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\coactivation_end.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\reality_monitor.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\graph_fire\\pre_report_check.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\conscience.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\resume_checkpoint.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\registry_refresh.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\retraction_guard.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\claim_check.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{FLEET}}\\mailbox_hook.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\report_guards_hook.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"{{PYTHON}}\" -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='claude';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\work_timer.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\summary_hook.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\task_checklist_hook.py",
+              "--hook",
+              "--runtime",
+              "claude"
+            ],
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\brain_switch.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\instinct_prime.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\fok_probe.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\spread_recall.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\danger_mode.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\compute_sense.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\work_timer.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\prompt_archive.py"
+            ],
+            "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{FLEET}}\\mailbox_hook.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"{{PYTHON}}\" -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='claude';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\proof_sense.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\math_sense.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\waste_sense.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\push_reminder.py"
+            ],
+            "timeout": 600
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\task_checklist_hook.py",
+              "--hook",
+              "--runtime",
+              "claude"
+            ],
+            "timeout": 60
+          }
+        ]
+      }
+      ,
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\owner_prompts_hook.py",
+              "--hook",
+              "--runtime",
+              "claude"
+            ],
+            "timeout": 60,
+            "statusMessage": "Reading the partner's prompts"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\compact_nodes.py"
+            ],
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\compact_nodes.py"
+            ],
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

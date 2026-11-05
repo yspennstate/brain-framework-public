@@ -1,0 +1,91 @@
+{
+  "found": [
+    {
+      "name": "Blender",
+      "path": "C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe",
+      "version": "Blender 5.2.0 LTS"
+    },
+    {
+      "name": "ffmpeg",
+      "path": "~\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.2-full_build\\bin\\ffmpeg.exe",
+      "version": "ffmpeg version 8.1.2-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers"
+    },
+    {
+      "name": "Kdenlive",
+      "path": "~\\AppData\\Local\\Programs\\Kdenlive\\bin\\kdenlive.exe",
+      "version": null
+    },
+    {
+      "name": "Shotcut",
+      "path": "~\\AppData\\Local\\Programs\\Shotcut\\Shotcut.exe",
+      "version": null
+    },
+    {
+      "name": "Krita",
+      "path": "C:\\Program Files\\Krita (x64)\\bin\\krita.exe",
+      "version": null
+    },
+    {
+      "name": "GIMP",
+      "path": "~\\AppData\\Local\\Programs\\GIMP 3\\bin\\gimptool.exe",
+      "version": null
+    },
+    {
+      "name": "OBS Studio",
+      "path": "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe",
+      "version": null
+    },
+    {
+      "name": "HandBrake",
+      "path": "C:\\Program Files\\HandBrake\\HandBrake.exe",
+      "version": null
+    },
+    {
+      "name": "ImageMagick",
+      "path": "~\\AppData\\Local\\Microsoft\\WindowsApps\\magick.exe",
+      "version": "Version: ImageMagick 7.1.2-30 Q16-HDRI x64 344e905:20260823 https://imagemagick.org"
+    },
+    {
+      "name": "Pencil2D",
+      "path": "~\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Pencil2D.Pencil_Microsoft.Winget.Source_8wekyb3d8bbwe\\Pencil2D\\pencil2d.exe",
+      "version": null
+    },
+    {
+      "name": "OpenToonz",
+      "path": "C:\\Program Files\\OpenToonz\\OpenToonz.exe",
+      "version": null
+    },
+    {
+      "name": "Synfig Studio",
+      "path": "C:\\Program Files\\Synfig\\bin\\synfigstudio.exe",
+      "version": null
+    },
+    {
+      "name": "LosslessCut",
+      "path": "~\\AppData\\Local\\Microsoft\\WinGet\\Packages\\ch.LosslessCut_Microsoft.Winget.Source_8wekyb3d8bbwe\\LosslessCut.exe",
+      "version": null
+    },
+    {
+      "name": "LMMS",
+      "path": "C:\\Program Files\\LMMS\\lmms.exe",
+      "version": null
+    },
+    {
+      "name": "ComfyUI",
+      "path": "~\\ComfyUI_portable\\ComfyUI_windows_portable\\python_embeded\\python.exe",
+      "version": null
+    },
+    {
+      "name": "Manim",
+      "path": "~\\lecture\\venv\\Scripts\\python.exe",
+      "version": null
+    }
+  ],
+  "missing": [
+    "Inkscape",
+    "Audacity",
+    "DaVinci Resolve",
+    "Natron"
+  ],
+  "checked": "2026-09-04T13:52:36Z"
+}

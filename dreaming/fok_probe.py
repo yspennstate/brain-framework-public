@@ -216,6 +216,13 @@ def _v2(data):
     q = _strip_harness(data.get("prompt", ""))[:3000]
     if len(q.strip()) < 12:
         return
+    # Under the dispatcher numpy is already loaded: score through the exact numpy lever (same scores bit for bit,
+    # 72 -> 12 ms median on real prompts, 5 Nov). Fail-open to the plain loop.
+    try:
+        import recall_levers
+        recall_levers.install_bm25()
+    except Exception:
+        pass
     b = BM25()
     superseded = active_supersessions(MEM)
     # a session's own compaction nodes quote its prompts back to it: 62 of the 74 fok fires in the 24 h to 30 Oct 14:40

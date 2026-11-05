@@ -418,6 +418,22 @@ def _install_status(g):
     g["_status_from_index"] = _status_from_index
 
 
+def install_bm25():
+    """The bm25 lever alone, for an in-process caller that already has numpy loaded (the prompt-hook dispatcher, where
+    fok_probe scores every prompt). Same PROVEN gate as install(). On fok_probe's call, BM25().score(q, topk=16), 154 of
+    154 real prompts equal, median 72.0 -> 11.7 ms (5 Nov, ab_fok_bm25_lever.py). True when the lever is in."""
+    if (os.environ.get("BRS_EXACT_NP", "1") == "0" or os.environ.get("BRS_NP_BM25", "1") == "0"
+            or "numpy" not in sys.modules):
+        return False
+    import numpy as np
+    import bm25
+    f = getattr(bm25, "score_postings", None)
+    if f is None or hasattr(f, "__wrapped__") or not _proven("bm25", f):
+        return False
+    _install_bm25(bm25, np)
+    return True
+
+
 def install(brain):
     """Called once by brain_recall_server.Brain after brain.py is loaded. Returns the names of the levers put in."""
     if os.environ.get("BRS_EXACT_NP", "1") == "0":

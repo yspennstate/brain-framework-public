@@ -36,3 +36,6 @@ dreaming/.owner_prompts_hook_state/
 
 # the film brain store is built locally from craft/ and ingest/ (filmbrain/README.md); never shipped
 filmbrain/store/
+# resident recall server state
+dreaming/brain_recall_server/
+dreaming/recall_fastcache/

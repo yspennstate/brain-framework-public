@@ -793,16 +793,20 @@ def _ctail_index(bm25mod):
     """(tails, tdf): anchor slug -> (term counts, length) of its summary's lines outside the anchor, and their df."""
     import marshal
     key = _ctail_key()
-    if _CTAIL.get("key") == key:
+    # The tails are read through anchors in bm25mod.MEM, so the cache belongs to that folder. One shared file let a
+    # recall on another folder (BRAIN_MEM_DIR) reuse the live folder's tails, which then stood for anchors that folder
+    # does not hold, and let it write back an index built from no anchors under the live key (5 Nov 2026).
+    cache = _mem_scoped(CTAIL_CACHE, bm25mod)
+    if _CTAIL.get("key") == key and _CTAIL.get("mem") == bm25mod.MEM:
         return _CTAIL["ix"]
     prev = {}
     try:
-        with open(CTAIL_CACHE, "rb") as fh:
+        with open(cache, "rb") as fh:
             got = marshal.load(fh)
         if len(got) == 3:
             prev = got[2]
         if tuple(tuple(x) for x in got[0]) == key:
-            _CTAIL.update(key=key, ix=got[1])
+            _CTAIL.update(key=key, mem=bm25mod.MEM, ix=got[1])
             return got[1]
     except Exception:
         pass
@@ -865,13 +869,14 @@ def _ctail_index(bm25mod):
                 tdf[t] = tdf.get(t, 0) + 1
     ix = (tails, tdf)
     try:
-        tmp = "%s.%d.tmp" % (CTAIL_CACHE, os.getpid())
-        with open(tmp, "wb") as fh:
-            marshal.dump((key, ix, files), fh)
-        os.replace(tmp, CTAIL_CACHE)
+        if not _mem_scope_throwaway(bm25mod):
+            tmp = "%s.%d.tmp" % (cache, os.getpid())
+            with open(tmp, "wb") as fh:
+                marshal.dump((key, ix, files), fh)
+            os.replace(tmp, cache)
     except Exception:
         pass
-    _CTAIL.update(key=key, ix=ix)
+    _CTAIL.update(key=key, mem=bm25mod.MEM, ix=ix)
     return ix
 
 
@@ -934,6 +939,17 @@ def _mem_scoped(path, bm25mod=None):
         live = os.path.realpath(os.path.join(bm25mod.HOME, ".claude", "projects", bm25mod._BRAIN_SLUG, "memory"))
         tag = _MEM_SCOPE[mem] = "" if real == live else "." + hashlib.sha1(real.encode("utf-8")).hexdigest()[:12]
     return path + tag
+
+
+def _mem_scope_throwaway(bm25mod=None):
+    """True when bm25 reads a memory folder under the temp dir. Its scoped tail files are never read again once the
+    folder is gone, and each sandboxed recall left a 3.4 MB postings file in the live compactions folder: 220 of them,
+    478 MB, by 5 Nov 2026. Such a recall keeps its tails in memory and writes nothing."""
+    if bm25mod is None:
+        return False
+    import tempfile
+    root = os.path.join(os.path.realpath(tempfile.gettempdir()), "")
+    return os.path.realpath(bm25mod.MEM).startswith(root)
 
 
 def _ctail_key():
@@ -1013,6 +1029,8 @@ def _tpost_write(ix, bm25mod=None):
     head = dict((k, v) for k, v in ix.items() if k != "post")
     head["spans"] = spans
     hb = marshal.dumps(head)
+    if _mem_scope_throwaway(bm25mod):
+        return
     path = _mem_scoped(TAIL_POST, bm25mod)
     tmp = "%s.%d.tmp" % (path, os.getpid())
     with open(tmp, "wb") as fh:
@@ -1154,6 +1172,8 @@ def _mtail_index(bm25mod, rescan=False):
             tf[t] = tf.get(t, 0) + 1
         new[n] = (sig, tf, len(rest))
     try:
+        if _mem_scope_throwaway(bm25mod):
+            raise OSError("a throwaway memory folder keeps its tails in memory")
         cache = _mem_scoped(MTAIL_CACHE, bm25mod)
         tmp = "%s.%d.tmp" % (cache, os.getpid())
         with open(tmp, "wb") as fh:

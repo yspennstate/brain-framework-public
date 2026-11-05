@@ -427,6 +427,57 @@ def _his_spelling(text):
     return _HIS_SPELLING_RE.sub(rep, text)
 
 
+# COMMON TYPOS IN MATHEMATICAL WORDS (MATHBRAIN_TYPO_FIX, default on). Questions are often typed fast ("the full proof
+# of the 5 singualr value version", "all the poorfs"), and neither the gate nor retrieval can read a misspelt word. A speller
+# run against the store's vocabulary invents eponyms (benjamin -> Benjamini), so this is a reviewed list: each entry is a
+# word that appeared at least twice in archived questions, is neither a store term nor an English word, and is kept only
+# when it is unambiguously a misspelling of the word it maps to. Ambiguous forms are left out, and so are misspellings of
+# common words (problem, theory, functions): a low-weight word corrected only reshuffles the ranking. Only the text the gate
+# and retrieval read is corrected; nothing is shown back. MATHBRAIN_TYPO_FIX=0 reads the text as typed.
+TYPO_FIX_ON = os.environ.get("MATHBRAIN_TYPO_FIX", "1").strip() not in ("0", "", "off", "false")
+_TYPO_FIX = {
+    "singuler": "singular", "singualr": "singular", "sinuler": "singular", "singulr": "singular", "singurla": "singular",
+    "singuel": "singular",
+    "matricies": "matrices", "submatricies": "submatrices", "submatirices": "submatrices", "submatriices": "submatrices",
+    "subamtrix": "submatrix", "submatirx": "submatrix", "submatix": "submatrix",
+    "binomail": "binomial", "binimial": "binomial", "binomila": "binomial",
+    "stocastic": "stochastic",
+    "diffution": "diffusion", "difussion": "diffusion", "difustion": "diffusion",
+    "convergecne": "convergence", "convergece": "convergence",
+    "distirbution": "distribution",
+    "gussain": "gaussian", "gussian": "gaussian",
+    "hypothisis": "hypothesis",
+    "kernal": "kernel", "kernsl": "kernel",
+    "lipshitz": "lipschitz",
+    "theorm": "theorem", "theorme": "theorem", "theormes": "theorems", "theorms": "theorems",
+    "veribles": "variables",
+    "differntial": "differential",
+    "momentium": "momentum", "momenum": "momentum",
+    "navir": "navier",
+    "ranodm": "random", "rnadom": "random", "ranomness": "randomness", "ranomnes": "randomness",
+    "spectram": "spectrum",
+    "meausre": "measure", "meausres": "measures",
+    "inequalites": "inequalities",
+    "proability": "probability", "proabability": "probability",
+    "poorfs": "proofs",
+}
+_TYPO_FIX_RE = re.compile(r"\b(" + "|".join(sorted(map(re.escape, _TYPO_FIX), key=len, reverse=True)) + r")\b",
+                          re.IGNORECASE)
+
+
+def _typo_fix(text):
+    if not TYPO_FIX_ON or not text:
+        return text
+
+    def rep(m):
+        w = m.group(0)
+        f = _TYPO_FIX.get(w.lower())
+        if not f:
+            return w
+        return f[:1].upper() + f[1:] if w[:1].isupper() else f
+    return _TYPO_FIX_RE.sub(rep, text)
+
+
 # LATEX ACCENTS FOLD (MATHBRAIN_LATEX_ACCENTS, default on; campaign mb10d, 25 Sep, arm cand57). A proof pasted from its LaTeX
 # source writes H\"older, Poincar\'e, Erd\H{o}s, \v{C}ech; the prefilter reads H\"older as "h" and "older" and the curated names
 # never see it, so a proof citing "H\"older's inequality" got no Hölder card. The accent macro folds to its letter before the gate
@@ -4883,6 +4934,7 @@ def _main_body(data, out):
         return
     _use_begin(str(data.get("session_id") or data.get("thread_id") or ""))
     prompt = _his_spelling(prompt)
+    prompt = _typo_fix(prompt)
     prompt = _latex_accents(prompt)
     _headless_budget(prompt)
     ctx_used = None

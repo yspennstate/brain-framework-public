@@ -28,7 +28,10 @@ STORE = os.path.join(DREAM, "graph_lane_store")
 STATE = os.path.join(STORE, "INSTALLED_RELEASE.json")
 NET_DIR = os.path.join(DREAM, "network")
 MS = os.path.expanduser("~/brain/brain-framework/mesh/agent_mesh.py")
-AGENT = os.environ.get("BRAIN_AGENT_ID", "claude-35617489")
+# The mesh claim goes under the caller's own id (BRAIN_AGENT_ID). With none set the checker joins the mesh as itself:
+# a default naming one session failed every claim once that session was gone (5 Nov 2026, rc 3 after the lock).
+AGENT = os.environ.get("BRAIN_AGENT_ID") or "graph-release-check"
+OWN_ID = not os.environ.get("BRAIN_AGENT_ID")
 STORE_FILES = ("nodes.json", "uses.json", "first_touch.json", "edges.npz")
 
 
@@ -116,9 +119,15 @@ def main():
     if free < 2 * size + 2e9:
         print("REFUSED: free disk %.2f GB is under 2x the download + 2 GB" % (free / 1e9))
         return 3
-    if mesh("claim", "--agent", AGENT, "--resource", "memory:graph_lane_store", "--mode", "exclusive",
-            "--purpose", "install brain graph release %s" % rel["tag_name"], "--ttl", "3600") != 0:
-        print("REFUSED: memory:graph_lane_store is claimed by another agent")
+    if OWN_ID:
+        mesh("hello", "--agent", AGENT, "--runtime", "script", "--task", "brain graph release swap")
+    rc = mesh("claim", "--agent", AGENT, "--resource", "memory:graph_lane_store", "--mode", "exclusive",
+              "--purpose", "install brain graph release %s" % rel["tag_name"], "--ttl", "3600")
+    if rc != 0:
+        print("REFUSED: memory:graph_lane_store is claimed by another agent" if rc == 3 else
+              "REFUSED: the mesh claim as %s failed (rc %s)" % (AGENT, rc))
+        if OWN_ID:
+            mesh("bye", "--agent", AGENT, "--status", "blocked", "--summary", "claim refused rc=%s" % rc)
         return 3
     try:
         os.makedirs(stage, exist_ok=True)
@@ -159,6 +168,8 @@ def main():
         return 0
     finally:
         mesh("release", "--agent", AGENT, "--resource", "memory:graph_lane_store")
+        if OWN_ID:
+            mesh("bye", "--agent", AGENT, "--status", "done", "--summary", "graph release swap")
 
 
 if __name__ == "__main__":

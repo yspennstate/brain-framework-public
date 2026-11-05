@@ -92,7 +92,10 @@ def rss_bytes():
                         ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t), ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
                         ("PagefileUsage", ctypes.c_size_t), ("PeakPagefileUsage", ctypes.c_size_t)]
         pmc = PMC(); pmc.cb = ctypes.sizeof(PMC)
-        h = ctypes.windll.kernel32.GetCurrentProcess()
+        # The pseudo-handle as a pointer: with ctypes' default int restype it reached psapi as an invalid handle on
+        # 64-bit, the call failed and this returned 0 every time, so RSS_CAP never fired (4 Nov: 0 against a 342 MB
+        # psutil reading).
+        h = ctypes.c_void_p(-1)
         if ctypes.windll.psapi.GetProcessMemoryInfo(h, ctypes.byref(pmc), pmc.cb):
             return int(pmc.WorkingSetSize)
     except Exception:
@@ -141,6 +144,11 @@ class Brain:
             self._memo(bnd, "load_documents")
         if "load_documents" in self.g:
             self.g["load_documents"] = bnd.load_documents
+        if os.environ.get("BRS_STAT_READDOC", "1") != "0":
+            try:
+                self._stat_memo_read_doc(bm25, bnd)
+            except Exception as e:
+                log("read_doc stat memo off: %s: %s" % (type(e).__name__, e))
         mem = self.g.get("MEM") or ""
         folder = [mem, os.path.join(mem, "MEMORY.md")]
         for name in ("bm25_index.json.gz", "memory_embeddings.npz", "superseded_index.json"):
@@ -215,6 +223,71 @@ class Brain:
             holder[attr] = w
         else:
             setattr(holder, attr, w)
+
+    def _stat_memo_read_doc(self, bm25, bnd, cap=1024):
+        """lever 15: keep each memory's BM25 token list across folder drops while its files are unchanged.
+
+        A folder drop (any peer memory write) re-ran the fresh-memory overlay, which re-read EVERY memory newer than
+        the current postings generation, not the one that changed: 69 fresh at 15:37 on 4 Nov cost the overlay
+        244-502 ms a drop, nearly all of it bm25.read_doc. Here a token list is kept while the memory file's
+        (mtime_ns, size), its attachment bundle's stat signature (node file, manifest, documents listing - the same
+        signature lever 4 uses) and the slug's query-expansion entry are unchanged. A read that adds to
+        bm25.ATTACHMENT_FAILURES is not kept. Each caller gets its own copy of the list. The store sits in no group
+        and holds at most `cap` slugs, oldest use dropped first. BRS_STAT_READDOC=0 turns it off.
+        """
+        from collections import OrderedDict
+        real = bm25.read_doc
+        store = OrderedDict()
+        lock = threading.Lock()
+        miss = self.miss
+
+        def sig(mem, slug):
+            st = os.stat(os.path.join(mem, slug + ".md"))
+            out = [(st.st_mtime_ns, st.st_size)]
+            root = bnd.bundle_dir(mem, slug)
+            for p in (bnd._node_path(bnd.Path(mem), bnd._slug(slug)), root / bnd.MANIFEST_NAME):
+                try:
+                    s2 = os.lstat(p)
+                    out.append((s2.st_mtime_ns, s2.st_size))
+                except OSError:
+                    out.append(None)
+            try:
+                with os.scandir(root / "documents") as it:
+                    out.append(tuple(sorted((e.name, e.stat(follow_symlinks=False).st_mtime_ns,
+                                             e.stat(follow_symlinks=False).st_size) for e in it)))
+            except OSError:
+                out.append(None)
+            out.append((getattr(bm25, "_DATES_ON", None), getattr(bm25, "_EXPANSION_ON", None)))
+            if getattr(bm25, "_EXPANSION_ON", False):
+                out.append(repr(bm25.expansions().get(slug)))
+            return tuple(out)
+
+        @functools.wraps(real)
+        def w(mem_dir, slug):
+            try:
+                key = (str(mem_dir), slug)
+                s = sig(str(mem_dir), slug)
+            except Exception:
+                return real(mem_dir, slug)
+            # bm25.read_many calls this from a thread pool, so the store's reorder and eviction take a lock
+            with lock:
+                hit = store.get(key)
+                if hit is not None and hit[0] == s:
+                    store.move_to_end(key)
+                    return None if hit[1] is None else list(hit[1])
+            t = time.perf_counter()
+            nfail = len(getattr(bm25, "ATTACHMENT_FAILURES", ()))
+            v = real(mem_dir, slug)
+            with lock:
+                miss["read_doc"] = miss.get("read_doc", 0.0) + time.perf_counter() - t
+                if len(getattr(bm25, "ATTACHMENT_FAILURES", ())) == nfail:
+                    store[key] = (s, None if v is None else tuple(v))
+                    store.move_to_end(key)
+                    while len(store) > cap:
+                        store.popitem(last=False)
+            return v
+        w.__wrapped__ = real
+        bm25.read_doc = w
 
     def _stat_memo_bundles(self, bnd):
         """lever 4: keep each attachment bundle across folder drops while its own files are unchanged.

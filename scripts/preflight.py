@@ -33,8 +33,11 @@ FAST = [
     ("private-label guard", [sys.executable, "scripts/check_no_private_labels.py"], "."),
     ("guard's own controls", [sys.executable, "-m", "pytest",
                               "scripts/test_check_no_private_labels.py", "-q"], "."),
+    # proofswarm is its own check: without its dependencies (Pydantic 2) its two collection errors
+    # used to interrupt the whole core run, so dreaming, mesh and governor went untested as well.
     ("core suites", [sys.executable, "-m", "pytest", "dreaming", "mesh", "governor",
-                     "methods", "-q"], "."),
+                     "methods", "--ignore=methods/proofswarm", "-q"], "."),
+    ("proofswarm", [sys.executable, "-m", "pytest", "methods/proofswarm", "-q"], "."),
     ("network", [sys.executable, "-m", "pytest", "network", "-q"], "."),
     ("resilience", [sys.executable, "-m", "pytest", "resilience", "-q"], "."),
     ("viewer", [sys.executable, "-m", "pytest", "tests", "-q"], "viewer"),

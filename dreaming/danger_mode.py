@@ -326,6 +326,131 @@ def _score(text):
     return hits
 
 
+# A command that only READS (grep, cat, a brain recall ...) cannot start a production service, so a production word
+# inside its pattern or query is a mention, not an action. Before 31 Oct a recall whose question named a live
+# service, and a grep for this file's own alarm text, each raised the full LIVE-action alarm; an alarm that fires
+# on reads is the wallpaper this hook warns about. Every segment must be a reader; ssh, any other python script,
+# a launcher, $( ) or a backtick keeps the full scoring (31 Oct 2026).
+_READERS = {"grep", "egrep", "fgrep", "rg", "cat", "head", "tail", "less", "wc", "ls", "echo", "printf", "cd", "pwd",
+            "sort", "uniq", "cut", "tr", "cmp", "diff", "stat", "file", "test", "[", "true", "false", "date",
+            "Select-String", "Get-Content", "Get-ChildItem", "Test-Path", "Measure-Object", "Select-Object", "Write-Output"}
+_READ_SCRIPTS = {"brain.py": {"recall", "node", "neighbors", "search", "show"}, "math_recall.py": None,
+                 "problem_recall.py": None}
+_SHELL_KW = {"do", "then", "else", "elif", "if", "while", "until", "!"}
+
+
+def _read_only(cmd):
+    """True when every segment of a shell command only reads files or queries the brain."""
+    if not cmd or "`" in cmd or "$(" in cmd or "<(" in cmd:
+        return False
+    for stages in _split_cmd(cmd):
+        for seg in stages:
+            if _seg_kind(seg) not in ("empty", "reader"):
+                return False
+    return True
+
+
+# Scripts whose arguments are TEXT for a record (a checklist line, a mesh message, a memory), not an action: a
+# production word in "done T-1 'the gateway now restarts cleanly'" is a mention. Before 1 Nov such a line raised the
+# full LIVE alarm. Only the named subcommands count; a segment holding $( ) or a backtick is never masked, because
+# the shell runs those inside double quotes (1 Nov 2026).
+_NOTE_SCRIPTS = {
+    "task_checklist_hook.py": {"working", "note", "done", "blocked", "drop", "reopen", "list"},
+    "checklist.py": {"working", "note", "done", "blocked", "drop", "reopen", "list"},
+    "agent_mesh.py": {"send", "hello", "pulse", "claim", "release", "bye", "digest", "inbox", "status", "assert",
+                      "ack", "--json"},
+    "brain.py": {"remember", "dream-about"},
+    "fleet_board.py": {"broadcast", "ack", "check"},
+    "live_inbox.py": {"event"},
+}
+
+
+def _seg_kind(seg):
+    """'empty', 'reader' (only reads), 'note' (records text), or 'other' for one shell segment."""
+    import shlex
+    seg = seg.strip()
+    if not seg or seg in ("done", "fi", "esac", "{", "}", "(", ")"):
+        return "empty"
+    try:
+        # posix shlex eats the backslashes of a Windows path (C:\Users\...\x.py), so normalise them first
+        toks = shlex.split(seg.replace("\\", "/"), posix=True)
+    except ValueError:
+        return "other"
+    while toks and toks[0] in _SHELL_KW | {"{", "("}:
+        toks = toks[1:]
+    while toks and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", toks[0]):
+        toks = toks[1:]
+    if toks and toks[0] == "timeout" and len(toks) > 2:
+        toks = toks[2:]
+    if not toks:
+        return "empty"
+    head = os.path.basename(toks[0].replace("\\", "/"))
+    if head == "for":
+        return "empty"
+    if head in _READERS:
+        if head in ("grep", "rg") and any(t in ("--exec", "-exec") for t in toks):
+            return "other"
+        return "reader"
+    if head == "sed" and "-n" in toks and not any(t.startswith("-i") for t in toks):
+        return "reader"
+    if _PY.match(head):
+        args = [t for t in toks[1:] if not t.startswith("-")]
+        if args:
+            script = os.path.basename(args[0].replace("\\", "/"))
+            if script in _READ_SCRIPTS:
+                subs = _READ_SCRIPTS[script]
+                if subs is None or (len(args) > 1 and args[1] in subs):
+                    return "reader"
+            if script in _NOTE_SCRIPTS:
+                rest = toks[toks.index(args[0]) + 1:]
+                sub = next((t for t in rest if not t.startswith("-") or t == "--json"), "")
+                if sub in _NOTE_SCRIPTS[script]:
+                    return "note"
+    return "other"
+
+
+def _split_cmd(cmd):
+    """[[stage, ...], ...]: pipelines split on newline ; && || and stages on |, OUTSIDE quotes. A plain regex split
+    cut quoted note text at its ';' and scored the pieces as commands (31 Oct 21:4x, a brain.py remember whose
+    --evidence held a ';'). An unclosed quote returns the whole command as one stage (never masked)."""
+    pipes, stages, cur, q, i, s = [], [], [], "", 0, cmd or ""
+    while i < len(s):
+        c = s[i]
+        if q:
+            cur.append(c)
+            if c == "\\" and q == '"' and i + 1 < len(s):
+                cur.append(s[i + 1]); i += 2; continue
+            if c == q:
+                q = ""
+            i += 1; continue
+        if c in "'\"":
+            q = c; cur.append(c); i += 1; continue
+        two = s[i:i + 2]
+        if two in ("&&", "||") or c in "\n;":
+            stages.append("".join(cur)); pipes.append(stages); stages, cur = [], []
+            i += 2 if two in ("&&", "||") else 1; continue
+        if c == "|":
+            stages.append("".join(cur)); cur = []; i += 1; continue
+        cur.append(c); i += 1
+    if q:
+        return [[s]]
+    stages.append("".join(cur)); pipes.append(stages)
+    return pipes
+
+
+def _action_text(cmd):
+    """The command with reader segments and note-writer segments removed: what the production labels are scored on.
+    A segment holding $( ), a backtick or <( ) is kept whole, as is anything shlex cannot parse."""
+    keep = []
+    for stages in _split_cmd(cmd):
+        pipeline = "|".join(stages)
+        # a reader piped into anything that runs ("grep -r x . | xargs python") feeds that stage: keep the whole pipeline
+        if "`" in pipeline or "$(" in pipeline or "<(" in pipeline or \
+                any(_seg_kind(s) == "other" for s in stages):
+            keep.append(pipeline)
+    return "\n".join(keep)
+
+
 def main():
     if any(a in ("-h", "--help") for a in sys.argv[1:]):
         # Discovery is not execution: this script writes, so a help request must
@@ -397,6 +522,15 @@ def main():
             hits = {"a secret / security credential": 3} if SECRET_VALUE.search(text) else {}
         else:
             hits = _score(text)
+            if ev == "PreToolUse" and tool in ("Bash", "PowerShell"):
+                # production labels count only on what the command RUNS: reader segments and the text arguments
+                # of note writers (checklist, mesh, brain remember) are dropped first; other labels stay as scored.
+                _left = _score(_action_text((data.get("tool_input", {}) or {}).get("command", "") or ""))
+                for _lab in ("a LIVE production action", "the live production stack"):
+                    if _lab in _left:
+                        hits[_lab] = _left[_lab]
+                    else:
+                        hits.pop(_lab, None)
         if not hits:
             _emit_guard(ev, guard)
             return

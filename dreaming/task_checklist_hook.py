@@ -70,7 +70,16 @@ PROBE_RX = re.compile(r"^\s*(\[probe\]|Automated delivery probe of a hook\b"
                       # (any picture-maker brief: a worker's image brief once put seven entries on the owner's list)
                       r"|\[headless-worker\]|You are (?:a|the) picture maker\b"
                       # the harness's continuation turn after a usage-limit reset (one entry per session)
-                      r"|Your claude\.ai usage limit has reset\b)", re.I)
+                      r"|Your claude\.ai usage limit has reset\b"
+                      # a Codex liveness ping (one open entry per ping session buried the real asks)
+                      r"|Reply with the single word OK\.?\s*$"
+                      # a coordinator's round prompt to its Codex workers
+                      r"|=== OPEN CALLS \(read this first\) ==="
+                      # Codex worker stage and relaunch prompts written by runners (stage, relaunch, roster, resume)
+                      r"|Next stage \(\d{4}-\d\d-\d\d \d\d:\d\d UTC\)\. Read "
+                      r"|It is \d\d:\d\d local\. Your last run (?:ended|stopped)\b"
+                      r"|You are A\d+, one of \d+ Codex agents\b"
+                      r"|Continue from where you stopped: read your STATUS\.md)", re.I)
 
 QUESTION_RX = re.compile(
     r"(what (did|have) i (ask|tell|give)|what (are|is) (the |my |all the )?agents? (working|doing|on)"
@@ -162,6 +171,8 @@ class _Lock(object):
                 os.write(fd, str(os.getpid()).encode("ascii"))
                 os.close(fd)
                 _LOCK_DEPTH[0] += 1
+                if _LOCK_DEPTH[0] == 1:
+                    _LOCK_T0[0] = time.time()
                 return self
             except FileExistsError:
                 try:
@@ -185,6 +196,15 @@ class _Lock(object):
         except OSError:
             pass
         _LOCK_DEPTH[0] = max(0, _LOCK_DEPTH[0] - 1)
+        if _LOCK_DEPTH[0] == 0 and _LOCK_T0[0]:
+            held = time.time() - _LOCK_T0[0]
+            _LOCK_T0[0] = 0.0
+            if held > 3.0:
+                # name the long holders: refusals went on after the reader fix
+                try:
+                    log("lock held %.1f s by pid %d: %s" % (held, os.getpid(), " ".join(sys.argv[1:3])[:80]))
+                except Exception:
+                    pass
         if _LOCK_DEPTH[0] == 0 and _PENDING_VIEW:
             st, mt = _PENDING_VIEW.pop("st"), _PENDING_VIEW.pop("mtime")
             _PENDING_VIEW.clear()
@@ -196,6 +216,7 @@ class _Lock(object):
 
 # write_view() inside a held lock leaves its state here for _Lock.__exit__ to render once the lock is released
 _LOCK_DEPTH = [0]
+_LOCK_T0 = [0.0]
 _PENDING_VIEW = {}
 
 
@@ -212,8 +233,83 @@ def _backup_path():
     return STATE + ".hourly"
 
 
+def _win32():
+    """kernel32 with the two calls the shared read and the POSIX replace need, or None off Windows."""
+    if os.name != "nt":
+        return None
+    k32 = globals().get("_K32")
+    if k32 is None:
+        import ctypes
+        from ctypes import wintypes
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.CreateFileW.restype = wintypes.HANDLE
+        k32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID, wintypes.DWORD,
+                                    wintypes.DWORD, wintypes.HANDLE]
+        k32.SetFileInformationByHandle.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
+        k32.CloseHandle.argtypes = [wintypes.HANDLE]
+        globals()["_K32"] = k32
+    return k32
+
+
+def _open_shared(path, binary=False):
+    """Open for reading with FILE_SHARE_DELETE, so a writer's POSIX replace never waits on this reader (2 Nov 21:3x:
+    plain open() readers made os.replace fail for up to 28.6 s while the checklist lock was held; the reader keeps
+    the old file's bytes, a whole snapshot). Falls back to a plain open off Windows or on any failure."""
+    k32 = _win32()
+    if k32 is not None:
+        try:
+            import ctypes, msvcrt
+            h = k32.CreateFileW(os.path.abspath(path), 0x80000000, 7, None, 3, 0x80, None)   # GENERIC_READ, share RWD
+            if h not in (None, ctypes.c_void_p(-1).value):
+                fd = msvcrt.open_osfhandle(h, os.O_RDONLY | os.O_BINARY)
+                raw = os.fdopen(fd, "rb")
+                return raw if binary else io.TextIOWrapper(raw, encoding="utf-8")
+            err = ctypes.get_last_error()
+            if err in (2, 3):
+                raise FileNotFoundError(2, "No such file", path)
+        except FileNotFoundError:
+            raise
+        except Exception:
+            pass
+    return io.open(path, "rb") if binary else io.open(path, encoding="utf-8")
+
+
+def _posix_replace(src, dst):
+    """Rename src over dst with FILE_RENAME_FLAG_POSIX_SEMANTICS: succeeds while readers hold dst open with share-delete
+    (they keep the old bytes). Returns False when the call is unavailable here; raises PermissionError while a reader
+    without share-delete holds dst."""
+    k32 = _win32()
+    if k32 is None:
+        return False
+    import ctypes
+    from ctypes import wintypes
+    h = k32.CreateFileW(os.path.abspath(src), 0x00010000 | 0x80000000, 7, None, 3, 0x80, None)   # DELETE|GENERIC_READ
+    if h in (None, ctypes.c_void_p(-1).value):
+        err = ctypes.get_last_error()
+        globals()["_REPL_WHY"] = "src %d" % err
+        if err in (5, 32):     # the fresh temp is held (a scanner reading the new file): wait, do not fall back
+            raise PermissionError(err, "temp held", src)
+        return False
+    try:
+        name = os.path.abspath(dst)
+
+        class _Info(ctypes.Structure):
+            _fields_ = [("Flags", wintypes.DWORD), ("RootDirectory", wintypes.HANDLE),
+                        ("FileNameLength", wintypes.DWORD), ("FileName", ctypes.c_wchar * (len(name) + 1))]
+        info = _Info(0x1 | 0x2, None, len(name) * 2, name)    # REPLACE_IF_EXISTS | POSIX_SEMANTICS
+        if k32.SetFileInformationByHandle(h, 22, ctypes.byref(info), ctypes.sizeof(info)):   # FileRenameInfoEx
+            return True
+        err = ctypes.get_last_error()
+    finally:
+        k32.CloseHandle(h)
+    globals()["_REPL_WHY"] = "dst %d" % err
+    if err in (5, 32):
+        raise PermissionError(err, "replace blocked by a reader", dst)
+    return False
+
+
 def _read_json(path):
-    with io.open(path, encoding="utf-8") as fh:
+    with _open_shared(path) as fh:
         return json.load(fh)
 
 
@@ -241,7 +337,7 @@ def _state_looks_whole(path):
     A file that cannot even be opened counts as whole: falling back on it is the one move that loses the list."""
     try:
         n = os.path.getsize(path)
-        with io.open(path, "rb") as fh:
+        with _open_shared(path, binary=True) as fh:
             head = fh.read(1)
             fh.seek(max(0, n - 64))
             tail = fh.read()
@@ -284,12 +380,19 @@ def load_state():
 def _replace_retrying(tmp, dest, tries=60):
     """os.replace, retried: on Windows it fails with PermissionError while any other process has dest open, and with
     the 9 Oct wave's fifty workers reading state.json on every prompt that cost 33 lost writes in an evening (hook.log)."""
+    t0 = time.time()
     for k in range(tries):
         try:
-            os.replace(tmp, dest)
+            if not _posix_replace(tmp, dest):
+                os.replace(tmp, dest)
+            if k:   # 2 Nov 21:2x: measure how long a writer waits on readers (lock holds of 20-28 s seen)
+                log("replace waited %.1f s over %d tries (last block: %s)" % (time.time() - t0, k + 1,
+                                                                          globals().get("_REPL_WHY", "?")))
             return
         except PermissionError:
             if k == tries - 1:
+                log("replace gave up after %.1f s over %d tries (last block: %s)" % (time.time() - t0, tries,
+                                                                           globals().get("_REPL_WHY", "?")))
                 raise
             time.sleep(0.05 + 0.01 * k)
 

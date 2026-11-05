@@ -276,6 +276,26 @@ def unmatched_words(query_terms, corpus_low):
     return [t for t in query_terms if len(t) >= 4 and corpus_low.find(t) < 0]
 
 
+_FAST_OFF_TOLD = set()
+
+
+def _say_fast_off(fr):
+    """One stderr line, once per reason per process, when the prepared fast path was not used. Before 31 Oct the
+    fallback was silent: a peer's in-place edit of retrieval.py turned it off for every agent and one question took
+    347 s instead of 22 s with nothing printed. MATH_RECALL_FAST=0 is a choice and says nothing."""
+    try:
+        why = str((getattr(fr, "STATUS", None) or {}).get("why") or "unknown reason")
+        if why == "MATH_RECALL_FAST=0" or why in _FAST_OFF_TOLD or os.environ.get("MATH_RECALL_QUIET_FALLBACK") == "1":
+            return
+        _FAST_OFF_TOLD.add(why)
+        sys.stderr.write("[math_recall] fast path OFF (%s): every card and link is read from the store, about 10x "
+                         "slower. If retrieval.py was edited, land it with a re-pinned fastrecall.PIN_RETRIEVAL.\n"
+                         % why)
+        sys.stderr.flush()
+    except Exception:
+        pass
+
+
 def derive_tool(nodes, edges):
     """What a printout reads besides the search, from every card and link: titles, which card supersedes which, the
     link kinds of each pair, each card's links in store order, and the short ids. Plain values only, so fastrecall.py
@@ -762,6 +782,8 @@ def main(argv=None):
         if query and fr.wants_encoder(queries, R):
             enc = fr.Encoder().start()
         P = fr.open_prepared(a.store, R, derive_tool, __file__)
+        if P is None:
+            _say_fast_off(fr)
     try:
         if P is not None:
             nodes, edges, by_id, tool = None, None, P.node_map(), P.tool

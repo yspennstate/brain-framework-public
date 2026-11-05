@@ -60,9 +60,12 @@ def log(msg):
 # BRAIN_ variables brain.py reads on each call (never at import), so the server applies the caller's value for the call
 # instead of declining. 3 Nov 2026: 91 of 98 recall calls were declined "brain env differs", all from compact_nodes.py's
 # linker, which sets BRAIN_RECALL_REFRESH=0. BRS_PER_CALL_ENV=0 restores the old decline.
-# 5 Nov 2026 (claude-7df69752): BRAIN_RECALL_LOG too. graph_lane.log_recall reads it on each call, and every test bank
-# sets BRAIN_RECALL_LOG=0, so all of them were declined and ran cold.
-PER_CALL_ENV = () if os.environ.get("BRS_PER_CALL_ENV", "1") == "0" else ("BRAIN_RECALL_REFRESH", "BRAIN_RECALL_LOG")
+# 5 Nov 2026 (claude-7df69752, Mac): BRAIN_RECALL_LOG too. graph_lane.log_recall reads it on each call, and every test
+# bank sets BRAIN_RECALL_LOG=0, so all of them were declined and ran cold.
+# 5 Nov 2026 (claude-83c711d4, the research box): BRAIN_HEADLESS_DIET too. Only hook_dispatch reads it, never recall, and it
+# was the laptop's one remaining env decline (55 calls in 24 h).
+PER_CALL_ENV = () if os.environ.get("BRS_PER_CALL_ENV", "1") == "0" else (
+    "BRAIN_RECALL_REFRESH", "BRAIN_RECALL_LOG", "BRAIN_HEADLESS_DIET")
 CLIENT_ONLY_ENV = ("BRAIN_RECALL_SERVER",)   # read by brain_recall_client, never by brain.py
 
 

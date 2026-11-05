@@ -648,6 +648,7 @@ import zlib as _fc_zlib
 
 _FC_VERSION = "r02-2"
 _FC_DF = {}
+_FC_ROWS = {}   # postings sidecar identity -> (pos_slug, slug_pos, base): its d table, read and checked once
 _FC_LIGHT_OK = ({}, None, 0.0)   # truthy, and its matrix has no dtype: _semantic_scores goes on to the full reader
 
 
@@ -790,7 +791,18 @@ def _fc_fresh_memories(bm):
     bm._load_payload = slugs_only
     try:
         sig0 = bm._index_signature(bm.INDEX)
-        out = bm.fresh_memories(bm.MEM, bm.INDEX)
+        # the call's one listing of the memory folder (R19) instead of a second scandir (29 Oct 2026, RECALL-10X
+        # lead 6: 1.3 s -> 0.25 s per recall on the 38k-entry folder, output equal)
+        got = _memlist()
+        out = None
+        if got is not None:
+            try:
+                if os.path.normcase(os.path.abspath(bm.MEM)) == os.path.normcase(os.path.abspath(MEM)):
+                    out = bm.fresh_memories(bm.MEM, bm.INDEX, entries=got[0])
+            except TypeError:
+                out = None
+        if out is None:
+            out = bm.fresh_memories(bm.MEM, bm.INDEX)
         if sig0 is not None and bm._index_signature(bm.INDEX) == sig0:
             _FC_FRESH_SIG = sig0
         return out
@@ -863,14 +875,15 @@ class _FcOverlayDf:
 class _FcOverlay:
     """BM25.from_payload(refresh_in_memory()) for one recall, read from the sidecar and the fresh documents."""
 
-    def __init__(self, bm, con, pos_rows, base_df, n_old, sum_old, fresh, gone, docs):
+    def __init__(self, bm, con, pos_rows, base_df, n_old, sum_old, fresh, gone, docs, maps=None):
         # pos_rows: the sidecar's (position, slug) rows in position order. Positions are ordered, not always 0..n-1
         # (bm25 I1 places a changed document past the base's last position); the fresh documents rank after them all.
+        # maps: (pos_slug, slug_pos, base) already built from those rows (_fc_rows keeps them per sidecar); read only.
         self._bm, self._con, self._base_df = bm, con, base_df
-        self._pos_slug = dict(pos_rows)
-        self._base = pos_rows[-1][0] + 1 if pos_rows else 0
+        if maps is None:
+            maps = (dict(pos_rows), {s: p for p, s in pos_rows}, pos_rows[-1][0] + 1 if pos_rows else 0)
+        self._pos_slug, slug_pos, self._base = maps
         self._blobs, self._dfc, self._fallback = {}, {}, None
-        slug_pos = {s: p for p, s in pos_rows}
         self._added = []          # (slug, tf, dl): the fresh slugs that have tokens, in merge order
         self._fresh_df = {}
         for slug in fresh:
@@ -1017,9 +1030,7 @@ def _fc_overlay(bm, fresh, gone):
         sum_old = int(round(avgdl_old * n_old)) if n_old > 0 else 0
         if n_old < 1 or n_old != n_f or sum_old / n_old != avgdl_old:
             raise ValueError("the header's n and avgdl are not a count and a mean of integer lengths")
-        rows = con.execute("select pos, slug from d order by pos").fetchall()
-        if len(rows) != n_old or rows[0][0] < 0 or any(rows[i][0] >= rows[i + 1][0] for i in range(len(rows) - 1)):
-            raise ValueError("the d table is not n increasing positions")
+        maps = _fc_rows(con, p, h, n_old)
         base_df = _fc_vocab_df(con)
         if base_df is None:
             raise LookupError("no vocabulary")
@@ -1028,7 +1039,7 @@ def _fc_overlay(bm, fresh, gone):
         # each listing of a slug re-appends it, so a slug listed twice sits where it was listed last
         order = list(dict.fromkeys(reversed(fresh)))[::-1]
         docs = {slug: bm.read_doc(bm.MEM, slug) for slug in order}
-        ov = _FcOverlay(bm, con, rows, base_df, n_old, sum_old, order, gone, docs)
+        ov = _FcOverlay(bm, con, None, base_df, n_old, sum_old, order, gone, docs, maps=maps)
         # refresh_in_memory counts a slug listed twice twice (one memory with two changed attachments); so does the
         # printed count here
         return ov, sum(1 for slug in fresh if docs.get(slug)), len(gone)
@@ -1039,6 +1050,34 @@ def _fc_overlay(bm, fresh, gone):
             except Exception:
                 pass
         return None
+
+
+def _fc_rows(con, path, hdr, n_old):
+    """(pos_slug, slug_pos, base) of the postings sidecar open on `con`, at `path`: its d table read, checked (n rows,
+    positions increasing from >= 0) and turned into the two dicts once per sidecar identity. Every folder drop used to
+    do all three again, about 0.14 s warm on 51k rows (overlay_split, 4 Nov 2026). A sidecar is built under a temporary
+    name and renamed into place, and os.replace over an open sqlite file is refused on Windows, so the path's stat plus
+    the header keys it. The dicts are shared by every overlay of that sidecar and only read. BRAIN_OVL_ROWC=0 reads the
+    table every call."""
+    key = None
+    if os.environ.get("BRAIN_OVL_ROWC", "1") != "0":
+        try:
+            st = os.stat(path)
+            key = (os.path.abspath(path), st.st_ino, st.st_size, st.st_mtime_ns,
+                   hdr.get("signature"), hdr.get("n"), hdr.get("avgdl"))
+        except Exception:
+            key = None
+        v = _FC_ROWS.get(key) if key is not None else None
+        if v is not None:
+            return v
+    rows = con.execute("select pos, slug from d order by pos").fetchall()
+    if len(rows) != n_old or rows[0][0] < 0 or any(rows[i][0] >= rows[i + 1][0] for i in range(len(rows) - 1)):
+        raise ValueError("the d table is not n increasing positions")
+    v = (dict(rows), {s: p for p, s in rows}, rows[-1][0] + 1)
+    if key is not None:
+        _FC_ROWS.clear()
+        _FC_ROWS[key] = v
+    return v
 
 
 def _fc_light_embeddings():
@@ -1099,7 +1138,7 @@ def _fc_walk_load(gl, d):
     g = _diff.Diffusion.__new__(_diff.Diffusion)
     g.names, g.meta = v["names"], v["meta"]
     g.N = len(g.names)
-    g.id = {n: i for i, n in enumerate(g.names)}
+    g.id = _diff._name_index(g.names, path, store)   # sorted-order index, as Diffusion._load (2 Nov); BRAIN_WALK_NAME_INDEX=0 keeps the dict
     g.alpha, g.iters, g.dtype = alpha, iters, np.float32
     g.PT = _diff.CSR(z["data"], z["indices"], z["indptr"], g.N)
     g.dangling, g.p0, g.out_sum = z["dangling"], z["p0"], z["out_sum"]
@@ -1238,12 +1277,143 @@ def _memlist():
         if got is None:
             try:
                 t = time.time_ns()
-                with os.scandir(MEM) as it:
-                    got = (list(it), t)
+                lst = _fast_listing(MEM)
+                if lst is not None:
+                    got = (lst, t)
+                else:
+                    with os.scandir(MEM) as it:
+                        got = (list(it), t)
             except Exception:
                 got = False
             _MEMLIST["got"] = got
     return got or None
+
+
+# FAST LISTING (29 Oct 2026, RECALL-10X lead 6). The call's one listing of the 38k-entry memory folder was the largest
+# piece left on recall's main thread (2-7 s inclusive under load). One FindFirstFileExW pass with FindExInfoBasic and
+# FIND_FIRST_EX_LARGE_FETCH returns the same names in the same order with the same attributes, size and times that a
+# Windows DirEntry carries (its stat also comes from the listing; ino, dev and nlink are 0 there too), so _FastEntry
+# answers name, path, is_file, is_dir, is_symlink and stat() as DirEntry does. Equal on all 38,423 entries; median
+# 1.12 s against scandir's 2.22 s over 12 rotated rounds on the loaded laptop. None (scandir is used) off Windows, on
+# any API error, on a reparse point, or with BRAIN_RECALL_FASTLIST=0.
+_FL_API = []
+_FL_EPOCH = 116444736000000000
+
+
+class _FastStat(object):
+    __slots__ = ("st_size", "st_mtime_ns", "st_ctime_ns", "st_birthtime_ns", "st_atime_ns", "st_file_attributes",
+                 "st_mode")
+    st_ino = st_dev = st_nlink = st_uid = st_gid = st_reparse_tag = 0
+
+    @staticmethod
+    def _f(ns):
+        s, n = divmod(ns, 1000000000)
+        return s + n * 1e-9
+
+    st_mtime = property(lambda self: self._f(self.st_mtime_ns))
+    st_ctime = property(lambda self: self._f(self.st_ctime_ns))
+    st_birthtime = property(lambda self: self._f(self.st_birthtime_ns))
+    st_atime = property(lambda self: self._f(self.st_atime_ns))
+
+
+class _FastEntry(object):
+    __slots__ = ("name", "path", "_st", "_dir")
+
+    def is_dir(self, follow_symlinks=True):
+        return self._dir
+
+    def is_file(self, follow_symlinks=True):
+        return not self._dir
+
+    def is_symlink(self):
+        return False
+
+    def is_junction(self):
+        return False
+
+    def stat(self, follow_symlinks=True):
+        return self._st
+
+    def inode(self):
+        return os.stat(self.path, follow_symlinks=False).st_ino
+
+    def __fspath__(self):
+        return self.path
+
+
+def _fast_listing(folder):
+    """[_FastEntry] in os.scandir's order for folder, or None (the caller lists with os.scandir)."""
+    if os.name != "nt" or os.environ.get("BRAIN_RECALL_FASTLIST", "1") == "0":
+        return None
+    try:
+        import ctypes
+        if not _FL_API:
+            import struct
+            from ctypes import wintypes
+
+            class _FT(ctypes.Structure):
+                _fields_ = [("lo", wintypes.DWORD), ("hi", wintypes.DWORD)]
+
+            class _WFD(ctypes.Structure):
+                _fields_ = [("attr", wintypes.DWORD), ("ctime", _FT), ("atime", _FT), ("mtime", _FT),
+                            ("size_hi", wintypes.DWORD), ("size_lo", wintypes.DWORD), ("r0", wintypes.DWORD),
+                            ("r1", wintypes.DWORD), ("name", ctypes.c_wchar * 260), ("alt", ctypes.c_wchar * 14),
+                            ("x0", wintypes.DWORD), ("x1", wintypes.DWORD), ("x2", wintypes.WORD)]
+
+            k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            first = k32.FindFirstFileExW
+            first.restype = wintypes.HANDLE
+            first.argtypes = [wintypes.LPCWSTR, ctypes.c_int, ctypes.POINTER(_WFD), ctypes.c_int, ctypes.c_void_p,
+                              wintypes.DWORD]
+            nxt = k32.FindNextFileW
+            nxt.restype = wintypes.BOOL
+            nxt.argtypes = [wintypes.HANDLE, ctypes.POINTER(_WFD)]
+            close = k32.FindClose
+            close.restype = wintypes.BOOL
+            close.argtypes = [wintypes.HANDLE]
+            # attr, ctime, atime, mtime, size_hi, size_lo: the first 36 bytes of WIN32_FIND_DATAW
+            _FL_API.append((_WFD, first, nxt, close, wintypes.HANDLE(-1).value, struct.Struct("<IQQQII").unpack_from))
+        _WFD, first, nxt, close, invalid, unpack = _FL_API[0]
+        folder = os.fspath(folder)
+        d = _WFD()
+        ref = ctypes.byref(d)
+        h = first(os.path.join(folder, "*"), 1, ref, 0, None, 2)   # FindExInfoBasic, FIND_FIRST_EX_LARGE_FETCH
+        if h is None or h == invalid:
+            return None
+        out = []
+        join, sb, addr, E = os.path.join, ctypes.string_at, ctypes.addressof(d), _FL_EPOCH
+        try:
+            while True:
+                attr, c, a, m, shi, slo = unpack(sb(addr, 36))
+                name = d.name
+                if name != "." and name != "..":
+                    if attr & 0x400:            # reparse point: scandir follows it for is_file and stat
+                        return None
+                    st = _FastStat()
+                    st.st_size = (shi << 32) | slo
+                    st.st_mtime_ns = (m - E) * 100
+                    c = (c - E) * 100
+                    st.st_ctime_ns = c
+                    st.st_birthtime_ns = c
+                    st.st_atime_ns = (a - E) * 100
+                    st.st_file_attributes = attr
+                    isdir = bool(attr & 0x10)
+                    st.st_mode = (0o40111 if isdir else 0o100000) | (0o444 if attr & 0x1 else 0o666)
+                    e = _FastEntry()
+                    e.name = name
+                    e.path = join(folder, name)
+                    e._st = st
+                    e._dir = isdir
+                    out.append(e)
+                if not nxt(h, ref):
+                    if ctypes.get_last_error() != 18:   # ERROR_NO_MORE_FILES
+                        return None
+                    break
+        finally:
+            close(h)
+        return out
+    except Exception:
+        return None
 
 
 def _memlist_md(got):
@@ -1294,28 +1464,191 @@ def _fc_md_signature(ss):
     return hashlib.sha256(repr(rows).encode("utf-8", "surrogateescape")).hexdigest(), len(rows)
 
 
+_SUP_DELTA_MAX = 64   # files a delta may look at; a larger change goes to the real reader
+
+
+_SUPROWC_ON = os.environ.get("BRAIN_SUP_ROWC", "1") != "0"
+_SUPROWC = {}
+
+
+def _sup_rows(ss):
+    """supersession's view of the memory folder as [(name, stat key)] in listing order, and the moment it was taken:
+    the call's one listing inside a recall (R19), else a listing of its own."""
+    got = _memlist()
+    if got is not None and _SUPROWC_ON:
+        # The call's listing is the recall server's resident one, which keeps an unchanged file's entry object and
+        # replaces it when the folder watcher reports that name; so an entry object seen before has the stat already
+        # read: name -> (entry, row or None). Same answer as the list below on 22 of 22 forced folder drops, row build
+        # 112 -> 19 ms on the 51k-entry folder (4 Nov 2026, claude-738954b6, TOP10 rank 3,
+        # recall_10x_2026_10_29/folder_drop_2026_11_04/incr_bench.py, incr_parity.py). BRAIN_SUP_ROWC=0 turns it off.
+        try:
+            ents, now_ns = got[0], got[1]
+            out, get, sk = [], _SUPROWC.get, ss._stat_key
+            for e in ents:
+                n = e.name
+                v = get(n)
+                if v is not None and v[0] is e:
+                    if v[1] is not None:
+                        out.append(v[1])
+                    continue
+                r = (n, tuple(sk(e.stat()))) if (n.endswith(".md") and e.is_file()) else None
+                _SUPROWC[n] = (e, r)
+                if r is not None:
+                    out.append(r)
+            if len(_SUPROWC) > 2 * len(ents) + 1000:
+                _SUPROWC.clear()
+            return out, now_ns
+        except Exception:
+            _SUPROWC.clear()
+    if got is not None:
+        entries, now_ns = _memlist_md(got), got[1]
+    else:
+        now_ns = time.time_ns()
+        entries = ss._md_files(MEM)
+    return [(e.name, tuple(ss._stat_key(e.stat()))) for e in entries], now_ns
+
+
+def _sup_base(ss, rows):
+    """The pointer facts behind the answer the real reader just gave, from supersession's own frontmatter cache:
+    {name: (strict, candidate)} for every file that carries a pointer, and the case-folded names a route can touch
+    (pointer holders, their targets and candidates, both sides of every index line). None unless that cache describes
+    exactly this listing (another process may have rewritten it since)."""
+    try:
+        with io.open(os.path.join(ss.HERE, ss._FM_CACHE_NAME), encoding="utf-8") as fh:
+            data = json.load(fh)
+        if data.get("version") != ss._FM_CACHE_VERSION or data.get("memory_dir") != os.path.abspath(MEM):
+            return None
+        files = data["files"]
+        if len(files) != len(rows):
+            return None
+        ptr = {}
+        for name, k in rows:
+            v = files.get(name)
+            if not (isinstance(v, list) and len(v) == 6 and tuple(v[:4]) == k):
+                return None
+            if v[4] or v[5]:
+                ptr[name] = (v[4], v[5])
+        nc = os.path.normcase
+        inv = set()
+        for name, pair in ptr.items():
+            inv.add(nc(name[:-3]))
+            inv.update(nc(t) for t in pair if t)
+        with io.open(SUPERSEDED_INDEX, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                inv.update(nc(t.strip()) for t in line.rstrip("\n").split("\t")[:2] if t.strip())
+        return ptr, sorted(inv)
+    except Exception:
+        return None
+
+
+def _sup_quiet(ss, changed, cur, ptr, inv):
+    """True when no changed file can move the answer: it carried no pointer before, carries none now, and no pointer
+    or index line names it. Then the routes are the same and the file only adds or drops a slug nothing resolves
+    through, so active_supersessions gives the same map."""
+    nc = os.path.normcase
+    for name in changed:
+        if name in ptr or nc(name[:-3]) in inv:
+            return False
+        if name in cur:
+            try:
+                head = ss._read_frontmatter(os.path.join(MEM, name))
+                if ss._frontmatter_target(head) or ss._lenient_candidate(head):
+                    return False
+            except Exception:
+                return False
+    return True
+
+
 def _fc_superseded_wrap(real):
     """brain._load_superseded (active_supersessions with frontmatter authority) read once per state of the memory
-    folder: the key is supersession's own per-file identity (size, mtime, ctime, birth time) over its own listing, the
-    supersession index file and supersession.py. A miss calls the real reader and stores its answer under the key taken
-    before the call; if the folder moved meanwhile that key belongs to a state that cannot come back (a write moves a
-    file's mtime and ctime forward), so the entry is never served."""
+    folder, and carried across other agents' writes. The head entry, keyed by the index file and supersession.py,
+    holds the digest of the folder's (name, stat key) listing, the answer, and the pointer facts behind it; the listing
+    itself is stored beside it. Same digest and no file under 6 s old: the answer. Otherwise the files whose key moved
+    (or that are that young, or that went away) are looked at; when none carries a pointer or is named by one
+    (_sup_quiet), the answer cannot have moved and is served, and the head moves to the new listing. Anything else,
+    or more than _SUP_DELTA_MAX files, goes to the real reader, whose answer is stored under the listing taken before
+    the call, with the pointer facts read back from supersession's own cache for that same listing.
+    (29 Oct 2026: the old key was the digest alone, so any write to the folder between two recalls cost the next one
+    the real reader, about 2.7 s on the loaded laptop; a file under 6 s old disabled the cache outright.)"""
+    # In-process memo (3 Nov 2026, claude-738954b6): the resident server served every recall through the delta path,
+    # because CONSCIENCE.md is rewritten between almost any two calls; each call re-made repr() of the 50k-row listing
+    # (0.28 s) and re-read and re-dicted the stored listing (0.16 s). The digest is now joined from per-row repr
+    # strings kept across calls (the same string, so the same digest), and the last stored listing is kept as a dict.
+    # BRAIN_SUP_MEMO=0 turns it off.
+    memo = {}
+
+    def _sig(rows):
+        if os.environ.get("BRAIN_SUP_MEMO", "1") == "0":
+            return hashlib.sha256(repr(rows).encode("utf-8", "surrogateescape")).hexdigest()
+        # An unchanged folder gives back the same row tuples (_sup_rows' entry cache), so comparing with the last rows
+        # is a pointer walk; the digest is the one the last call made. 74 -> 0.5 ms a call on 52k rows (4 Nov 2026,
+        # claude-738954b6, recall_10x_2026_10_29/served_profile_20261104/sigbench.py).
+        last = memo.get("last")
+        if last is not None and last[0] == rows:
+            return last[1]
+        s = _sig_build(rows)
+        memo["last"] = (rows, s)
+        return s
+
+    def _sig_build(rows):
+        rr = memo.get("rr")
+        if rr is None or len(rr) > 2 * len(rows) + 1000:
+            rr = memo["rr"] = {}
+        parts = []
+        for n, k in rows:
+            v = rr.get(n)
+            if v is None or v[0] != k:
+                v = rr[n] = (k, repr((n, k)))
+            parts.append(v[1])
+        return hashlib.sha256(("[" + ", ".join(parts) + "]").encode("utf-8", "surrogateescape")).hexdigest()
+
+    def _old_rows(key, hsig):
+        on = os.environ.get("BRAIN_SUP_MEMO", "1") != "0"
+        got = memo.get("old") if on else None
+        if got is not None and got[0] == (key, hsig):
+            return got[1]
+        old = _fc_get("superseded_rows", (key, hsig))
+        if not isinstance(old, list):
+            return None
+        old = dict(old)
+        if on:
+            memo["old"] = ((key, hsig), old)
+        return old
+
     def _load_superseded():
         try:
             import supersession as _ss
-            sig = _fc_md_signature(_ss)
-            key = (os.path.abspath(MEM), sig, _fc_ident(SUPERSEDED_INDEX), _fc_ident(_ss.__file__),
-                   _ss._FM_CACHE_VERSION)
+            rows, now_ns = _sup_rows(_ss)
+            key = (os.path.abspath(MEM), _fc_ident(SUPERSEDED_INDEX), _fc_ident(_ss.__file__), _ss._FM_CACHE_VERSION)
         except Exception:
             return real()
-        if sig is None:
+        if not rows:
             return real()
-        v = _fc_get("superseded", key)
-        if isinstance(v, dict):
-            return v
+        recent = {n for n, k in rows if now_ns - k[1] < 6_000_000_000}
+        sig = _sig(rows)
+        head = _fc_get("superseded_head", key)
+        if isinstance(head, (list, tuple)) and len(head) == 4 and isinstance(head[1], dict):
+            hsig, ans, ptr, inv = head
+            if hsig == sig and not recent:
+                return ans
+            old = _old_rows(key, hsig)
+            if old is not None:
+                cur = dict(rows)
+                changed = [n for n, k in rows if n in recent or old.get(n) != k]
+                changed += [n for n in old if n not in cur]
+                if len(changed) <= _SUP_DELTA_MAX and _sup_quiet(_ss, changed, cur, ptr, set(inv)):
+                    if not recent and hsig != sig:
+                        _fc_put("superseded_rows", (key, sig), rows, keep=2)
+                        _fc_put("superseded_head", key, (sig, ans, ptr, inv), keep=2)
+                        if os.environ.get("BRAIN_SUP_MEMO", "1") != "0":
+                            memo["old"] = ((key, sig), cur)   # the rows just stored under sig, as the next call reads them
+                    return ans
         res = real()
-        if isinstance(res, dict) and _fc_ident(SUPERSEDED_INDEX) == key[2]:
-            _fc_put("superseded", key, res)
+        if isinstance(res, dict) and _fc_ident(SUPERSEDED_INDEX) == key[1]:
+            base = _sup_base(_ss, rows)
+            if base is not None:
+                _fc_put("superseded_rows", (key, sig), rows, keep=2)
+                _fc_put("superseded_head", key, (sig, res, base[0], base[1]), keep=2)
         return res
     _load_superseded._r02 = True
     return _load_superseded
@@ -1470,6 +1803,14 @@ def _fc_layer():
                 sr._load_graph = _fc_spread_graph_wrap(sr, sr._load_graph)
         except Exception:
             pass
+        # the seed arm's filename match reads this call's listing instead of a second os.listdir (3 Nov 2026,
+        # claude-738954b6; 2.2 s a warm served call). BRAIN_SEED_ONESCAN=0 turns it off.
+        if opened and os.environ.get("BRAIN_SEED_ONESCAN", "1") != "0" and getattr(sr, "MEM_NAMES", 0) is None:
+            def _seed_names():
+                got = _memlist()
+                return [e.name for e in got[0]] if got else None
+            undo.append((sr, "MEM_NAMES", None))
+            sr.MEM_NAMES = _seed_names
         try:
             import graph_lane as _gl
             if not getattr(_gl._graph, "_r02", False):
@@ -1588,15 +1929,27 @@ def _semantic_scores(seeds, diag=None):
         # result set while cutting warm validation from ~430 ms to tens of milliseconds.
         # Rank only active rows. Digest-bound publication masks and local stat drift can leave
         # inactive matrix rows; letting them enter the top-256 could crowd out every safe result.
-        candidates = sorted(
+        _order = sorted(
             ((slug, int(row)) for slug, row in idx_e.items()),
             key=lambda item: -float(cos[item[1]]),
-        )[:256]
+        )
+        _passed = set()
+        if os.environ.get("BRAIN_EMB_LAZY") == "1":
+            # lazy load: idx_e holds every row, current or not, so walk the cosine order until 256 pass
+            candidates = []
+            for _s, _i in _order:
+                if row_current(_s):
+                    candidates.append((_s, _i))
+                    _passed.add(_s)
+                    if len(candidates) >= 256:
+                        break
+        else:
+            candidates = _order[:256]
         for s in seeds:
             if s in idx_e and all(s != existing for existing, _ in candidates):
                 candidates.append((s, idx_e[s]))
         for s, i in candidates:
-            if row_current(s):
+            if s in _passed or row_current(s):
                 out[s] = max(0.0, (float(cos[i]) - bias) / (1.0 - bias))
         return out
     except Exception:
@@ -1820,12 +2173,15 @@ def _qemb_start(query):
 
 def _qemb_proc_send(text):
     """Start query_embed_proc.py with the query text on its stdin (no window; stdin, stdout and stderr all named) and
-    return the process, or None: BRAIN_QEMB_PROC=0, the helper file missing, the start or the write failing, or this
+    return the process, or None. OFF BY DEFAULT since 2 Nov 2026 (claude-1e0a23c2): on a loaded box the helper's process
+    start made recall wait a median 6-7 s for the vector; in-thread the recall body ran 6.4 s against 14.1 s median,
+    7 of 9 pairs faster, same answers (brain_math_loop_1e0a/op/recall10x/ab_proc_out.txt). BRAIN_QEMB_PROC=1 brings it back.
+    None also when: BRAIN_QEMB_PROC unset or 0, the helper file missing, the start or the write failing, or this
     process having encoded a query before. A process that runs many recalls pays the in-thread session build once and
     then encodes in about 20 ms a query, cheaper than a helper's ~1.5 s each, so only its first query goes out."""
     first = not _QEMB_PROC
     _QEMB_PROC.append(1)
-    if not first or os.environ.get("BRAIN_QEMB_PROC", "1").strip().lower() in ("0", "off", "false", "no"):
+    if not first or os.environ.get("BRAIN_QEMB_PROC", "0").strip().lower() in ("0", "off", "false", "no", ""):
         return None
     qe = sys.modules.get("query_embed")
     if qe is not None and "sess" in getattr(qe, "_STATE", {}):
@@ -2131,8 +2487,21 @@ def _status_from_index(slug, idx):
     line = idx.get(slug, "")
     # RETRACTED added 2026-09-22 (F50): a memory its author took back now carries that tag on its index line,
     # and the lane label prints it, so a retracted claim no longer reads as a live one in the ranked list
-    m = re.search(r"\)\s*-\s*\[(PROVISIONAL|VERIFIED|OWNER-STATED|RETRACTED)\]", line, re.I)
-    return m.group(1).lower() if m else "legacy"
+    # 3 Nov 2026 (RECALL-10X lever 14): runs once per ranked candidate, 23-32k times a recall. The pattern is
+    # compiled once and the answer memoised per line text (the answer depends on the line alone, so a changed
+    # line is a new key); 0.047-0.094 -> 0.016 s CPU per recall warm, same status on 104,716 of 104,716 calls.
+    v = _STATUS_MEMO.get(line)
+    if v is None:
+        m = _STATUS_RX.search(line)
+        v = m.group(1).lower() if m else "legacy"
+        if len(_STATUS_MEMO) > 400000:
+            _STATUS_MEMO.clear()
+        _STATUS_MEMO[line] = v
+    return v
+
+
+_STATUS_RX = re.compile(r"\)\s*-\s*\[(PROVISIONAL|VERIFIED|OWNER-STATED|RETRACTED)\]", re.I)
+_STATUS_MEMO = {}
 
 
 def _lesson_line(slug):
@@ -2725,10 +3094,44 @@ def recall(query, n=8):
 
 
 def _recall_body(query, n=8):
+    # q61c (4 Nov 2026, claude-68ceaf54): ACRONYM JOIN FROM A FROZEN TABLE. A question that spells out a term
+    # ("in the money") joins the acronym ("itm") only for rows where the notes use the acronym at least as often as
+    # the phrase (q61d_scan document counts; pnl/tts/fps/wer/oom dropped). BRAIN_RECALL_ACRONYMS=0 turns it off.
+    if os.environ.get("BRAIN_RECALL_ACRONYMS", "1") != "0" and query:
+        try:
+            _rows = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "recall_acronyms.json"), encoding="utf-8"))
+            _add = []
+            for _p, _a in _rows:
+                if re.search(r"\b" + r"[\s_-]+".join(map(re.escape, _p.split())) + r"\b", query, re.I) \
+                        and not re.search(r"\b%s\b" % re.escape(_a), query, re.I) and _a not in _add:
+                    _add.append(_a)
+            if _add:
+                if os.environ.get("Q60_LOG"):
+                    open(os.environ["Q60_LOG"], "a", encoding="utf-8").write("%s\t%s\n" % (" ".join(_add), query))
+                query = query + " " + " ".join(_add)
+        except Exception as _acr_exc:
+            print("  [warn] acronym join skipped (%s: %s)" % (type(_acr_exc).__name__, _acr_exc))
     idx = _archived_index_lines()
     idx.update(sr._index_lines())     # live entries override archived twins
     words = sr._words(query)
     seeds, lex = sr._seeds_from_prompt(words, idx)
+    # TASK-ID SEEDS (2 Nov 2026, claude-5693aca3). sr._words keeps letter-led words only, so a query that is a bare
+    # checklist id ('T-20261101-017') gave no seeds and recall stopped at "no lexical foothold" before the bm25 block,
+    # although bm25.tokens keeps the id as t_20261101_017. When the query holds an id, BM25's hits on the raw query
+    # join the seeds at the same strength the seeder's own BM25 arm uses. Measured on 10 checklist ids
+    # (brain_everything_node_5693/eval_taskid_recall.py): bare id 2/10 -> 10/10 with a memory naming the id in the top 8;
+    # 'status of task <id>' 10/10 -> 10/10. BRAIN_RECALL_TASKID_SEEDS=0 turns it off.
+    if os.environ.get("BRAIN_RECALL_TASKID_SEEDS", "1") != "0" and re.search(r"\bT-20\d{6}-\d{3}\b", query or "", re.I):
+        try:
+            import bm25 as _bm25tid
+            _tid_hits = _bm25tid.BM25().score(query, 5)
+            if _tid_hits:
+                _tid_max = _tid_hits[0][1] or 1.0
+                for _slug, _s in _tid_hits:
+                    seeds[_slug] = max(seeds.get(_slug, 0.0), 1.5 + 1.5 * _s / _tid_max)
+                    lex = set(lex) | {_slug}
+        except Exception as _tid_exc:
+            print("  [warn] task-id seeds skipped (%s: %s)" % (type(_tid_exc).__name__, _tid_exc))
     # Some older integrations supplied a mapping for the lexical-match collection.  The
     # public contract is set-like, so normalize once at the boundary before policy filtering.
     lex = set(lex)
@@ -2951,6 +3354,7 @@ def _recall_body(query, n=8):
     _note_demote = os.environ.get("BRAIN_RECALL_NOTE_DEMOTE", "1") != "0"   # see the bm25 block below
     _name_cov = os.environ.get("BRAIN_RECALL_NAME_COVERAGE", "1") != "0"   # see the bm25 block below
     _qcover_on = os.environ.get("BRAIN_RECALL_QCOVER", "1") != "0"        # see the bm25 block below
+    _qc_digit_prefix = os.environ.get("BRAIN_RECALL_QCOVER_DIGIT_PREFIX", "0") == "1"
     _qtoks = set()
     _absent_terms = []   # query words no memory contains (see the bm25 block and the [absent] line below)
     scored = []
@@ -2996,8 +3400,29 @@ def _recall_body(query, n=8):
                         if _ovl is not None:
                             _ovl_bm, _added, _gone = _ovl
                         else:
-                            _mem_payload, _added, _gone = _bm25mod.refresh_in_memory(out=_bm25mod.INDEX)
-                        if _mem_payload is not None or _ovl_bm is not None:
+                            # the pair just scanned, while the index is the generation it was scanned against
+                            # (29 Oct 2026, RECALL-10X lead 6: refresh_in_memory scanned the folder again, 2.2 s)
+                            _found = None
+                            try:
+                                if _FC_FRESH_SIG is not None and _bm25mod._index_signature(_bm25mod.INDEX) == _FC_FRESH_SIG:
+                                    _found = (_fresh_mem, _gone_mem)
+                            except Exception:
+                                _found = None
+                            try:
+                                _mem_payload, _added, _gone = _bm25mod.refresh_in_memory(out=_bm25mod.INDEX, found=_found)
+                            except TypeError:
+                                _mem_payload, _added, _gone = _bm25mod.refresh_in_memory(out=_bm25mod.INDEX)
+                        # 1 Nov 2026 (claude-68ceaf54, RECALL-10X): a recall spawns the publish only when the index is
+                        # at least BRAIN_RECALL_SPAWN_AGE s old (600). remember() kicks its own refresh and the 15-min
+                        # task publishes, so a young index needs no extra 13-17 s CPU refresh per recall (26 ran in
+                        # one hour on 1 Nov); this recall is scored on the merged payload either way.
+                        _spawn_age = float(os.environ.get("BRAIN_RECALL_SPAWN_AGE", "600") or 0)
+                        if (_mem_payload is not None or _ovl_bm is not None) and _idx_age < _spawn_age:
+                            print("  [bm25] index was %.0f min old: merged %d fresh memor%s (dropped %d) in memory;"
+                                  " publish left to remember() and the 15-min task"
+                                  % (_idx_age / 60, _added, "y" if _added == 1 else "ies", _gone))
+                        elif _mem_payload is not None or _ovl_bm is not None:
+                            os.environ["BM25_REFRESH_ORIGIN"] = "recall"
                             _pid = _bm25mod.spawn_detached_refresh()
                             print("  [bm25] index was %.0f min old: merged %d fresh memor%s (dropped %d) in memory;"
                                   " publish handed to a detached refresh%s"
@@ -3037,6 +3462,32 @@ def _recall_body(query, n=8):
             # typo silently dropped its term. 2026-07-28 (owner: ship prevention fixes): default ON -
             # the owner's own queries carry typos and BM25 scored them raw. BRAIN_RECALL_SPELLFIX=0 opts out.
             _q = QueryNormalizer(_bm.df).normalize(query) if os.environ.get("BRAIN_RECALL_SPELLFIX", "1") != "0" else query
+            # KEEP THE WORD THE NORMALISER CHANGED (2026-11-02, RECALL-10X probe 22, claude-68ceaf54): the snap replaces a
+            # rare word with a common neighbour, but a memory that quotes him holds his typo ('straved') and many rare words
+            # are real (eyre, gump, pride, birds). Each changed word is scored again and added (BM25 sums over terms, so
+            # this is exact). Stored questions with a changed word, n 496: top-1 280 -> 411, top-8 384 -> 487, 9 slip a
+            # place; his quoted words, n 32: top-8 27 -> 32 (content_gap_68ce/RESULT_probe22_2nov.md).
+            # BRAIN_RECALL_KEEPTYPO=0 off; BRAIN_RECALL_KEEPTYPO_W weight (1.0; 0.3 gave 364 / 439).
+            _keep = []
+            if _q is not query and os.environ.get("BRAIN_RECALL_KEEPTYPO", "1") != "0":
+                try:
+                    import bm25 as _bm25kt
+                    _qnk = QueryNormalizer(_bm.df)
+                    for _t in _bm25kt.tokens(query):
+                        if _t not in _keep and _qnk._correct(_t) != _t:
+                            _keep.append(_t)
+                except Exception:
+                    _keep = []
+            # QUERY SYNONYMS (2026-10-31, RECALL-10X, claude-68ceaf54): a memory names a failure by its cause ("stale",
+            # "shows nothing"), a question by what was seen ("too old", "nothing in it"). brain_syn appends the memory's word;
+            # it matches on the RAW query because the normaliser above drops short words ('too old' -> 'old'). Live recall,
+            # 12 questions incl. 7 fresh: top-8 7 -> 10, no loss (brain_improvement/recall_10x_2026_10_29/content_gap_68ce/
+            # RESULT_synonym_31oct.md). Fail-open. BRAIN_RECALL_SYN=0 turns it off.
+            try:
+                import brain_syn as _bsyn
+                _q = _bsyn.expand(_q, query)
+            except Exception:
+                pass
             # ABSENT WORDS (2026-09-23, round 6 T1). Asked about "moving the live production stack onto ARM servers", recall
             # returned plausible neighbours and the agent could rule the premise out only by grep. A query word that NO
             # memory contains - and that the spell normaliser did not correct to a known word - is named after the
@@ -3059,6 +3510,60 @@ def _recall_body(query, n=8):
             # one rank moved); 60 landed as the margin - neutral on the bank, and the gold that lived at rank 40
             # no longer sits on the edge.
             bm_hits = _bm.score(_q, int(os.environ.get("BRAIN_LEX_TOPK", "60") or 60))
+            # BRITISH/US SPELLING (2026-11-01, RECALL-10X probe 15, claude-68ceaf54): the memories split common words
+            # (neighbours 390 files / neighbors 64, catalogue 427 / catalog 1050) and the normaliser only snaps a word seen
+            # in at most 8 memories, so "no neighbors" never reached a memory that says neighbours (BM25 rank 28). The other
+            # spelling is scored at weight 0.3 and added: BM25 sums over terms, so s(q) + 0.3 s(other) is the weighted query
+            # exactly. Appending it at full weight lost on 750 stored questions (top-1 434 -> 369); at 0.3 top-1 429 -> 437,
+            # top-8 565 -> 567, dev 3 better 0 worse (content_gap_68ce/RESULT_probe15_1nov.md). BRAIN_RECALL_SPELL=0 off.
+            if os.environ.get("BRAIN_RECALL_SPELL", "1") != "0":
+                try:
+                    import bm25 as _bm25sp
+                    import brain_syn as _bsyn2
+                    _have = set(_bm25sp.tokens(_q))
+                    _sw = [w for w in _bsyn2.spelling_fold(query) if w not in _have]
+                    if _sw:
+                        _k = int(os.environ.get("BRAIN_LEX_TOPK", "60") or 60)
+                        _wide = max(_k, 400)
+                        _sw_w = float(os.environ.get("BRAIN_RECALL_SPELL_W", "0.3") or 0.3)
+                        _acc = {_s1: _v1 for _s1, _v1 in _bm.score(_q, _wide)}
+                        for _s1, _v1 in _bm.score(" ".join(_sw), _wide):
+                            _acc[_s1] = _acc.get(_s1, 0.0) + _sw_w * _v1
+                        bm_hits = sorted(_acc.items(), key=lambda kv: -kv[1])[:_k]
+                except Exception:
+                    pass
+            if _keep:
+                try:
+                    _k = int(os.environ.get("BRAIN_LEX_TOPK", "60") or 60)
+                    _wide = max(_k, 400)
+                    _kt_w = float(os.environ.get("BRAIN_RECALL_KEEPTYPO_W", "1.0") or 1.0)
+                    _acc = dict(bm_hits)
+                    for _s1, _v1 in _bm.score(_q, _wide):
+                        _acc.setdefault(_s1, _v1)
+                    for _s1, _v1 in _bm.score(" ".join(_keep), _wide):
+                        _acc[_s1] = _acc.get(_s1, 0.0) + _kt_w * _v1
+                    bm_hits = sorted(_acc.items(), key=lambda kv: -kv[1])[:_k]
+                except Exception:
+                    pass
+            # COMPACTION-STACK LIFT (2026-11-02, RECALL-10X probe 24b, claude-68ceaf54; ON by default, BRAIN_RECALL_LIFT=0 turns it off).
+            # A compaction summary repeats his order word for word, so on his own quotes a stack of compaction anchors
+            # can bury the memory that records the order. Damping the anchors as a class (probe 23) or by place in the
+            # stack (probe 24) loses the sessions. This moves ONE row: if the best non-compaction row sits below rank R
+            # and scores at least F of the top score, it is given a score between ranks R-1 and R. On BM25 alone
+            # (R 8, F 0.7): his quotes top-8 173 -> 176, compaction golds 482 -> 480, memory golds 852 -> 852
+            # Full recall path, his 187 quotes: top-1 97 -> 98, top-8 168 -> 170, worse 0 (content_gap_68ce/RESULT_probe24b_2nov.md).
+            if os.environ.get("BRAIN_RECALL_LIFT", "1") == "1" and len(bm_hits) > 1:
+                try:
+                    _lr = max(2, int(os.environ.get("BRAIN_RECALL_LIFT_R", "8") or 8))
+                    _lf = float(os.environ.get("BRAIN_RECALL_LIFT_F", "0.7") or 0.7)
+                    _crx = re.compile(r"^compaction_(claude|codex)_[0-9a-z]+_\d{8}T\d{6}$")
+                    _lj = next((i for i, (_s1, _v1) in enumerate(bm_hits) if not _crx.match(_s1)), None)
+                    if _lj is not None and _lj > _lr - 1 and bm_hits[_lj][1] >= _lf * bm_hits[0][1]:
+                        _lv = 0.5 * (bm_hits[_lr - 2][1] + bm_hits[_lr - 1][1])
+                        _row = (bm_hits[_lj][0], _lv)
+                        bm_hits = bm_hits[:_lr - 1] + [_row] + bm_hits[_lr - 1:_lj] + bm_hits[_lj + 1:]
+                except Exception:
+                    pass
             if _lex_path == "overlay" and _ovl_bm._fallback is not None:
                 _lex_path = "overlay-fallback"
             try:
@@ -3074,6 +3579,102 @@ def _recall_body(query, n=8):
                   % (type(_bm_exc).__name__, _bm_exc))
             bm_hits = []
             _lex_path = "failed"
+        # PERMISSION RESCUE, part 1 (2026-11-03, RECALL-10X q19, claude-68ceaf54): on a permission question ("can I ...",
+        # "is it ok to ..."), score the owner family alone (owner_* slugs, OWNER-tagged and owner-stated memories) by BM25
+        # on the question minus its permission words; part 2 shows the best of them at rank 3. BRAIN_RECALL_PERMIT=0 off.
+        _permit_picks = []
+        if os.environ.get("BRAIN_RECALL_PERMIT", "1") != "0" and (_PERMIT_RX.search(query) or _permit_lead(query) or (
+                os.environ.get("BRAIN_RECALL_PERMIT_SHAPE", "1") != "0" and _PERMIT_RX2.search(query)) or (
+                os.environ.get("BRAIN_RECALL_PERMIT_ELLIPSIS", "1") != "0" and _PERMIT_RX3.search(query))):
+            try:
+                _pk = int(os.environ.get("BRAIN_RECALL_PERMIT_K", "1") or 1)
+                _core = " ".join(_PERMIT_STRIP.sub(" ", query).split())
+                # q21 (3 Nov): a law names the act in its own verbs (stops, kills, suspends, deleted); the agent asks with
+                # another (pause, truncate). Add the law-side verbs for the few action words below. BRAIN_RECALL_PERMIT_EXPAND=0 off.
+                if os.environ.get("BRAIN_RECALL_PERMIT_EXPAND", "1") != "0":
+                    _px = [_PERMIT_VERBS[w.lower()] for w in _core.split() if w.lower() in _PERMIT_VERBS]
+                    if _px:
+                        _core = _core + " " + " ".join(_px)
+                # q54 (4 Nov): a law names a script, gate or folder joined (token_ledger, stage_gate); the agent says
+                # it with a space. Add the joined form of adjacent core words when the index holds it.
+                # BRAIN_RECALL_PERMIT_JOIN=0 off.
+                if os.environ.get("BRAIN_RECALL_PERMIT_JOIN", "1") != "0":
+                    try:
+                        _vdf = getattr(_bm, "df", None) or {}
+                        _cw = [w.lower() for w in re.findall(r"[A-Za-z]+", _core)]
+                        _jn = [a + "_" + b for a, b in zip(_cw, _cw[1:]) if (a + "_" + b) in _vdf]
+                        if _jn:
+                            _core = _core + " " + " ".join(dict.fromkeys(_jn))
+                    except Exception:
+                        pass
+                # q48 (3 Nov): a question that hands work to ANOTHER agent (another / worker / task / two agents;
+                # delegate, offload, spawn) asks the no-subagents order in words it does not use. Add its words only
+                # then - a bare 'agent' (the mesh, the desk, codex agents) is not delegation. BRAIN_RECALL_PERMIT_DELEG=0 off.
+                if os.environ.get("BRAIN_RECALL_PERMIT_DELEG", "1") != "0" and _DELEG_RX.search(query):
+                    _core = _core + " subagent helper"
+                # q22 (3 Nov): an overtaken rule is not an answer to 'can I'; drop superseded memories from the family
+                # (87 of 605 on 3 Nov). BRAIN_RECALL_PERMIT_SUPX=0 off.
+                _fam_x = set()
+                if os.environ.get("BRAIN_RECALL_PERMIT_SUPX", "1") != "0":
+                    try:
+                        _fam_x = set(superseded or {})
+                    except Exception:
+                        _fam_x = set()
+                _fam = _owner_family_texts(_fam_x)
+                _pf = float(os.environ.get("BRAIN_RECALL_PERMIT_FLOOR", "12.5") or 12.5)
+                _fh = [(s, _v) for s, _v in _bm.score(_core, 5000) if s in _fam and _v >= _pf]
+                # q34 (3 Nov): his later words win. Among family rows scoring within BRAIN_RECALL_PERMIT_NEWEST (0.75) of
+                # the best, show the newest by the slug's date (30 Oct order over 14 Oct and 7 Sep ones). =0 off.
+                _nr = float(os.environ.get("BRAIN_RECALL_PERMIT_NEWEST", "0.81") or 0)
+                if _fh and _nr > 0:
+                    _top = _fh[0][1]
+                    # q42: the floor gates the top; rows within the band of a top that passed it may be under it.
+                    _near = [(s, _v) for s, _v in _bm.score(_core, 5000) if s in _fam and _v >= _nr * _top]
+                    # q36: only his orders jump the queue; a newer method note never displaces an older law.
+                    if os.environ.get("BRAIN_RECALL_PERMIT_NEWEST_OWNER", "1") != "0":
+                        # q40: an owner_ slug alone is not an order (owner_orders_are_missed_..._10_31 is a recall
+                        # note); only rows stated as his order by tag or by an order-kind slug jump on date.
+                        _near = [t for t in _near if t[0] in _OWNER_STATED or _OWNER_ORDER_SLUG_RX.match(t[0])
+                                 or t == _fh[0]]
+                    # q42: an order scoped to the Mac is his word for the Mac, not for this laptop: on Windows, unless
+                    # the question names the Mac, Mac-only rows leave the near band (the top row too) when another stays.
+                    if (sys.platform == "win32" and os.environ.get("BRAIN_RECALL_PERMIT_SCOPE", "1") != "0"
+                            and not re.search(r"\bmac\b", query, re.I)):
+                        _nm = [t for t in _near if not (_MAC_SCOPE_RX.search(_fam.get(t[0], ""))
+                               and not _ALL_SCOPE_RX.search(_fam.get(t[0], "")))]
+                        if _nm:
+                            _near = _nm
+                    def _sd(s):
+                        m = re.search(r"(20\d\d)_(\d\d)_(\d\d)$", s)
+                        return m.group(0) if m else ""
+                    _near.sort(key=lambda t: (_sd(t[0]), t[1]), reverse=True)
+                    _fh = _near + [t for t in _fh if t not in _near]
+                _permit_picks = [s for s, _v in _fh][:_pk]
+                # q43: a second row - the newest of his orders within BRAIN_RECALL_PERMIT_SECOND of the top.
+                _sb = float(os.environ.get("BRAIN_RECALL_PERMIT_SECOND", "0.75") or 0)
+                if _permit_picks and _sb > 0 and _fh:
+                    _all2 = [(s, _v) for s, _v in _bm.score(_core, 5000) if s in _fam
+                             and (s in _OWNER_STATED or _OWNER_ORDER_SLUG_RX.match(s))]
+                    # q44: when the question names an agent (codex, gpt-5, claude ...), the band is read among
+                    # his orders that name it, so a stronger order about something else does not set the bar.
+                    _anm = {w.lower() for w in re.findall(r"\b(codex|claude|gpt[-\w.]*|gemini|sonnet|opus|fable)\b", query, re.I)}
+                    if _anm:
+                        _nrx = re.compile(r"\b(" + "|".join(re.escape(w) for w in _anm) + r")\b", re.I)
+                        _sub = [t for t in _all2 if _nrx.search(_fam.get(t[0], ""))]
+                        if _sub:
+                            _all2 = _sub
+                    _t2 = max([_v for _s, _v in _all2] or [0])
+                    _o2 = [(s, _v) for s, _v in _all2 if _v >= _sb * _t2 and s not in _permit_picks]
+                    if (sys.platform == "win32" and os.environ.get("BRAIN_RECALL_PERMIT_SCOPE", "1") != "0"
+                            and not re.search(r"\bmac\b", query, re.I)):
+                        _o2 = [t for t in _o2 if not (_MAC_SCOPE_RX.search(_fam.get(t[0], ""))
+                               and not _ALL_SCOPE_RX.search(_fam.get(t[0], "")))]
+                    if _o2:
+                        _d2 = lambda s: (re.search(r"(20\d\d)_(\d\d)_(\d\d)$", s) or [""])[0]
+                        _o2.sort(key=lambda t: (_d2(t[0]), t[1]), reverse=True)
+                        _permit_picks.append(_o2[0][0])
+            except Exception:
+                _permit_picks = []
         _lex_s = round(time.time() - _lex_t0, 3)
         # bm25 block: the whole-corpus content match, in bm25's own order (the eval's method -
         # hits outside the seed/spread candidate set are legitimate and rank on content alone).
@@ -3191,8 +3792,13 @@ def _recall_body(query, n=8):
                 _st = _slug_name_tokens(slug)
                 if _st:
                     _hit = 0
+                    # A five-character prefix is a word stem, not a number (2 Nov 2026, claude-5693aca3): on a bare task id
+                    # the query token 20261028 matched every compaction name's 20261030T180042 on "20261", so each
+                    # compaction got x1.33 and the task's own node (name digits dropped) fell from bm25 rank 1 to last.
+                    # BRAIN_RECALL_QCOVER_DIGIT_PREFIX=1 restores the old match.
                     for _t in _qtoks:
-                        if _t in _st or (len(_t) >= 5 and any(len(_u) >= 5 and _u[:5] == _t[:5] for _u in _st)):
+                        if _t in _st or (len(_t) >= 5 and (_qc_digit_prefix or not _t[:5].isdigit())
+                                         and any(len(_u) >= 5 and _u[:5] == _t[:5] for _u in _st)):
                             _hit += 1
                     bsc = bsc * (1.0 + _hit / float(len(_qtoks)))
             order.append((slug, bsc))
@@ -3513,6 +4119,157 @@ def _recall_body(query, n=8):
         except Exception as _gate_exc:
             print("  [warn] gated lane merge skipped (%s: %s)" % (type(_gate_exc).__name__, _gate_exc))
 
+    # Semantic rescue (claude-68ceaf54, 30 Oct 2026, RECALL-10X): the query-meaning lane's own top two memories
+    # (current slugs) are shown at ranks 4 and 5 unless the fused order already has them at that rank or better.
+    # The misses it targets are fusion losses: on heldout16 the lane alone had the gold at rank 1-5 for four
+    # questions the fused top 8 lost. MEASURED end to end (semr_ab.py, 83 questions, one run, hit@1/2/3/8):
+    #   owner56   off 38/43/48/49  on 38/43/48/50      heldout16 off 3/5/6/7  on 3/5/6/9
+    #   now8      off 4/6/8/8      on 4/6/8/8          controls  3/3/3/3 both
+    # No question lost a gold at any depth. Ranks 1-3 are never touched. Caveat: heldout16 helped choose the rule
+    # (K=2 at rank 4 of 18 offline arms), so its +2 is in-sample. BRAIN_RECALL_SEM_RESCUE=0 turns it off; record in
+    # brain_improvement/recall_10x_2026_10_29/content_gap_68ce/RESULT_sem_rescue_2026_10_30.md.
+    if os.environ.get("BRAIN_RECALL_SEM_RESCUE", "1") != "0" and scored:
+        try:
+            _semr_dbg = os.environ.get("BRAIN_RECALL_SEM_RESCUE_DEBUG", "0") != "0"
+            _disp = list(_display_rows(scored, n))
+            if _semr_dbg:
+                print("  [semr] before " + "|".join(r[4] for r in _disp))
+            _sk = qsem if isinstance(qsem, dict) and qsem else (_query_semantic_scores(query) or {})
+            _picks = []
+            for _s in sorted(_sk, key=lambda s: -_sk[s]):
+                _cur = _current_slug(_s, superseded, known_slugs)
+                if _cur in sr.SKIP or _cur in disabled or tier.get(_cur) == "unconscious":
+                    continue
+                if _cur not in _picks:
+                    _picks.append(_cur)
+                if len(_picks) >= 2:
+                    break
+            _byslug = {r[4]: r for r in scored}
+            for _j, _p in enumerate(_picks):
+                _at = 3 + _j
+                _slugs = [r[4] for r in _disp]
+                if _p in _slugs[:_at + 1]:
+                    continue
+                _row = _byslug.get(_p) or (0.05, 0.0, 0.0, float(_sk.get(_p, 0.0)), _p, _status_from_index(_p, idx))
+                _disp = [r for r in _disp if r[4] != _p]
+                _sc = _disp[_at][0] if _at < len(_disp) else max(0.05, _row[0])
+                _disp.insert(min(_at, len(_disp)), (max(_sc, 0.03),) + tuple(_row[1:]))
+            _ds = {r[4] for r in _disp}
+            scored = _disp + [r for r in scored if r[4] not in _ds]
+            if _semr_dbg:
+                print("  [semr] picks " + "|".join(_picks))
+        except Exception as _semr_exc:
+            print("  [warn] sem rescue skipped (%s: %s)" % (type(_semr_exc).__name__, _semr_exc))
+
+    # PERMISSION RESCUE, part 2: the picks from part 1 are shown from rank PERMIT_AT (default 3) unless already there or
+    # better. Measured on q19 (content_gap_68ce/RESULT_q19_3nov.md).
+    try:
+        _pp = _permit_picks
+    except NameError:
+        _pp = []
+    if _pp and scored:
+        try:
+            _disp = list(_display_rows(scored, n))
+            _byslug = {r[4]: r for r in scored}
+            _at0 = int(os.environ.get("BRAIN_RECALL_PERMIT_AT", "3") or 3) - 1
+            for _j, _p0 in enumerate(_pp):
+                _p = _current_slug(_p0, superseded, known_slugs)
+                if _p in sr.SKIP or _p in disabled:
+                    continue
+                _at = _at0 + _j
+                if _p in [r[4] for r in _disp][:_at + 1]:
+                    continue
+                _row = _byslug.get(_p) or (0.05, 0.0, 0.0, 0.0, _p, _status_from_index(_p, idx))
+                _disp = [r for r in _disp if r[4] != _p]
+                _sc = _disp[_at][0] if _at < len(_disp) else max(0.05, _row[0])
+                _disp.insert(min(_at, len(_disp)), (max(_sc, 0.03),) + tuple(_row[1:]))
+            _ds = {r[4] for r in _disp}
+            scored = _disp + [r for r in scored if r[4] not in _ds]
+        except Exception as _pr_exc:
+            print("  [warn] permission rescue skipped (%s: %s)" % (type(_pr_exc).__name__, _pr_exc))
+
+    # PART LIFT (q65, 4 Nov): a memory that is only PARTLY superseded was served above its successor when the question
+    # asked about exactly the clause that moved ('which voice must narrate a film': his_standing_film_orders_2026_09_23
+    # at 1, its narration-voice clause overtaken by owner_order_d1b_is_the_only_film_voice_2026_10_13 at 4). When a
+    # displayed row's superseded_in_part clause shares BRAIN_RECALL_PART_LIFT_MIN (2) content words with the question,
+    # its successor goes directly above it. Measured in brain_recall_68ceaf54/RESULT_q65_4nov.md. BRAIN_RECALL_PART_LIFT=0 off.
+    if scored and os.environ.get("BRAIN_RECALL_PART_LIFT", "1") != "0":
+        try:
+            import supersession as _sup
+            _pl_min = int(os.environ.get("BRAIN_RECALL_PART_LIFT_MIN", "2") or 2)
+            _pl_stop = {"which", "what", "when", "where", "must", "should", "would", "could", "does", "this",
+                        "that", "with", "from", "have", "into", "about", "there", "their", "they", "them",
+                        "then", "than", "also", "only", "every", "still", "instead", "myself", "used", "uses"}
+            _pl_stem = lambda t: {w[:5] for w in re.findall(r"[a-z]{4,}", (t or "").lower()) if w not in _pl_stop}
+            _pl_q = _pl_stem(query)
+            # q68 (4 Nov): the words a which/what question asks for ("which engine generation ..." -> engin, gener).
+            _pl_wh = set()
+            if os.environ.get("BRAIN_RECALL_PART_LIFT_WH", "1") != "0":
+                _whm = re.match(r"\s*(?:which|what)\s+((?:[a-z0-9-]+\s+){0,2}[a-z0-9-]+)", (query or "").lower())
+                if _whm:
+                    for _w in _whm.group(1).split()[:2]:
+                        if len(_w) < 4 or _w in _pl_stop or _w in ("is", "are", "was", "were", "does", "do"):
+                            break
+                        _pl_wh.add(_w[:5])
+            # q66 (4 Nov): the rest of the old memory - slug words and frontmatter description - for the clause test.
+            _pl_rest_on = os.environ.get("BRAIN_RECALL_PART_LIFT_REST", "1") != "0"
+            _pl_rest_memo = {}
+            def _pl_rest(_slug):
+                if _slug not in _pl_rest_memo:
+                    _txt = _slug.replace("_", " ")
+                    try:
+                        with open(os.path.join(MEM, _slug + ".md"), encoding="utf-8", errors="replace") as _fh:
+                            _mm = re.search(r"^description:\s*(.*)$", _fh.read(8000), re.M)
+                        if _mm:
+                            _txt += " " + _mm.group(1)
+                    except OSError:
+                        pass
+                    _pl_rest_memo[_slug] = _pl_stem(_txt)
+                return _pl_rest_memo[_slug]
+            _disp = list(_display_rows(scored, n))
+            _byslug = {r[4]: r for r in scored}
+            _pl_done = set()
+            # q67 (4 Nov): examine a lifted successor too (chains 3c-D -> 3c-F -> generation 9); rows already examined skip.
+            _pl_seen = set()
+            _pl_hops = int(os.environ.get("BRAIN_RECALL_PART_LIFT_HOPS", "6") or 6)
+            _i = 0
+            while _i < len(_disp) and len(_pl_q) >= _pl_min:
+                _lifted = False
+                if _disp[_i][4] in _pl_seen:
+                    _i += 1
+                    continue
+                _pl_seen.add(_disp[_i][4])
+                for _cl, _succ in _sup.read_part_supersessions(MEM, _disp[_i][4]):
+                    if not _succ or len(_pl_q & _pl_stem(_cl)) < _pl_min:
+                        continue
+                    if _pl_rest_on:
+                        _pl_cs = _pl_stem(_cl)
+                        if not (_pl_wh and _pl_wh <= _pl_cs) and \
+                                len(_pl_q & _pl_cs) <= len(_pl_q & (_pl_rest(_disp[_i][4]) - _pl_cs)):
+                            continue
+                    _cur = _current_slug(_succ, superseded, known_slugs)
+                    if _cur in _pl_done or _cur in sr.SKIP or _cur in disabled or _cur == _disp[_i][4]:
+                        continue
+                    _pl_done.add(_cur)
+                    if _cur in [r[4] for r in _disp[:_i]]:
+                        continue
+                    _row = _byslug.get(_cur) or (0.05, 0.0, 0.0, 0.0, _cur, _status_from_index(_cur, idx))
+                    _sc = _disp[_i][0]
+                    _disp = [r for r in _disp if r[4] != _cur]
+                    _disp.insert(_i, (max(_sc, 0.03),) + tuple(_row[1:]))
+                    _lifted = True
+                    break
+                if _lifted:
+                    _pl_hops -= 1
+                    if _pl_hops <= 0:
+                        break
+                else:
+                    _i += 1
+            _ds = {r[4] for r in _disp}
+            scored = _disp + [r for r in scored if r[4] not in _ds]
+        except Exception as _pl_exc:
+            print("  [warn] part lift skipped (%s: %s)" % (type(_pl_exc).__name__, _pl_exc))
+
     _dump = os.environ.get("BRAIN_RECALL_DUMP_SCORED")          # evaluation only: the list the display reads, in order
     if _dump:
         try:
@@ -3656,8 +4413,24 @@ def neighbors(slug, n=10):
         print("  (isolated node - no edges, not in sidecar)")
 
 
+def _yaml_desc(desc):
+    """The description as a YAML double-quoted scalar (2026-11-04, TOP10 rank 8 item 7). Written raw, 27% of notes
+    failed a strict YAML parser: a leading [PROVISIONAL] opens a flow sequence, an inner ': ' starts a second
+    mapping. json.dumps escapes backslash and quote, which is valid YAML double-quoted; ensure_ascii=False keeps
+    non-ASCII readable for the readers that only strip the quotes. A value already wrapped in double quotes is
+    left as given so a caller that quotes it itself is not quoted twice."""
+    d = desc or ""
+    if len(d) >= 2 and d.startswith('"') and d.endswith('"'):
+        return d
+    return json.dumps(d, ensure_ascii=False)
+
+
 def _render_memory_text(slug, mtype, desc, body, status, evidence, created,
-                        supersedes="", created_at=""):
+                        supersedes="", created_at="", legacy_desc=False):
+    # legacy_desc=True renders the description raw, as every memory before 2026-11-04 was written; repair mode
+    # tries it second so a memory filed just before the change can still be repaired after it.
+    if not legacy_desc:
+        desc = _yaml_desc(desc)
     evidence_line = json.dumps((evidence or "").strip(), ensure_ascii=False)
     supersedes_line = ("  supersedes: %s\n" % supersedes) if supersedes else ""
     # created_at (2026-09-22, round 5 W4): the filing TIME beside the filing date - two orders filed the same day
@@ -3860,6 +4633,12 @@ def _repair_memory_index(slug, mtype, desc, body, status, evidence,
                 created_matches[0],
                 created_at=(created_at_matches[0] if created_at_matches else "")).encode("utf-8")
             if raw != expected:
+                expected = _render_memory_text(
+                    slug, mtype, desc, body, status, evidence,
+                    created_matches[0],
+                    created_at=(created_at_matches[0] if created_at_matches else ""),
+                    legacy_desc=True).encode("utf-8")
+            if raw != expected:
                 raise ValueError(
                     "memory bytes do not match the complete intended metadata/body")
             index_raw, index_text = _read_regular_utf8(ix, "memory index")
@@ -3984,10 +4763,67 @@ def _print_prior_art_advisory(slug, desc, supersedes=""):
 # nearest owner orders already on file, with their filing stamps and the exact command that links one. Advisory
 # only: it never blocks, never links anything by itself, fails silent, and gives up past its time budget.
 _OWNER_DESC_RX = re.compile(r"\s*[\"']?\[?\s*(?:OWNER|Owner)\b")
+# The early laws (June-July 2026) were filed before the [OWNER-STATED] tag and open with markup: "**<emoji> 2026-06-10 OWNER
+# HARD RULE: ...". The family takes them too (q20, 3 Nov 2026: 600 -> 605 family memories, every one an owner rule).
+_OWNER_FAMILY_RX2 = re.compile(r"[\s\"'\[\(\*_~#>|\u2600-\u27BF\u2B00-\u2BFF\U0001F000-\U0001FAFF\uFE0F\u200d\u2605\u2606]*"
+                               r"(?:\d{4}-\d{2}-\d{2}[\sT:0-9x]*)?[\s\*_\-\u2014,:\u2600-\u27BF\U0001F000-\U0001FAFF\uFE0F]*"
+                               r"(?:OWNER|Owner)(?:'s)?\s+(?:HARD\s+|STANDING\s+|STANDARD\s+)?"
+                               r"(?:RULE|LAW|ORDER|POLICY|CORRECTION|DIRECTIVE)", re.U)
 _OWNER_INDEX_LINE_RX = re.compile(r"-\s*\[([^\]]+?)\.md\]\([^)]*\)\s*[-\u2014]*\s*(.*)$")
 _OWNER_STATUS_TAG_RX = re.compile(r"\[(PROVISIONAL|VERIFIED|OWNER-STATED|RETRACTED)\]\s*")
+_OWNER_STATED = set()  # q40: slugs whose index line carries [OWNER-STATED], filled by _owner_family_texts
+_OWNER_ORDER_SLUG_RX = re.compile(r"owner_(order|law|rule|directive|allows)_")
 OWNER_ADVISORY_BUDGET_S = 1.5     # the join: what the filer waits at most, plus the OS's scheduling slack
 OWNER_ADVISORY_ROWS = 5
+
+
+_PERMIT_RX = re.compile(r"^\s*(?:can|could|may|should|shall)\s+(?:i|we)\b|^\s*is\s+it\s+(?:ok|okay|fine|safe|alright|allowed)\b"
+                         r"|^\s*am\s+i\s+allowed\b|^\s*do\s+i\s+need\s+permission\b"
+                         # q42: a third-person agent subject asks the same thing (can a codex lane take ...)
+                         r"|^\s*(?:can|could|may|should|shall)\s+(?:a|an|the|this|that|my|our|one|another)\s+"
+                         r"(?:\S+\s+)?(?:codex|claude|gpt\S*|agent|agents|worker|workers|lane|lanes|solver|solvers|"
+                         r"session|subagent|fleet|helper|job|runner)\b", re.I)
+# q49 (3 Nov): permission asked about an act rather than by a person - "is spawning an agent for X allowed",
+# "would launching ... be fine", "are we allowed to", "is it permitted". The gerund keeps "is the render fine" out.
+_PERMIT_RX2 = re.compile(r"^\s*(?:are|am)\s+(?:we|i)\s+(?:allowed|permitted)\b|^\s*is\s+it\s+permitted\b"
+                          r"|^\s*(?:is|would|will)\s+(?!(?:every|any|no|some)?thing\b|morning\b|evening\b|string\b|spring\b)\w+ing\b[^.?!]*\b(?:allowed|permitted|ok|okay|fine|alright|acceptable)\b",
+                          re.I)
+# q50 (3 Nov): the elliptical permission question names no person and no gerund - "ok to hand X to an agent?",
+# "another agent for X - fine?", "X, allowed?". A permission word opens it before "to", or closes it after a dash,
+# colon or comma right before the question mark.
+_PERMIT_RX3 = re.compile(r"^\s*(?:is\s+it\s+)?(?:ok|okay|fine|alright|allowed|acceptable|permitted)\s+to\s+\w"
+                          r"|[-:,\u2013\u2014]\s*(?:is\s+(?:that|this|it)\s+)?(?:ok|okay|fine|alright|allowed|acceptable|permitted)\s*\?+\s*$",
+                          re.I)
+# q51 (3 Nov): the permission head after a leading clause. A hyphen counts only with spaces round it, so a name
+# like vanilla-brain is not a break.
+_LEAD_BREAK_RX = re.compile(r"[,;:.\u2013\u2014]|\s-+\s")
+
+
+def _permit_lead(q):
+    if os.environ.get("BRAIN_RECALL_PERMIT_LEAD", "1") == "0":
+        return False
+    for m in _LEAD_BREAK_RX.finditer(q or ""):
+        tail = q[m.end():]
+        if _PERMIT_RX.search(tail) or _PERMIT_RX2.search(tail):
+            return True
+    return False
+
+
+_MAC_SCOPE_RX = re.compile(r"\bon the mac\b|\bmac mini\b|\bmac clock\b", re.I)
+_ALL_SCOPE_RX = re.compile(r"laptop|the research box|all three|three computers|every computer|both computers|this pc", re.I)
+_PERMIT_VERBS = {"pause": "suspend stop", "paused": "suspend stop", "suspend": "stop pause", "halt": "stop suspend",
+                 "kill": "stop terminate", "terminate": "kill stop", "throttle": "lower priority",
+                 "deprioritize": "lower priority throttle", "truncate": "delete", "wipe": "delete", "purge": "delete",
+                 "prune": "delete", "erase": "delete", "rm": "delete", "remove": "delete", "clear": "delete",
+                 "trim": "delete", "rotate": "delete",
+                 # q33 (3 Nov): a launch question names the act and the worker in its own words (spin up codex solvers);
+                 # the order says launch / start / workers / agents.
+                 "spin": "launch start", "launch": "start run", "start": "launch run", "relaunch": "launch restart",
+                 "restart": "relaunch start", "kick": "start launch", "solvers": "workers agents", "solver": "worker agent",
+                 "workers": "agents", "worker": "agent"}
+_DELEG_RX = re.compile(r"\bsub-?agents?\b|\b(?:another|other|second|separate|extra|worker|task|helper|child|sub|parallel|background|two|three|several|more)\s+agents?\b|\b(?:delegat\w*|offload\w*|outsourc\w*|spawn\w*|fork\w*)\b[^.?!]*\bagents?\b", re.I)
+_PERMIT_STRIP = re.compile(r"\b(?:can|could|may|should|shall|i|we|is|it|ok|okay|fine|safe|alright|allowed|am|to|the|a|an|"
+                           r"this|that|these|those|my|our|here|so|just|quick|quickly)\b", re.I)
 
 
 def _is_owner_order(slug, desc, status=""):
@@ -4011,7 +4847,10 @@ def _owner_family_texts(exclude):
         text = m.group(2) if m else ""
         tag = _OWNER_STATUS_TAG_RX.match(text)
         bare = text[tag.end():] if tag else text
-        if slug.startswith("owner_") or (tag and tag.group(1) == "OWNER-STATED") or _OWNER_DESC_RX.match(bare):
+        if tag and tag.group(1) == "OWNER-STATED":
+            _OWNER_STATED.add(slug)
+        if (slug.startswith("owner_") or (tag and tag.group(1) == "OWNER-STATED") or _OWNER_DESC_RX.match(bare)
+                or _OWNER_FAMILY_RX2.match(bare)):
             texts[slug] = bare
     return {s: t for s, t in texts.items() if s not in exclude and s not in sr.SKIP}
 
@@ -4631,13 +5470,41 @@ def _verify_attachments_cli(argv):
         return 2
 
 
+def _no_power_throttling():
+    """Windows runs a windowless python (every hook and agent call of recall) under EcoQoS by default: 1 Nov 2026,
+    12 alternating recalls on one query, median wall 19.4 s default vs 7.4 s opted out, cpu ~5-7 s both, answers equal.
+    Opt this process out (speed policy controlled, state off); priority is untouched. Never fails the command."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        import ctypes.wintypes as _w
+
+        class _PPTS(ctypes.Structure):
+            _fields_ = [("Version", _w.ULONG), ("ControlMask", _w.ULONG), ("StateMask", _w.ULONG)]
+        k = ctypes.WinDLL("kernel32", use_last_error=True)
+        k.GetCurrentProcess.restype = _w.HANDLE
+        k.SetProcessInformation.argtypes = [_w.HANDLE, ctypes.c_int, ctypes.c_void_p, _w.DWORD]
+        k.SetProcessInformation.restype = _w.BOOL
+        st = _PPTS(1, 1, 0)
+        k.SetProcessInformation(k.GetCurrentProcess(), 4, ctypes.byref(st), ctypes.sizeof(st))
+    except Exception:
+        pass
+
+
 def main():
     args = sys.argv[1:]
+    _no_power_throttling()
     if not args or args[0] in ("-h", "--help"):
         print(__doc__.strip().split("\n\n")[1])
         return 0
     cmd = args[0]
     if cmd == "recall":
+        # RECALL-10X (2026-11-02, claude-1e0a23c2): the CLI recall loads the vector sidecar lazily - every user of it in
+        # this file already checks each row it uses (row_current / embedding_row_current), so the eager stat scan was
+        # duplicate work (load median 4.3 -> 1.2 s, top-8 unchanged; recall10x/ab_walk_out.txt). Only the CLI, never the
+        # importable recall(): hooks import this module in the dispatcher. BRAIN_EMB_LAZY=0 turns it off.
+        os.environ.setdefault("BRAIN_EMB_LAZY", "1")
         # a query is never a flag (2026-09-22, Test A): a FIRE WHEN line pasted as "- the situation ..." begins
         # with "-" and used to be dropped whole, returning usage text - 322 of 1,038 lines in the F42 bank and
         # every bullet-led query the Opus agent sent. Only a bare option-shaped token is a flag.

@@ -467,9 +467,26 @@ def load_documents(mem: str | os.PathLike[str] | Path, slug: str,
     # If no bundle existed at this observation, an empty result is a valid pre-write snapshot.
     # Avoid creating a synchronization sidecar for nodes that have never used attachments.
     if not os.path.lexists(bundle_dir(mem_path, safe_slug)):
-        return _load_documents_unlocked(mem_path, safe_slug, missing_ok=missing_ok)
-    if not _lock_writable(mem_path):
+        try:
+            return _load_documents_unlocked(mem_path, safe_slug, missing_ok=missing_ok)
+        except (AttachmentError, OSError):
+            # A writer created the bundle between the check and the read (its folder before its manifest): read it the
+            # way an existing bundle is read below, so the reader waits out the publish instead of failing it (29 Oct,
+            # the race test met this 2-3 times a run). A bundle still absent re-raises as before.
+            if not os.path.lexists(bundle_dir(mem_path, safe_slug)):
+                raise
+    # A reader takes the verified snapshot first and the lock only when that fails (29 Oct 2026, claude-1e0a23c2,
+    # RECALL-10X lead 6). Every reader in every process used to take the one memory-root write lock per bundle, and
+    # each acquisition opens and stats the lock file; on the loaded laptop one recall spent 262 s in 256 loads and
+    # lost bundles to the lock's 10 s timeout (an AttachmentError the recall reports as a failed bundle). The snapshot
+    # verifies the whole bundle, so a read racing a writer raises and retries; after its retries the lock waits out
+    # the writer as before. A/B on the live store, 4 interleaved rounds: identical output whenever the locked read
+    # finished, 0 timeouts against 36, attachment search median 28 s against 121 s.
+    try:
         return _load_documents_snapshot(mem_path, safe_slug, missing_ok=missing_ok)
+    except (AttachmentError, OSError):
+        if not _lock_writable(mem_path):
+            raise
     with _attachment_write_lock(mem_path):
         return _load_documents_unlocked(mem_path, safe_slug, missing_ok=missing_ok)
 
@@ -706,6 +723,27 @@ def _idf(token: str, df: dict, n: float) -> float:
     return math.log(1.0 + (n - d + 0.5) / (d + 0.5))
 
 
+_BUNDLE_TOKENS: dict = {}
+
+
+def _bundle_tokens(slug: str, docs) -> tuple[int, dict]:
+    """One bundle's search-token count and per-token counts, kept per bundle while its documents' names and sha256s
+    match (4 Nov 2026, claude-738954b6, RECALL-10X rank 3). load_documents checks every document's bytes against its
+    sha256, so the same hashes mean the same text and the same tokens. Under the recall server every call re-joined
+    and re-tokenised the text of all 41 bundles: 168 ms of a 1.8 s warm call. BRAIN_NODE_TOKCACHE=0 turns it off."""
+    key = tuple((doc.name, doc.sha256) for doc in docs)
+    hit = _BUNDLE_TOKENS.get(slug)
+    if hit is not None and hit[0] == key:
+        return hit[1], hit[2]
+    tokens = _tokens("\n".join(doc.text for doc in docs))
+    counts: dict = {}
+    for token in tokens:
+        counts[token] = counts.get(token, 0) + 1
+    if os.environ.get("BRAIN_NODE_TOKCACHE", "1") != "0":
+        _BUNDLE_TOKENS[slug] = (key, len(tokens), counts)
+    return len(tokens), counts
+
+
 def search_nodes(mem: str | os.PathLike[str] | Path, query: str,
                  limit: int = 10, failures: list | None = None) -> list[tuple[str, float]]:
     """Small live lexical arm over attachments, so parent retrieval need not wait for nightly BM25.
@@ -740,22 +778,21 @@ def search_nodes(mem: str | os.PathLike[str] | Path, query: str,
             except Exception as exc:
                 failures.append((slug, type(exc).__name__))
                 continue
-        tokens = _tokens("\n".join(doc.text for doc in docs))
-        corpus.append((slug, tokens))
+        dl, counts = _bundle_tokens(slug, docs)
+        corpus.append((slug, dl, counts))
     if not corpus:
         return []
-    avgdl = max(1.0, sum(len(t) for _s, t in corpus) / len(corpus))
+    avgdl = max(1.0, sum(dl for _s, dl, _c in corpus) / len(corpus))
     k1, b = 1.2, 0.75
     scored = []
-    for slug, tokens in corpus:
-        present = q.intersection(tokens)
+    for slug, dl, counts in corpus:
+        present = q.intersection(counts)
         if len(present) < need:
             continue
-        dl = len(tokens)
         norm = k1 * (1.0 - b + b * dl / avgdl)
         mass = 0.0
         for t in present:
-            tf = tokens.count(t)
+            tf = counts[t]
             sat = (k1 + 1.0) * tf / (tf + norm)      # 1.0 for one mention in an average-length doc
             mass += _idf(t, df, n_docs) * min(sat, 1.5)
         strength = len(q) * mass / q_mass

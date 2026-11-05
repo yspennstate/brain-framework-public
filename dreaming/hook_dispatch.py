@@ -62,10 +62,10 @@ def _format_exc(path=None):
 
 # Once wired, settings.json holds only the dispatcher, so the real hook list lives here (written by hook_dispatch_wire.py,
 # and the same file --off restores from). Before wiring, this file does not exist and settings.json is the list.
-LIST = os.path.expanduser(r"~/.claude/dreaming/hook_dispatch_list.json")
-SETTINGS = os.path.expanduser(r"~/.claude/settings.json")
-ENABLED = os.path.expanduser(r"~/.claude/dreaming/HOOK_DISPATCH_ENABLED")
-LOG = os.path.expanduser(r"~/.claude/compute/hook_dispatch.log")
+LIST = os.path.expanduser("~/.claude/dreaming/hook_dispatch_list.json")
+SETTINGS = os.path.expanduser("~/.claude/settings.json")
+ENABLED = os.path.expanduser("~/.claude/dreaming/HOOK_DISPATCH_ENABLED")
+LOG = os.path.expanduser("~/.claude/compute/hook_dispatch.log")
 SELF = os.path.basename(__file__).lower()
 CREATE_NO_WINDOW = (0x08000000 if os.name == "nt" else 0)
 PER_HOOK_BUDGET_S = 120.0
@@ -140,7 +140,7 @@ HARNESS_INLINE_MAX = 10000
 # file's StringIO gives rc 1 and silence; 116 ms a call saved, 204.6 -> 88.2 ms median (primary_directive/
 # improve_1012/fronts/R25/runs/control_hot_1.txt). It left this set for the allowlist on that control. The prompt
 # hook (a different difference) and the strong-node runner stay.
-FORCE_SUBPROCESS = {"project_memory_hook.py",
+FORCE_SUBPROCESS = {# project_memory_hook.py left on 3 Nov for STDIN_BYTES_OK (below): its difference was the stdin
                     # the strong-nodes runtime hook: caused the 2026-09-15 fleet-wide block. Passing its argv fixed
                     # the argparse exit 2, and it still returns rc 1 with a traceback in-process where its own
                     # process returns 0 silently. Belt and braces with the allowlist below - it fails the control,
@@ -151,7 +151,13 @@ FORCE_SUBPROCESS = {"project_memory_hook.py",
 # them: the same bytes run_subprocess would send, behind a text layer, so .buffer.read() and .read() both work. Every
 # other hook keeps the io.StringIO it has always had, byte for byte; hook_dispatch_extend.py's stdin probe relies on
 # that. A name joins this set only with its own control.
-STDIN_BYTES_OK = frozenset({"project_memory_hot_hook.py"})
+STDIN_BYTES_OK = frozenset({"project_memory_hot_hook.py",
+                            # 3 Nov 2026, claude-baabdcd6: the prompt hook's 15 Sep difference was the same stdin. On APFS
+                            # clones of its store, 8 of 8 prompts gave the same rc, stdout and rows (only time-derived
+                            # ids differ); with the StringIO it printed a failed-closed note and wrote no row at all.
+                            # In its own process it logged 962 s of slow prompts on 3 Nov, 70 runs at 5 s or more, for
+                            # 0.1-0.4 s of work (brain_improvement/hook_inproc_2026_11_03).
+                            "project_memory_hook.py"})
 
 
 def _stdin_for(path, payload):
@@ -169,7 +175,7 @@ def _stdin_for(path, payload):
 # equivalent. hook_dispatch_control.py writes this file after a passing run, listing the hooks whose in-process
 # output matched their own subprocess exactly. An unknown hook, a new hook, or a hook edited since the last control
 # run is simply not in the list, and runs the way it always did.
-ALLOW = os.path.expanduser(r"~/.claude/dreaming/hook_dispatch_allow.json")
+ALLOW = os.path.expanduser("~/.claude/dreaming/hook_dispatch_allow.json")
 
 
 _ALLOW_STALE = [False]          # set by _allowlist(), read once per dispatch so the log says it ONCE
@@ -586,7 +592,7 @@ RANK = {"allow": 0, "ask": 1, "deny": 2}
 # ones are cut to that share at a line boundary, the whole untrimmed text goes to a file named in the first line, and
 # the log says so (FIT). INLINE_CAP sits under the harness number because it counts UTF-16 units and we count code points.
 INLINE_CAP = 9800
-OVERFLOW_DIR = os.path.expanduser(r"~/.claude/compute/hook_overflow")
+OVERFLOW_DIR = os.path.expanduser("~/.claude/compute/hook_overflow")
 OVERFLOW_KEEP_S = 48 * 3600
 _LAST_FIT = [None]        # (total_chars, n_hooks, n_cut, path) of the last merge that had to cut, for the dispatch log
 
@@ -722,6 +728,67 @@ def fit_contexts(items, cap, event, session):
     return out[:cap]
 
 
+# 1000-ways #13 (2026-10-30): one "recently attended" store across the hooks. Measured by eval_hook_cofire.py on 30 h
+# of Mac transcripts: 71.5% of all hook text was a block the session had been shown, numbers aside, within the last
+# 10 min - [prompt-contract] 91% repeats, [project-context] 97.5% - while the memory-naming hooks almost never repeat
+# (unconscious 0.8%, exact-name 0%) and never named one slug twice in an event. So only those two tags are folded: a
+# block whose number-blind text this session saw within DEDUP_WINDOW_S is dropped; it shows again once the window has
+# passed, and any change of substance is new text and shows at once. Tool and prompt events only; HOOK_DEDUP_OFF=1
+# turns it off.
+DEDUP_TAGS = ("prompt-contract", "project-context")
+DEDUP_WINDOW_S = 600
+DEDUP_EVENTS = ("PreToolUse", "PostToolUse", "UserPromptSubmit")
+DEDUP_DIR = os.path.expanduser("~/.claude/compute/hook_seen")
+
+
+def dedup_repeats(items, event, session, now=None):
+    """items: [(label, text)]. Returns them with the repeated DEDUP_TAGS blocks removed (an item left empty goes)."""
+    if event not in DEDUP_EVENTS or not session or os.environ.get("HOOK_DEDUP_OFF") == "1":
+        return items
+    if not any("[%s]" % t in text for _, text in items for t in DEDUP_TAGS):
+        return items
+    import hashlib, re
+    now = time.time() if now is None else now
+    path = os.path.join(DEDUP_DIR, (re.sub(r"[^0-9A-Za-z_-]", "", session) or "x")[:64] + ".json")
+    try:
+        with open(path) as f:
+            seen = {k: v for k, v in json.load(f).items() if now - v <= DEDUP_WINDOW_S}
+    except (OSError, ValueError, AttributeError):
+        seen = {}
+    tag_at = re.compile(r"^\[([a-z][a-z0-9_-]{1,30})\]", re.M)
+    out, changed = [], False
+    for label, text in items:
+        starts = [m.start() for m in tag_at.finditer(text)]
+        if not starts:
+            out.append((label, text))
+            continue
+        pieces = [text[:starts[0]]] + [text[a:b] for a, b in zip(starts, starts[1:] + [len(text)])]
+        kept = []
+        for p in pieces:
+            m = tag_at.match(p)
+            if m and m.group(1) in DEDUP_TAGS:
+                key = hashlib.md5(re.sub(r"\d+", "#", " ".join(p.split())).encode()).hexdigest()[:16]
+                if key in seen:
+                    changed = True
+                    continue
+                seen[key] = now
+                changed = True
+            kept.append(p)
+        t = "".join(kept).rstrip("\n")
+        if t.strip():
+            out.append((label, t))
+    if changed:
+        try:
+            os.makedirs(DEDUP_DIR, exist_ok=True)
+            tmp = "%s.%d.tmp" % (path, os.getpid())
+            with open(tmp, "w") as f:
+                json.dump(seen, f)
+            os.replace(tmp, path)
+        except OSError:
+            pass
+    return out
+
+
 TOP_LEVEL_EVENTS_WITHOUT_HSO = ("Stop", "SubagentStop")
 
 
@@ -842,6 +909,10 @@ def merge(results, event, session=""):
                             "event: " + LIST_UNREADABLE[0] + ". The session is unharmed and unhooked; "
                             "repair that file."))
     hso = {"hookEventName": event}
+    try:
+        contexts = dedup_repeats(contexts, event, session)
+    except Exception:
+        log("dedup failed, contexts kept whole: " + _format_exc().replace("\n", " | ")[:300])
     if contexts:
         try:
             hso["additionalContext"] = fit_contexts(contexts, INLINE_CAP, event, session)
@@ -937,6 +1008,15 @@ def _label_from_cmd(cmd, args=None):
                 if parent:
                     return "%s/%s" % (parent[:12], base)
             return base
+    # The error-graph runner passes its path hex-encoded inside -c "...bytes.fromhex('...')...runpy...", so no token
+    # ends in .py; on 29 Oct it logged 4,266 rows (70 of them timeouts) as "/Library/Frameworks/Python.framework/Ve...".
+    import re
+    m = re.search(r"fromhex\(\s*['\"]([0-9a-fA-F]{8,})['\"]\s*\)", cmd)
+    if m:
+        try:
+            return os.path.basename(bytes.fromhex(m.group(1)).decode("utf-8").rstrip("/\\")) or (cmd[:40] + "...")
+        except ValueError:
+            pass
     return (cmd[:40] + "...")
 
 
@@ -1063,8 +1143,8 @@ def _flag_file_absent(args):
 # payload, a hook's text or a prompt. With the flag absent the cost is one os.stat per event; nothing is written past
 # PROFILE_MAX_BYTES; nothing here raises. On: create the flag (an empty file). It lapses three hours after its mtime.
 # Read the lines with primary_directive/improve_1012/fronts/R30/analyse_r30.py.
-PROFILE_FLAG = os.path.expanduser(r"~/.claude/compute/hook_profile.on")
-PROFILE_LOG = os.path.expanduser(r"~/.claude/compute/hook_profile.jsonl")
+PROFILE_FLAG = os.path.expanduser("~/.claude/compute/hook_profile.on")
+PROFILE_LOG = os.path.expanduser("~/.claude/compute/hook_profile.jsonl")
 PROFILE_MAX_AGE_S = 3 * 3600
 PROFILE_MAX_BYTES = 64 * 1024 * 1024
 PROFILE_RATE_256 = 64                # sampled when os.urandom(1)[0] < this: 64 of 256, one dispatch in four

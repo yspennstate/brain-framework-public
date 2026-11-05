@@ -103,6 +103,102 @@ def _csr_kernel():
     return _KERNEL[0]
 
 
+_POOL = []
+
+
+def _threaded_matvec(m, k, n, x, y):
+    """y = m @ x with the rows split into nnz-balanced blocks over a small thread pool (scipy's csr_matvec releases the
+    GIL). Each row is still summed by csr_matvec in its own order, so y is the same bit for bit as one call (2 Nov 2026:
+    uint32-equal at 2/4/8 threads; a walk's 20 products 0.62 s -> 0.18-0.27 s). BRAIN_WALK_THREADS=1 keeps one call."""
+    try:
+        T = int(os.environ.get("BRAIN_WALK_THREADS", "4"))
+    except ValueError:
+        T = 4
+    if T <= 1 or n < 50000:
+        k.csr_matvec(n, n, m.indptr, m.indices, m.data, x, y)
+        return
+    bl = m.__dict__.get("_blocks")
+    if bl is None or bl[0] != T:
+        nnz = int(m.indptr[-1])
+        cuts = [0] + [int(np.searchsorted(m.indptr, nnz * j // T)) for j in range(1, T)] + [n]
+        parts = []
+        for a, b in zip(cuts, cuts[1:]):
+            if b > a:
+                ip = m.indptr[a:b + 1]
+                s, e = int(ip[0]), int(ip[-1])
+                parts.append((a, b, ip - ip[0], m.indices[s:e], m.data[s:e]))
+        bl = (T, parts)
+        m.__dict__["_blocks"] = bl
+    if not _POOL or _POOL[0][0] < T:
+        from concurrent.futures import ThreadPoolExecutor
+        _POOL[:] = [(T, ThreadPoolExecutor(T, thread_name_prefix="walk"))]
+
+    def one(p):
+        a, b, ip, ind, dat = p
+        k.csr_matvec(b - a, n, ip, ind, dat, x, y[a:b])
+    list(_POOL[0][1].map(one, bl[1]))
+
+
+class _NameIndex:
+    """name -> node id for a loaded walk without hashing every name: a binary search over the names in sorted order,
+    the order kept beside the walk cache. A recall looks up some 30 names; building the 351k-entry dict cost 0.2-0.36 s
+    in every process (2 Nov 2026). Same answers as the dict (names are unique; checked when the order is built)."""
+    __slots__ = ("names", "order")
+
+    def __init__(self, names, order):
+        self.names, self.order = names, order
+
+    def get(self, name, default=None):
+        nm, o = self.names, self.order
+        lo, hi = 0, len(o)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if nm[o[mid]] < name:
+                lo = mid + 1
+            else:
+                hi = mid
+        if lo < len(o) and nm[o[lo]] == name:
+            return int(o[lo])
+        return default
+
+    def __getitem__(self, name):
+        i = self.get(name)
+        if i is None:
+            raise KeyError(name)
+        return i
+
+    def __contains__(self, name):
+        return self.get(name) is not None
+
+    def __len__(self):
+        return len(self.names)
+
+
+def _name_index(names, cache_path, store):
+    """The walk's name -> id map. BRAIN_WALK_NAME_INDEX=0 keeps the plain dict."""
+    if os.environ.get("BRAIN_WALK_NAME_INDEX", "1") == "0":
+        return {n: i for i, n in enumerate(names)}
+    sid = source_identity(store)
+    p = cache_path[:-4] + "_order.npz"
+    try:
+        with np.load(p) as z:
+            if str(z["src_id"]) == sid and len(z["order"]) == len(names):
+                return _NameIndex(names, z["order"])
+    except Exception:
+        pass
+    order = sorted(range(len(names)), key=names.__getitem__)
+    if any(names[a] == names[b] for a, b in zip(order, order[1:])):   # a repeated name: the dict keeps the last
+        return {n: i for i, n in enumerate(names)}
+    order = np.array(order, dtype=np.int32)
+    try:
+        tmp = "%s.%d.tmp.npz" % (p, os.getpid())
+        np.savez(tmp, order=order, src_id=np.array(sid))
+        os.replace(tmp, p)
+    except Exception:
+        pass
+    return _NameIndex(names, order)
+
+
 class CSR:
     """A square CSR matrix whose product with a float32 vector or column is scipy's own: csr_matvec on the same arrays,
     the routine csr_matrix @ x calls for those shapes, so a walk comes out the same bit for bit. Anything else asked of
@@ -130,7 +226,7 @@ class CSR:
                 and self.data.dtype == np.float32):
             y = np.zeros(n, np.float32)
             try:
-                k.csr_matvec(n, n, self.indptr, self.indices, self.data, x.ravel(), y)
+                _threaded_matvec(self, k, n, x.ravel(), y)
             except Exception:
                 return self._scipy() @ x
             return y if x.ndim == 1 else y.reshape(n, 1)
@@ -198,7 +294,7 @@ class Diffusion:
         d = json.load(open(os.path.join(store, "nodes.json"), encoding="utf-8"))
         g.names, g.meta = d["names"], d["meta"]
         g.N = len(g.names)
-        g.id = {n: i for i, n in enumerate(g.names)}
+        g.id = _name_index(g.names, path, store)
         g.alpha, g.iters, g.dtype = alpha, iters, np.float32
         g.PT = CSR(z["data"], z["indices"], z["indptr"], g.N)
         g.dangling, g.p0, g.out_sum = z["dangling"], z["p0"], z["out_sum"]
@@ -307,9 +403,27 @@ class Diffusion:
         col = S.sum(axis=0, keepdims=True)
         S = S / np.where(col > 0, col, 1)
         r = S.copy()
+        if os.environ.get("BRAIN_PPR_SEEDROWS", "1") == "0":
+            for _ in range(iters):
+                dang = r[self.dangling].sum(axis=0, keepdims=True)
+                r = alpha * S + (1 - alpha) * (self.PT @ r + S * dang)
+            return r
+        # The same walk bit for bit (13/13 recall walks and a batch of 3, 3 Nov, claude-738954b6): off the seed rows
+        # alpha*0 + (1-alpha)*(y + 0*dang) is (1-alpha)*y exactly, so only the seed rows take the full expression,
+        # and the dangling mass is summed over the same rows taken by index. ppr 0.61 -> 0.33 s on the 360k-node walk.
+        di = getattr(self, "_dang_ix", None)
+        if di is None:
+            di = self._dang_ix = np.flatnonzero(self.dangling)
+        nz = np.flatnonzero(S.any(axis=1))
+        Snz = S[nz]
+        aS = alpha * Snz
         for _ in range(iters):
-            dang = r[self.dangling].sum(axis=0, keepdims=True)
-            r = alpha * S + (1 - alpha) * (self.PT @ r + S * dang)
+            dang = r[di].sum(axis=0, keepdims=True)
+            y = self.PT @ r
+            top = aS + (1 - alpha) * (y[nz] + Snz * dang)
+            y *= (1 - alpha)
+            y[nz] = top
+            r = y
         return r
 
     def seed_words(self, text, extra=()):

@@ -1,0 +1,16 @@
+{
+  "template_only": true,
+  "execution_authority": false,
+  "items": [
+    {"rank": 1, "theme": "Security and privacy", "task": null, "status": "unconfigured"},
+    {"rank": 2, "theme": "Workflow and agent effectiveness", "task": null, "status": "unconfigured"},
+    {"rank": 3, "theme": "Speed and useful recall", "task": null, "status": "unconfigured"},
+    {"rank": 4, "theme": "Owner questions and scoped verified decisions", "task": null, "status": "unconfigured"},
+    {"rank": 5, "theme": "Shared agent collaboration", "task": null, "status": "unconfigured"},
+    {"rank": 6, "theme": null, "task": null, "status": "unconfigured"},
+    {"rank": 7, "theme": null, "task": null, "status": "unconfigured"},
+    {"rank": 8, "theme": null, "task": null, "status": "unconfigured"},
+    {"rank": 9, "theme": null, "task": null, "status": "unconfigured"},
+    {"rank": 10, "theme": null, "task": null, "status": "unconfigured"}
+  ]
+}

@@ -11,9 +11,7 @@ import re
 # (phrases a question uses, words the memories use)
 TABLE = [
     (("too old", "expired", "outdated", "out of date"), "stale"),
-    # Mac, 4 Nov 2026 (claude-52d17aea): bare "empty" is left out. Over 111 Mac bank wordings it fired on 61 and moved
-    # 2 up and 8 down ("why is the fetch log session always empty" 6 -> 12); "blank" moved 1 up and 0 down.
-    (("nothing in it", "no visual", "blank"), "shows nothing"),
+    (("nothing in it", "no visual", "blank", "empty"), "shows nothing"),
     # the memories name the file by its suffix; 'temp folder' is left alone (those memories say 'temp')
     (("temp file", "temp files", "temporary file", "temporary files", "temp name"), "tmp"),
     # an API's daily allowance is what the memories call its quota; 'commit allowance' and 'premium allowance' stay out
@@ -36,10 +34,53 @@ TABLE = [
       "space is full", "2 t of storage", "2 t of stroage", "space agsin", "space again", "space left",
       "low on space", "no space"), "disk"),
     (("swap file", "swap files", "swapfile", "page file", "page files", "paging file", "paging files"), "pagefile"),
+    # q63 (4 Nov, recall_loop_68ceaf54_2026_10_27/RESULT_q63_4nov.md): the bond-leg memories name the fund tlt; a
+    # question says long bond. 1,087 live memories say tlt and never these words, none says them without tlt. Held 21:
+    # top-8 21 -> 21 (ceiling), MRR 0.863 -> 0.952, 4 better 0 worse; an IEI question naming the long bond as its
+    # comparator moved 1 -> 2.
+    (("long bond", "long bonds", "long-bond", "long treasury", "long treasuries", "long-dated treasury",
+      "long dated treasury", "20 year treasury", "20-year treasury", "twenty year treasury"), "tlt"),
 ]
 _RX = [(re.compile(r"\b(?:%s)\b" % "|".join(re.escape(k) for k in keys), re.I), add) for keys, add in TABLE]
+# Rows a fixed phrase list cannot hold (a year follows the phrase).
+# q78 (5 Nov, recall_loop_68ceaf54_2026_10_27/RESULT_q78_5nov.md): a question asks why a book "did badly in 2019" or "a
+# bad year", and the memory calls it a weak year. Dev 29 -> 1, held [1,3,2,1] -> [1,1,1,1]. Five negatives are
+# unchanged, except one 2022 question outside the top 8 either way (58 -> 122). No stored question fires it. A bare
+# 'badly' row was rejected: it moved a views question 2 -> 6.
+# BRAIN_RECALL_SYN_YEAR=0 leaves it out.
+if os.environ.get("BRAIN_RECALL_SYN_YEAR", "1") != "0":
+    _RX.append((re.compile(r"\b(?:badly|poorly)\s+in\s+(?:19|20)\d\d\b|\b(?:bad|poor)\s+years?\b", re.I), "weak"))
+# q83 (5 Nov, recall_loop_68ceaf54_2026_10_27/RESULT_q83_5nov.md): a question names the abbreviation by example ("cut
+# in two at St. or Dr.") and the normalizer drops "St"/"Dr", so the splitter memories, which say "abbreviation", lose
+# their only clue (dev 111 -> 1 BM25-alone with the word added). Fires only when a capitalised title abbreviation with
+# its period AND a split/break word are both in the question, so "Dr. Owhadi" questions are untouched.
+# BRAIN_RECALL_SYN_ABBR=0 leaves it out.
+if os.environ.get("BRAIN_RECALL_SYN_ABBR", "1") != "0":
+    _RX.append((re.compile(
+        r"^(?=.*\b(?:St|Dr|Mr|Mrs|Ms|Sgt|Gen|Col|Capt|Lt|Jr|Sr|Rev|Prof|Ft|Mt|Gov|Sen|Pres|Adm|Maj|Cpl|Pvt|Fr)\.(?=\s|$))"
+        r"(?=.*(?i:\b(?:split|splits|splitting|cut|cuts|break|breaks|broke|broken|chop|chops|chopped|stops|stopped"
+        r"|half|halves|in two|new line|new sentence)\b))", re.S), "abbreviation"))
+# q84 (5 Nov, recall_loop_68ceaf54_2026_10_27/RESULT_q84_5nov.md): a question asks how big the hedge's f can be ("the
+# most f can be", "how high is f allowed") and the normalizer drops the lone "f", so the f-cap memories (dynamic f,
+# 0 <= f <= 0.8) have no clue left. Adds "dynamic" and "0_8" (the normalised 0.8) when a lowercase stand-alone f AND a
+# size or limit word are both in the question; f( f- f' and f-strings do not count. The 0.8 is today's cap: if the
+# law moves it, change this row with it. BRAIN_RECALL_SYN_FCAP=0 leaves it out.
+if os.environ.get("BRAIN_RECALL_SYN_FCAP", "1") != "0":
+    # a maths question about a function f is not about the hedge: on "if f is convex what is the max on the interval"
+    # the unguarded row put three f-cap notes on top (live eval 5 Nov), so maths words switch it off
+    _FCAP = (r"^(?!.*(?i:\b(?:convex|concave|interval|function|functions|derivative|integral|integrable|continuous"
+             r"|differentiable|lemma|theorem|proof|prove|polynomial|domain|density|densities|probability|random"
+             r"|matrix|eigenvalue|norm|measure|series|sequence|bounded|maximi[sz]e|minimi[sz]e|real-valued|analytic"
+             r"|lipschitz|harmonic|holomorphic|of x|in x|f\s*=)\b))"
+             r"(?=.*(?<![\w.'\-/])f(?![\w'(\-/]|\.\w))"
+             r"(?=.*(?i:\b(?:most|max|maximum|maxed|ceiling|cap|capped|limit|limits|limited|high|higher|highest|big"
+             r"|bigger|biggest|large|larger|largest|above|exceed|exceeds|bound|upper|allowed|allow|allows|range)\b))")
+    _RX.append((re.compile(_FCAP, re.S), "dynamic"))
+    _RX.append((re.compile(_FCAP, re.S), "0_8"))
 # whole-word test for "the memory word is already in the question" ('tar' is not in 'starts')
-_HAS = {add: re.compile(r"\b%s\b" % re.escape(add), re.I) for _k, add in TABLE}
+_HAS = {add: re.compile(r"\b%s\b" % re.escape(add), re.I) for _rx, add in _RX}
+if "0_8" in _HAS:
+    _HAS["0_8"] = re.compile(r"(?<![\d.])0?[._]8(?![\d])")
 
 # probe 15 (1 Nov, content_gap_68ce/RESULT_probe15_1nov.md): the memories split British and US spellings (390 files say
 # neighbours, 64 neighbors; 427 catalogue, 1050 catalog), and bm25's typo snap only corrects a word seen in at most 8

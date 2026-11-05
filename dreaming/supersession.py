@@ -418,7 +418,7 @@ def _default_index():
     return os.environ.get("BRAIN_SUPERSEDED_INDEX") or os.path.join(HERE, "superseded.tsv")
 
 
-def load_map(memory_dir, index_path=None, include_frontmatter=False, entries=None, listed_ns=None):
+def load_map(memory_dir, index_path=None, include_frontmatter=False):
     """Load old->correction routes.  Frontmatter, when requested, is authoritative."""
     routes = {}
     path = _default_index() if index_path is None else index_path
@@ -436,7 +436,7 @@ def load_map(memory_dir, index_path=None, include_frontmatter=False, entries=Non
         pass
 
     if include_frontmatter:
-        for name, target in _frontmatter_targets(memory_dir, entries=entries, listed_ns=listed_ns).items():
+        for name, target in _frontmatter_targets(memory_dir).items():
             routes[name] = target
     return routes
 
@@ -483,12 +483,30 @@ def _stat_key(st):
     return [st.st_size, st.st_mtime_ns, st.st_ctime_ns, getattr(st, "st_birthtime_ns", 0) or 0]
 
 
-def _frontmatter_targets(memory_dir, entries=None, listed_ns=None):
+def _fm_cache_path(memory_dir):
+    """One cache file per memory folder (29 Oct 2026). The single shared file held one folder at a time, so a recall
+    against the repo mirror's memory folder made the next live recall re-read all 28k files: 70-282 s on the loaded
+    Mac, and other agents' recalls queued 5-13 min behind it."""
+    import hashlib
+    tag = hashlib.sha256(os.path.normcase(os.path.abspath(memory_dir)).encode("utf-8")).hexdigest()[:12]
+    return os.path.join(HERE, "supersession_frontmatter_cache.%s.json" % tag)
+
+
+# What the last _frontmatter_targets call read: memory_dir and pointers, file name -> (strict, candidate) for every file
+# that has either. brain.py's recall keeps it beside a cached map to tell whether a later folder state can change it.
+LAST_POINTERS = {}
+
+
+def _frontmatter_targets(memory_dir):
     import json
-    cache_path = os.path.join(HERE, _FM_CACHE_NAME)
+    cache_path = _fm_cache_path(memory_dir)
     cached = {}
     try:
-        with io.open(cache_path, encoding="utf-8") as fh:
+        try:
+            fh = io.open(cache_path, encoding="utf-8")
+        except FileNotFoundError:   # first use: seed from the old shared file when it holds this folder
+            fh = io.open(os.path.join(HERE, _FM_CACHE_NAME), encoding="utf-8")
+        with fh:
             data = json.load(fh)
         if isinstance(data, dict) and data.get("memory_dir") == os.path.abspath(memory_dir) \
                 and data.get("version") == _FM_CACHE_VERSION \
@@ -502,12 +520,12 @@ def _frontmatter_targets(memory_dir, entries=None, listed_ns=None):
                       if not (isinstance(v, list) and len(v) == 6 and v[5])}
     except Exception:
         cached = {}
-    files, out, dirty = {}, {}, False
+    files, out, dirty, stale = {}, {}, False, 0
+    pointers = {}
+    LAST_POINTERS.clear()
     import time as _time
-    # a listing handed in is judged at the moment it was taken, as this function's own listing is
-    now_ns = listed_ns if (entries is not None and listed_ns is not None) else _time.time_ns()
-    if entries is None:
-        entries = _md_files(memory_dir)
+    now_ns = _time.time_ns()
+    entries = _md_files(memory_dir)
     canon = _canonical_names(entries)
     for entry in entries:
         name = entry.name
@@ -525,8 +543,18 @@ def _frontmatter_targets(memory_dir, entries=None, listed_ns=None):
             head = _read_frontmatter(entry.path)
             strict = _frontmatter_target(head)
             candidate = "" if strict else _lenient_candidate(head)
-            dirty = True
+            # A re-read that parses to what the cache already holds changed only its stamp. CONSCIENCE.md is
+            # rewritten by a Stop hook on every turn, so counting that as dirty rewrote this 3.4 MB cache on
+            # every recall (30 Oct). Such a file is re-read next call instead; the map returned is the same.
+            # A new file waits the same way: agents file a memory every few minutes, so writing on each one
+            # still rewrote the cache on most recalls (2.6 s of a 15 s recall at load 48).
+            if prev is None or (isinstance(prev, list) and len(prev) == 6 and prev[4:] == [strict, candidate]):
+                stale += 1
+            else:
+                dirty = True
         files[name] = key + [strict, candidate]
+        if strict or candidate:
+            pointers[name] = (strict, candidate)
         # a prose pointer routes only while its target exists, judged against this listing on every call; a target is
         # spelled as its file is, so the resolver's exact-name check finds it
         if strict:
@@ -535,7 +563,8 @@ def _frontmatter_targets(memory_dir, entries=None, listed_ns=None):
             target = canon.get(os.path.normcase(candidate), "") if candidate else ""
         if target and SLUG_RX.fullmatch(target):
             out[name[:-3]] = target
-    if dirty or len(files) != len(cached):
+    # a deleted file's leftover entry is never looked up, so removals alone do not force a write
+    if dirty or stale > 64 or (files and not cached):
         try:
             tmp = cache_path + ".tmp.%d" % os.getpid()
             with io.open(tmp, "w", encoding="utf-8") as fh:
@@ -546,6 +575,7 @@ def _frontmatter_targets(memory_dir, entries=None, listed_ns=None):
             os.replace(tmp, cache_path)
         except Exception:
             pass
+    LAST_POINTERS.update(memory_dir=os.path.abspath(memory_dir), pointers=pointers)
     return out
 
 
@@ -569,6 +599,31 @@ def resolve(slug, routes, known_slugs=None, max_hops=32):
     return original
 
 
+# 3 Nov 2026, claude-baabdcd6: fok_probe and spread_recall both call active_supersessions on every prompt, in the one
+# dispatcher process since the hooks went in-process, and each listed the whole memory folder: 0.45 s of a 0.72 s call
+# with 45k files (S/fokprof). The slug set is kept per process and reused while the folder's inode, mtime and ctime are
+# unchanged. Creating, removing or renaming an entry moves the folder's mtime and ctime, so the set is right by
+# construction; the stat is read before the listing, so a change during the listing makes the next call list again.
+# Not covered: a *.md symlink whose target changes between file and directory, which the listing alone would notice.
+_KNOWN_SLUGS = {}
+
+
+def _known_slugs(memory_dir):
+    path = os.path.abspath(memory_dir)
+    try:
+        st = os.stat(path)
+        key = (st.st_ino, st.st_mtime_ns, st.st_ctime_ns)
+    except Exception:
+        key = None
+    hit = _KNOWN_SLUGS.get(path)
+    if key is not None and hit is not None and hit[0] == key:
+        return hit[1]
+    names = frozenset(entry.name[:-3] for entry in _md_files(memory_dir))
+    if key is not None:
+        _KNOWN_SLUGS[path] = (key, names)
+    return names
+
+
 def active_supersessions(memory_dir, index_path=None, known_slugs=None,
                          include_frontmatter=False):
     """Return known historical slug -> existing terminal correction."""
@@ -585,13 +640,11 @@ def active_supersessions(memory_dir, index_path=None, known_slugs=None,
         entries = _md_files(memory_dir)
         known_slugs = {entry.name[:-3] for entry in entries}
     else:
-        entries = listed_ns = None
         known_slugs = set(known_slugs)
     routes = load_map(memory_dir, index_path=index_path,
-                      include_frontmatter=include_frontmatter, entries=entries,
-                      listed_ns=listed_ns)
+                      include_frontmatter=include_frontmatter)
     active = {}
-    for slug in known_slugs:
+    for slug in known_slugs.intersection(routes):   # resolve() returns a slug with no route unchanged
         endpoint = resolve(slug, routes, known_slugs=known_slugs)
         if endpoint != slug:
             active[slug] = endpoint

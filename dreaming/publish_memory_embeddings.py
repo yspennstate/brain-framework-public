@@ -44,6 +44,46 @@ def _authority_snapshot(report, committed_at=None):
     }
 
 
+def _missing_only_newer(report):
+    """True when the report's only shortfall is memories newer than every memory the generation holds, so written
+    after the build read the corpus. Their rows are missing, not wrong; the next build embeds them. A missing memory
+    no newer than the newest held one (the build skipped it), or more than 2% of the corpus missing, still refuses."""
+    if (not report.get("readable") or not report.get("corpus_readable") or not report.get("hashes_available")
+            or report.get("problems") or report.get("extra") or report.get("stale") or report.get("duplicates")
+            or report.get("activation_inconsistent") or not report.get("missing")):
+        return False
+    manifest = report.get("corpus_manifest") or {}
+    missing = set(report["missing"])
+    if len(missing) > max(1, int(0.02 * report.get("eligible", 0))):
+        return False
+    try:
+        held = [int(manifest[s][1]) for s in manifest if s not in missing]
+        newest_held = max(held)
+        return all(int(manifest[s][1]) > newest_held for s in missing)
+    except (KeyError, IndexError, TypeError, ValueError):
+        return False
+
+
+def _why(report):
+    """One line saying what a refused generation is short of, for the dream log."""
+    manifest = report.get("corpus_manifest") or {}
+    missing = set(report.get("missing") or [])
+    try:
+        newest_held = max(int(manifest[s][1]) for s in manifest if s not in missing)
+        older = sum(1 for s in missing if int(manifest[s][1]) <= newest_held)
+    except (KeyError, IndexError, TypeError, ValueError):
+        older = "?"
+    parts = ["missing %d of %d (%s no newer than the newest held)" % (len(missing), report.get("eligible", 0), older)]
+    for key in ("stale", "extra", "duplicates", "activation_inconsistent"):
+        if report.get(key):
+            parts.append("%s %d" % (key, len(report[key])))
+    if not report.get("readable") or not report.get("corpus_readable"):
+        parts.append("unreadable")
+    if report.get("problems"):
+        parts.append("problem: %s" % str(report["problems"][0])[:120])
+    return "; ".join(parts)
+
+
 def _coherent_report(mem_dir, sidecar, expected_model, expected_sha, expected_size,
                      require_complete=True):
     """Two strict reads must describe the same safe corpus and exact immutable bytes."""
@@ -57,9 +97,24 @@ def _coherent_report(mem_dir, sidecar, expected_model, expected_sha, expected_si
         raise OSError("corpus or staged generation changed during publication audit")
     if (not second["readable"] or not second["corpus_readable"] or second["problems"]
             or second["sidecar_sha256"] != expected_sha or second["sidecar_size"] != expected_size
-            or (require_complete and not second["complete"])):
-        raise ValueError("sidecar is not an exact safe current-corpus generation")
+            or (require_complete and not second["complete"] and not _missing_only_newer(second))):
+        raise ValueError("sidecar is not an exact safe current-corpus generation (%s)" % _why(second))
     return second
+
+
+def _warm_corpus(mem_dir):
+    """Read the corpus once before the locks, with the builder's stat-keyed cache on: the four audits publish() runs
+    under memory_write.lock then stat unchanged files instead of reading them (3 Nov: 105 of 137 s per audit was the
+    read, and the publish hit its 1800 s cap holding the lock). The locked audits still decide."""
+    if not hasattr(builder, "enable_read_cache"):
+        # the read cache lives in the Mac's builder (dreaming/macmini); a machine whose builder lacks it skips the warm
+        # pass, which only saves time, rather than failing the publish (4 Nov, the research box)
+        return
+    builder.enable_read_cache()
+    try:
+        builder.collect_memories(mem_dir, strict=False)
+    except Exception:
+        pass
 
 
 def _json_bytes(value):
@@ -193,6 +248,7 @@ def publish(staged, production=builder.OUT, authority_path=coverage.DEFAULT_AUTH
     if not os.path.isfile(staged):
         raise FileNotFoundError(staged)
 
+    _warm_corpus(mem_dir)
     with artifact.file_lock(lock_path, lock_timeout):
         with artifact.file_lock(memory_lock_path, lock_timeout):
             staged_blob, staged_sha, staged_size, _ = artifact.read_stable_bytes(staged)

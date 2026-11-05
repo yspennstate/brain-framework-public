@@ -42,7 +42,12 @@
       "hooks": [
         {
           "type": "command",
-          "command": "\"{{PYTHON}}\" -s -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='claude';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+          "command": "{{PYTHON}}",
+          "args": [
+            "-s",
+            "-B",
+            "{{DREAMING}}/error_graph_hook.py"
+          ],
           "timeout": 600
         }
       ]
@@ -98,6 +103,35 @@
           ],
           "timeout": 60,
           "enabled_if": "~/.claude/brain_graph/live/HOOK_ENABLED"
+        }
+      ]
+    },
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}/test_rigor_hook.py"
+          ],
+          "timeout": 10
+        }
+      ]
+    },
+    {
+      "matcher": "Edit|Write|MultiEdit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "-B",
+            "{{DREAMING}}/verify_ops.py"
+          ],
+          "timeout": 60
         }
       ]
     }
@@ -195,7 +229,12 @@
       "hooks": [
         {
           "type": "command",
-          "command": "\"{{PYTHON}}\" -s -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='claude';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+          "command": "{{PYTHON}}",
+          "args": [
+            "-s",
+            "-B",
+            "{{DREAMING}}/error_graph_hook.py"
+          ],
           "timeout": 600
         }
       ]
@@ -414,6 +453,20 @@
           "timeout": 60
         }
       ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}/crash_breadcrumb.py"
+          ],
+          "timeout": 30,
+          "statusMessage": "Checking whether the machine crashed"
+        }
+      ]
     }
   ],
   "Stop": [
@@ -515,7 +568,12 @@
       "hooks": [
         {
           "type": "command",
-          "command": "\"{{PYTHON}}\" -s -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='claude';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+          "command": "{{PYTHON}}",
+          "args": [
+            "-s",
+            "-B",
+            "{{DREAMING}}/error_graph_hook.py"
+          ],
           "timeout": 600
         }
       ]
@@ -747,7 +805,12 @@
       "hooks": [
         {
           "type": "command",
-          "command": "\"{{PYTHON}}\" -s -B -c \"import os,runpy,sys;os.environ['ERROR_GRAPH_MODE']='shadow';os.environ['ERROR_GRAPH_RUNTIME_HINT']='claude';p=bytes.fromhex('{{ERROR_GRAPH_HEX}}').decode('utf-8');sys.path.insert(0,p);runpy.run_path(os.path.join(p,'hook.py'),run_name='__main__')\"",
+          "command": "{{PYTHON}}",
+          "args": [
+            "-s",
+            "-B",
+            "{{DREAMING}}/error_graph_hook.py"
+          ],
           "timeout": 600
         }
       ]
@@ -907,6 +970,19 @@
             "{{DREAMING}}\\primary_hook.py"
           ],
           "timeout": 30
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}/test_rigor_hook.py"
+          ],
+          "timeout": 10
         }
       ]
     }

@@ -124,42 +124,79 @@ def collect_memories(mem_dir=MEM_DEFAULT, limit=None, strict=True):
     raise last
 
 
-def _collect_memories_once(mem_dir=MEM_DEFAULT, limit=None, strict=True):
-    """One snapshot attempt; see collect_memories for the retry contract."""
-    rows = []
-    names = sorted(os.listdir(mem_dir))
-    eligible_names = [fn for fn in names if fn.endswith(".md") and fn[:-3] not in SKIP]
-    for fn in eligible_names:
-        if not fn.endswith(".md") or fn[:-3] in SKIP:
-            continue
-        path = os.path.join(mem_dir, fn)
+COLLECT_RECONCILE_ROUNDS = 8   # 2026-10-18: membership churn is reconciled by name, not by re-reading the corpus
+CHANGED_READ_RETRIES = 3
+
+
+def _eligible(mem_dir):
+    return sorted(fn for fn in os.listdir(mem_dir) if fn.endswith(".md") and fn[:-3] not in SKIP)
+
+
+def _read_row(mem_dir, fn, strict):
+    """(slug, text, sha) for one memory read with no change under the read; None when too short or skipped."""
+    path = os.path.join(mem_dir, fn)
+    for attempt in range(CHANGED_READ_RETRIES if strict else 1):
         try:
             before = os.stat(path)
             body = io.open(path, encoding="utf-8", errors="replace").read()
             after = os.stat(path)
+        except FileNotFoundError:
+            return "gone"
         except Exception as exc:
             if strict:
                 raise OSError("could not read corpus memory %s: %s" % (fn, exc)) from exc
-            continue
+            return None
         before_sig = (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
         after_sig = (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
-        if before_sig != after_sig:
-            if strict:
-                raise OSError("corpus memory changed while read: %s" % fn)
-            continue
-        text = _text_for(body)
-        if len(text) < 40:
-            continue
-        rows.append((fn[:-3], text, text_sha256(text)))
+        if before_sig == after_sig:
+            text = _text_for(body)
+            return (fn[:-3], text, text_sha256(text)) if len(text) >= 40 else None
+        if strict and attempt + 1 < CHANGED_READ_RETRIES:
+            time.sleep(0.5)
+    if strict:
+        raise OSError("corpus memory changed while read: %s" % fn)
+    return None
+
+
+def _collect_memories_once(mem_dir=MEM_DEFAULT, limit=None, strict=True):
+    """One snapshot attempt; see collect_memories for the retry contract.
+
+    18 Oct 2026: one pass over ~28k files took ~9 min on a busy disk, and agents file a memory every few minutes, so
+    almost every pass ended with "membership changed" and was thrown away whole (the 13:20 refresh read the corpus
+    for 20+ min; embedding_coverage.py timed out at 600 s on every run that day). Now a pass that ends with a
+    different membership reads only the names that arrived, drops the ones that left, and checks again; the result
+    is still exactly the final listing's membership, every row read with no change under its read."""
+    rows = {}
+    eligible_names = _eligible(mem_dir)
+    for fn in eligible_names:
+        row = _read_row(mem_dir, fn, strict)
+        if row == "gone":
+            continue                      # removed mid-pass; the membership check below settles it
+        if row:
+            rows[fn] = row
         if limit and len(rows) >= limit:
-            break
+            return [rows[k] for k in sorted(rows)]
     if strict and limit is None:
-        after_names = sorted(
-            fn for fn in os.listdir(mem_dir) if fn.endswith(".md") and fn[:-3] not in SKIP
-        )
-        if after_names != eligible_names:
+        for _ in range(COLLECT_RECONCILE_ROUNDS):
+            after_names = _eligible(mem_dir)
+            if after_names == eligible_names:
+                break
+            now = set(after_names)
+            for fn in [k for k in rows if k not in now]:
+                del rows[fn]
+            for fn in sorted(now - set(eligible_names)):
+                row = _read_row(mem_dir, fn, strict)
+                if row and row != "gone":
+                    rows[fn] = row
+            eligible_names = after_names
+        else:
             raise OSError("memory corpus membership changed while it was collected")
-    return rows
+        missing = [fn for fn in eligible_names if fn not in rows and os.path.exists(os.path.join(mem_dir, fn))]
+        for fn in missing:                # read as "gone" mid-pass but listed at the end: read it now
+            row = _read_row(mem_dir, fn, strict)
+            if row and row != "gone":
+                rows[fn] = row
+    return [rows[k] for k in sorted(rows)]
 
 
 def _scalar(z, name, default=None):

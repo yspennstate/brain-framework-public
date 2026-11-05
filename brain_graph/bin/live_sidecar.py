@@ -172,12 +172,91 @@ def build_nodes(db, st):
     return len(rows)
 
 
+MEMPARSE_CACHE = os.path.join(LIVE, "memparse_cache.pkl")
+CACHE_WRITE_ALWAYS = False      # tests only: write the cache on a partial pass too
+
+
+def _code_key():
+    """The parse depends on this file's patterns and extract_touch_events's; any edit to either starts a fresh cache."""
+    import hashlib
+    import extract_touch_events as X
+    h = hashlib.sha256()
+    for p in (os.path.abspath(__file__), os.path.abspath(X.__file__)):
+        with open(p, "rb") as fh:
+            h.update(fh.read())
+    return h.hexdigest()[:16]
+
+
+def _load_cache(key):
+    import pickle
+    try:
+        with open(MEMPARSE_CACHE, "rb") as fh:
+            c = pickle.load(fh)
+        if c.get("key") == key:
+            return c["files"]
+    except Exception:
+        pass
+    return {}
+
+
+def _save_cache(key, files):
+    import pickle
+    tmp = "%s.%d.tmp" % (MEMPARSE_CACHE, os.getpid())     # two writers (a build, a study) never share a temp file
+    try:
+        with open(tmp, "wb") as fh:
+            pickle.dump({"key": key, "files": files}, fh, protocol=pickle.HIGHEST_PROTOCOL)
+        os.replace(tmp, MEMPARSE_CACHE)
+    except Exception as e:                     # a cache is never a precondition
+        log("memparse cache not saved: %s: %s" % (type(e).__name__, e))
+
+
+def _parse_file(text):
+    """Everything memory_pass takes from one memory file that does not depend on the store or on the other memories:
+    the frontmatter fields, the slugs it names, and its content candidates before they are matched against the store's
+    nodes, dials and file basenames. Cached by (mtime, size) so a full build reads only the files that changed
+    (1 Nov, claude-1e0a23c2: the full pass re-read ~40k files every build, 154 s quiet and 11,029 s on 31 Oct)."""
+    import extract_touch_events as X
+    head = text[:3000]
+    m = DESC_RX.search(head)
+    desc = (m.group(1).strip().strip('"') if m else "")[:300]
+    fields = {k.lower(): v.strip().strip('"') for k, v in FIELD_RX.findall(head)}
+    sup = fields.get("superseded_by", "")
+    sup = _whole_successor(sup) if sup else ""
+    refs = set(r.lower().removesuffix(".md") for r in LINK.findall(text))
+    for mm in NAMES.finditer(head):
+        refs.update(r.lower() for r in re.findall(r"[A-Za-z0-9_.\-]{8,}", mm.group(2)))
+    rec = {"desc": desc, "status": fields.get("status", "")[:40], "sup": sup, "type": fields.get("type", "")[:20],
+           "refs": sorted(refs), "fm": text.startswith("---")}
+    if not rec["fm"]:
+        return rec
+    got = collections.Counter()
+    for mt_ in X.PATH_RX.finditer(text):
+        for kind, nid in X.path_nodes(mt_.group(0)):
+            if kind != "mem":
+                got["%s:%s" % (kind, nid)] += 1
+    low = text.lower()
+    for key, host in X.HOSTS.items():
+        if re.search(r"(?<![\w.-])%s(?![\w-])" % re.escape(key.lower()), low):
+            got["host:" + host] += 1
+    dialm = collections.Counter(dm.group(1) for dm in DIAL_BARE.finditer(text))
+    for rx, pre in ((X.GS_RX, "store:gs://"), (X.DB_RX, "store:"), (X.SRV_RX, "store:")):
+        for sm in rx.finditer(text):
+            got[pre + (sm.group(1).lower() if pre != "store:" or rx is X.DB_RX else sm.group(1))] += 1
+    for keys, rx, name in X.SVC:
+        if any(k in low for k in keys) and rx.search(text):
+            got["svc:" + name] += 1
+    rec["got"] = dict(got)
+    rec["dial"] = dict(dialm)
+    rec["bare"] = [bm.group(1).lower() for bm in BARE_FILE.finditer(text)]
+    return rec
+
+
 def memory_pass(db, node_names, max_mtime=None, only=None, all_slugs=None):
     """memory, link and content tables from the memory files themselves. node_names: every node name of the store, so
     content edges are kept only toward nodes a session can actually light. max_mtime (a walk-forward study's cut) leaves
     out memories last written after it. only: read just these file names (the incremental hourly pass), resolving
-    their links against all_slugs; the typed E1 links are loaded on a full pass only."""
-    import extract_touch_events as X
+    their links against all_slugs; the typed E1 links are loaded on a full pass only. A file whose mtime and size match
+    the parse cache is not read again (_parse_file)."""
     in_store = set(node_names)
     basenames = collections.defaultdict(list)
     dials = set()
@@ -186,66 +265,79 @@ def memory_pass(db, node_names, max_mtime=None, only=None, all_slugs=None):
             basenames[n.rsplit("/", 1)[-1]].append(n)
         elif n.startswith("dial:"):
             dials.add(n[5:])
-    files = list(only) if only is not None else [f for f in os.listdir(MEM) if f.endswith(".md") and f[:-3] not in SKIP]
+    stats = {}
+    if only is not None:
+        files = list(only)
+    else:
+        files = []
+        with os.scandir(MEM) as it:
+            for de in it:
+                if de.name.endswith(".md") and de.name[:-3] not in SKIP:
+                    files.append(de.name)
+                    try:
+                        st = de.stat()
+                        stats[de.name] = (st.st_mtime, st.st_mtime_ns, st.st_size)
+                    except OSError:
+                        pass
+    key = _code_key()
+    cache = _load_cache(key)
+    n_read = 0
     lower = {s: s for s in all_slugs} if all_slugs else {f[:-3].lower(): f[:-3].lower() for f in files}
     mem_rows, links, content = [], [], collections.defaultdict(collections.Counter)
     for f in files:
         slug = f[:-3].lower()
         p = os.path.join(MEM, f)
         try:
-            mt = os.path.getmtime(p)
+            if f in stats:
+                mt, mt_ns, size = stats[f]
+            else:
+                st = os.stat(p)
+                mt, mt_ns, size = st.st_mtime, st.st_mtime_ns, st.st_size
             if max_mtime and mt > max_mtime:
                 continue
-            text = open(p, encoding="utf-8", errors="replace").read()
+            c = cache.get(f)
+            if c is not None and c[0] == mt_ns and c[1] == size:
+                rec = c[2]
+            else:
+                text = open(p, encoding="utf-8", errors="replace").read()
+                rec = _parse_file(text)
+                cache[f] = (mt_ns, size, rec)
+                n_read += 1
         except OSError:
             continue
-        head = text[:3000]
-        m = DESC_RX.search(head)
-        desc = (m.group(1).strip().strip('"') if m else "")[:300]
-        fields = {k.lower(): v.strip().strip('"') for k, v in FIELD_RX.findall(head)}
-        sup = fields.get("superseded_by", "")
-        sup = _whole_successor(sup) if sup else ""
-        mem_rows.append((slug, desc, fields.get("status", "")[:40], sup, fields.get("type", "")[:20], mt))
-        refs = set(r.lower().removesuffix(".md") for r in LINK.findall(text))
-        for mm in NAMES.finditer(head):
-            refs.update(r.lower() for r in re.findall(r"[A-Za-z0-9_.\-]{8,}", mm.group(2)))
-        for r in refs:
+        sup = rec["sup"]
+        mem_rows.append((slug, rec["desc"], rec["status"], sup, rec["type"], mt))
+        for r in rec["refs"]:
             d = lower.get(r)
             if d and d != slug:
                 links.append((slug, d, "named", LINK_W["named"]))
         if sup and sup in lower and sup != slug:
             links.append((slug, sup, "superseded_by", 1.0))
             links.append((sup, slug, "supersedes", 1.0))
-        if not text.startswith("---"):
+        if not rec["fm"]:
             continue
-        got = collections.Counter()
-        for mt_ in X.PATH_RX.finditer(text):
-            for kind, nid in X.path_nodes(mt_.group(0)):
-                if kind != "mem":
-                    got["%s:%s" % (kind, nid)] += 1
-        low = text.lower()
-        for key, host in X.HOSTS.items():
-            if re.search(r"(?<![\w.-])%s(?![\w-])" % re.escape(key.lower()), low):
-                got["host:" + host] += 1
-        for dm in DIAL_BARE.finditer(text):
-            if dm.group(1) in dials:
-                got["dial:" + dm.group(1)] += 1
-        for rx, pre in ((X.GS_RX, "store:gs://"), (X.DB_RX, "store:"), (X.SRV_RX, "store:")):
-            for sm in rx.finditer(text):
-                got[pre + (sm.group(1).lower() if pre != "store:" or rx is X.DB_RX else sm.group(1))] += 1
-        for keys, rx, name in X.SVC:
-            if any(k in low for k in keys) and rx.search(text):
-                got["svc:" + name] += 1
+        got = collections.Counter(rec["got"])
+        for d_, k in rec["dial"].items():
+            if d_ in dials:
+                got["dial:" + d_] += k
         named = {n.rsplit("/", 1)[-1] for n in got if n.startswith("file:")}
-        for bm in BARE_FILE.finditer(text):
-            b = bm.group(1).lower()
+        for b in rec["bare"]:
             hits = basenames.get(b, ())
             if b not in named and 0 < len(hits) <= 3:
                 for h in hits:
                     got[h] += 1
-        for n, c in got.items():
+        for n, c_ in got.items():
             if n in in_store:
-                content[n][slug] += min(c, 3)
+                content[n][slug] += min(c_, 3)
+    n_gone = 0
+    if only is None and max_mtime is None:
+        keep = set(files)
+        n_gone = sum(1 for f in cache if f not in keep)
+        if n_gone:
+            cache = {f: v for f, v in cache.items() if f in keep}
+    if (n_read or n_gone) and ((only is None and max_mtime is None) or CACHE_WRITE_ALWAYS):
+        _save_cache(key, cache)
+    memory_pass.last_read = n_read
     if only is None and os.path.exists(E1_LINKS):
         for line in open(E1_LINKS, encoding="utf-8"):
             try:
@@ -263,8 +355,8 @@ def memory_pass(db, node_names, max_mtime=None, only=None, all_slugs=None):
         if df > 0.02 * n_mem:           # a node most memories name (a hub folder) links to nothing in particular
             continue
         idf = math.log(n_mem / df)
-        for slug, c in per.items():
-            crow.append((n, slug, round(idf * (1.0 + math.log(c)), 4)))
+        for slug, c_ in per.items():
+            crow.append((n, slug, round(idf * (1.0 + math.log(c_)), 4)))
     db.execute("DELETE FROM memory")
     db.execute("DELETE FROM link")
     db.execute("DELETE FROM content")
@@ -372,6 +464,8 @@ def build(store=STORE, out=SIDECAR, max_mtime=None, verdict_store=None):
     CREATE INDEX edge_src ON edge(src);
     CREATE INDEX link_src ON link(src);
     CREATE INDEX content_node ON content(node);
+    CREATE INDEX content_slug ON content(slug);
+    CREATE INDEX link_dst ON link(dst);
     CREATE INDEX member_node ON member(node);
     """)
     meta = {"version": VERSION, "kinds": sorted(KIND_CAP), "built": time.time(), "store_until": st.meta.get("until"), "store_built": st.meta.get("built"),
@@ -398,6 +492,13 @@ def refresh_memories():
     if not os.path.exists(SIDECAR):
         return None
     db = sqlite3.connect(SIDECAR, timeout=30)
+    # the per-slug deletes below scan content and link whole without these (32 s -> 9 s for ~110 files, 1 Nov)
+    db.execute("CREATE INDEX IF NOT EXISTS content_slug ON content(slug)")
+    db.execute("CREATE INDEX IF NOT EXISTS link_dst ON link(dst)")
+    # a links-only sidecar (memory_pass alone, no build) has no link_src either, and graph_lane's lazy walk reads
+    # src IN (...) OR dst IN (...): without both indexes every batch scans the whole table (Mac, 5 Nov: 274 batches,
+    # 2.9 s of a 3.2 s recall)
+    db.execute("CREATE INDEX IF NOT EXISTS link_src ON link(src)")
     known = dict(db.execute("SELECT slug, mtime FROM memory"))
     changed = []
     with os.scandir(MEM) as it:

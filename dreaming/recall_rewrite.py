@@ -32,7 +32,7 @@ BRAIN = os.path.join(HOME, ".claude", "dreaming", "brain.py")
 # Windows ships claude.exe; the Mac has plain claude (the .exe path made every rewrite fail there until 3 Nov)
 CLAUDE = os.path.join(HOME, ".local", "bin", "claude.exe" if os.name == "nt" else "claude")
 LOG = os.path.join(HOME, ".claude", "brain_graph", "live", "recall_rewrite_log.jsonl")
-WORK = (r"{{USERPROFILE}}\recall4_rewrite_work" if os.name == "nt"
+WORK = (os.path.join(os.environ.get("PUBLIC", HOME), "recall4_rewrite_work") if os.name == "nt"
         else os.path.join(HOME, ".claude", "brain_graph", "live", "recall_rewrite_work"))
 ROW = re.compile(r"^\s+([0-9]*\.?[0-9]+)\s+\[([^\]]*)\]\s+(\S+)\s*$")
 NOWIN = 0x08000000 if os.name == "nt" else 0          # CREATE_NO_WINDOW: never a console flash

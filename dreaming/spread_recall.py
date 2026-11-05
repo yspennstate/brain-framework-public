@@ -21,7 +21,7 @@ session so a train of prompts on one topic surfaces the bridge once, not every t
 
 Fail-safe silent on any error. Reads stdin (hook JSON), writes injection JSON to stdout.
 """
-import sys, os, io, json, re, time
+import sys, os, io, json, re, time, bisect, threading
 from collections import defaultdict
 
 import keyword_artifacts
@@ -637,7 +637,30 @@ def _topic_expand(hit, members, sal):
     return out
 
 
+# _load_salience is kept per (mtime, size) of salience.tsv (3 Nov 2026, claude-738954b6, RECALL-10X rank 3): the
+# resident recall server called it twice a warm recall and parsed the 3.8 MB file each time, 0.49 s a call in the
+# profile. The file is rewritten about once a day; a changed stat re-reads it. Each caller gets its own copy.
+# BRAIN_SAL_CACHE=0 turns the cache off.
+_SAL_CACHE = [None, None]
+
+
 def _load_salience():
+    if os.environ.get("BRAIN_SAL_CACHE", "1") != "0":
+        try:
+            st = os.stat(SAL)
+            key = (st.st_mtime_ns, st.st_size)
+        except Exception:
+            key = None
+        if key is not None and _SAL_CACHE[0] == key:
+            return dict(_SAL_CACHE[1])
+        sal = _load_salience_file()
+        if key is not None:
+            _SAL_CACHE[0], _SAL_CACHE[1] = key, sal
+        return dict(sal)
+    return _load_salience_file()
+
+
+def _load_salience_file():
     sal = {}
     try:
         with io.open(SAL, encoding="utf-8", errors="replace") as f:
@@ -669,6 +692,140 @@ def _index_lines():
     return out
 
 
+# The filename arm's folder names (3 Nov 2026, claude-738954b6, RECALL-10X rank 3): brain.py's recall sets MEM_NAMES
+# for the length of a call to a reader of the call's own listing (_memlist, which the recall server answers from its
+# resident listing), so the arm no longer lists the 50k-entry folder a second time - 2.2 s of a 6-8 s warm recall in
+# the server profile. Same names in the same order; None (the hook, any other caller, a failed listing) lists as before.
+MEM_NAMES = None
+
+
+def _mem_names():
+    if MEM_NAMES is not None:
+        try:
+            names = MEM_NAMES()
+            if names is not None:
+                return names
+        except Exception:
+            pass
+    return os.listdir(MEM)
+
+
+# --- RunIndex: the seed arms' overlap counts without the per-line scan (3 Nov 2026, claude-738954b6, RECALL-10X rank 3) ---
+# The two lexical arms of _seeds_from_prompt count, for each index line (and each memory file name), how many query
+# words occur in it as substrings: 0.6-0.8 s of a warm served recall on 50k lines plus 50k names. Every query word is
+# [a-z_]+ (_words lowers the prompt and keeps [a-zA-Z][a-zA-Z_]{2,}), so `w in text.lower()` holds exactly when w sits
+# inside one maximal [a-z_]+ run of the lowered text. A resident process keeps run -> keys postings and the run
+# vocabulary joined for one bytes.find pass per word; a word's keys are the union of the postings of the runs that
+# contain it. Same counts, same seeds, same order (62/62 word sets, 22 real questions + 40 random run fragments).
+# It is built from the SECOND call in a process (a one-shot CLI or the per-prompt hook never pays the ~1.7 s build),
+# kept while the lists are unchanged (two list compares in C), resynced key by key when they change, and off with
+# BRAIN_SEED_RUNINDEX=0. Any word outside [a-z_]+ or any failure falls back to the scan.
+_RUN_RE = re.compile(r"[a-z_]+")
+_RUN_WORD = re.compile(r"[a-z_]+\Z")
+
+
+class _RunIndex:
+    def __init__(self):
+        self.keys = None
+        self.texts = None
+        self.text = {}
+        self.pos = {}
+        self.post = {}
+        self.vocab = []
+        self.vblob = b""
+        self.vstarts = [0]
+        self.vdirty = False
+
+    def _add(self, key, text):
+        for r in set(_RUN_RE.findall(text.lower())):
+            s = self.post.get(r)
+            if s is None:
+                s = self.post[r] = set()
+                self.vocab.append(r)
+                self.vdirty = True
+            s.add(key)
+
+    def _drop(self, key, text):
+        for r in set(_RUN_RE.findall(text.lower())):
+            s = self.post.get(r)
+            if s is not None:
+                s.discard(key)
+
+    def sync(self, keys, texts):
+        if keys == self.keys and texts == self.texts:
+            return
+        old = self.text
+        live = set(keys)
+        for k, t in zip(keys, texts):
+            o = old.get(k)
+            if o is t or o == t:
+                continue
+            if o is not None:
+                self._drop(k, o)
+            self._add(k, t)
+            old[k] = t
+        for k in [k for k in old if k not in live]:
+            self._drop(k, old.pop(k))
+        self.keys, self.texts = keys, texts
+        self.pos = {k: i for i, k in enumerate(keys)}
+
+    def hits(self, words, need=2):
+        """[(key, count)] with count >= need, in key order: count = number of words that occur in the key's text."""
+        if self.vdirty:
+            self.vblob = "\x00".join(self.vocab).encode("ascii")
+            st = [0]
+            for r in self.vocab:
+                st.append(st[-1] + len(r) + 1)
+            self.vstarts = st
+            self.vdirty = False
+        blob, st, vocab, post = self.vblob, self.vstarts, self.vocab, self.post
+        cnt = {}
+        for w in words:
+            b = w.encode("ascii")
+            got = set()
+            p = blob.find(b)
+            while p != -1:
+                i = bisect.bisect_right(st, p) - 1
+                got |= post[vocab[i]]
+                p = blob.find(b, st[i + 1])
+            for k in got:
+                cnt[k] = cnt.get(k, 0) + 1
+        pos = self.pos
+        return sorted(((k, c) for k, c in cnt.items() if c >= need), key=lambda kc: pos[kc[0]])
+
+
+_RUNIDX = {"calls": 0}
+_RUNIDX_LOCK = threading.Lock()
+
+
+def _runindex_ok(tag, words):
+    """True when the RunIndex may answer: switched on, past the first call in the process (or already built), and every
+    word [a-z_]+."""
+    if os.environ.get("BRAIN_SEED_RUNINDEX", "1") == "0":
+        return False
+    if tag not in _RUNIDX and _RUNIDX["calls"] < 1:
+        return False
+    return all(_RUN_WORD.match(w) for w in words)
+
+
+def _runindex_hits(tag, keys, texts, words):
+    """[(key, count >= 2)] in key order from the RunIndex for `tag` synced to keys/texts, or None (another thread holds
+    it, or a failure, which also drops the index) - the caller then scans."""
+    if not _RUNIDX_LOCK.acquire(blocking=False):
+        return None
+    try:
+        ri = _RUNIDX.get(tag)
+        if ri is None:
+            ri = _RUNIDX[tag] = _RunIndex()
+        ri.sync(keys, texts)
+        return ri.hits(words)
+    except Exception:
+        _RUNIDX.pop(tag, None)
+        return None
+    finally:
+        _RUNIDX_LOCK.release()
+
+
 def _seeds_from_prompt(words, idx, skip_records=False):
     """Lexical hits = seeds. Returns {slug: strength} and the lexical-match set (the 'obvious' set).
     skip_records=True (the hook) leaves the session records out of every arm; the BM25 arm then reads
@@ -680,28 +837,54 @@ def _seeds_from_prompt(words, idx, skip_records=False):
     # delta. Lexical order is only a deterministic tie-break; length remains the rarity proxy.
     words = _distinctive_words(words)   # distinctive words only
     seeds, lex = {}, set()
-    for slug, line in idx.items():
-        if slug in SKIP or (skip_records and SESSION_RECORD.match(slug)):
-            continue
-        low = line.lower()
-        overlap = sum(1 for w in words if w in low)
-        if overlap >= 2:
+    pairs = _runindex_hits("idx", list(idx), list(idx.values()), words) if _runindex_ok("idx", words) else None
+    if pairs is not None:
+        for slug, overlap in pairs:
+            if slug in SKIP or (skip_records and SESSION_RECORD.match(slug)):
+                continue
             seeds[slug] = float(overlap)
             lex.add(slug)
-    # also filenames across the whole store (memories not in the live index)
-    try:
-        for fn in os.listdir(MEM):
-            if not fn.endswith(".md"):
+    else:
+        for slug, line in idx.items():
+            if slug in SKIP or (skip_records and SESSION_RECORD.match(slug)):
                 continue
-            slug = fn[:-3]
-            if slug in SKIP or slug in seeds or (skip_records and SESSION_RECORD.match(slug)):
-                continue
-            overlap = sum(1 for w in words if len(w) >= 4 and w in slug.lower())
+            low = line.lower()
+            overlap = sum(1 for w in words if w in low)
             if overlap >= 2:
                 seeds[slug] = float(overlap)
                 lex.add(slug)
+    # also filenames across the whole store (memories not in the live index)
+    # (3 Nov 2026, RECALL-10X: the words of four letters or more are picked once and each name lowered once, not once
+    # per word: 1.9 s of a 4 s warm recall on the 50k-entry folder. Fewer than two such words can never reach an
+    # overlap of 2, so the folder is not listed at all then. Same seeds, same order.)
+    long_words = [w for w in words if len(w) >= 4]
+    try:
+        names = _mem_names() if len(long_words) >= 2 else ()
+        pairs = None
+        if names and _runindex_ok("names", long_words):
+            slugs = [fn[:-3] for fn in names if fn.endswith(".md")]
+            pairs = _runindex_hits("names", slugs, slugs, long_words)
+        if pairs is not None:
+            for slug, overlap in pairs:
+                if slug in SKIP or slug in seeds or (skip_records and SESSION_RECORD.match(slug)):
+                    continue
+                seeds[slug] = float(overlap)
+                lex.add(slug)
+        else:
+            for fn in names:
+                if not fn.endswith(".md"):
+                    continue
+                slug = fn[:-3]
+                if slug in SKIP or slug in seeds or (skip_records and SESSION_RECORD.match(slug)):
+                    continue
+                slow = slug.lower()
+                overlap = sum(1 for w in long_words if w in slow)
+                if overlap >= 2:
+                    seeds[slug] = float(overlap)
+                    lex.add(slug)
     except Exception:
         pass
+    _RUNIDX["calls"] += 1
     # BM25 full-text arm (2026-07-09): the index-line/filename match above cannot see memory CONTENT.
     # Gated before wiring on eval_prompt_recall (real first prompts -> the session's actual reads,
     # whole corpus as negatives): bm25 hit@10 0.53 vs 0.22 for this lexical seeder, MRR 2.4x. Top

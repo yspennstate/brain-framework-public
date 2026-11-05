@@ -53,10 +53,19 @@ PATTERNS = [
     # lowercase LETTERS with no digits and no uppercase, ending at a non-token character. Controlled both ways
     # before landing (2026-09-13): six real-shaped keys still caught, including an all-lowercase unhyphenated
     # one and a two-segment one carrying digits; four word slugs excluded. No real key has this shape.
+    # 3 Nov 2026: widened from three runs to TWO OR MORE - lemma labels such as lem:sk-<word>-<word> (21 hits in
+    # the export, all Sherrington-Kirkpatrick) stopped the export again. A single unhyphenated run, a digit, a
+    # capital or an underscore anywhere still flags; test_scan_secrets_sk_slugs.py holds the controls.
     ("OpenAI/Anthropic key",
-     r"(?<![A-Za-z0-9])sk-(?:ant-)?(?![a-z]+(?:-[a-z]+){2,}(?![A-Za-z0-9_\-]))[A-Za-z0-9_\-]{20,}"),
+     r"(?<![A-Za-z0-9])sk-(?:ant-)?(?![a-z]+(?:-[a-z]+){1,}(?![A-Za-z0-9_\-]))[A-Za-z0-9_\-]{20,}"),
     ("AWS access key id", r"AKIA[0-9A-Z]{16}"),
-    ("Telegram bot token", r"\b\d{8,10}:[A-Za-z0-9_-]{30,60}\b"),
+    # Store source ids of the 10 Oct Codex pool read "owner-w344-open-problems-20261010:<35-char slug>": a date stamp, a
+    # colon and a slug, this rule's exact shape. 216 findings in 24 places blocked the math-store export to main and 33
+    # bundles of the open-problem push were held (2026-10-10). Excluded NARROWLY and only on this rule: the digits must
+    # follow a hyphen or colon AND be exactly an 8-digit calendar date 20YYMMDD (URN locators "urn:owner-own-work:p0110:w381:
+    # 20261010:<slug>" too); a token after a quote, space, =, or / is untouched, a 9-10 digit id after : is untouched, and so
+    # is a hyphen followed by digits that are not a date. Controlled both ways before landing (claude-4a88bc43).
+    ("Telegram bot token", r"\b(?!(?<=[-:])20\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\b)\d{8,10}:[A-Za-z0-9_-]{30,60}\b"),
     ("Slack token", r"xox[baprs]-[A-Za-z0-9-]{10,}"),
     ("Google API key", r"AIza[0-9A-Za-z_\-]{35}"),
     ("RunPod/HF/Groq key", r"\b(?:rpa_|rpk_|hf_|gsk_)[A-Za-z0-9_\-]{16,}\b"),
@@ -69,7 +78,26 @@ PATTERNS = [
     # tracked text files; no slower on 1 MB of adversarial text.
     ("bearer token", r"(?i)\bbearer[ \t]+(?!eyJ)(?=[A-Za-z0-9._~+/\-]*\d)(?=[A-Za-z0-9._~+/\-]*[A-Za-z])"
                      r"[A-Za-z0-9._~+/\-]{20,}=*"),
-    ("long API key", r"(?<![/\w.])(?=[A-Za-z0-9]*[a-z])(?=[A-Za-z0-9]*[A-Z])(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{40,}(?![\w.])"),
+    # Proof-record cards in the public math-store export write a file checksum as the algorithm name run straight into
+    # its hex ("SHA256" + 64 lowercase hex): mixed case, a digit, 70 characters, this rule's exact shape. 39 of them
+    # (already public since the export's first commit) blocked every later change to nodes.jsonl and
+    # bundle_manifests.jsonl, because a range scan reads each changed file whole (2026-11-03). Excluded NARROWLY and only
+    # on this rule: the whole token must be the literal SHA256 and exactly 64 lowercase hex; one more character, an
+    # uppercase hex digit, another prefix or a shorter tail is still a finding. Controlled both ways before landing.
+    # Same export, same day: the cards quote paper text, and a LaTeX citation key or equation label is CamelCase words
+    # and a year run together ("\cite{BahouriCheminDanchin2011Fourier}", 40+ characters, this rule's shape again). 235
+    # such hits, 20 distinct tokens, all public, stopped the hourly export push. One card also writes the checksum as
+    # "SHA" + 64 hex. Excluded only when BOTH hold: the token opens right after "{", "[", "eq:" or an escaped "\n", AND
+    # the whole token is a chain of words (capitalised words, short capital runs, lowercase runs of three or more, a few
+    # two-letter words such as "On", digit runs of at most four). A random 40-64 character key almost never splits
+    # that way: 0 of 5000 missed in each of those contexts, and a word-chain key anywhere else still flags. The
+    # checksum exclusion now also takes the bare "SHA" prefix, still exactly 64 lowercase hex. Controls in
+    # test_scan_secrets_citekeys.py (2026-11-03).
+    ("long API key", r"(?<![/\w.])(?!SHA(?:256)?[0-9a-f]{64}(?![\w.]))"
+                     r"(?!(?:(?<=[{\[])|(?<=[Ee]q:)|(?<=\\)n)"
+                     r"(?:[A-Z][a-z]{2,}+|(?:On|Of|In|To|An|At|By|De|Du|La|Le)(?![a-z])|[A-Z]{1,5}+|[a-z]{3,}+|\d{1,4}+(?!\d))++"
+                     r"(?![\w.]))"
+                     r"(?=[A-Za-z0-9]*[a-z])(?=[A-Za-z0-9]*[A-Z])(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{40,}(?![\w.])"),
     ("plain password", r"(?i)\b(?:password|passwd|pwd)\b(?:\s+(?:is|was))?\s*[:=]?\s+(?=\S*\d)[A-Za-z0-9!@#$%^&*_\-]{6,24}\b"),
     # Git file modes (100644, 100755, ...) are six digits, so prose such as "mode code 100644"
     # matched this rule and blocked brain-persist pushes on documents that exist to EXPLAIN the
@@ -123,6 +151,9 @@ MAX_REPOSITORY_IDENTITY_FILE_BYTES = 256 * 1024 * 1024
 MAX_SHARED_INDEX_FILES = 64
 MAX_TOTAL_SHARED_INDEX_BYTES = 256 * 1024 * 1024
 GIT_TIMEOUT_SECONDS = 60
+GIT_BATCH_IDLE_SECONDS = 60
+GIT_BATCH_SECONDS_PER_OBJECT = 0.5
+GIT_BATCH_CEILING_SECONDS = 4 * 3600
 MAX_REPORTED_LOCATIONS_PER_PATTERN = 3
 _OID = re.compile(rb"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
 _OID_RANGE = re.compile(
@@ -781,6 +812,9 @@ def _execute_git(
     environment: dict[str, str] | None = None,
 ) -> tuple[bytes | None, str | None]:
     creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    if input_bytes:
+        return _execute_git_batch(arguments, input_bytes, environment, creationflags)
+    timeout_seconds = GIT_TIMEOUT_SECONDS
     try:
         process = subprocess.run(
             arguments,
@@ -788,13 +822,123 @@ def _execute_git(
             capture_output=True,
             creationflags=creationflags,
             env=environment or _sanitized_git_environment(),
-            timeout=GIT_TIMEOUT_SECONDS,
+            timeout=timeout_seconds,
         )
     except (OSError, subprocess.TimeoutExpired) as error:
         return None, "could not complete Git operation (%s)" % _safe_exception(error)
     if process.returncode != 0:
         return None, "Git operation failed (exit=%d)" % process.returncode
     return process.stdout or b"", None
+
+
+def _execute_git_batch(
+    arguments: list[str],
+    input_bytes: bytes,
+    environment: dict[str, str] | None,
+    creationflags: int,
+) -> tuple[bytes | None, str | None]:
+    # A batch request (cat-file --batch / --batch-check) is timed on progress, not on its total length.
+    # The nightly dream stages ~17,700 memory files; right after git add they are loose objects, one cold
+    # open each, and on a loaded disk a cold open measured 0.7-2 s. A flat 60 s, then 20 ms and 100 ms per
+    # object, each timed out a scan that was still answering, and the dream committed nothing (4 Nov).
+    # cat-file flushes after every object, so output that stops for GIT_BATCH_IDLE_SECONDS means git is
+    # stuck; output that keeps coming means it is working. A hard ceiling still bounds the whole call, and
+    # either limit fails closed with the same message as before.
+    import threading
+    import time
+
+    requested = input_bytes.count(b"\n")
+    ceiling = min(
+        GIT_BATCH_CEILING_SECONDS,
+        GIT_TIMEOUT_SECONDS + GIT_BATCH_SECONDS_PER_OBJECT * requested,
+    )
+    timeout_message = "could not complete Git operation (TimeoutExpired)"
+    try:
+        process = subprocess.Popen(
+            arguments,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=creationflags,
+            env=environment or _sanitized_git_environment(),
+        )
+    except OSError as error:
+        return None, "could not complete Git operation (%s)" % _safe_exception(error)
+    chunks: list[bytes] = []
+    last_progress = [time.monotonic()]
+
+    def feed() -> None:
+        try:
+            for offset in range(0, len(input_bytes), 65536):
+                process.stdin.write(input_bytes[offset:offset + 65536])
+                process.stdin.flush()
+                last_progress[0] = time.monotonic()
+        except (OSError, ValueError):
+            pass
+        finally:
+            try:
+                process.stdin.close()
+            except (OSError, ValueError):
+                pass
+
+    def drain_stdout() -> None:
+        try:
+            while True:
+                block = process.stdout.read1(65536)
+                if not block:
+                    break
+                chunks.append(block)
+                last_progress[0] = time.monotonic()
+        except (OSError, ValueError):
+            pass
+
+    def drain_stderr() -> None:
+        try:
+            while process.stderr.read(65536):
+                pass
+        except (OSError, ValueError):
+            pass
+
+    threads = [
+        threading.Thread(target=feed, daemon=True),
+        threading.Thread(target=drain_stdout, daemon=True),
+        threading.Thread(target=drain_stderr, daemon=True),
+    ]
+    for thread in threads:
+        thread.start()
+    started = time.monotonic()
+    timed_out = False
+    while True:
+        try:
+            process.wait(timeout=1.0)
+            break
+        except subprocess.TimeoutExpired:
+            now = time.monotonic()
+            if (
+                now - last_progress[0] > GIT_BATCH_IDLE_SECONDS
+                or now - started > ceiling
+            ):
+                timed_out = True
+                break
+    if timed_out:
+        try:
+            process.kill()
+        except OSError:
+            pass
+        try:
+            process.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            pass
+        for thread in threads:
+            thread.join(timeout=5)
+        return None, timeout_message
+    for thread in threads:
+        thread.join(timeout=GIT_BATCH_IDLE_SECONDS)
+    if any(thread.is_alive() for thread in threads):
+        return None, timeout_message
+    if process.returncode != 0:
+        return None, "Git operation failed (exit=%d)" % process.returncode
+    return b"".join(chunks), None
 
 
 def _discover_repository(

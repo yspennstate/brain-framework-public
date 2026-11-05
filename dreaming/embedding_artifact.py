@@ -224,6 +224,26 @@ def _decode_npy_bool(descr, shape, raw):
     return values
 
 
+# The members grow with the corpus (about 2.2 KB a memory). At 64 MiB the cap sat near 30k memories, and past it
+# the hot reader refused every sidecar, so recall and the hooks ran semantic-off with nothing saying why (Mac,
+# 2 Nov 2026, the 31,126-row publish). 256 MiB holds about 120k memories and still stops a zip bomb, since the
+# check runs on a blob already matched to the pointer's sha256. Raise it again before the corpus gets there.
+_LIGHT_MEMBER_CAP = 256 * 1024 * 1024
+
+
+def _members_over_cap(path, cap):
+    """True when the zip at path declares uncompressed members totalling more than cap. Reads only the central
+    directory (a few KB), so the light loader can refuse an over-cap sidecar without reading and hashing all of it
+    (81 MB, 0.15-0.45 s, on every hook call since the sidecar passed the cap at about 29,850 rows). A refusal here
+    is the same refusal the full read reaches; any error returns False and the normal verified path decides."""
+    try:
+        import zipfile
+        with zipfile.ZipFile(path) as archive:
+            return sum(info.file_size for info in archive.infolist()) > cap
+    except Exception:
+        return False
+
+
 def load_verified_embeddings_lightweight(
         sidecar, authority_path, mem_dir=None, expected_model=None,
         verify_all_rows=False):
@@ -248,7 +268,9 @@ def load_verified_embeddings_lightweight(
         _utc(status.get("committed_at"))
         if expected_model and status.get("model") != expected_model:
             return None
-        blob, actual_sha, actual_size, _ = read_stable_bytes(actual_sidecar)
+        if _LIGHT_MEMBER_CAP and _members_over_cap(actual_sidecar, _LIGHT_MEMBER_CAP):
+            return None
+        blob, actual_sha, actual_size, _ = read_known_bytes(actual_sidecar, expected_sha)
         if actual_sha != expected_sha or actual_size != expected_size:
             return None
 
@@ -261,7 +283,7 @@ def load_verified_embeddings_lightweight(
             names = [info.filename for info in infos]
             if len(names) != len(set(names)):
                 return None
-            if sum(info.file_size for info in infos) > 64 * 1024 * 1024:
+            if sum(info.file_size for info in infos) > _LIGHT_MEMBER_CAP:
                 return None
             member_names = {name[:-4] for name in names if name.endswith(".npy")}
             if required - member_names:
@@ -367,6 +389,46 @@ def load_verified_embeddings_lightweight(
         return None
 
 
+_SHA_STAT_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".embedding_sha_stat.json")
+
+
+def read_known_bytes(path, expected_sha):
+    """read_stable_bytes, minus the sha256 when this exact file was already hashed to expected_sha (4 Nov 2026).
+
+    The sidecar is content-addressed (its name carries the sha) and is never rewritten in place; a rewrite, copy,
+    touch or chmod changes mtime or ctime, and a replaced file changes ino. So a full stat match with a record made
+    when the bytes hashed to expected_sha means the same bytes. Saves about 35 ms of every prompt hook (96 MB file).
+    EMB_SHA_STAT_CACHE=0 always hashes."""
+    if os.environ.get("EMB_SHA_STAT_CACHE", "1") == "0":
+        return read_stable_bytes(path)
+    with open(path, "rb") as fh:
+        before = os.fstat(fh.fileno())
+        blob = fh.read()
+        after = os.fstat(fh.fileno())
+    sig = [after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns]
+    if ((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) != tuple(sig)
+            or len(blob) != after.st_size):
+        raise OSError("artifact changed while it was being read")
+    key = os.path.abspath(path)
+    try:
+        with open(_SHA_STAT_CACHE, encoding="utf-8") as fh:
+            rec = json.load(fh).get(key)
+        if isinstance(rec, dict) and rec.get("sha") == expected_sha and rec.get("sig") == sig:
+            return blob, expected_sha, len(blob), after.st_mtime_ns
+    except Exception:
+        pass
+    sha = hashlib.sha256(blob).hexdigest()
+    if sha == expected_sha:
+        try:
+            tmp = "%s.%d.tmp" % (_SHA_STAT_CACHE, os.getpid())
+            with open(tmp, "w", encoding="utf-8") as fh:
+                json.dump({key: {"sha": sha, "sig": sig}}, fh)
+            os.replace(tmp, _SHA_STAT_CACHE)
+        except Exception:
+            pass
+    return blob, sha, len(blob), after.st_mtime_ns
+
+
 def read_stable_bytes(path):
     """Read one stable descriptor snapshot and return bytes, sha256, size, and mtime_ns."""
     with open(path, "rb") as fh:
@@ -458,8 +520,164 @@ def resolve_authority_sidecar(canonical, authority_path):
     return os.path.abspath(actual), status
 
 
+class _MdStat(tuple):
+    """(st_size, st_mtime_ns) of one listed file: the two fields the loader's stat check reads."""
+    __slots__ = ()
+    st_size = property(lambda self: self[0])
+    st_mtime_ns = property(lambda self: self[1])
+
+
+_FIND = []
+
+
+def _md_stats_fast(mem_dir):
+    """{name: _MdStat} for the plain .md files in mem_dir from one FindFirstFileExW pass with FindExInfoBasic and
+    FIND_FIRST_EX_LARGE_FETCH, or None (not Windows, any API error, or a reparse point, which scandir's is_file would
+    follow): the caller then lists with os.scandir as before. Same size and mtime_ns as DirEntry.stat() (checked equal
+    on all 37,922 files, 29 Oct); about half the time of scandir on this folder (median 0.42 s against 0.80 s, 8
+    alternating rounds), more under disk load. BRAIN_EMB_FASTLIST=0 switches it off."""
+    if os.name != "nt" or os.environ.get("BRAIN_EMB_FASTLIST", "1") == "0":
+        return None
+    try:
+        if not _FIND:
+            import ctypes
+            from ctypes import wintypes
+
+            class _FT(ctypes.Structure):
+                _fields_ = [("lo", wintypes.DWORD), ("hi", wintypes.DWORD)]
+
+            class _WFD(ctypes.Structure):
+                _fields_ = [("attr", wintypes.DWORD), ("ctime", _FT), ("atime", _FT), ("mtime", _FT),
+                            ("size_hi", wintypes.DWORD), ("size_lo", wintypes.DWORD), ("r0", wintypes.DWORD),
+                            ("r1", wintypes.DWORD), ("name", ctypes.c_wchar * 260), ("alt", ctypes.c_wchar * 14),
+                            ("x0", wintypes.DWORD), ("x1", wintypes.DWORD), ("x2", wintypes.WORD)]
+
+            k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            first = k32.FindFirstFileExW
+            first.restype = wintypes.HANDLE
+            first.argtypes = [wintypes.LPCWSTR, ctypes.c_int, ctypes.POINTER(_WFD), ctypes.c_int, ctypes.c_void_p,
+                              wintypes.DWORD]
+            nxt = k32.FindNextFileW
+            nxt.restype = wintypes.BOOL
+            nxt.argtypes = [wintypes.HANDLE, ctypes.POINTER(_WFD)]
+            close = k32.FindClose
+            close.restype = wintypes.BOOL
+            close.argtypes = [wintypes.HANDLE]
+            _FIND.append((ctypes, _WFD, first, nxt, close, wintypes.HANDLE(-1).value))
+        ctypes, _WFD, first, nxt, close, invalid = _FIND[0]
+        d = _WFD()
+        h = first(os.path.join(os.fspath(mem_dir), "*"), 1, ctypes.byref(d), 0, None, 2)
+        if h is None or h == invalid:
+            return None
+        out = {}
+        try:
+            while True:
+                name = d.name
+                if name.endswith(".md"):
+                    attr = d.attr
+                    if attr & 0x400:            # reparse point: let scandir decide what it is
+                        return None
+                    if not attr & 0x10:         # not a directory
+                        out[name] = _MdStat((
+                            (d.size_hi << 32) | d.size_lo,
+                            (((d.mtime.hi << 32) | d.mtime.lo) - 116444736000000000) * 100,
+                        ))
+                if not nxt(h, ctypes.byref(d)):
+                    if ctypes.get_last_error() != 18:   # ERROR_NO_MORE_FILES
+                        return None
+                    break
+        finally:
+            close(h)
+        return out
+    except Exception:
+        return None
+
+
+def _body_row_current(loaded, slug, body):
+    """Hash a body the caller already read (same canonical text as embedding_row_current)."""
+    try:
+        import build_memory_embeddings as builder
+
+        expected = loaded.text_hashes.get(slug)
+        if not isinstance(expected, str) or not _SHA256_RE.fullmatch(expected):
+            return False
+        text = builder._text_for(body)
+        return len(text) >= 40 and builder.text_sha256(text) == expected
+    except Exception:
+        return False
+
+
+# Resident mode (lever 8 of RECALL-10X, 3 Nov 2026): a long-lived process (brain_recall_server) sets RESIDENT = True
+# and keeps the PARSED sidecar between calls, keyed by the file's own stat signature plus the sha256 and size the
+# authority pointer names, so a new generation, a replaced file or a moved pointer reads afresh. Which rows are current
+# is still judged on every call from the memory folder's stat, exactly as before; only the immutable digest-bound
+# arrays are reused. The exact-hash verdict of an exceptional row (stat differs from the NPZ's record) is kept per
+# (sidecar sha, slug, size, mtime_ns). Off by default: a one-shot process behaves exactly as before.
+RESIDENT = False
+_RES = {}
+
+
+def _parsed_sidecar(actual_sidecar, expected_sha, expected_size, np):
+    key = None
+    if RESIDENT:
+        try:
+            st = os.stat(actual_sidecar)
+            key = (os.path.abspath(actual_sidecar), expected_sha, expected_size,
+                   st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns)
+        except OSError:
+            key = None
+        hit = _RES.get("sidecar")
+        if key is not None and hit is not None and hit[0] == key:
+            return hit[1]
+    blob, actual_sha, actual_size, mtime_ns = read_known_bytes(actual_sidecar, expected_sha)
+    if actual_sha != expected_sha or actual_size != expected_size:
+        return None
+    with np.load(io.BytesIO(blob), allow_pickle=False) as z:
+        required = {
+            "slugs", "vecs", "model", "built_at", "schema_version", "text_sha256",
+            "source_size", "source_mtime_ns", "row_safe",
+        }
+        if required - set(z.files):
+            return None
+        parsed = (
+            [str(s) for s in z["slugs"]],
+            np.asarray(z["vecs"]),
+            str(z["model"].item()),
+            str(z["built_at"].item()),
+            int(z["schema_version"].item()),
+            [str(h) for h in z["text_sha256"]],
+            np.asarray(z["source_size"]),
+            np.asarray(z["source_mtime_ns"]),
+            np.asarray(z["row_safe"]),
+        )
+    # keep only what was read under the same signature it was keyed by
+    if key is not None and key[5] == actual_size and key[6] == mtime_ns:
+        for arr in parsed[1:2] + parsed[6:]:
+            arr.setflags(write=False)
+        _RES.clear()
+        _RES["sidecar"] = (key, parsed)
+    return parsed
+
+
+def _row_current_cached(probe, mem_dir, slug, memory_stats, sidecar_sha):
+    if not RESIDENT:
+        return embedding_row_current(probe, mem_dir, slug)
+    st = memory_stats.get(slug + ".md")
+    if st is None:
+        return embedding_row_current(probe, mem_dir, slug)
+    k = (sidecar_sha, slug, int(st.st_size), int(st.st_mtime_ns))
+    verdicts = _RES.setdefault("rows", {})
+    if k in verdicts:
+        return verdicts[k]
+    ok = embedding_row_current(probe, mem_dir, slug)
+    if len(verdicts) > 20000:
+        verdicts.clear()
+    verdicts[k] = ok
+    return ok
+
+
 def load_verified_embeddings(sidecar, authority_path, mem_dir=None, expected_model=None,
-                             verify_all_rows=False):
+                             verify_all_rows=False, bodies=None):
     """Return a slug index, float32 matrix, and cosine bias, or fail closed to None.
 
     The publication-host stat snapshot and row-safety mask live inside the digest-bound schema-v3
@@ -481,25 +699,11 @@ def load_verified_embeddings(sidecar, authority_path, mem_dir=None, expected_mod
         _utc(status.get("committed_at"))
         if expected_model and status.get("model") != expected_model:
             return None
-        blob, actual_sha, actual_size, _ = read_stable_bytes(actual_sidecar)
-        if actual_sha != expected_sha or actual_size != expected_size:
+        parsed = _parsed_sidecar(actual_sidecar, expected_sha, expected_size, np)
+        if parsed is None:
             return None
-        with np.load(io.BytesIO(blob), allow_pickle=False) as z:
-            required = {
-                "slugs", "vecs", "model", "built_at", "schema_version", "text_sha256",
-                "source_size", "source_mtime_ns", "row_safe",
-            }
-            if required - set(z.files):
-                return None
-            slugs = [str(s) for s in z["slugs"]]
-            vecs = np.asarray(z["vecs"])
-            model = str(z["model"].item())
-            built_at = str(z["built_at"].item())
-            schema_version = int(z["schema_version"].item())
-            text_hashes = [str(h) for h in z["text_sha256"]]
-            source_size = np.asarray(z["source_size"])
-            source_mtime = np.asarray(z["source_mtime_ns"])
-            row_safe = np.asarray(z["row_safe"])
+        (slugs, vecs, model, built_at, schema_version, text_hashes, source_size, source_mtime,
+         row_safe) = parsed
 
         if (schema_version != RUNTIME_SCHEMA_VERSION or status.get("model") != model
                 or status.get("built_at") != built_at):
@@ -517,15 +721,23 @@ def load_verified_embeddings(sidecar, authority_path, mem_dir=None, expected_mod
         probe = VerifiedEmbeddings(
             {slug: i for i, slug in enumerate(slugs)}, vecs, 0.0, hashes_by_slug
         )
-        try:
-            with os.scandir(mem_dir) as entries:
-                memory_stats = {
-                    entry.name: entry.stat()
-                    for entry in entries
-                    if entry.name.endswith(".md") and entry.is_file()
-                }
-        except OSError:
-            return None
+        if os.environ.get("BRAIN_EMB_LAZY") == "1" and not verify_all_rows:
+            # rows are judged current by the caller, best first (embedding_row_current)
+            _mean = vecs.mean(axis=0)
+            _b = float(_mean @ _mean)
+            return VerifiedEmbeddings({slug: i for i, slug in enumerate(slugs)}, vecs,
+                                      _b if math.isfinite(_b) and 0.0 <= _b < 0.95 else 0.0, hashes_by_slug)
+        memory_stats = _md_stats_fast(mem_dir)
+        if memory_stats is None:
+            try:
+                with os.scandir(mem_dir) as entries:
+                    memory_stats = {
+                        entry.name: entry.stat()
+                        for entry in entries
+                        if entry.name.endswith(".md") and entry.is_file()
+                    }
+            except OSError:
+                return None
         active = {}
         for i, slug in enumerate(slugs):
             fast_current = False
@@ -539,7 +751,7 @@ def load_verified_embeddings(sidecar, authority_path, mem_dir=None, expected_mod
                 pass
             # A benign touch, restored stale row, or conservative adoption mask must not suppress
             # a current memory. Exact-hash only these exceptional rows; the normal hot path is stat-only.
-            if fast_current or embedding_row_current(probe, mem_dir, slug):
+            if fast_current or _row_current_cached(probe, mem_dir, slug, memory_stats, expected_sha):
                 active[slug] = i
         def active_bias(index):
             if not index:
@@ -552,9 +764,19 @@ def load_verified_embeddings(sidecar, authority_path, mem_dir=None, expected_mod
             active, vecs, active_bias(active), hashes_by_slug
         )
         if verify_all_rows:
+            # bodies={"<slug>.md": (text, st_size, st_mtime_ns)} from a caller that already read the folder
+            # (dream.py, stat taken BEFORE its read). A body is hashed in place of a fresh read only when the
+            # file's size and mtime now are the ones recorded at that read; anything else is read again as before.
+            def _row_ok(slug):
+                ent = bodies.get(slug + ".md") if bodies else None
+                st = memory_stats.get(slug + ".md") if ent is not None else None
+                if (st is not None and len(ent) == 3 and int(st.st_size) == int(ent[1])
+                        and int(st.st_mtime_ns) == int(ent[2])):
+                    return _body_row_current(loaded, slug, ent[0])
+                return embedding_row_current(loaded, mem_dir, slug)
             loaded.index = {
                 slug: row for slug, row in loaded.index.items()
-                if embedding_row_current(loaded, mem_dir, slug)
+                if _row_ok(slug)
             }
             loaded.bias = active_bias(loaded.index)
         return loaded

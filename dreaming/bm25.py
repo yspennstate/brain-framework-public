@@ -345,6 +345,26 @@ def _indexable(fn):
 
 ATTACHMENT_FAILURES = []     # (slug, error type) of every bundle read_doc could not verify in this process
 
+# read_doc's tokeniser output kept by the text's own hash (3 Nov 2026, RECALL-10X lever 11, claude-fb4584c3). In the
+# resident recall server every call merges the memories newer than the published index (refresh_in_memory), and each
+# call re-read and re-tokenised the same twenty or thirty files: about 1 s of a 4 s warm recall went to _tokens_v3.
+# The key is the exact text, so a changed file gives a new key; the tokens are the tokeniser's own. BRAIN_BM25_TOKMEMO=0
+# turns it off. Bounded: cleared whole past _TOKMEMO_MAX entries.
+_TOKMEMO = {}
+_TOKMEMO_MAX = 4000
+
+
+def _memo_tokens(kind, text, fn):
+    if os.environ.get("BRAIN_BM25_TOKMEMO", "1") == "0":
+        return fn(text)
+    key = (kind, hashlib.sha1(text.encode("utf-8", "surrogatepass")).digest(), len(text))
+    got = _TOKMEMO.get(key)
+    if got is None:
+        if len(_TOKMEMO) >= _TOKMEMO_MAX:
+            _TOKMEMO.clear()
+        got = _TOKMEMO[key] = tuple(fn(text))
+    return list(got)
+
 
 def read_doc(mem_dir, slug):
     """One memory -> token list, exactly as the live index sees it (or None if unreadable/empty)."""
@@ -367,9 +387,9 @@ def read_doc(mem_dir, slug):
     slug_words = slug.replace("_", " ")
     head = slug_words + " " + slug_words + " " + slug_words + " " + body
     if _DATES_ON:     # the date tokens of the first 12,000 characters, after the budget (see DATES above)
-        tks = _base_tokens(head)[:MAX_DOC_TOKENS] + date_tokens(head[:12000])
+        tks = _memo_tokens("b", head, _base_tokens)[:MAX_DOC_TOKENS] + date_tokens(head[:12000])
     else:
-        tks = tokens(head)[:MAX_DOC_TOKENS]
+        tks = _memo_tokens("t", head, tokens)[:MAX_DOC_TOKENS]
     try:
         attachment_text = node_docs.search_text_for_node(mem_dir, slug)
     except Exception as exc:
@@ -382,7 +402,7 @@ def read_doc(mem_dir, slug):
         print("[bm25] %s: its attachment bundle failed verification (%s) and adds nothing to the index" % (
             slug, type(exc).__name__), file=sys.stderr)
     if attachment_text:
-        tks.extend(tokens(attachment_text)[:MAX_ATTACHMENT_TOKENS])
+        tks.extend(_memo_tokens("t", attachment_text, tokens)[:MAX_ATTACHMENT_TOKENS])
     if _EXPANSION_ON and tks:
         q = expansions().get(slug)
         if q:
@@ -390,14 +410,33 @@ def read_doc(mem_dir, slug):
     return tks or None
 
 
+def _read_threads():
+    try:
+        return max(1, int(os.environ.get("BRAIN_BM25_READ_THREADS", "8")))
+    except ValueError:
+        return 8
+
+
+def read_many(mem_dir, slugs):
+    """[read_doc(mem_dir, s) for s in slugs], in the same order, on a small thread pool.
+    Why (4 Nov 2026, TOP10 rank 3, claude-738954b6): a refresh's merge is file reads, not arithmetic - on a shadow
+    copy the merge loop for 1,000 notes took 0.4 s and their read_doc 4-31 s. Interleaved A/B on 4,000 older notes
+    (100-note chunks, ABAB): serial 7.3 ms/note median, 8 threads 2.8, tokens identical. The open and read release
+    the GIL; tokenising does not, so more threads buy little. BRAIN_BM25_READ_THREADS=1 restores the serial loop."""
+    slugs = list(slugs)
+    w = _read_threads()
+    if w <= 1 or len(slugs) < 32:
+        return [read_doc(mem_dir, s) for s in slugs]
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(min(w, len(slugs))) as ex:
+        return list(ex.map(lambda s: read_doc(mem_dir, s), slugs))
+
+
 def read_docs(mem_dir=MEM):
     """slug -> token list, exactly as the live index sees each memory (shared by build + evals)."""
     docs = {}
-    for fn in sorted(os.listdir(mem_dir)):
-        slug = _indexable(fn)
-        if slug is None:
-            continue
-        tks = read_doc(mem_dir, slug)
+    slugs = [s for s in (_indexable(fn) for fn in sorted(os.listdir(mem_dir))) if s is not None]
+    for slug, tks in zip(slugs, read_many(mem_dir, slugs)):
         if tks:
             docs[slug] = tks
     return docs
@@ -889,6 +928,7 @@ def _build_inner(mem_dir, out, _attempt=0):
         for t in tf:
             df[t] = df.get(t, 0) + 1
     n = len(docs)
+    tfs, dl = _build_keep_order(out, tfs, dl)
     avgdl = (sum(dl.values()) / n) if n else 0.0
     payload = {"n": n, "avgdl": avgdl, "df": df, "dl": dl, "tf": tfs}
     if _publish_payload(payload, out, expected_signature, scan_t0, n, 0, manifests=manifests) is None:
@@ -898,8 +938,44 @@ def _build_inner(mem_dir, out, _attempt=0):
     return n, len(df)
 
 
+def _build_keep_order(out, tfs, dl):
+    """(tfs, dl) reordered as an incremental refresh would have left them: the documents the newest postings sidecar of
+    `out` holds with the same fingerprint first, in its position order, then the rest in the order build() read them.
+    The sidecar's incremental build keeps only the payload prefix that matches its base, and build()'s sorted order
+    broke that prefix within the first hundred documents, so every full build() used to cost a full sidecar build
+    (4 Nov 2026). Scores do not depend on the order; it decides only which of two equal scores is listed first, as
+    refresh()'s appends always have. No sidecar, any error, or BM25_BUILD_KEEP_ORDER=0: unchanged."""
+    if os.environ.get("BM25_BUILD_KEEP_ORDER", "1") == "0":
+        return tfs, dl
+    try:
+        import sqlite3
+        base = _postings_base(out, "")
+        if base is None:
+            return tfs, dl
+        con = sqlite3.connect("file:%s?mode=ro" % base.replace("?", "%3f"), uri=True)
+        try:
+            rows = con.execute("select pos, slug from d order by pos").fetchall()
+            fps = dict(con.execute("select pos, h from fp"))
+        finally:
+            con.close()
+        head = [s for p, s in rows if s in tfs and fps.get(p) == _doc_fp(tfs[s], dl[s])]
+        if not head or len(set(head)) != len(head):
+            return tfs, dl
+        hs = set(head)
+        order = head + [s for s in tfs if s not in hs]
+        if len(order) != len(tfs):
+            return tfs, dl
+        return {s: tfs[s] for s in order}, {s: dl[s] for s in order}
+    except Exception:
+        return tfs, dl
+
+
 REFRESH_LOCK_STALE_S = 180        # a lock older than this belongs to a dead process
-REFRESH_FULL_REBUILD_AT = 400     # more fresh files than this: a full build is cheaper and exact
+REFRESH_FULL_REBUILD_AT = 400     # more fresh files than this: the READ path (refresh_in_memory) merges nothing
+# refresh() itself merges up to REFRESH_MERGE_MAX fresh files and builds above it. Measured 4 Nov 2026 on a shadow of the
+# live index (51k memories, laptop under load): merge + gzip-2 publish 98 s at 400 fresh, 209 s at 5000, while build()'s
+# read of every memory alone took 506 s (recall_10x_2026_10_29/folder_drop_2026_11_04/refresh_vs_build_cost.py).
+REFRESH_MERGE_MAX = int(os.environ.get("BM25_REFRESH_MERGE_MAX", "5000"))
 
 
 def scan_reference(index_path=INDEX):
@@ -990,7 +1066,11 @@ def _marker_manifests(index_path=INDEX):
     return recorded
 
 
-def fresh_memories(mem_dir=MEM, index_path=INDEX):
+_FM_IDC_ON = os.environ.get("BM25_FM_IDCACHE", "1") != "0"
+_FM_IDC = {"since": None, "c": {}}
+
+
+def fresh_memories(mem_dir=MEM, index_path=INDEX, entries=None):
     """(fresh, gone): slugs whose .md is newer than the index (new or edited) or whose attachments changed since it
     was read, and indexed slugs whose file no longer exists. One scandir + one stat per entry - ~30 ms on the live
     corpus, so recall() can afford it on every call. Returns ([], []) when the index does not exist (build() is the
@@ -1000,17 +1080,48 @@ def fresh_memories(mem_dir=MEM, index_path=INDEX):
     since = scan_reference(index_path)
     fresh = []
     present = set()
-    with os.scandir(mem_dir) as it:
-        for e in it:
-            slug = _indexable(e.name)
-            if slug is None:
+    if entries is not None and _FM_IDC_ON:
+        # A caller's listing (the recall server's resident one) keeps an unchanged file's entry object and replaces it
+        # when the folder watcher reports that name, so an entry object we have seen has the stat we already read:
+        # name -> (entry, slug, fresh), reset when the index's scan reference moves. Same answer as the loop below on
+        # 22 of 22 forced folder drops, 0.3 s off the median served call (4 Nov 2026, claude-738954b6, TOP10 rank 3,
+        # recall_10x_2026_10_29/folder_drop_2026_11_04/incr_parity.py). BM25_FM_IDCACHE=0 turns it off.
+        if _FM_IDC["since"] != since:
+            _FM_IDC["since"], _FM_IDC["c"] = since, {}
+        c = _FM_IDC["c"]
+        get = c.get
+        for e in entries:
+            n = e.name
+            v = get(n)
+            if v is None or v[0] is not e:
+                slug = _indexable(n)
+                f = False
+                if slug is not None:
+                    try:
+                        f = e.stat().st_mtime >= since
+                    except OSError:
+                        f = False
+                v = c[n] = (e, slug, f)
+            if v[1] is None:
                 continue
-            present.add(slug)
-            try:
-                if e.stat().st_mtime >= since:
-                    fresh.append(slug)
-            except OSError:
-                continue
+            present.add(v[1])
+            if v[2]:
+                fresh.append(v[1])
+        if len(c) > 2 * len(present) + 5000:
+            _FM_IDC["c"] = {}
+    else:
+        import contextlib as _cl
+        with (_cl.nullcontext(iter(entries)) if entries is not None else os.scandir(mem_dir)) as it:
+            for e in it:
+                slug = _indexable(e.name)
+                if slug is None:
+                    continue
+                present.add(slug)
+                try:
+                    if e.stat().st_mtime >= since:
+                        fresh.append(slug)
+                except OSError:
+                    continue
     # A memory whose attachments changed after the last scan is fresh too: read_doc indexes their text, so what the
     # index should hold for it changed (28 Sep, account02/B02 R1, B02-R1-ATTACHMENT-REFRESH-DROPS-LIVE-PROMOTION-001:
     # until then an incremental refresh never re-read an attachment-only change, and its newer index then switched off
@@ -1148,6 +1259,13 @@ def _pid_is_alive(pid):
         return None
 
 
+def _touch_lock(lock):
+    try:
+        os.utime(lock, None)
+    except OSError:
+        pass
+
+
 def _refresh_lock(index_path):
     lock = index_path + ".refresh.lock"
     try:
@@ -1216,7 +1334,7 @@ def refresh(mem_dir=MEM, out=INDEX, quiet=False, build_if_absent=False):
             manifests[s] = current[s]
         else:
             manifests.pop(s, None)
-    if len(fresh) > REFRESH_FULL_REBUILD_AT:
+    if len(fresh) > REFRESH_MERGE_MAX:
         n, _v = build(mem_dir, out)
         spawn_detached_postings()      # this path publishes too, and leaves the sidecar a generation behind
         return n, 0
@@ -1239,8 +1357,12 @@ def refresh(mem_dir=MEM, out=INDEX, quiet=False, build_if_absent=False):
                     else:
                         df[t] = c
         added = 0
-        for slug in fresh:
-            tks = read_doc(mem_dir, slug)
+        toks = []
+        for c in range(0, len(fresh), 250):
+            if c:
+                _touch_lock(lock)     # a merge of thousands outlives REFRESH_LOCK_STALE_S otherwise (4 Nov 2026)
+            toks.extend(read_many(mem_dir, fresh[c:c + 250]))
+        for slug, tks in zip(fresh, toks):
             _drop(slug)
             if not tks:
                 continue
@@ -1256,6 +1378,7 @@ def refresh(mem_dir=MEM, out=INDEX, quiet=False, build_if_absent=False):
             _drop(slug)
         n = len(tfs)
         payload = {"n": n, "avgdl": (sum(dl.values()) / n) if n else 0.0, "df": df, "dl": dl, "tf": tfs}
+        _touch_lock(lock)
         # The compare and replace are serialized with full builds, AFTER the
         # staged gzip is complete. A pathname-mtime check before compression
         # cannot prevent overwriting a newer generation.
@@ -1316,8 +1439,7 @@ def refresh_in_memory(mem_dir=MEM, out=INDEX):
                 else:
                     df[t] = c
     added = 0
-    for slug in fresh:
-        tks = read_doc(mem_dir, slug)
+    for slug, tks in zip(fresh, read_many(mem_dir, fresh)):
         _drop(slug)
         if not tks:
             continue
@@ -2009,6 +2131,7 @@ def _postings_conn(index_path=INDEX):
 # tree and the same summation order - so every score is the same double. BRAIN_BM25_FASTLOOP=0 restores the
 # plain loop.
 _FASTLOOP = os.environ.get("BRAIN_BM25_FASTLOOP", "1") == "1"
+_HEAPTOP = os.environ.get("BRAIN_BM25_HEAPTOP", "1") == "1"
 
 
 class _LengthNorm(dict):
@@ -2074,7 +2197,15 @@ def score_postings(query, topk=20, index_path=INDEX, conn=None):
                 scores[pos] = scores.get(pos, 0.0) + idf * f * (K1 + 1) / (f + K1 * (1 - B + B * d / avgdl))
         if not scores:
             return []
-        top = sorted(((p, s) for p, s in scores.items() if s > 0), key=lambda kv: (-kv[1], kv[0]))[:topk]
+        # heapq.nsmallest is documented equal to sorted(...)[:topk]; the key is unique (pos), so no tie can reorder.
+        # A full sort of ~18,000 candidates cost about half of a seed-arm score call (28 of 53 ms median; the heap
+        # 4.9 ms - claude-738954b6, 4 Nov 2026). BRAIN_BM25_HEAPTOP=0 restores the full sort.
+        cand = ((p, s) for p, s in scores.items() if s > 0)
+        if _HEAPTOP:
+            import heapq
+            top = heapq.nsmallest(topk, cand, key=lambda kv: (-kv[1], kv[0]))
+        else:
+            top = sorted(cand, key=lambda kv: (-kv[1], kv[0]))[:topk]
         out = []
         for pos, s in top:
             r = con.execute("select slug from d where pos=?", (pos,)).fetchone()
@@ -2340,6 +2471,19 @@ def main():
     elif sys.argv[1:2] == ["unfreeze"]:
         print("%s bm25 unfreeze: %s" % (_stamp(), "released" if unfreeze() else "nothing was frozen"))
     elif sys.argv[1:2] == ["refresh"]:
+        # RAISE IT TO NORMAL (2026-10-30, measured). The 15-min task (wscript -> cmd -> python) starts this at class
+        # BelowNormal, I/O 1 and memory 2. On the busy box that is starvation: one refresh ran 06:06Z-09:4xZ on 10 s of
+        # CPU, its thread Ready (never scheduled) or faulting its trimmed pages back in, and no new memory was
+        # recallable for hours. Same treatment as spawn_detached_postings gives the builder.
+        try:
+            import ctypes
+            # The pseudo-handle -1 must go in as a pointer: passed as a bare int, ctypes sends 0xFFFFFFFF and the call
+            # fails with ERROR_INVALID_HANDLE (shipped that way 10:2x 30 Oct; the task's refresh stayed BelowNormal).
+            _k = ctypes.windll.kernel32
+            _k.SetPriorityClass(ctypes.c_void_p(_k.GetCurrentProcess()), 0x00000020)
+        except Exception:
+            pass
+        _raise_io_mem_priority()
         frozen, why = freeze_state()
         if frozen:
             print("%s bm25 refresh: skipped, generation FROZEN - %s" % (_stamp(), why))
@@ -2393,8 +2537,10 @@ def main():
                 return 0 if live_holder else 1
             print("%s bm25 refresh: index already current (%d docs)" % (_stamp(), _docs()))
         else:
-            print("%s bm25 refresh: +%d fresh memor%s, -%d gone -> %d docs"
-                  % (_stamp(), added, "y" if added == 1 else "ies", removed, _docs()))
+            # origin (1 Nov 2026): who started this run - "recall" when brain.py spawned it, else the env is unset
+            print("%s bm25 refresh: +%d fresh memor%s, -%d gone -> %d docs [origin %s]"
+                  % (_stamp(), added, "y" if added == 1 else "ies", removed, _docs(),
+                     os.environ.get("BM25_REFRESH_ORIGIN", "other")))
         # The sidecar catches up HERE, in the detached process, whether or not this run published:
         # it is checked against the live generation, so a run that found the index already current
         # still rebuilds one that is absent or left behind by somebody else's publish.

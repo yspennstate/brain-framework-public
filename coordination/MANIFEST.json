@@ -1,0 +1,77 @@
+{
+  "format": 1,
+  "scope": "Additive coordination kit only; not a whole-repository privacy attestation",
+  "base_commit": "15ecca9e7486588c3c4b97a956ea91d42a8f8e79",
+  "files": [
+    {
+      "path": "framework/coordination/.gitignore",
+      "sha256": "64cfa1857b4544ab859f504c9002626c4a862fa6b74c0a97b3c1021715f3030c",
+      "bytes": 68,
+      "license": "MIT",
+      "provenance": "newly authored; synthetic fixtures only"
+    },
+    {
+      "path": "framework/coordination/README.md",
+      "sha256": "fcf0a052e4a04bd74d5b42442653e97a8806f06a226199ab4b87499e31444585",
+      "bytes": 15976,
+      "license": "MIT",
+      "provenance": "newly authored; synthetic fixtures only"
+    },
+    {
+      "path": "framework/coordination/PROVENANCE.md",
+      "sha256": "896c0ee34aebc8708982a9178bbeb7390a1de3ed6392a8b5ceaaf253ec268f28",
+      "bytes": 1909,
+      "license": "MIT",
+      "provenance": "newly authored; synthetic fixtures only"
+    },
+    {
+      "path": "framework/coordination/hub.py",
+      "sha256": "110c1cb31f8a0e0450c7eaa9b1f6cc471196b7473e69c644a5c83ec1403c1da4",
+      "bytes": 12973,
+      "license": "MIT",
+      "provenance": "newly authored; synthetic fixtures only"
+    },
+    {
+      "path": "framework/coordination/client.py",
+      "sha256": "24c1a9ec2f8d9f1e4f7a181bbecb6ba70df3074220f29248962cdfced1e22535",
+      "bytes": 6003,
+      "license": "MIT",
+      "provenance": "newly authored; synthetic fixtures only"
+    },
+    {
+      "path": "framework/coordination/email_adapter.py",
+      "sha256": "92a23b69511b24fc29ccc025dd1e791a45b35ddc55057f30a7f263610d252e3f",
+      "bytes": 2837,
+      "license": "MIT",
+      "provenance": "newly authored; synthetic fixtures only"
+    },
+    {
+      "path": "framework/coordination/test_coordination.py",
+      "sha256": "1b355450df2e854b65062b51c614310b8bdad612090e24bc4f0ca565e2ec0fc3",
+      "bytes": 12150,
+      "license": "MIT",
+      "provenance": "newly authored; synthetic fixtures only"
+    },
+    {
+      "path": "framework/coordination/owner_questions.py",
+      "sha256": "c391a53d82aac8604b06967c37fd03dcc45a309e6f461492479a33a31b28c649",
+      "bytes": 8085,
+      "license": "MIT",
+      "provenance": "newly authored; synthetic fixtures only"
+    },
+    {
+      "path": "framework/coordination/test_owner_questions.py",
+      "sha256": "5070d0da424aaed6fe6ddc21f8c74ad18a764129c01939d98faa196944fca4e7",
+      "bytes": 5910,
+      "license": "MIT",
+      "provenance": "newly authored; synthetic fixtures only"
+    },
+    {
+      "path": "framework/coordination/TOP10.template.json",
+      "sha256": "53382927e9e6458bc37712861b54155e63fe923c09746af1ff1b974009dd2322",
+      "bytes": 934,
+      "license": "MIT",
+      "provenance": "newly authored; synthetic fixtures only"
+    }
+  ]
+}

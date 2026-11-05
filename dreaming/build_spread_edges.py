@@ -31,6 +31,7 @@ OUT = os.path.join(DR, "spread_edges.tsv")
 
 W_COACT = 1.6    # the lived "reasoned together" signal outweighs a hand-authored cross-reference
 W_WIKI = 1.0
+W_TWIN = 0.5     # name twins that differ only in their date tail (see main)
 LINK_RE = re.compile(r"\[\[([^\]]+?)\]\]")
 DATE_TAIL = re.compile(r"_\d{4}_\d{2}_\d{2}$")
 # non-memory pages that would act as false hubs (everything links the index / the mistakes log).
@@ -60,26 +61,52 @@ def main():
         print(__doc__ or os.path.basename(__file__))
         return
     # canonical key -> the real filename slug (so output ids are the actual files)
-    real = {}
-    for fn in os.listdir(MEM):
+    # A name that matches a file exactly (case and -/_ folded, date kept) goes to that file; only a name with no
+    # exact file falls back to the date-stripped key. Keying nodes by the stripped key alone merged files that
+    # differ only in their date (identity_who_you_are vs identity_who_you_are_2026_07_07, two observer_stack_audit
+    # runs months apart): on 31 Oct 2026 that hid 26 memories from the walk graph and sent 1,850 of 97,828 exact
+    # links to the wrong twin.
+    real, exact = {}, {}
+    for fn in sorted(os.listdir(MEM)):
         if fn.endswith(".md") and fn[:-3] not in SKIP:
             real[norm(fn)] = fn[:-3]
+            exact[fn[:-3].replace("-", "_").lower()] = fn[:-3]
 
-    edges = defaultdict(float)   # (keyA, keyB) sorted -> weight
+    def resolve(slug):
+        s = slug.strip()
+        if s.endswith(".md"):
+            s = s[:-3]
+        s = s.replace("-", "_").lower()
+        return exact.get(s) or real.get(DATE_TAIL.sub("", s))
+
+    edges = defaultdict(float)   # (slugA, slugB) sorted -> weight
 
     def add(a, b, w):
-        a, b = norm(a), norm(b)
-        if a == b or a not in real or b not in real:
+        a, b = resolve(a), resolve(b)
+        if a is None or b is None or a == b:
             return
         key = (a, b) if a < b else (b, a)
         edges[key] += w
+
+    # Date twins (files whose names differ only in the date tail) are the same subject: the undated wake stubs
+    # (identity_who_you_are, shared_language, ...) link only to each other, and without this they form an island
+    # apart from their dated full versions.
+    twins = defaultdict(list)
+    for s in exact.values():
+        twins[norm(s)].append(s)
+    twin_n = 0
+    for group in twins.values():
+        for i, a in enumerate(group):
+            for b in group[i + 1:]:
+                add(a, b, W_TWIN)
+                twin_n += 1
 
     # wiki-links from every memory body
     wiki_n = 0
     for fn in os.listdir(MEM):
         if not fn.endswith(".md") or fn[:-3] in SKIP:
             continue
-        src = norm(fn)
+        src = fn[:-3]
         try:
             text = io.open(os.path.join(MEM, fn), encoding="utf-8", errors="replace").read()
         except Exception:
@@ -154,14 +181,15 @@ def main():
     with io.open(tmp, "w", encoding="utf-8") as f:
         f.write("a\tb\tweight\n")
         for (a, b), w in sorted(edges.items(), key=lambda kv: -kv[1]):
-            f.write(f"{real[a]}\t{real[b]}\t{w:.3f}\n")
+            f.write(f"{a}\t{b}\t{w:.3f}\n")
     os.replace(tmp, OUT)
 
-    print(f"spread_edges: {len(edges)} edges from {wiki_n} wiki-links + {coact_n} coactivation pairs "
-          f"+ {orphan_n} orphan + {series_n} series + {keyword_n} keyword edges over {len(real)} nodes -> {OUT}")
+    print(f"spread_edges: {len(edges)} edges from {wiki_n} wiki-links + {twin_n} date-twin + {coact_n} coactivation pairs "
+          f"+ {orphan_n} orphan + {series_n} series + {keyword_n} keyword edges over {len(exact)} nodes -> {OUT}")
 
 
 FRESH = os.path.join(DR, "spread_edges_fresh.tsv")
+LOOKBACK = 7200  # seconds; see fresh()
 
 
 def fresh():
@@ -175,7 +203,11 @@ def fresh():
     memory from a file older than the build are not seen here (that file was read before the target existed).
     bm25.py refresh calls this whenever it indexes a new memory, so the links are live within one refresh."""
     try:
-        cut = os.path.getmtime(OUT)
+        # Look back LOOKBACK seconds before the nightly file's mtime: the build reads the memory dir minutes before it
+        # writes OUT, so a memory written inside that window was in neither file (3 Nov 02:33: 11 term_ nodes written,
+        # build file stamped 02:35:15, all 11 isolated). Pairs OUT already holds are skipped below, so re-reading the
+        # window never counts a link twice. claude-5693aca3, 3 Nov 2026.
+        cut = os.path.getmtime(OUT) - LOOKBACK
     except OSError:
         return
     real, newer = {}, []

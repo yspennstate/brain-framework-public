@@ -687,22 +687,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    # End with os._exit, as brain.py does: once query_embed has loaded onnxruntime, its C++ teardown at exit() can spin
-    # forever (a recall helper did for 1 h 46 min on 3 Nov). Every write here is closed inside a with block before
-    # main returns, and the lock is an fcntl lock the kernel drops with the process.
-    try:
-        _rc = main()
-    except SystemExit as e:
-        _rc = e.code
-    except KeyboardInterrupt:
-        _rc = 130
-    except BaseException:
-        import traceback
-        traceback.print_exc()
-        _rc = 1
-    for _s in (sys.stdout, sys.stderr):
-        try:
-            _s.flush()
-        except Exception:
-            pass
-    os._exit(_rc if isinstance(_rc, int) else (0 if _rc is None else 1))
+    sys.exit(main())

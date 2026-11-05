@@ -193,7 +193,9 @@ def _cli(argv):
     import argparse
     p = argparse.ArgumentParser(prog="brain_switch.py")
     p.add_argument("action", choices=("status", "on", "off"))
-    p.add_argument("--session", default=os.environ.get("CLAUDE_SESSION_ID", ""))
+    # a tool shell knows its session as CLAUDE_CODE_SESSION_ID; CLAUDE_SESSION_ID is set only by an evaluation (27 Sep:
+    # before, "off" with no --session wrote nothing and printed None)
+    p.add_argument("--session", default=os.environ.get("CLAUDE_SESSION_ID") or os.environ.get("CLAUDE_CODE_SESSION_ID", ""))
     p.add_argument("--global", dest="glob", action="store_true")
     a = p.parse_args(argv)
     if a.action == "off":

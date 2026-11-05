@@ -112,6 +112,13 @@ def portable_hooks(wiring, python, repo, fold=True):
                         cmd = cmd.replace(chr(92), "/")
                         if "args" in h:
                             h["args"] = [str(x).replace(chr(92), "/") for x in h["args"]]
+                        # The dispatched SessionStart list names wake_brain.ps1 too, and there is no powershell
+                        # here: without this the dispatcher's wake ritual never ran on a Mac or Linux install.
+                        if cmd == "powershell" and any(str(x).endswith("wake_brain.ps1") for x in h.get("args", [])):
+                            a = [str(x) for x in h["args"]]
+                            part = a[a.index("-Part") + 1] if "-Part" in a else None
+                            cmd = python
+                            h["args"] = ["-s", os.path.join(repo, "hooks", "wake_brain.py")] + (["--part", part] if part else [])
                     if cmd in ("python", "python3", "py"):
                         cmd = python
                     elif cmd.startswith(("python ", "python3 ")):

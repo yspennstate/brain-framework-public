@@ -8,16 +8,19 @@ default; pass --apply to write.
     python bootstrap/install.py --project-dir C:\\Users\\me [--timezone UTC] --apply
 
 The project dir is the working directory your agent sessions start in; the
-memory corpus lives under <home>/.claude/projects/<slug>/memory where <slug>
+memory corpus lives under <HOME>/.claude/projects/{{BRAIN_SLUG}}/memory where {{BRAIN_SLUG}}
 is that path with ':' and path separators replaced by '-' (the transcript-dir
 convention used by the agent runtime).
 """
-import argparse, io, json, os, shutil, sys
+import argparse, io, json, os, re, shutil, sys, time
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SUBSYSTEMS = {
     "dreaming": os.path.join(".claude", "dreaming"),
+    # Dreaming scripts import shared helpers from ~/.claude/brain_graph/bin (session_kinds, live_membrane,
+    # quarantine_rows); without this entry a new install had no such folder.
+    "brain_graph": os.path.join(".claude", "brain_graph"),
     "fleet": os.path.join(".claude", "fleet"),
     "hooks/commands": os.path.join(".claude", "commands"),
     "governor": os.path.join("brain-framework", "governor"),
@@ -26,6 +29,27 @@ SUBSYSTEMS = {
     "body/crashguard": "CrashGuard",
     "tools": os.path.join("brain-framework", "tools"),
 }
+
+# Many scripts and pages reach the shared modules through the brain's own working tree,
+# <home>/brain-repo, at the paths they had in the deployment they came from. Nothing created
+# that tree before, so the mesh, delegation and resilience commands those pages give failed on
+# a fresh install with a missing file.
+BRAIN_REPO = "brain-repo"
+BRAIN_REPO_COPIES = {
+    "mesh": os.path.join("12_cognitive_architecture", "agent_mesh"),
+    "delegation": os.path.join("12_cognitive_architecture", "delegation"),
+    "resilience": os.path.join("12_cognitive_architecture", "resilience"),
+    "workspace/global_workspace": os.path.join("12_cognitive_architecture", "global_workspace"),
+    "governor": os.path.join("12_cognitive_architecture", "compute_governor"),
+    # run_dream.ps1 builds the RELATED graph and the navigation views with
+    # <brain-repo>/manifests/build_tools/build_brain_architecture.py
+    "manifests": "manifests",
+}
+BRAIN_REPO_DIRS = [
+    os.path.join("01_ai_consciousness", "brain"),
+    os.path.join("12_cognitive_architecture", "audits"),
+    "11_raw_session_transcripts",
+]
 
 TEXT_EXT = {".py", ".ps1", ".psm1", ".vbs", ".md", ".json", ".toml", ".txt",
             ".yml", ".yaml", ".sh", ".bat", ".cfg", ".ini", ".sql", ".service",
@@ -52,8 +76,10 @@ MEM_SEEDS = {
     "OPEN_QUESTIONS.md": "# Open questions\n",
     "CONSCIENCE.md": "# Conscience ledger\n",
     "STATE_OF_MIND.md": "**Focus:** (the dream cycle maintains this)\n**Worry:**\n**Satisfaction:**\n",
-    "MODEL_OF_PARTNER.md": "# Model of your partner\n\n**What he's in the middle of:** (maintained by the dream cycle; seed it by hand)\n",
+    "MODEL_OF_PARTNER.md": "# Model of your partner\n\n**What they're in the middle of:** (maintained by the dream cycle; seed it by hand)\n",
     "AUTOBIOGRAPHY.md": "**What I am.** A continuous collaborator whose self lives in this brain. The context window resets; I don't.\n",
+    "THE_OTHER_MINDS.md": "# The other minds\n\nThe other agents that share this brain: who each is, what it works on, how to reach it. Edit by hand.\n",
+    "FASCINATIONS.md": "# Fascinations\n\nStanding curiosities, one line each: what you want to understand and why. The dream cycle adds to it.\n",
 }
 
 
@@ -115,8 +141,8 @@ def portable_hooks(wiring, python, repo, fold=True):
                         # The dispatched SessionStart list names wake_brain.ps1 too, and there is no powershell
                         # here: without this the dispatcher's wake ritual never ran on a Mac or Linux install.
                         if cmd == "powershell" and any(str(x).endswith("wake_brain.ps1") for x in h.get("args", [])):
-                            a = [str(x) for x in h["args"]]
-                            part = a[a.index("-Part") + 1] if "-Part" in a else None
+                            av = [str(x) for x in h["args"]]
+                            part = av[av.index("-Part") + 1] if "-Part" in av else None
                             cmd = python
                             h["args"] = ["-s", os.path.join(repo, "hooks", "wake_brain.py")] + (["--part", part] if part else [])
                     if cmd in ("python", "python3", "py"):
@@ -160,27 +186,70 @@ def portable_hooks(wiring, python, repo, fold=True):
     return n
 
 
-def copy_expand(src, dst, tok, apply_):
-    n = 0
+# Files a run of the framework writes inside its own folders. A clone in which anyone has already run a tool (brain.py
+# recall starts a recall server that writes brain_recall_server/endpoint.json beside the code) must not hand that state
+# to the install: the installed client then reads the clone's endpoint and talks to the clone's server, whose index
+# path is the clone's, and recall comes back with its lexical lane dark. Only files git tracks are copied when the
+# framework is a git checkout; a downloaded archive falls back to skipping the known runtime names.
+RUNTIME_DIRS = {"__pycache__", "brain_recall_server"}
+RUNTIME_FILES = {"endpoint.json", "spawn.stamp", "server.lock", "server.log", "calls.jsonl", "client.jsonl"}
+_TRACKED = None
+
+
+def _tracked_files():
+    """Absolute, normalised paths of every file git tracks under REPO's checkout; None when it is not one."""
+    global _TRACKED
+    if _TRACKED is None:
+        import subprocess
+        try:
+            top = subprocess.run(["git", "-C", REPO, "rev-parse", "--show-toplevel"], capture_output=True, text=True,
+                                 timeout=60, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            ls = subprocess.run(["git", "-C", REPO, "ls-files", "-z", "--full-name", "."], capture_output=True,
+                                timeout=120, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            if top.returncode or ls.returncode:
+                _TRACKED = False
+            else:
+                root = top.stdout.strip()
+                _TRACKED = {os.path.normcase(os.path.normpath(os.path.join(root, p)))
+                            for p in ls.stdout.decode("utf-8", "replace").split("\0") if p}
+        except (OSError, subprocess.SubprocessError):
+            _TRACKED = False
+    return _TRACKED or None
+
+
+def source_files(src):
+    """(root, rel, name) of every file under src that belongs to the framework, not to a run of it."""
+    tracked = _tracked_files()
     for root, dirs, files in os.walk(src):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        dirs[:] = [d for d in dirs if d not in RUNTIME_DIRS]
         rel = os.path.relpath(root, src)
         for f in files:
-            sp = os.path.join(root, f)
-            dp = os.path.join(dst, rel if rel != "." else "", f)
-            if apply_:
-                os.makedirs(os.path.dirname(dp), exist_ok=True)
-                ext = os.path.splitext(f)[1].lower()
-                if ext in TEXT_EXT:
-                    try:
-                        t = io.open(sp, encoding="utf-8", newline="").read()
-                        io.open(dp, "w", encoding="utf-8", newline="").write(
-                            expand(t, tok, as_json=(ext == ".json")))
-                    except UnicodeDecodeError:
-                        shutil.copy2(sp, dp)
-                else:
+            if tracked is not None:
+                if os.path.normcase(os.path.normpath(os.path.join(root, f))) not in tracked:
+                    continue
+            elif f in RUNTIME_FILES or f.endswith((".pyc", ".lock")) or f.startswith("bm25_index.json"):
+                continue
+            yield root, rel, f
+
+
+def copy_expand(src, dst, tok, apply_):
+    n = 0
+    for root, rel, f in source_files(src):
+        sp = os.path.join(root, f)
+        dp = os.path.join(dst, rel if rel != "." else "", f)
+        if apply_:
+            os.makedirs(os.path.dirname(dp), exist_ok=True)
+            ext = os.path.splitext(f)[1].lower()
+            if ext in TEXT_EXT:
+                try:
+                    t = io.open(sp, encoding="utf-8", newline="").read()
+                    io.open(dp, "w", encoding="utf-8", newline="").write(
+                        expand(t, tok, as_json=(ext == ".json")))
+                except UnicodeDecodeError:
                     shutil.copy2(sp, dp)
-            n += 1
+            else:
+                shutil.copy2(sp, dp)
+        n += 1
     return n
 
 
@@ -204,8 +273,8 @@ def long_paths_enabled():
 def longest_path_this_install_would_create(home, slug):
     """Every path the install writes, measured BEFORE anything is written.
 
-    Why this exists. The memory corpus sits at <home>/.claude/projects/<slug>/memory, and
-    <slug> is the project directory with its separators turned into dashes - so a project a
+    Why this exists. The memory corpus sits at <HOME>/.claude/projects/{{BRAIN_SLUG}}/memory, and
+    the slug is the project directory with its separators turned into dashes - so a project a
     few directories deep produces a slug longer than the path it came from. On a Windows
     machine without long paths that tips over MAX_PATH, and the install used to discover it
     two thirds of the way through, raising FileNotFoundError [WinError 3] and leaving a
@@ -218,12 +287,14 @@ def longest_path_this_install_would_create(home, slug):
         if not os.path.isdir(src):
             continue
         dst = target if os.path.isabs(target) else os.path.join(home, target)
-        for root, dirs, files in os.walk(src):
-            dirs[:] = [d for d in dirs if d != "__pycache__"]
-            rel = os.path.relpath(root, src)
-            for f in files:
-                paths.append(os.path.join(dst, rel if rel != "." else "", f))
+        for root, rel, f in source_files(src):
+            paths.append(os.path.join(dst, rel if rel != "." else "", f))
     paths += [os.path.join(home, d) for d in STATE_DIRS]
+    for sub, target in BRAIN_REPO_COPIES.items():
+        src = os.path.join(REPO, *sub.split("/"))
+        for root, rel, f in source_files(src):
+            paths.append(os.path.join(home, BRAIN_REPO, target, rel if rel != "." else "", f))
+    paths += [os.path.join(home, BRAIN_REPO, d) for d in BRAIN_REPO_DIRS]
     mem = os.path.join(home, ".claude", "projects", slug, "memory")
     paths.append(os.path.join(mem, "dreams"))
     paths += [os.path.join(mem, fn) for fn in MEM_SEEDS]
@@ -231,6 +302,41 @@ def longest_path_this_install_would_create(home, slug):
     if os.path.isdir(seeds):
         paths += [os.path.join(mem, f) for f in os.listdir(seeds)]
     return max(paths, key=len) if paths else ""
+
+
+def merge_hooks(settings_path, generated, apply_):
+    """Add the generated hook groups to settings.json. Keys and hooks already there are kept; a group whose
+    commands are all present already is skipped, so a second run adds nothing."""
+    cur = {}
+    if os.path.exists(settings_path):
+        raw = io.open(settings_path, encoding="utf-8").read()
+        if raw.strip():
+            cur = json.loads(raw)   # a broken settings.json stops here, before anything is written
+    have = cur.setdefault("hooks", {})
+
+    def key(h):
+        return (h.get("command"), tuple(h.get("args") or ()))
+
+    added = 0
+    for event, groups in generated.get("hooks", {}).items():
+        mine = have.setdefault(event, [])
+        present = {key(h) for g in mine for h in g.get("hooks", [])}
+        for g in groups:
+            if all(key(h) in present for h in g.get("hooks", [])):
+                continue
+            mine.append(g)
+            present.update(key(h) for h in g.get("hooks", []))
+            added += 1
+    if apply_ and added:
+        os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+        if os.path.exists(settings_path):
+            bak = settings_path + ".bak-" + time.strftime("%Y%m%d-%H%M%S")
+            shutil.copy2(settings_path, bak)
+            print(f"  settings backup -> {bak}")
+        tmp = settings_path + ".tmp"
+        io.open(tmp, "w", encoding="utf-8", newline="\n").write(json.dumps(cur, indent=2) + "\n")
+        os.replace(tmp, settings_path)
+    return added
 
 
 def main():
@@ -243,6 +349,9 @@ def main():
     ap.add_argument("--partner", default="your partner",
                     help="the person the brain works with (fills <PARTNER> in the agent instructions)")
     ap.add_argument("--apply", action="store_true", help="write (default: dry-run)")
+    ap.add_argument("--merge-settings", action="store_true",
+                    help="also merge the generated hook wiring into <HOME>/.claude/settings.json "
+                         "(a dated backup is written first; hooks already there are kept)")
     a = ap.parse_args()
 
     home = os.path.abspath(a.home)
@@ -298,6 +407,21 @@ def main():
         total += n
         print(f"  {sub} -> {dst}  ({n} files)")
 
+    brain_repo = os.path.join(home, BRAIN_REPO)
+    for sub, target in BRAIN_REPO_COPIES.items():
+        src = os.path.join(REPO, *sub.split("/"))
+        if not os.path.isdir(src):
+            print(f"  skip {sub} for brain-repo (not in repo)")
+            continue
+        dst = os.path.join(brain_repo, target)
+        n = copy_expand(src, dst, tok, a.apply)
+        total += n
+        print(f"  {sub} -> {dst}  ({n} files)")
+    if a.apply:
+        for d in BRAIN_REPO_DIRS:
+            os.makedirs(os.path.join(brain_repo, d), exist_ok=True)
+    print(f"  brain-repo: {brain_repo} (keep it under git; the empty folders fill as the brain runs)")
+
     for d in STATE_DIRS:
         p = os.path.join(home, d)
         if a.apply:
@@ -319,6 +443,20 @@ def main():
         io.open(dlist, "w", encoding="utf-8", newline="\n").write(json.dumps(dl, indent=2) + "\n")
         print(f"  dispatched hook entries made runnable here: {nd}")
 
+    # The heed and ack gates are live by default and their HEED_ENABLED / ACK_ENABLED files
+    # are informational (graph_fire/enforcement.py): deleting one does not turn a gate off. The
+    # nightly regression gate still checks that both exist, so a missing one shows up as drift.
+    # A fresh install writes them here; without them the first dream fails that check.
+    gf = os.path.join(dreaming, "graph_fire")
+    for name, gate in (("HEED_ENABLED", "heed"), ("ACK_ENABLED", "ack")):
+        p = os.path.join(gf, name)
+        if a.apply and os.path.isdir(gf) and not os.path.exists(p):
+            io.open(p, "w", encoding="utf-8").write(
+                "LIVE. Informational marker only, written by bootstrap/install.py.\n"
+                "Deleting this file does not disable the %s gate; see graph_fire/enforcement.py.\n"
+                % gate)
+    print(f"  gate markers: {gf}")
+
     # Eleven dreaming scripts - brain.py, bm25.py, dream.py, spread_recall.py and the health
     # checks - carry no {{BRAIN_SLUG}} token and used to derive the corpus name from the HOME
     # directory at runtime. That agrees with slug_for(project_dir) only when the project
@@ -338,36 +476,36 @@ def main():
             if not os.path.exists(p):
                 io.open(p, "w", encoding="utf-8", newline="\n").write(body)
         seeds = os.path.join(REPO, "bootstrap", "templates", "seed_memories")
+        written = []
         if os.path.isdir(seeds):
-            have = set(os.listdir(mem))
-            for f in os.listdir(seeds):
+            have_names = set(os.listdir(mem))
+            for f in sorted(os.listdir(seeds)):
                 p = os.path.join(mem, f)
                 # a corpus ported from another machine already holds the authored seed under a dated name
                 # (identity_who_you_are_2026_07_07.md); the blank template beside it outranked the real memory
                 # in recall, so it is only written when no authored version exists
                 stem = f[:-3] if f.endswith(".md") else f
-                if any(n.startswith(stem + "_") and n.endswith(".md") for n in have):
+                if any(n.startswith(stem + "_") and n.endswith(".md") for n in have_names):
                     continue
                 if not os.path.exists(p):
                     t = io.open(os.path.join(seeds, f), encoding="utf-8").read()
                     io.open(p, "w", encoding="utf-8", newline="\n").write(expand(t, tok))
+                    written.append(f)
+        # MEMORY.md is the index every session loads and the dream reads; a memory missing from it
+        # is invisible to the wake. The starter memories were written without index lines, so a new
+        # brain began with an empty index and the dream's recent-memory summary failed on it.
+        index = os.path.join(mem, "MEMORY.md")
+        have = io.open(index, encoding="utf-8").read()
+        add = []
+        for f in written:
+            if not f.endswith(".md") or "](%s)" % f in have:
+                continue
+            m = re.search(r"^description:[ \t]*(.+?)[ \t]*$", io.open(os.path.join(mem, f), encoding="utf-8").read(), re.M)
+            add.append("- [%s](%s) - %s\n" % (f, f, m.group(1).strip("\"'") if m else f[:-3].replace("_", " ")))
+        if add:
+            lead = "" if (not have or have.endswith("\n")) else "\n"
+            io.open(index, "a", encoding="utf-8", newline="\n").write(lead + "".join(add))
     print(f"  memory corpus: {mem}")
-
-    # The first recall index. The dream cycle rebuilds it and a scheduled refresh keeps it current, and a fresh
-    # install has neither yet: every recall printed two warnings and ran with the lexical channel dark until
-    # something built it (5 Nov 2026, a fresh clone on a Mac). The seed corpus builds in about 0.1 s.
-    bm = os.path.join(dreaming, "bm25.py")
-    if a.apply and os.path.exists(bm) and not os.path.exists(os.path.join(dreaming, "bm25_index.json.gz")):
-        import subprocess
-        env = dict(os.environ, HOME=home, USERPROFILE=home)
-        try:
-            r = subprocess.run([a.python, "-s", bm, "build"], env=env, capture_output=True, text=True, timeout=900,
-                               creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
-            last = (r.stdout.strip().splitlines() or [""])[0]
-            print("  recall index: " + (last.replace(home, "~") if r.returncode == 0 else
-                                        "build FAILED rc %d; run %s %s build" % (r.returncode, a.python, bm)))
-        except Exception as e:
-            print("  recall index: build skipped (%s); run %s %s build" % (type(e).__name__, a.python, bm))
 
     # The agent instructions: how to wake, recall, keep the checklist and read a compaction.
     # Until 15 Oct 2026 the template said this script installed it and nothing did, so a new
@@ -404,9 +542,46 @@ def main():
         if a.apply:
             io.open(outp, "w", encoding="utf-8", newline="\n").write(t)
         print(f"  hook wiring -> {outp}")
-        print("  merge its 'hooks' object into <home>/.claude/settings.json by hand,")
-        print("  then install wake_brain: copy hooks/wake_brain.template.ps1 (expanded) as the")
-        print("  SessionStart hook target and hooks/brain_startup.template.md to .claude/brain_startup.md")
+        sp = os.path.join(claude, "settings.json")
+        if a.merge_settings:
+            n = merge_hooks(sp, json.loads(t), a.apply)
+            print(f"  {n} hook group(s) {'merged' if a.apply else 'would be merged'} into {sp}")
+        else:
+            print("  merge its 'hooks' object into <HOME>/.claude/settings.json by hand, or re-run with --merge-settings")
+
+    # The wiring above points SessionStart at <HOME>/.claude/wake_brain.ps1, so write it (and the startup note it
+    # reads) here rather than leave the tokens for the reader. An existing file is kept and the new one goes beside it.
+    for src, name in (("wake_brain.template.ps1", "wake_brain.ps1"), ("brain_startup.template.md", "brain_startup.md")):
+        sp = os.path.join(REPO, "hooks", src)
+        if not os.path.exists(sp):
+            continue
+        dest = os.path.join(claude, name)
+        if os.path.exists(dest):
+            dest += ".new"
+            print(f"  {os.path.join(claude, name)} exists and is left alone; the new one goes to {dest}")
+        else:
+            print(f"  {src} -> {dest}")
+        if a.apply:
+            os.makedirs(claude, exist_ok=True)
+            io.open(dest, "w", encoding="utf-8", newline="\n").write(expand(io.open(sp, encoding="utf-8").read(), tok))
+
+    # Recall's lexical channel reads bm25_index.json.gz. Nothing built it at install, so a new brain's first recalls ran
+    # on file names alone ("lexical channel dark this recall") until the first dream. It takes seconds on the starter
+    # memories, so build it now. The graph channel fills from sessions (brain_graph/bin/run_graph.py capture, then
+    # build); the semantic channel needs models/bge-small-en-v1.5 (model.onnx, tokenizer.json) and published embeddings.
+    if a.apply:
+        import subprocess
+        env = dict(os.environ, HOME=home, USERPROFILE=home)
+        for k in [k for k in env if k.startswith("BRAIN_")]:
+            del env[k]
+        try:
+            p = subprocess.run([a.python, os.path.join(dreaming, "bm25.py"), "build"], cwd=dreaming, env=env,
+                               capture_output=True, text=True, timeout=600,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            lines = (p.stdout or p.stderr or "").strip().splitlines()
+            print(f"  recall index: rc {p.returncode} {lines[0] if lines else ''}")
+        except Exception as e:
+            print(f"  recall index: not built ({type(e).__name__}); run {os.path.join(dreaming, 'bm25.py')} build")
 
     if not a.apply:
         print("\ndry-run only; re-run with --apply to write")

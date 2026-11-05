@@ -24,7 +24,8 @@ BOARD_MAX = 3500
 
 def read_payload():
     try:
-        raw = sys.stdin.buffer.read().decode("utf-8", "replace")
+        b = getattr(sys.stdin, "buffer", None)   # the dispatcher's in-process stdin is text only
+        raw = b.read().decode("utf-8", "replace") if b is not None else sys.stdin.read()
     except Exception:
         return {}
     i = raw.find("{")
@@ -110,7 +111,11 @@ def main():
         if runtime == "codex":
             sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": event, "additionalContext": text}}))
         else:
-            sys.stdout.buffer.write((text + "\n").encode("utf-8", "replace"))
+            b = getattr(sys.stdout, "buffer", None)  # in-process the dispatcher hands a text stream with no buffer
+            if b is not None:
+                b.write((text + "\n").encode("utf-8", "replace"))
+            else:
+                sys.stdout.write(text + "\n")
     except Exception:
         return 0
     return 0

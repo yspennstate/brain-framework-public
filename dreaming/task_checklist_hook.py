@@ -313,6 +313,24 @@ def _read_json(path):
         return json.load(fh)
 
 
+def _file_key(st):
+    return (st.st_ino, st.st_size, st.st_mtime_ns)
+
+
+# 5 Nov 2026 (claude-95df24fa, Mac): a prompt parsed the 1.6 MB state.json twice, once to look up the session's mesh
+# agent and again under the lock (~7 ms each). hook_main now hands its first parse over: _PRIMED holds (file key,
+# state) and the next load_state takes it, once, when state.json still has that inode, size and mtime. save_state
+# always writes a temp file and replaces, so an unchanged key is an unchanged file.
+_PRIMED = []
+_LAST_KEY = []          # the file key of the newest parse load_state made
+
+
+def _read_state_keyed():
+    with _open_shared(STATE) as fh:
+        key = _file_key(os.fstat(fh.fileno()))
+        return json.load(fh), key
+
+
 def _fallback_state():
     """state.json exists but does not parse. The 23 Oct 11:46 crash left it so; the old code went on with {} and the
     list lost 5,600 entries while the day's ids restarted at 001. Load the newest readable copy instead."""
@@ -350,7 +368,14 @@ def load_state():
     # 1 Nov: 'state.json unreadable' was logged 8 times in 4 hours with the file intact. Each time the hourly copy (or a
     # leftover temp a day old) was loaded and then SAVED over the list, dropping every change since that copy (19
     # entries at 03:01). A failed read of a whole file is retried, then refused; only a damaged file falls back.
-    st, last = None, None
+    st, last, key = None, None, None
+    if _PRIMED:
+        key, primed = _PRIMED.pop()
+        try:
+            if _file_key(os.stat(STATE)) == key:
+                return primed
+        except OSError:
+            pass
     for k in range(10):
         try:
             if not os.path.exists(STATE):
@@ -359,7 +384,7 @@ def load_state():
             if os.path.getsize(STATE) == 0:
                 st = {}
                 break
-            st = _read_json(STATE)
+            st, key = _read_state_keyed()
             break
         except Exception as exc:
             last = exc
@@ -374,6 +399,7 @@ def load_state():
     st.setdefault("entries", {})
     st.setdefault("sessions", {})
     st.setdefault("seq", {})
+    _LAST_KEY[:] = [key] if key is not None else []
     return st
 
 
@@ -1041,8 +1067,11 @@ def hook_main(runtime_arg):
     if "--runtime" not in sys.argv and os.environ.get("CODEX_THREAD_ID"):
         runtime = "codex"
     # the mesh lookup opens a 200 MB sqlite that is often write-locked; do it once per session and remember it
+    _LAST_KEY[:] = []
     st0 = load_state()
     sess0 = st0["sessions"].get(session[:12], {}) if session else {}
+    if _LAST_KEY:
+        _PRIMED[:] = [(_LAST_KEY[0], st0)]      # st0 is only read here; the next load_state may take it whole
     if "mesh_agent" in sess0:
         mesh_agent, mesh_task = sess0.get("mesh_agent"), sess0.get("mesh_task")
     else:

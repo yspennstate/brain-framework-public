@@ -57,7 +57,102 @@ def _proven(name, f):
 
 
 # ---- 1. bm25 ------------------------------------------------------------------------------------------------------
+# Per-term cache (5 Nov 2026, claude-95df24fa): a term's (positions, contributions) arrays depend only on the postings
+# file, the term, its query weight and K1/B, so they are kept per postings file (path, inode, size, mtime_ns; reset when
+# it changes) and reused, LRU-capped at BRS_NP_BM25_CACHE_MB (default 48; 0 = off, the plain body below). Same arrays,
+# same np.add.at order, same top-k: 154 of 154 real prompts equal with the cache filling and warm, and a changed term
+# weight is recomputed (control); fok_probe's call 13.2 -> 3.4 ms median (ab_bm25_termcache.py). Live served fok_probe
+# had run 50 ms against 13 ms warm: the same work slowed by whatever shares the cores, so the lever cuts the work.
+import threading
+from collections import OrderedDict
+
+_TC = {"key": None, "terms": OrderedDict(), "bytes": 0}
+_TC_LOCK = threading.Lock()
+
+
+def _tc_cap():
+    try:
+        return int(float(os.environ.get("BRS_NP_BM25_CACHE_MB", "48")) * 1048576)
+    except ValueError:
+        return 0
+
+
+def _tc_term(bm25, np, con, n, avgdl, t, cap):
+    w = bm25.QUERY_TERM_WEIGHTS.get(t, 1.0)
+    k = (t, w, bm25.K1, bm25.B)
+    ent = _TC["terms"].get(k)
+    if ent is not None:
+        _TC["terms"].move_to_end(k)
+        return ent
+    row = con.execute("select df,blob from p where term=?", (t,)).fetchone()
+    if not row:
+        ent = ()
+    else:
+        df_t, blob = row
+        idf = math.log(1.0 + (n - df_t + 0.5) / (df_t + 0.5)) * w
+        import zlib
+        b = zlib.decompress(blob)
+        if len(b) % 12:
+            return None
+        rec = np.frombuffer(b, dtype=np.dtype([("p", "<u4"), ("f", "<i4"), ("d", "<u4")]))
+        f = rec["f"].astype(np.float64)
+        d = rec["d"].astype(np.float64)
+        norm = bm25.K1 * (1 - bm25.B + bm25.B * d / avgdl)
+        v = ((idf * f) * (bm25.K1 + 1)) / (f + norm)
+        p = rec["p"].astype(np.int64)
+        ent = (p, v, int(p.max()) if len(p) else -1)
+    _TC["terms"][k] = ent
+    _TC["bytes"] += (ent[0].nbytes + ent[1].nbytes) if ent else 64
+    while _TC["bytes"] > cap and len(_TC["terms"]) > 1:
+        _, old = _TC["terms"].popitem(last=False)
+        _TC["bytes"] -= (old[0].nbytes + old[1].nbytes) if old else 64
+    return ent
+
+
+def _bm25_np_cached(bm25, np, query, topk, conn, cap):
+    con, n, avgdl = conn
+    path = con.execute("pragma database_list").fetchone()[2]
+    s = os.stat(path)
+    fk = ((path, s.st_ino, s.st_size, s.st_mtime_ns), n, avgdl)
+    acc = touched = None
+    with _TC_LOCK:
+        if _TC["key"] != fk:
+            _TC.update(key=fk, terms=OrderedDict(), bytes=0)
+        ents = []
+        for t in sorted(set(bm25.tokens(query))):
+            ent = _tc_term(bm25, np, con, n, avgdl, t, cap)
+            if ent is None:
+                return None
+            if ent:
+                ents.append(ent)
+    for p, v, pmax in ents:
+        if acc is None:
+            size = max(pmax + 1 if len(p) else 1, int(n) + 1)
+            acc = np.zeros(size, dtype=np.float64)
+            touched = np.zeros(size, dtype=bool)
+        if len(p) and pmax >= acc.shape[0]:
+            grow = pmax + 1
+            acc = np.concatenate([acc, np.zeros(grow - acc.shape[0])])
+            touched = np.concatenate([touched, np.zeros(grow - touched.shape[0], dtype=bool)])
+        np.add.at(acc, p, v)
+        touched[p] = True
+    if acc is None or not touched.any():
+        return []
+    pos = np.nonzero(touched & (acc > 0))[0]
+    sc = acc[pos]
+    order = np.lexsort((pos, -sc))[:topk]
+    out = []
+    for i in order:
+        r = con.execute("select slug from d where pos=?", (int(pos[i]),)).fetchone()
+        if r:
+            out.append((r[0], float(sc[i])))
+    return out
+
+
 def _bm25_np(bm25, np, query, topk, conn):
+    cap = _tc_cap()
+    if cap > 0:
+        return _bm25_np_cached(bm25, np, query, topk, conn, cap)
     con, n, avgdl = conn
     acc = touched = None
     for t in sorted(set(bm25.tokens(query))):

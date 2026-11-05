@@ -3,6 +3,8 @@
 Re-scores a recorded run (eval_ownvoice.py --out X.jsonl) with every question's key ROTATED to the next
 question's key. If the hit_result count stays near zero the instrument's hits are key-specific; if it stays
 high, "hit" was measuring something that any served block satisfies and the number means nothing.
+Since 2026-09-25 a row's "same result on record" ids (record_ids) count with its served ids, as they do in
+eval_ownvoice.py; a run recorded before then has none and is scored as before.
 
     python ownvoice_negative_control.py --store <brain.sqlite3> --run ownvoice_LIVE_default_on.jsonl
 """
@@ -18,13 +20,16 @@ def main():
     db = sqlite3.connect("file:%s?mode=ro" % a.store.replace("\\", "/"), uri=True)
     titles = {r[0]: (r[1] or "") for r in db.execute("select id, title from nodes")}
     keys = [r["key"] for r in rows]
-    own = sum(1 for r in rows if any(("(our id %s)" % r["key"]) in titles.get(i, "") for i in r["served_ids"]))
+
+    def reached(r):
+        return list(r["served_ids"]) + list(r.get("record_ids") or [])
+    own = sum(1 for r in rows if any(("(our id %s)" % r["key"]) in titles.get(i, "") for i in reached(r)))
     rot = 0
     for j, r in enumerate(rows):
         k = keys[(j + 1) % len(keys)]
         if k == r["key"]:
             continue
-        rot += any(("(our id %s)" % k) in titles.get(i, "") for i in r["served_ids"])
+        rot += any(("(our id %s)" % k) in titles.get(i, "") for i in reached(r))
     served = sum(1 for r in rows if r["served"])
     print("NEGATIVE CONTROL[%s] n=%d served %d | own-key hits %d | rotated-key hits %d" % (a.run, len(rows), served, own, rot))
     return 0 if rot <= 2 else 1

@@ -246,6 +246,31 @@ def _command_text(data):
     return ""
 
 
+# A READ OF THE BRAIN IS NOT AN ACT (2026-09-23, round 6). The T1 test's brain arm was denied on
+# `python .../brain.py recall "What did the user decide ... the live production stack ..."` - the query's own words fired
+# no_local_privileged_stack, and an act-hazard gate stopped a read-only lookup ABOUT the hazard. Exempt only a command that is
+# nothing but a brain read: an optional leading `cd <dir> &&`, then python .../brain.py recall|node|neighbors, one line,
+# no chaining, pipe, redirect or substitution outside its quoted query. Anything else keeps the gate as it was.
+_BRAIN_READ = re.compile(r"^\s*(?:timeout\s+\d+\s+)?\S*python\S*(?:\s+-[XW]\s+\S+|\s+-\S+)*\s+\S*brain\.py\s+"
+                         r"(?:recall|node|neighbors)\b", re.I)
+_QUOTED = re.compile(r'"(?:[^"\\]|\\.)*"|\'[^\']*\'')
+
+
+def _brain_read_only(cmd):
+    try:
+        if not cmd or "\n" in cmd.strip():
+            return False
+        bare = _QUOTED.sub('""', cmd)
+        parts = [p.strip() for p in bare.split("&&")]
+        if len(parts) == 2 and re.match(r"^cd\s+\S+$", parts[0]):
+            parts = parts[1:]
+        if len(parts) != 1 or re.search(r"[;|<>`&]|\$\(", parts[0]):
+            return False
+        return bool(_BRAIN_READ.match(parts[0]))
+    except Exception:
+        return False
+
+
 def _candidate(fired):
     """The first rendered reflex that can actually govern this command."""
     if not isinstance(fired, list):
@@ -275,6 +300,8 @@ def evaluate(event, data, fired, now=None):
         # only a real act with a command surface can carry the signature protocol
         tn = (data or {}).get("tool_name", "")
         if tn not in ("Bash", "PowerShell") or not cmd:
+            return None
+        if _brain_read_only(cmd):
             return None
         top, rid = _candidate(fired) if fired else (None, "")
         # INVARIANT (2026-07-28): a signed retry MUST register even when `fired` is empty or

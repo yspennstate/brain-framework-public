@@ -10,12 +10,13 @@ Test noise is excluded: session ids from this build (89f84043) and hand-run fixt
 zztest/selftest/deadfeed) are not real workload; Stop blocks whose message matches a known test string are
 flagged so the real-vs-test split is honest. Read-only, stdlib, forward-slash paths.
 """
-import os, io, re, sys, collections
+import os, io, re, sys, json, time, collections
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DREAM = os.path.dirname(HERE)
 LOG = os.path.join(HERE, "gf_shadow_fires.tsv")
-DEDUP = os.path.join(DREAM, ".instinct_fired.json")   # per-session reflex fire counts (read-past signal)
+DEDUP = os.path.join(DREAM, ".instinct_fired.json")   # legacy single file (instinct_prime's fallback)
+DEDUP_DIR = os.path.join(DREAM, ".instinct_fired")    # per-session reflex fire counts (read-past signal)
 TEST_SESS = re.compile(r"^(deadbeef|abcdef|zztest|selftest|deadfeed|89f84043)", re.I)
 TEST_MSG = re.compile(r"grid backtest earns|20x (delta-neutral )?book|losing money every single year|"
                       r"leveraged carry is negligible|selling puts to collect premium|9999k per year|"
@@ -67,24 +68,33 @@ def main():
     # read-past / mindware-override signal: reflexes surfaced >=3x in a session (escalation territory). This
     # is the referee's key finding - detection worked, heeding didn't. A high-charge reflex here got an
     # un-ignorable escalation; a reflex read past a lot is where the brain's ACTION, not detection, is failing.
-    try:
-        st = json.load(io.open(DEDUP, encoding="utf-8"))
-    except Exception:
-        st = {}
-    read_past = []
+    # since 2 Sep instinct_prime keeps its counts per session (.instinct_fired/<session>.json); the single
+    # DEDUP file is only its fallback, so reading that alone always printed "none" (31 Oct). Read both, last day.
+    st = {}
+    paths = [DEDUP] + [os.path.join(DEDUP_DIR, n) for n in sorted(os.listdir(DEDUP_DIR))
+                       if n.endswith(".json") and not TEST_SESS.match(n)] if os.path.isdir(DEDUP_DIR) else [DEDUP]
+    for p in paths:
+        try:
+            if time.time() - os.path.getmtime(p) > 86400:
+                continue
+            st.update(json.load(io.open(p, encoding="utf-8")))
+        except Exception:
+            pass
+    per = {}   # reflex -> [max count in one session, sessions at >=3]
     for k, v in st.items():
         cnt = v[1] if (isinstance(v, list) and len(v) >= 2) else (1 if v else 0)
         try:
             cnt = int(cnt)
         except Exception:
             cnt = 0
-        if cnt >= 3:
-            read_past.append((k.split("|")[-1], cnt))
-    read_past.sort(key=lambda x: -x[1])
+        if cnt >= 3 and not TEST_SESS.match(k):
+            r = per.setdefault(k.split("|")[-1], [0, 0])
+            r[0], r[1] = max(r[0], cnt), r[1] + 1
+    read_past = sorted(per.items(), key=lambda x: (-x[1][1], -x[1][0]))
     print("Read-past (a reflex surfaced >=3x in one session - detection working, heeding maybe not):")
     if read_past:
-        for reflex, cnt in read_past[:12]:
-            print("    %-30s x%d" % (reflex, cnt))
+        for reflex, (cnt, ns) in read_past[:12]:
+            print("    %-30s max x%d, %d session(s)" % (reflex, cnt, ns))
     else:
         print("    (none in the last day - no reflex surfaced >=3x in a live session)")
 

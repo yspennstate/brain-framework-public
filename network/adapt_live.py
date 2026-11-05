@@ -170,25 +170,6 @@ def from_retrievals(path, out):
     return n
 
 
-def from_memory_reads(path, out):
-    """memory_reads.tsv: slug \t epoch \t session \t via ... -> a mem: access event for each
-    `brain.py node` read. retrievals.tsv only sees Read-tool reads; on 5 Nov most reads were node
-    reads (48 of 59 in a day), so the network never learned them. Rows with other via values are
-    left out: read rows are already in retrievals.tsv and windows_import rows are imported history."""
-    n = 0
-    with io.open(path, encoding="utf-8", errors="replace") as fh:
-        for ln in fh:
-            parts = ln.rstrip("\n").split("\t")
-            if len(parts) < 4 or parts[3] != "node":
-                continue
-            ts = parse_ts(parts[1])
-            if not ts:
-                continue
-            emit(out, ts, parts[2], "mem", parts[0], "")
-            n += 1
-    return n
-
-
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--prompts-dir")
@@ -196,7 +177,6 @@ def main(argv=None):
     ap.add_argument("--outcomes")
     ap.add_argument("--memory-dir")
     ap.add_argument("--retrievals")
-    ap.add_argument("--memory-reads")
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
     with io.open(a.out, "w", encoding="utf-8", newline="\n") as out:
@@ -211,8 +191,6 @@ def main(argv=None):
             counts["memory"] = from_memory_dir(a.memory_dir, out)
         if a.retrievals and os.path.exists(a.retrievals):
             counts["retrievals"] = from_retrievals(a.retrievals, out)
-        if a.memory_reads and os.path.exists(a.memory_reads):
-            counts["memory_reads"] = from_memory_reads(a.memory_reads, out)
     tot = sum(counts.values())
     print(f"events={tot} ({counts}) -> {a.out}")
     return 0

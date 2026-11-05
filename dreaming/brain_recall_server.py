@@ -179,6 +179,16 @@ class Brain:
                 graph_lane.LAZY_RESIDENT = True
             except Exception as e:
                 log("resident link lists off: %s: %s" % (type(e).__name__, e))
+        # Lever 10 (5 Nov 2026): exact numpy forms of bm25.score_postings, the embeddings loader and _spread
+        # (recall_levers.py has the proofs). Each is admitted only for a source version it was checked on and falls
+        # back to the original otherwise. BRS_EXACT_NP=0 off.
+        try:
+            import recall_levers
+            put = recall_levers.install(self)
+            if put:
+                log("exact numpy levers: %s" % ",".join(put))
+        except Exception as e:
+            log("exact numpy levers off: %s: %s" % (type(e).__name__, e))
         self.code = self._code_sig()
         self.calls = 0
 

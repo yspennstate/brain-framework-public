@@ -38,7 +38,9 @@ PROVEN = {
     "bm25": {"b54f7a2d2b4c450c",      # Mac lineage, 306/306 (5 Nov)
              "53202072716ee9a9"},     # brain-framework (heapq top-k), 306/306 on two seeds, control 75/306,
                                       # 60.6 -> 12.1 ms (ab_bm25_lineage.py, 5 Nov 10:20 on the Mac's postings)
-    "emb": {"467b923b88d89822"},      # Mac light-loader lineage, 21/21 (5 Nov)
+    "emb": {"467b923b88d89822",       # Mac light-loader lineage, 21/21 (5 Nov)
+            "012f6f954ea04578"},      # brain-framework (lever-8 sidecar): 11/11 equal on every attribute, control
+                                      # caught, 94 -> 25 ms (ab_emb_lineage.py, 5 Nov); BRAIN_EMB_LAZY=1 falls back
     "spread": {"fa0f3a9249918eb6"},   # same source on the Mac and in brain-framework, 60/60 (5 Nov)
 }
 
@@ -225,7 +227,8 @@ def _install_emb(ea, np):
 
     def load_verified_embeddings(sidecar, authority_path, mem_dir=None, expected_model=None,
                                  verify_all_rows=False, memory_entries=None, **kw):
-        if kw or verify_all_rows or memory_entries is None or not mem_dir:
+        # BRAIN_EMB_LAZY=1 is the framework loader's other answer (rows judged later by the caller): not this lever's
+        if kw or verify_all_rows or memory_entries is None or not mem_dir or os.environ.get("BRAIN_EMB_LAZY") == "1":
             STATS["emb"][1] += 1
             return real(sidecar, authority_path, mem_dir, expected_model, verify_all_rows=verify_all_rows,
                         memory_entries=memory_entries, **kw)

@@ -945,11 +945,13 @@ def _store_n():
 # ("audit", "verification", "report", "transfer") are what matched: on the landed hook's 73 blocks over his 483 past
 # prompts such cards sat in 15, none of them about their own program. Today only the Rademacher-singularity bundles have
 # such titles (275 of 325 current cards). They join the lead-named rule below; the rule reads the title's form, not the
-# family, so a later bundle titled the same way is covered. MATHBRAIN_LEAD_SLUG=0 switches it off.
-LEAD_SLUG = os.environ.get("MATHBRAIN_LEAD_SLUG", "1").strip() not in ("0", "off", "false", "")
+# family, so a later bundle titled the same way is covered. MATHBRAIN_LEAD_KEY_TITLE=0 (or the older MATHBRAIN_LEAD_SLUG=0)
+# switches it off.
+LEAD_KEY_TITLE = os.environ.get("MATHBRAIN_LEAD_KEY_TITLE", os.environ.get("MATHBRAIN_LEAD_SLUG", "1")).strip() not in ("0", "off", "false", "")
+LEAD_SLUG = LEAD_KEY_TITLE
 
 
-def _slug_titled(node):
+def _key_titled(node):
     """True when the card's title is its bundle entry key in words (lower case, the key's family prefix optional)."""
     try:
         meta = getattr(node, "metadata", None) or {}
@@ -962,6 +964,9 @@ def _slug_titled(node):
         return bool(tw) and (kw == tw or kw[1:] == tw)
     except Exception:
         return False
+
+
+_slug_titled = _key_titled
 
 
 def _lead_filter(prompt, chosen, pinned=()):
@@ -983,7 +988,7 @@ def _lead_filter(prompt, chosen, pinned=()):
         for h in chosen:
             src = str((getattr(h.node, "metadata", None) or {}).get("bundle_id") or "")
             if h.node.id in pinned or not (any(src.startswith(p) for p in LEAD_POPULATIONS)
-                                           or (LEAD_SLUG and _slug_titled(h.node))):
+                                           or (LEAD_KEY_TITLE and _key_titled(h.node))):
                 keep.append(h)
                 continue
             tt = terms(h.node.title or "")
@@ -4474,6 +4479,231 @@ def _same_card(a, b):
     return bool(a and b) and (a == b or a.startswith(b[:16]) or b.startswith(a[:16]))
 
 
+def _switch_on(name):
+    return os.environ.get(name, "1").strip() not in ("0", "", "off", "false")
+
+
+def _merge_subquery_blocks(blocks, chosen, lead=False):
+    """Round-robin the sub-query blocks three deep, then the whole-question cards; one card per node and, under
+    MERGE_TITLE_DEDUP, one per accent-folded title (a statement replaces an encyclopedia opening).
+
+    ONE CARD PER TITLE ACROSS THE MERGE (MATHBRAIN_MERGE_TITLE_DEDUP, default on; arm cand59). Two named sub-queries can
+    each bring a copy of one result ("Holder's Inequality" and "Hölder's inequality"); the merge joined blocks by node id
+    only, so both went out and a slot was spent twice. A dropped duplicate leaves None in its place under
+    MERGE_DUP_NO_REFILL. lead=True (a named argument) puts the first MATHBRAIN_SUBQ_LEAD_KEEP whole-question cards
+    (default 1) ahead of the blocks."""
+    merged, seen, keys = [], set(), {}
+
+    def _merge_in(h):
+        if h.node.id in seen:
+            return
+        seen.add(h.node.id)
+        if MERGE_TITLE_DEDUP:
+            k = _title_key(getattr(h.node, "title", ""), fold=True)
+            if k and k in keys:
+                i = keys[k]
+                if merged[i] is not None and _is_lede(merged[i].node) and not _is_lede(h.node):
+                    merged[i] = h
+                if MERGE_DUP_NO_REFILL:
+                    merged.append(None)
+                return
+            if k:
+                keys[k] = len(merged)
+        merged.append(h)
+
+    try:
+        lead_keep = int(os.environ.get("MATHBRAIN_SUBQ_LEAD_KEEP", "1") or 0)
+    except Exception:
+        lead_keep = 0
+    if lead and lead_keep > 0:
+        for h in (chosen or [])[:lead_keep]:
+            _merge_in(h)
+    for depth in range(3):
+        for b in blocks:
+            if len(b) > depth:
+                _merge_in(b[depth])
+    for h in (chosen or []):
+        _merge_in(h)
+    return merged
+
+
+def _named_slots_full(blocks, merged, cap, base, named):
+    """The cards a merged sub-query list serves, whether the block budget widens for them, and the merged cut before
+    the append (the coherence guard's fallback).
+
+    A FIFTH CARD FOR A FIFTH NAMED RESULT (MATHBRAIN_NAMED_EXTRA_SLOT, default on; campaign mb10d, 25 Sep, arm cand54).
+    merged opens with each named block's first card, in order; when more distinct results than the cap came back
+    title-matched, the next of them gets one more slot - never a whole-question card - and the block budget widens.
+
+    FIX D (MATHBRAIN_SUBQ_APPEND=N, default 4): on a named argument the whole-question block (base, the cards chosen
+    before the sub-queries) is kept whole and up to N named cards with new titles are appended after it, so a named
+    card never pushes the whole-question gold out of the last slot."""
+    extra = False
+    d0 = []
+    if named and NAMED_TITLEMATCH and _switch_on("MATHBRAIN_NAMED_EXTRA_SLOT"):
+        d0k = set()
+        for b in blocks:
+            if b and b[0].node.id not in d0:
+                k0 = _title_key(b[0].node.title, fold=True) if MERGE_TITLE_DEDUP else b[0].node.id
+                if k0 in d0k:
+                    continue
+                d0k.add(k0)
+                d0.append(b[0].node.id)
+    if len(d0) > cap and len(merged) > cap and merged[cap] is not None and merged[cap].node.id == d0[cap]:
+        chosen = [h for h in merged[:cap + 1] if h is not None]
+        extra = True
+    else:
+        chosen = [h for h in merged[:cap] if h is not None]
+    cprime = list(chosen)
+    try:
+        n_app = int(os.environ.get("MATHBRAIN_SUBQ_APPEND", "4") or 0)
+    except Exception:
+        n_app = 0
+    if named and n_app > 0 and base:
+        keep = list(base)[:cap]
+        ids = {h.node.id for h in keep}
+        tks = {_title_key(getattr(h.node, "title", ""), fold=True) for h in keep}
+        add = []
+        for h in merged:
+            if h is None or h.node.id in ids:
+                continue
+            k = _title_key(getattr(h.node, "title", ""), fold=True)
+            if k and k in tks:
+                continue
+            add.append(h)
+            ids.add(h.node.id)
+            tks.add(k)
+            if len(add) >= n_app:
+                break
+        chosen = keep + add
+        extra = bool(add)
+    return chosen, extra, cprime
+
+
+def _named_slots(blocks, merged, cap, base, named):
+    """_named_slots_full without the pre-append list."""
+    chosen, extra, _ = _named_slots_full(blocks, merged, cap, base, named)
+    return chosen, extra
+
+
+def _cut_unless_named(prompt, hits):
+    """_incoherent_weak_block on these cards, None when the lead card's title is the result the prompt names."""
+    c = _incoherent_weak_block(prompt, [str(h.node.id) for h in hits])
+    if c and COH_NAME_EXEMPT and _lead_title_names_prompt(prompt, hits[0].node.title):
+        return None
+    return c
+
+
+def _subq_coh_guard(prompt, chosen, extra, pre, cprime, named):
+    """The cards a named or quoted-title sub-query block serves once the coherence cut has read it
+    (MATHBRAIN_SUBQ_COH_GUARD, default on). The cards a sub-query pulls are chosen by the names in the prompt, not by the
+    question, so a merged block can read as weak and scattered where the whole-question block (pre) did not. When the
+    merged block would be cut: on a named argument the merge before the append (cprime) is served if it passes
+    (MATHBRAIN_SUBQ_APPEND_FALLBACK_MERGED, default on); else the whole-question block if it passes; else nothing
+    changes and the serve path's own cut decides. Any failure keeps the block."""
+    if not (COH_CUT and pre and len(chosen) > 1 and _switch_on("MATHBRAIN_SUBQ_COH_GUARD")):
+        return chosen, extra
+    try:
+        if not _cut_unless_named(prompt, chosen):
+            return chosen, extra
+        cp = _cut_unless_named(prompt, pre) if len(pre) > 1 else None
+        try:
+            n_app = int(os.environ.get("MATHBRAIN_SUBQ_APPEND", "4") or 0)
+        except Exception:
+            n_app = 0
+        if (named and n_app > 0 and len(cprime) > 1 and _switch_on("MATHBRAIN_SUBQ_APPEND_FALLBACK_MERGED")
+                and not _cut_unless_named(prompt, cprime)):
+            return list(cprime), True
+        if not cp:
+            return list(pre), False
+    except Exception:
+        pass
+    return chosen, extra
+
+
+def _block_cov_verdict(prompt, chosen, pinned_ids, split_used=False):
+    """None when the block is not judged by the coverage floor or passes it; "block_coverage:<cov>" when it is silenced;
+    "coverage_agree_block:<cov>" when it is under the floor but the word and meaning channels agree (COV_AGREE): the
+    agreed card is recorded in _COV_AGREED and the block passes. A block the sub-queries built (split_used) is not
+    judged."""
+    floor = _block_cov_floor()
+    if not (floor > 0 and chosen and not pinned_ids and not split_used and len(prompt) <= 1500
+            and not _argument_shape(prompt)):
+        return None
+    # PLAIN QUESTIONS ONLY (cand7, 2026-09-24): at 0.40 on every prompt the floor silenced all 40 enumerated
+    # self-avoiding-walk lookups, four locate questions, Hoeffding (0.384, a health case) and two held-out research
+    # steps whose notation no card repeats word for word - word coverage undercounts a prompt that carries digits or
+    # formulas. It judges only a prompt with neither, at 0.35.
+    plain = not re.search(r"\d", prompt)
+    if plain and os.environ.get("MATHBRAIN_BLOCK_COV_PLAIN_ONLY", "1") != "0":
+        try:
+            from math_brain.retrieval import index_signals as _isg
+            plain = not _isg(prompt).math_tokens
+        except Exception:
+            plain = False
+    elif os.environ.get("MATHBRAIN_BLOCK_COV_PLAIN_ONLY", "1") == "0":
+        plain = True
+    if not plain:
+        return None
+    # NAMED SUBJECT (cand7): a served card whose title carries a name the prompt uses (an acronym, a proper name -
+    # _name_tokens) is on the prompt's subject however few of its other words the card repeats. A capitalised word that
+    # opens a sentence is grammar, not a name ("Existence and uniqueness of a translation-invariant measure ..." matched
+    # the title word "Existence"); acronyms and hyphenated names keep counting there.
+    if os.environ.get("MATHBRAIN_BLOCK_COV_NAME_EXEMPT", "1") != "0":
+        try:
+            nm = _name_tokens(re.sub(r"(^|[.!?:;]\s+)[A-Z][a-z]+\b", r"\1", prompt.strip()))
+            if nm and any(nm & set(re.findall(r"[a-z0-9]+", (h.node.title or "").casefold())) for h in chosen):
+                return None
+        except Exception:
+            pass
+        # A HOUSE ALIAS NAMES THE SUBJECT TOO (5 Nov, MATHBRAIN_BLOCK_COV_ALIAS_EXEMPT, default on): "MP law" is a name
+        # the alias table spells out ("Marchenko-Pastur law"); a served card whose title carries every name token of
+        # that expansion is on the prompt's subject. The raw-prompt check above cannot see it: no title says "MP".
+        if os.environ.get("MATHBRAIN_BLOCK_COV_ALIAS_EXEMPT", "1") != "0":
+            try:
+                xp = _expand_aliases(prompt)
+                if xp != prompt:
+                    at = {w for w in re.findall(r"[a-z0-9]+", xp[len(prompt):].casefold())
+                          if len(w) >= 4 and w not in _NAME_STOP}
+                    if at and any(at <= set(re.findall(r"[a-z0-9]+", (h.node.title or "").casefold())) for h in chosen):
+                        return None
+            except Exception:
+                pass
+    # A RARE TERM THE LEAD CARD'S TITLE SHARES WITH THE PROMPT (MATHBRAIN_COV_RARE_EXEMPT, default on; arm cand68): a
+    # question in other words covers few of the card's words, but it keeps the rare technical term ("fork-join",
+    # "Sinkhorn", "hyperuniformity") the name exemption cannot see when it is not capitalised. A term at most
+    # MATHBRAIN_COV_RARE_DF store cards carry, shared by the prompt and the lead card's title, lifts the floor.
+    if COV_RARE_EXEMPT:
+        try:
+            import math_prefilter as _mpf
+            pdata = _mpf.load(STORE_PATH)
+            if pdata:
+                post = pdata["post"]
+                shared = set(_mpf.tokens(prompt)) & set(_mpf.tokens(chosen[0].node.title or ""))
+                if any(len(w) >= 4 and w in post and len(post[w]) <= COV_RARE_DF for w in shared):
+                    return None
+        except Exception:
+            pass
+    try:
+        cov = _block_best_coverage(prompt, chosen)
+    except Exception:
+        cov = None
+    if cov is None or cov >= _block_cov_floor_for(chosen, floor):
+        return None
+    if COV_AGREE and _cov_agree_wide(chosen, _semantic_top(prompt)):
+        _COV_AGREED["block"] = chosen[0].node.id
+        return "coverage_agree_block:%.3f" % cov
+    return "block_coverage:%.3f" % cov
+
+
+def _reset_cov_agree_state():
+    """A caller that runs several prompts in one process must not carry one prompt's agreed card or first claim into the
+    next (the live hook runs one process per prompt; an in-process measurement does not)."""
+    _COV_AGREED.clear()
+    _SEMTOP.clear()
+    _SEMTOP_WHY.clear()
+
+
 def _reset_per_prompt_state():
     """A caller that runs several prompts in one process must not carry one prompt's vouch route, agreed card or pool
     adjacency into the next (the live hook runs one process per prompt; found 28 Sep in an in-process measurement). The
@@ -4645,6 +4875,7 @@ def main():
 def _main_body(data, out):
     started = time.time()
     _reset_per_prompt_state()
+    _reset_cov_agree_state()
     prompt = data.get("prompt")
     prompt = (prompt if isinstance(prompt, str) else "")[:8000]
     if RELAY_SKIP and _RELAY_OR_PICTURE_HEAD.match(prompt):
@@ -5338,186 +5569,21 @@ def _main_body(data, out):
                         blocks.append(_subquery_block(_sq, prompt=prompt, exact_pass=(_subq_src == "named")))
                     if _subq_src == "named" and NAMED_TITLEMATCH:
                         blocks = [[h for h in b if _named_title_match(q, h.node.title)] for q, b in zip(subs, blocks)]
-                    merged, seen = [], set()
-                    # ONE CARD PER TITLE ACROSS THE MERGE (MATHBRAIN_MERGE_TITLE_DEDUP, default on; arm cand59). Two named
-                    # sub-queries can each bring a copy of one result ("Holder's Inequality" and "Hölder's inequality"); the
-                    # merge joined blocks by node id only, so both went out and a slot was spent twice. A second card with the
-                    # same folded title is dropped, a statement replacing an encyclopedia opening as in _select.
-                    _mtk = {}
-
-                    def _merge_in(h):
-                        if h.node.id in seen:
-                            return
-                        seen.add(h.node.id)
-                        if MERGE_TITLE_DEDUP:
-                            k = _title_key(getattr(h.node, "title", ""), fold=True)
-                            if k and k in _mtk:
-                                i = _mtk[k]
-                                if _is_lede(merged[i].node) and not _is_lede(h.node):
-                                    merged[i] = h
-                                if MERGE_DUP_NO_REFILL:
-                                    merged.append(None)
-                                return
-                            if k:
-                                _mtk[k] = len(merged)
-                        merged.append(h)
-                    try:
-                        _lead_keep = int(os.environ.get("MATHBRAIN_SUBQ_LEAD_KEEP", "1") or 0)
-                    except Exception:
-                        _lead_keep = 0
-                    if _subq_src == "named" and _lead_keep > 0:
-                        for h in (chosen or [])[:_lead_keep]:
-                            _merge_in(h)
-                    for depth in range(3):
-                        for b in blocks:
-                            if len(b) > depth:
-                                _merge_in(b[depth])
-                    for h in (chosen or []):
-                        _merge_in(h)
-                    # A FIFTH CARD FOR A FIFTH NAMED RESULT (MATHBRAIN_NAMED_EXTRA_SLOT, default on; campaign mb10d, 25 Sep, arm
-                    # cand54). merged opens with each named block's first card, in order; when more distinct results than the cap
-                    # came back title-matched, the next of them gets one more slot - never a whole-question card - and the block
-                    # budget below widens for it.
-                    _d0 = []
-                    if _subq_src == "named" and NAMED_TITLEMATCH and os.environ.get("MATHBRAIN_NAMED_EXTRA_SLOT", "1").strip() not in ("0", "off", "false", ""):
-                        _d0k = set()
-                        for b in blocks:
-                            if b and b[0].node.id not in _d0:
-                                _k0 = _title_key(b[0].node.title, fold=True) if MERGE_TITLE_DEDUP else b[0].node.id
-                                if _k0 in _d0k:
-                                    continue
-                                _d0k.add(_k0)
-                                _d0.append(b[0].node.id)
-                    if len(_d0) > _cap and len(merged) > _cap and merged[_cap] is not None and merged[_cap].node.id == _d0[_cap]:
-                        chosen = [h for h in merged[:_cap + 1] if h is not None]
-                        _named_extra = True
-                    else:
-                        chosen = [h for h in merged[:_cap] if h is not None]
-                    # FIX D (MATHBRAIN_SUBQ_APPEND=N, sandbox): keep the plain block whole and append up to N named
-                    # cards after it, so a named card never pushes the whole-question gold out of the last slot.
-                    try:
-                        _sq_app = int(os.environ.get("MATHBRAIN_SUBQ_APPEND", "4") or 0)
-                    except Exception:
-                        _sq_app = 0
-                    _cprime_chosen = list(chosen)
-                    if _subq_src == "named" and _sq_app > 0 and _pre_subq_chosen:
-                        _base = list(_pre_subq_chosen)[:_cap]
-                        _ids = {h.node.id for h in _base}
-                        _tks = {_title_key(getattr(h.node, "title", ""), fold=True) for h in _base}
-                        _add = []
-                        for h in merged:
-                            if h is None or h.node.id in _ids:
-                                continue
-                            _k = _title_key(getattr(h.node, "title", ""), fold=True)
-                            if _k and _k in _tks:
-                                continue
-                            _add.append(h); _ids.add(h.node.id); _tks.add(_k)
-                            if len(_add) >= _sq_app:
-                                break
-                        chosen = _base + _add
-                        _named_extra = bool(_add)
-                    if (_subq_src in ("named", "quoted_title") and COH_CUT and _pre_subq_chosen and len(chosen) > 1
-                            and os.environ.get("MATHBRAIN_SUBQ_COH_GUARD", "1").strip() not in ("0", "", "off", "false")):
-                        try:
-                            _cm = _incoherent_weak_block(prompt, [str(h.node.id) for h in chosen])
-                            if _cm and COH_NAME_EXEMPT and _lead_title_names_prompt(prompt, chosen[0].node.title):
-                                _cm = None
-                            if _cm:
-                                _cp = (_incoherent_weak_block(prompt, [str(h.node.id) for h in _pre_subq_chosen])
-                                       if len(_pre_subq_chosen) > 1 else None)
-                                if _cp and COH_NAME_EXEMPT and _lead_title_names_prompt(prompt, _pre_subq_chosen[0].node.title):
-                                    _cp = None
-                                _fbm = None
-                                if (_subq_src == "named" and _sq_app > 0 and len(_cprime_chosen) > 1
-                                        and os.environ.get("MATHBRAIN_SUBQ_APPEND_FALLBACK_MERGED", "1").strip() not in ("0", "", "off", "false")):
-                                    _cq = _incoherent_weak_block(prompt, [str(h.node.id) for h in _cprime_chosen])
-                                    if _cq and COH_NAME_EXEMPT and _lead_title_names_prompt(prompt, _cprime_chosen[0].node.title):
-                                        _cq = None
-                                    if not _cq:
-                                        _fbm = _cprime_chosen
-                                if _fbm is not None:
-                                    chosen = _fbm
-                                    _named_extra = True
-                                elif not _cp:
-                                    chosen = _pre_subq_chosen
-                                    _named_extra = False
-                        except Exception:
-                            pass
+                    merged = _merge_subquery_blocks(blocks, chosen, lead=(_subq_src == "named"))
+                    chosen, _named_extra, _cprime_chosen = _named_slots_full(blocks, merged, _cap, _pre_subq_chosen,
+                                                                             _subq_src == "named")
+                    if _subq_src in ("named", "quoted_title"):
+                        chosen, _named_extra = _subq_coh_guard(prompt, chosen, _named_extra, _pre_subq_chosen,
+                                                               _cprime_chosen, _subq_src == "named")
                     _split_used = True
             except Exception:
                 pass
-        _bcf = _block_cov_floor()
-        # PLAIN QUESTIONS ONLY (cand7, 2026-09-24): at 0.40 on every prompt the floor silenced all 40 enumerated
-        # self-avoiding-walk lookups, four locate questions, Hoeffding (0.384, a health case) and two held-out
-        # research steps whose notation no card repeats word for word - word coverage undercounts a prompt that
-        # carries digits or formulas. It judges only a prompt with neither, at 0.35.
-        _plain = not re.search(r"\d", prompt)
-        if _plain and os.environ.get("MATHBRAIN_BLOCK_COV_PLAIN_ONLY", "1") != "0":
-            try:
-                from math_brain.retrieval import index_signals as _isg
-                _plain = not _isg(prompt).math_tokens
-            except Exception:
-                _plain = False
-        elif os.environ.get("MATHBRAIN_BLOCK_COV_PLAIN_ONLY", "1") == "0":
-            _plain = True
-        # NAMED SUBJECT (cand7, same day): a served card whose title carries a name the prompt uses (an acronym, a
-        # proper name - _name_tokens) is on the prompt's subject however few of its other words the card repeats.
-        # The shadow over his 479 past math prompts: the plain-question floor silenced five junk blocks (the
-        # noisy-channel coding theorem for a proof-fixing request, the halting problem for a code audit) and his own
-        # FEI-for-monotone-functions prompt with three FEI cards; only the FEI block shared a name with its prompt.
-        _named_hit = False
-        if _plain and os.environ.get("MATHBRAIN_BLOCK_COV_NAME_EXEMPT", "1") != "0":
-            try:
-                # a capitalised word that opens a sentence is grammar, not a name ("Existence and uniqueness of a
-                # translation-invariant measure ..." matched the title word "Existence" and let a Haar-measure
-                # question keep three cone-diffusion cards); acronyms and hyphenated names keep counting there
-                _nm = _name_tokens(re.sub(r"(^|[.!?:;]\s+)[A-Z][a-z]+\b", r"\1", prompt.strip()))
-                _named_hit = bool(_nm) and any(
-                    _nm & set(re.findall(r"[a-z0-9]+", (h.node.title or "").casefold())) for h in (chosen or []))
-            except Exception:
-                _named_hit = False
-        # A HOUSE ALIAS NAMES THE SUBJECT TOO (5 Nov, claude-1e0a23c2, MATHBRAIN_BLOCK_COV_ALIAS_EXEMPT, default on): "MP law"
-        # is a name the alias table spells out ("Marchenko-Pastur law"); a served card whose title carries every name token of
-        # that expansion is on the prompt's subject. The raw-prompt check above cannot see it: no title says "MP".
-        if (_plain and not _named_hit and chosen and os.environ.get("MATHBRAIN_BLOCK_COV_ALIAS_EXEMPT", "1") != "0"
-                and os.environ.get("MATHBRAIN_BLOCK_COV_NAME_EXEMPT", "1") != "0"):
-            try:
-                _xp = _expand_aliases(prompt)
-                if _xp != prompt:
-                    _at = {t for t in re.findall(r"[a-z0-9]+", _xp[len(prompt):].casefold())
-                           if len(t) >= 4 and t not in _NAME_STOP}
-                    _named_hit = bool(_at) and any(
-                        _at <= set(re.findall(r"[a-z0-9]+", (h.node.title or "").casefold())) for h in chosen)
-            except Exception:
-                pass
-        # A RARE TERM THE LEAD CARD'S TITLE SHARES WITH THE PROMPT (MATHBRAIN_COV_RARE_EXEMPT, default on; arm cand68): a question
-        # in other words covers few of the card's words, but it keeps the rare technical term ("fork-join", "Sinkhorn",
-        # "hyperuniformity") the name exemption above cannot see when it is not capitalised. A term at most
-        # MATHBRAIN_COV_RARE_DF store cards carry, shared by the prompt and the lead card's title, lifts the floor.
-        _rare_hit = False
-        if _plain and COV_RARE_EXEMPT and chosen and not _named_hit:
-            try:
-                import math_prefilter as _mpf
-                _pdata = _mpf.load(STORE_PATH)
-                if _pdata:
-                    _post = _pdata["post"]
-                    _shared = set(_mpf.tokens(prompt)) & set(_mpf.tokens(chosen[0].node.title or ""))
-                    _rare_hit = any(len(t) >= 4 and t in _post and len(_post[t]) <= COV_RARE_DF for t in _shared)
-            except Exception:
-                _rare_hit = False
-        if (_bcf > 0 and _plain and not _named_hit and not _rare_hit and chosen and not pinned_ids and not _split_used
-                and len(prompt) <= 1500 and not _argument_shape(prompt)):
-            try:
-                _bcov = _block_best_coverage(prompt, chosen)
-            except Exception:
-                _bcov = None
-            if _bcov is not None and _bcov < _block_cov_floor_for(chosen, _bcf):
-                if COV_AGREE and _cov_agree_wide(chosen, _semantic_top(prompt)):
-                    _silence_note(data, "coverage_agree_block:%.3f" % _bcov, harness_only=True)
-                    _COV_AGREED["block"] = chosen[0].node.id
-                else:
-                    _silence_note(data, "block_coverage:%.3f" % _bcov)
-                    return
+        _bcv = _block_cov_verdict(prompt, chosen, pinned_ids, split_used=_split_used)
+        if _bcv and _bcv.startswith("coverage_agree_block"):
+            _silence_note(data, _bcv, harness_only=True)
+        elif _bcv:
+            _silence_note(data, _bcv)
+            return
         if chosen:
             _kept = _lead_filter(prompt, chosen, pinned=set(pinned_ids or ()))
             if not _kept:

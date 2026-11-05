@@ -59,6 +59,19 @@ if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "recall":
         _brc_rc = None
     if _brc_rc is not None:
         sys.exit(_brc_rc)
+if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "where":
+    # 5 Nov 2026: "where in the brain's code does X live" goes to code_map.py, which maps
+    # every function and class in ~/.claude/dreaming; recall indexes memories, not code (held-out bench: right
+    # file in the top 3 for 9 of 10 questions against recall's 3). Routed before the recall imports load.
+    import code_map as _cm
+    _wq = " ".join(a for a in sys.argv[2:] if not a.startswith("--") and not a.isdigit())
+    if not _wq.strip():
+        print('usage: brain.py where "which hook refuses a billed CI push" [--budget 800] [--files 5]')
+        sys.exit(1)
+    _wb = int(sys.argv[sys.argv.index("--budget") + 1]) if "--budget" in sys.argv else 800
+    _wf = int(sys.argv[sys.argv.index("--files") + 1]) if "--files" in sys.argv else 5
+    print(_cm.query(_wq, _wb, _wf))
+    sys.exit(0)
 import spread_recall as sr
 import brain_node_documents as node_docs
 from supersession import SLUG_RX, active_supersessions, load_map, resolve as resolve_supersession
@@ -6888,7 +6901,7 @@ def main():
         return 0
     else:
         print("unknown command %r - recall | node | attach | verify-attachments | "
-              "neighbors | remember | supersede | supersede-part | status | "
+              "neighbors | remember | supersede | supersede-part | status | where | "
               "dream-about \"topic\" [--why ...] | dream-requests | "
               "strong-node-proposals" % cmd)
         return 1

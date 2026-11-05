@@ -6,7 +6,9 @@
  P3 the keyed signal sidecar is filled and the build reports no error for it
  P4 MATHBRAIN_EXPANSION=0: no expansion words in the postings or the df table
  P5 an expansion that raises: the index and the df table are still written, the failure is recorded
- P6 MATHBRAIN_EXPANSION_MEMORY is handed to the expansion as its memory directory; unset, nothing is named
+ P6 MATHBRAIN_EXPANSION_MEMORY is handed to the expansion as its memory directory; unset, the prefilter names this
+    home's own memory folder (~/.claude/projects/<BRAIN_SLUG or the home's slug>/memory), as lived does since the
+    library lost its default on 30 Sep
 
     python test_prefilter_sidecars.py      (a few seconds; ALL PASS at the end; a stub stands in for the expansion)
 """
@@ -113,7 +115,10 @@ def main():
     build_in({"MATHBRAIN_EXPANSION_MEMORY": os.path.join(tempfile.gettempdir(), "mem")})
     named = SEEN.get("memory_dir")
     build_in({})
-    check(named and named.endswith("mem") and SEEN.get("memory_dir") is None and SEEN.get("ids") == ["card-a", "card-b"],
+    home = os.path.expanduser("~")
+    own = os.path.join(home, ".claude", "projects", os.environ.get("BRAIN_SLUG")
+                       or home.replace(":", "-").replace(chr(92), "-").replace("/", "-"), "memory")
+    check(named and named.endswith("mem") and SEEN.get("memory_dir") == own and SEEN.get("ids") == ["card-a", "card-b"],
           "P6 memory dir %r then %r, cards %r" % (named, SEEN.get("memory_dir"), SEEN.get("ids")))
     print("ALL PASS" if all(results) else "SOME FAILED")
     return 0 if all(results) else 1

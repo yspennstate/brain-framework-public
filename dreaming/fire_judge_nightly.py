@@ -14,9 +14,12 @@ import calendar, glob, io, json, os, random, re, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # the Claude project directory whose transcripts are judged: BRAIN_PROJECT_DIR wins, else the slug in
-# BRAIN_PROJECT_SLUG under ~/.claude/projects (the slug is the working directory with separators replaced by dashes)
+# BRAIN_PROJECT_SLUG under ~/.claude/projects (the slug is the working directory with separators replaced by dashes),
+# else the home folder's slug, as the memory folder is found. The old default, a folder named "default" that nothing
+# makes, left the judge with no transcript and 0 cases a night on every install that did not set the variable (5 Nov).
 PROJ = os.environ.get("BRAIN_PROJECT_DIR") or os.path.join(
-    os.path.expanduser("~"), ".claude", "projects", os.environ.get("BRAIN_PROJECT_SLUG", "default"))
+    os.path.expanduser("~"), ".claude", "projects", os.environ.get("BRAIN_PROJECT_SLUG") or os.environ.get("BRAIN_SLUG")
+    or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-"))
 OUTLOG = os.path.join(HERE, "judged_nightly.jsonl")
 TARGET = ("sim_flatters", "risk_vs_measured_record", "ib_marks",
           "vxn_long_tenor_state", "stale_mark_banks")

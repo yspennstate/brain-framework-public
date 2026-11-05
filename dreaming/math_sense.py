@@ -2688,9 +2688,9 @@ def _revision_edge_reader(store, EdgeKind):
     import sqlite3
     from collections import namedtuple
 
-    con = store.connection
     if not callable(getattr(store, "_edge_from_row", None)):
         return None
+    con = store.connection
     try:
         values = {k.value for k in EdgeKind}
         for row in con.execute("SELECT DISTINCT kind FROM edges").fetchall():

@@ -116,11 +116,24 @@ def seek_tests(fj):
     shutil.rmtree(d)
 
 
+LOGS = ("instinct_fires.tsv", "instinct_suppressed.tsv", "instincts.tsv")
+
+
+def log_source():
+    """This folder when it holds the fire log (an installed brain), else the installed dreaming folder: a framework
+    checkout carries no logs, and S1 there timed 0 cases (5 Nov 2026). None when neither has one."""
+    for src in (HERE, os.path.join(os.path.expanduser("~"), ".claude", "dreaming")):
+        if os.path.exists(os.path.join(src, LOGS[0])):
+            return src
+    return None
+
+
 def frozen_dir():
     d = tempfile.mkdtemp(prefix="judge_eq_")
-    for n in ("instinct_fires.tsv", "instinct_suppressed.tsv", "instincts.tsv"):
-        if os.path.exists(os.path.join(HERE, n)):
-            shutil.copy2(os.path.join(HERE, n), os.path.join(d, n))
+    src = log_source()
+    for n in LOGS:
+        if src and os.path.exists(os.path.join(src, n)):
+            shutil.copy2(os.path.join(src, n), os.path.join(d, n))
     return d
 
 
@@ -148,7 +161,10 @@ def main():
     try:
         new_cases, new_dt = build(new, d, t, seed)
         n_new = sum(len(v) for v in new_cases.values())
-        check(new_dt < 60 and n_new > 0, "S1 the new builder: %.1f s for %d cases (budget 120 s)" % (new_dt, n_new))
+        if log_source() is None:
+            print("SKIP  S1 no instinct_fires.tsv here or in the installed dreaming folder, so nothing to time")
+        else:
+            check(new_dt < 60 and n_new > 0, "S1 the new builder: %.1f s for %d cases (budget 120 s)" % (new_dt, n_new))
         if "--old" in sys.argv:
             old = load(os.path.join(HERE, sys.argv[sys.argv.index("--old") + 1]), "fj_old")
             old_cases, old_dt = build(old, d, t, seed)

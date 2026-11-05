@@ -70,7 +70,11 @@ def old_parser_path(tmp):
 def main():
     tmp = tempfile.mkdtemp(prefix="mg_test_")
     new = load(os.path.join(DR, "mistake_graph.py"), "mg_live")
-    old = load(old_parser_path(tmp), "mg_old")
+    op = old_parser_path(tmp)
+    if os.path.getsize(op) == 0:     # a shallow clone has no 91e123ea40 (5 Nov 2026, a Mac): nothing to compare with
+        print("SKIP - no old parser in this clone's history; pass the file: python test_mistake_graph_dated.py OLD.py")
+        return 0
+    old = load(op, "mg_old")
     ids = {"a_fix_at_one_site_is_a_note"}
     ro, _ = old.parse_corrections(ids, raw=TEXT)
     rn, _ = new.parse_corrections(ids, raw=TEXT)

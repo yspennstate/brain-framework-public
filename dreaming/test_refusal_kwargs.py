@@ -62,8 +62,18 @@ def main():
     check(src.count('_silence_note(data, "integrity_api_incompatible")') == 1, "K3 None refuses with a note")
 
     import math_brain.selection_integrity as si
+    # The public package is the math-brain checkout: "tt" beside the brain repo on the laptop, any folder elsewhere (a
+    # Mac installs it from ~/brain/math-brain), so the checkout is known by its remote, not by its folder (5 Nov 2026).
+    import subprocess
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(si.__file__))))
+    try:
+        url = subprocess.run(["git", "-C", root, "remote", "get-url", "origin"], capture_output=True, text=True,
+                             timeout=20).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        url = ""
     check(os.path.abspath(si.__file__).startswith(os.path.abspath(os.path.join(HERE, "..", "..", "tt"))) or
-          "PUBLIC_PKG_ANY" in os.environ, "K4 the package under test is the public one: %s" % si.__file__)
+          url.removesuffix(".git").endswith("/math-brain") or "PUBLIC_PKG_ANY" in os.environ,
+          "K4 the package under test is the public one: %s (%s)" % (si.__file__, url.rsplit("/", 1)[-1] or "no remote"))
     from types import SimpleNamespace as NS
 
     class Node:

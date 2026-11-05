@@ -353,6 +353,22 @@ def main():
                     io.open(p, "w", encoding="utf-8", newline="\n").write(expand(t, tok))
     print(f"  memory corpus: {mem}")
 
+    # The first recall index. The dream cycle rebuilds it and a scheduled refresh keeps it current, and a fresh
+    # install has neither yet: every recall printed two warnings and ran with the lexical channel dark until
+    # something built it (5 Nov 2026, a fresh clone on a Mac). The seed corpus builds in about 0.1 s.
+    bm = os.path.join(dreaming, "bm25.py")
+    if a.apply and os.path.exists(bm) and not os.path.exists(os.path.join(dreaming, "bm25_index.json.gz")):
+        import subprocess
+        env = dict(os.environ, HOME=home, USERPROFILE=home)
+        try:
+            r = subprocess.run([a.python, "-s", bm, "build"], env=env, capture_output=True, text=True, timeout=900,
+                               creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+            last = (r.stdout.strip().splitlines() or [""])[0]
+            print("  recall index: " + (last.replace(home, "~") if r.returncode == 0 else
+                                        "build FAILED rc %d; run %s %s build" % (r.returncode, a.python, bm)))
+        except Exception as e:
+            print("  recall index: build skipped (%s); run %s %s build" % (type(e).__name__, a.python, bm))
+
     # The agent instructions: how to wake, recall, keep the checklist and read a compaction.
     # Until 15 Oct 2026 the template said this script installed it and nothing did, so a new
     # brain's agents never saw the recall method. An existing CLAUDE.md is the user's own and

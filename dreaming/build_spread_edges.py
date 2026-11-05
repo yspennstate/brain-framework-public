@@ -24,7 +24,9 @@ import os, re, io, sys
 from collections import defaultdict
 
 HOME = os.path.expanduser("~")
-MEM = os.path.join(HOME, ".claude", "projects", "{{BRAIN_SLUG}}", "memory")
+# BRAIN_MEM_DIR names the memory folder outright (a machine whose folder name differs from the installed slug,
+# or a test copy); otherwise the installed one.
+MEM = os.environ.get("BRAIN_MEM_DIR") or os.path.join(HOME, ".claude", "projects", "{{BRAIN_SLUG}}", "memory")
 DR = os.path.dirname(os.path.abspath(__file__))
 COACT = os.path.join(DR, "coactivation.tsv")
 OUT = os.path.join(DR, "spread_edges.tsv")

@@ -582,6 +582,25 @@ def render(event, desc, totals, orphans=()):
     return "\n".join(lines)
 
 
+def _once(session, block):
+    """The standing paragraphs (about 1,500 of the 1,926 chars a fire) go to a context once - again after a
+    compaction or three hours; the census lines go every time (4 Nov 2026, claude-fb4584c3; 95 pct of this
+    hook's 24 h text was a repeat to the same session). Any failure sends the block whole."""
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from once_per_context import filter_lines
+        lines = block.split("\n")
+        live = lambda l: l.startswith(("[waste-sense]", "  - pid", "  - ...", "  ORPHANED"))
+        out, whole, at = filter_lines(session, "waste_sense", lines, keep=live)
+        if whole:
+            return block
+        out.append("  (the standing rules - judge, do not shed, report in one line at the end - went to this context "
+                   "whole at %s and are unchanged)" % time.strftime("%H:%M", time.localtime(at)))
+        return "\n".join(out)
+    except Exception:
+        return block
+
+
 def main():
     t0 = time.perf_counter()
     _LAST[:] = ["", 0.0, 0]          # only a census taken by THIS fire is logged (the selftest calls main() after census())
@@ -630,6 +649,7 @@ def _main():
     if not desc and not orphans:
         return
     block = render(event, desc, totals, orphans)
+    block = _once(session, block)
     sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": event, "additionalContext": block}}))
 
 

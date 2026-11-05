@@ -4,7 +4,8 @@ The rule: data about the brain's own activity and its improvement is never
 deleted, because the brain is the most important research product on the machine. A PreToolUse gate
 on Bash and PowerShell: a command whose command word deletes (rm, rmdir, del, erase, rd, unlink, shred, Remove-Item,
 Clear-Content, find -delete or -exec rm, git rm, git clean, or python calling os.remove, os.unlink, shutil.rmtree,
-Path.unlink) and that names brain data is refused, with the reason. Protected:
+Path.unlink) and that names brain data is refused, with the reason; so is mv of brain data to outside it, and
+truncation (truncate, or a single > redirect onto it). Protected:
 
   ~/.claude/projects (session transcripts and the memories)       ~/.codex/sessions (Codex rollouts)
   ~/.claude/brain_graph (events, live logs, learned edges, study)  ~/.claude/dreaming logs (reflex fires, served notes,
@@ -216,15 +217,15 @@ def main():
     deny, hit = verdict(cmd, str(data.get("cwd") or ""))
     if not deny:
         return
-    reason = ("BRAIN DATA IS NEVER DELETED (his law, 26 Sep 2026: 'the most important research product on this whole "
-              "computer is the brain'). This command deletes, moves out or truncates %s. Keep it; if space is short, tell him and move it only "
-              "with his word and a verified copy. Rebuildable files (.tmp .new .old .lock, the rebuilt store and "
+    reason = ("BRAIN DATA IS NEVER DELETED (a standing rule since 26 Sep 2026: the brain is the most important research product on the "
+              "machine). This command deletes, moves out or truncates %s. Keep it; if space is short, tell the owner and move it only "
+              "with their word and a verified copy. Rebuildable files (.tmp .new .old .lock, the rebuilt store and "
               "sidecar) are not protected." % ", ".join(sorted(set(hit))[:3]))
     if any(PICTURES.search(h) for h in hit):
-        reason = ("PICTURES ARE NEVER DELETED LOCALLY (his order, 11 Oct 2026: 'no pictures should be deleted locally'; "
-                  "5 Oct: 'i want to make other videos out of these images'). This command deletes, moves out or "
+        reason = ("PICTURES ARE NEVER DELETED LOCALLY (a standing rule since 11 Oct 2026: the pictures are "
+                  "source material for later videos). This command deletes, moves out or "
                   "truncates %s. That holds after an upload and after a sha256 check, and to free disk: free it "
-                  "somewhere else, or tell him." % ", ".join(sorted(set(hit))[:3]))
+                  "somewhere else, or tell the owner." % ", ".join(sorted(set(hit))[:3]))
     try:
         os.makedirs(os.path.dirname(LOG), exist_ok=True)
         with open(LOG, "a", encoding="utf-8") as fh:

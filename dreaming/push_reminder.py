@@ -107,8 +107,34 @@ def decide(payload, now=None, state_dir=None):
         pass
     if not fire:
         return {}
-    log("fire session=%s event=%s n=%s" % (session, event, st.get("fires")))
-    return {"hookSpecificOutput": {"hookEventName": event, "additionalContext": ROUTING % ROUTING_DOC}}
+    text = _once(str(payload.get("session_id") or ""), ROUTING % ROUTING_DOC)
+    log("fire session=%s event=%s n=%s chars=%d" % (session, event, st.get("fires"), len(text)))
+    return {"hookSpecificOutput": {"hookEventName": event, "additionalContext": text}}
+
+
+REPEAT_NOTE = ("  (the routing table, the cost rules and the push discipline reached this context already and are"
+               " unchanged; full table: %s)")
+
+
+def _once(sess, full):
+    """The push line goes every half hour; the routing paragraph only once per context - again after a compaction
+    or three hours (4 Nov 2026: 3,125 chars a fire on the first deployment, 87 pct of it a repeat to the same
+    session). The line that always goes is the routing text's own first line, so a deployment's own routing file
+    keeps working. No session id, or any failure, sends the whole text as before."""
+    if not sess:
+        return full
+    try:
+        sys.path.insert(0, DREAMING)
+        from once_per_context import filter_lines
+        lines = full.split("\n")
+        lead = lines[0]
+        out, whole, _at = filter_lines(sess, "push_reminder", lines, keep=lambda l: l == lead)
+        if whole:
+            return full
+        body = [l for l in out if l != lead]
+        return "\n".join([lead] + body + ([] if body else [REPEAT_NOTE % ROUTING_DOC]))
+    except Exception:
+        return full
 
 
 def selftest():

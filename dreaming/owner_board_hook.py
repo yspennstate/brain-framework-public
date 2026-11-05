@@ -55,6 +55,30 @@ def board_text():
     return text if len(text) <= BOARD_MAX else text[:BOARD_MAX - 40] + " ... (cut; read the file)"
 
 
+REPEAT_NOTE = ("[owner-board] unchanged since it reached this context (his message and the roster: %s); the control"
+               " line as of now:")
+
+
+def _once(sess, full):
+    """The control line goes every hour; the header and his message only once per context, again when they change,
+    after a compaction or after three hours (4 Nov 2026, claude-fb4584c3: 2,845 chars a fire, 91 pct a repeat to the
+    same session). No session id, or any failure, sends the whole text as before."""
+    if not sess:
+        return full
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from once_per_context import filter_lines
+        lines = full.split("\n")
+        out, whole, _at = filter_lines(sess, "owner_board", lines, keep=lambda l: l.startswith("  control: "))
+        if whole:
+            return full
+        if any(not l.startswith("  control: ") for l in out):
+            return "\n".join([lines[0]] + [l for l in out if l != lines[0]])
+        return "\n".join([REPEAT_NOTE % README] + out)
+    except Exception:
+        return full
+
+
 def main():
     if "--hook" not in sys.argv[1:]:
         print(board_text())
@@ -80,7 +104,7 @@ def main():
         now = time.time()
         if st.get("board_mtime") == mtime and now - float(st.get("at") or 0) < EVERY_S:
             return 0
-        text = board_text()
+        text = _once(str(payload.get("session_id") or payload.get("thread_id") or ""), board_text())
         with io.open(sp, "w", encoding="utf-8") as f:
             json.dump({"board_mtime": mtime, "at": now}, f)
         if runtime == "codex":

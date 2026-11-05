@@ -15,6 +15,26 @@ nothing when a memory existed, and scanning the whole index when nothing is ther
 Fail-safe silent on any error. Reads stdin (UserPromptSubmit JSON), writes injection JSON to stdout.
 """
 import sys, os, io, json, re, time
+
+# 5 Nov 2026 (claude-95df24fa): the resident spread_server.py hosts this hook too. Its time is the bm25 and
+# supersession imports plus the scoring, which the server keeps loaded: 30 of 30 outputs byte-identical (29 of them
+# non-empty), 134 -> 86 ms a fresh-process call. On None (no server,
+# busy, declined, any error) the hook runs cold exactly as before. SPREAD_SERVER=0 turns it off.
+if __name__ == "__main__" and os.environ.get("SPREAD_SERVER", "1") != "0" and not os.environ.get("SPREAD_SERVER_CHILD") \
+        and not any(a in ("-h", "--help") for a in sys.argv[1:]):
+    _raw = sys.stdin.read()
+    sys.stdin = io.StringIO(_raw)
+    _served = None
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import spread_client as _spread_client
+        _served = _spread_client.serve(_raw, "fok_probe")
+    except Exception:
+        _served = None
+    if _served is not None:
+        sys.stdout.write(_served)
+        raise SystemExit(0)
+
 from supersession import active_supersessions
 
 HOME = os.path.expanduser("~")
@@ -108,8 +128,11 @@ def _front(slug):
     return desc, status, t
 
 
-def _fresh_knowing(sess, slug, window=1800):
-    """Name the same memory to the same session at most once per 30 minutes."""
+def _fresh_knowing(sess, slug, window=43200):
+    """Name the same memory to the same session once per context: again only after a compaction or 12 h.
+    (Was 30 min. 30 Oct: repeats earned 0 uses, so 12 h; 4 Nov, on the other machine: a looped session got
+    the same 600-char note every half hour, 87 pct repeats, and a compaction empties the context, so the
+    note may go again after one.)"""
     if not sess:
         return True
     now = time.time()
@@ -119,7 +142,16 @@ def _fresh_knowing(sess, slug, window=1800):
         st = {}
     st = {k: v for k, v in st.items() if now - v < 86400}
     key = sess + "|" + slug
-    if now - st.get(key, 0) < window:
+    last = st.get(key, 0)
+    comp = 0
+    if last:
+        try:
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from once_per_context import last_compaction_at
+            comp = last_compaction_at(sess) or 0
+        except Exception:
+            comp = 0
+    if now - last < window and not (comp and comp >= last - 5):
         return False
     st[key] = now
     try:
@@ -186,13 +218,33 @@ def _v2(data):
         return
     b = BM25()
     superseded = active_supersessions(MEM)
+    # a session's own compaction nodes quote its prompts back to it: 62 of the 74 fok fires in the 24 h to 30 Oct 14:40
+    # named the asking session's own summary, which it already holds; skip them (other sessions' summaries stay)
+    own = "_%s_" % (data.get("session_id") or "")[:8] if re.match(r"^[0-9a-f]{8}", data.get("session_id") or "") else None
     top, seen = [], set()
-    for s, v in b.score(q, topk=12):
+    for s, v in b.score(q, topk=16):
         s2 = superseded.get(s, s)
-        if s2 not in seen:
+        if own and s2.startswith("compaction_") and own in s2:
+            continue
+        if s2 not in seen and len(top) < 12:
             seen.add(s2)
             top.append((s2, v))
     s1 = top[0][1] if top else 0.0
+    # strength sidecar (1000-ways D6 #14/#40, 3 Nov): surfaced.tsv keeps no strength, so FOK gamma and any
+    # quality weighting had no data. One row per scored prompt, fired or not: ts, session, top slug, s1, conc,
+    # rare_share, fired. Slugs and numbers only, never prompt text.
+    _sg = {"conc": "", "rare": "", "fired": 0}
+
+    def _log_strength():
+        _sess = data.get("session_id") or ""
+        if top and re.match(r"^[0-9a-f]{8}-", _sess):
+            try:
+                with io.open(os.path.join(HOME, ".claude", "dreaming", "fok_strength.tsv"), "a",
+                             encoding="utf-8") as _sf:
+                    _sf.write("%.0f\t%s\t%s\t%.2f\t%s\t%s\t%d\n" % (time.time(), _sess[:12], top[0][0], s1,
+                                                                 _sg["conc"], _sg["rare"], _sg["fired"]))
+            except Exception:
+                pass
     if top and s1 >= S1_MIN:
         s10 = top[min(9, len(top) - 1)][1]
         conc = s1 / s10 if s10 > 0 else 99.0
@@ -203,6 +255,7 @@ def _v2(data):
         desc, status, text = _front(top[0][0])
         toks = set(tokens(text))
         rare_share = sum(1 for t in rare if t in toks) / max(1, len(rare))
+        _sg["conc"], _sg["rare"] = "%.2f" % min(conc, 99.0), "%.2f" % rare_share
         if conc >= CONC_MIN or rare_share >= RARE_MIN or _id_match(q, top[0][0], text):
             slug = top[0][0]
             # a correction recorded only in the memory's own frontmatter (superseded_by:) is not in the supersession
@@ -213,6 +266,8 @@ def _v2(data):
                 slug = nxt.group(1)
                 desc, status, _ = _front(slug)
             if not _fresh_knowing(data.get("session_id") or "", slug):
+                _sg["fired"] = 2  # passed the gate, held back as already shown to this session
+                _log_strength()
                 return
             hint = {"verified": "verified", "provisional": "provisional - unverified",
                     "withdrawn": "WITHDRAWN - read its correction"}.get(status, status or "status not recorded")
@@ -232,7 +287,10 @@ def _v2(data):
                         _sf.write("%.0f\t%s\t%s\tfok\n" % (time.time(), _sess[:12], slug))
                 except Exception:
                     pass
+            _sg["fired"] = 1
+            _log_strength()
             return
+    _log_strength()
     if s1 < VOID_MAX and len(set(tokens(q))) >= 3 and re.search(CLAIM_RE, q, re.I) and \
             _fresh_fonk(data.get("session_id") or ""):
         ctx = ("[metamemory] feeling-of-NOT-knowing: no stored memory lands on this and it asks for a definite "

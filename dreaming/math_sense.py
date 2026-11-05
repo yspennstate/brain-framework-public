@@ -1601,7 +1601,13 @@ _USE_CTX = {"sid": "", "served": set(), "cache": {}}
 
 
 def _use_module():
+    """math_use from the installed graph (~/.claude/brain_graph/bin), else from the clone this hook runs in
+    (<clone>/brain_graph/bin beside dreaming/), so a fresh clone works before the graph is installed."""
     p = os.path.join(os.path.expanduser("~"), ".claude", "brain_graph", "bin")
+    if not os.path.isfile(os.path.join(p, "math_use.py")):
+        q = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "brain_graph", "bin")
+        if os.path.isfile(os.path.join(q, "math_use.py")):
+            p = q
     if p not in sys.path:
         sys.path.insert(0, p)
     import math_use
@@ -2535,11 +2541,25 @@ def _already_injected(session_id, node_ids, *, record=True):
             rec = {}
         if not isinstance(rec, dict) or now - float(rec.get("ts", 0) or 0) >= SESSION_STATE_TTL_S:
             rec = {}
+        # ONE CONTEXT, NOT 48 HOURS (5 Nov 2026, claude-1e0a23c2, MATHBRAIN_DEDUP_PER_CONTEXT, default on). A compaction
+        # drops every block the session was shown, so an id recorded before the session's newest compaction is not a
+        # duplicate after it. Measured 5 Nov: 409 of 416 all_dedup_suppressed silences in 24 h came a median 16 min
+        # after a compaction, in loop sessions that compact about every 40 min. The shard records the compaction it
+        # was written under ("ctx"); a newer one starts it empty. Any doubt (no index, unreadable) keeps the old rule.
+        _ctx = 0.0
+        if os.environ.get("MATHBRAIN_DEDUP_PER_CONTEXT", "1") != "0":
+            try:
+                import once_per_context as _opc
+                _ctx = float(_opc.last_compaction_at(session_id) or 0.0)
+            except Exception:
+                _ctx = 0.0
+            if _ctx and rec and _ctx > float(rec.get("ctx", 0) or 0):
+                rec = {}
         seen = set(rec.get("ids") or [])
         dup = set(node_ids) & seen
         if not record:
             return dup
-        rec = {"ids": sorted(seen | set(node_ids))[:400], "ts": now}
+        rec = {"ids": sorted(seen | set(node_ids))[:400], "ts": now, "ctx": max(_ctx, float(rec.get("ctx", 0) or 0))}
         try:
             os.makedirs(SESSION_DIR, exist_ok=True)
         except OSError:
@@ -3950,10 +3970,13 @@ def _tuple_exact_first(query, hits):
 # are the picture maker for a cinematic history documentary" and "You are a picture maker for three history documentaries
 # (the history of mathematics, ...)" slipped past the exact wording and got algebra cards on 09-23 at 16:51, 18:33 and
 # 20:38 (surfaced.tsv), the history-of-mathematics batches looking most like mathematics of all.
+# 2026-11-05 (claude-1e0a23c2): the picture REVIEW head too. The film line's headless reviewers start 'You are checking
+# pictures drawn for the documentary ...'; in the 24 h to 5 Nov 08:4x all 59 hard_deadline silences in the real-session log
+# were those sessions, each holding the hook 60-69 s before it gave up and served nothing.
 _RELAY_OR_PICTURE_HEAD = re.compile(
     r"^\s*(?:﻿)?(?:<agent-message\b|Another Claude session sent a message\b|<cross-session-message\b"
     r"|<task-notification\b|<agent-notification\b|<hook_prompt\b|<system-reminder\b|<local-command-stdout\b"
-    r"|<recommended_plugins\b|You are (?:a|the) picture maker\b)", re.I)
+    r"|<recommended_plugins\b|You are (?:a|the) picture maker\b|You are checking (?:the )?pictures drawn for\b)", re.I)
 RELAY_SKIP = os.environ.get("MATHBRAIN_RELAY_SKIP", "1").strip() not in ("0", "off", "false")
 
 # SESSION CONTEXT FOR CONTINUATIONS (MATHBRAIN_SESSION_CONTEXT, default 0 = OFF; 2026-09-23, round 6).

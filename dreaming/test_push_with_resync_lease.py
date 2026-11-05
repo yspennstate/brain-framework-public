@@ -40,7 +40,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 LIB = os.path.abspath(sys.argv[sys.argv.index("--lib") + 1]) if "--lib" in sys.argv else os.path.join(HERE, "dream_git_sync.ps1")
 OLD = os.path.abspath(sys.argv[sys.argv.index("--old") + 1]) if "--old" in sys.argv else None
 OLD_STALE = os.path.abspath(sys.argv[sys.argv.index("--old-stale") + 1]) if "--old-stale" in sys.argv else None
-PS = shutil.which("powershell") or r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+PS = shutil.which("powershell") or shutil.which("pwsh") or r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+if __name__ == "__main__" and not os.path.exists(PS):
+    print("SKIP - no PowerShell here; dream_git_sync.ps1 is the Windows dream's git sync")   # a Mac, 5 Nov 2026
+    sys.exit(0)
 NOWIN = 0x08000000 if os.name == "nt" else 0
 ENV = dict(os.environ, GIT_TERMINAL_PROMPT="0", GCM_INTERACTIVE="never", GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t",
            GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")

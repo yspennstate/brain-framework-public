@@ -13,6 +13,10 @@ import re
 import sys
 import types
 
+if __name__ == "__main__" and ("-h" in sys.argv[1:] or "--help" in sys.argv[1:]):
+    print(__doc__)
+    sys.exit(0)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 results = []

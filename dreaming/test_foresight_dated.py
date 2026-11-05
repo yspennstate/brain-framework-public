@@ -50,8 +50,9 @@ def old_path():
     repo = os.path.join(os.path.expanduser("~"), "brain-repo")
     blob = subprocess.run(["git", "-C", repo, "show", "a5cb082f7a:12_cognitive_architecture/dreaming/foresight.py"],
                           capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
-    if "def _mistakes" not in blob:
-        raise SystemExit("could not read the old foresight from git history; pass its path")
+    if "def _mistakes" not in blob:     # a shallow or missing clone (5 Nov 2026, a Mac): nothing to compare with
+        print("SKIP - could not read the old foresight from git history; pass its path")
+        raise SystemExit(0)
     p = os.path.join(tempfile.mkdtemp(prefix="fs_old_"), "foresight_old.py")
     open(p, "w", encoding="utf-8").write(blob)
     return p
@@ -76,6 +77,9 @@ def check(name, ok, detail=""):
 
 def main():
     new = load(os.path.join(DR, "foresight.py"), "fs_live")
+    if "{{" in new.MEM:                 # a framework checkout before install renders the slug: no ledger to read
+        print("SKIP - foresight.MEM is not rendered (%s); run it in an installed copy" % new.MEM)
+        return 0
     old = load(old_path(), "fs_old")
     rn, ro = rows(new, TEXT), rows(old, TEXT)
     check("1 the old version reads the two bold rows only", len(ro) == 2, str(ro))

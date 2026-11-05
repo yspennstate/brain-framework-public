@@ -65,6 +65,12 @@ trigger committed to the log but not yet checkpointed was missing from the dry r
 refused on it (account04/B13 r4, B13-R58-WAL-SIDECAR-OMITTED-BY-DRYRUN-COPY-20260929-01). The modes in the output are the
 store's, not the copy's.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import hashlib
 import json
 import os

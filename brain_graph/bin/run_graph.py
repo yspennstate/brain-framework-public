@@ -20,6 +20,12 @@ Windows power throttling, refuses to build with less than 3 GB of commit headroo
 logs/run_graph.log and the latest state to STATUS.json. Launched windowless by run_graph.vbs (wscript //B, pythonw).
 A build or an hourly capture that finds a run in progress waits up to three minutes for it; a fast run skips.
 Usage: run_graph.py capture|build|fast|status"""
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import ctypes
 import ctypes.wintypes as wt
 import io

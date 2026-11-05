@@ -23,6 +23,12 @@ session's shard of 13,242 and no fetch: the layer is nearly empty because real s
 
     python math_use.py build | stats
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import glob
 import json

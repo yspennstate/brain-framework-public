@@ -10,6 +10,12 @@ Read-only; aggregates only (place names are not printed, only counts).
 
     python eval_place_shadow.py [OUT_JSON] [--window 1800]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import bisect
 import collections
 import json

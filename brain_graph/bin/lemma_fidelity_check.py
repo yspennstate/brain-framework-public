@@ -10,6 +10,12 @@ to a log line that carries the same error.
 
     python lemma_fidelity_check.py STORE OUT_JSON
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import io
 import json
 import os

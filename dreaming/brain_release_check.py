@@ -13,6 +13,12 @@ store is kept as graph_lane_store.prev_<tag> (brain data is never deleted).
 
 Refuses when free disk is under 2x the download plus 2 GB, and when the mesh claim on memory:graph_lane_store is held.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import gzip, hashlib, json, os, shutil, subprocess, sys, time
 
 REPO = "yspennstate/ai-memories-and-functionality"

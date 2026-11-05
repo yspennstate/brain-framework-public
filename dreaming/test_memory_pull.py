@@ -4,6 +4,12 @@
 
 Runs in a temporary folder with a directory source and a fake repository source; no network, no installed brain.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import base64
 import importlib.util
 import os

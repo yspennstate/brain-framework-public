@@ -8,6 +8,12 @@ Claude and Codex sessions that were writing in the 3 h before it and have writte
 Unclean means wtmp (`last`) ends the sessions open before this boot with "crash" instead of a shutdown record. Prints
 nothing on a clean boot, more than a day after boot, or when `last` cannot be read.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import glob
 import json
 import os

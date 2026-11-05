@@ -13,6 +13,12 @@ searches, and the 968 reworded bank questions with their verbatim twins (quarant
 
     python study_tokenizer_variants.py OUT_JSON [--variants base,canon,stem,dates,all] [--skip-bank]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import hashlib
 import io

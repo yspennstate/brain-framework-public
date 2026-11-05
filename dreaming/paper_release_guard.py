@@ -20,6 +20,12 @@ Use:
 A file that is not a paper (a table fragment, a beamer talk) is skipped. A draft that must go to a public repo
 before it is finished does not exist: finish it first. There is no bypass.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import io, json, os, re, shutil, subprocess, sys, tarfile, tempfile, time, urllib.request
 
 LOG = os.path.expanduser("~/.claude/dreaming/logs/paper_release_guard.log")

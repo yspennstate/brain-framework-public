@@ -26,6 +26,12 @@ so weight 0 is the deployed stack without the use-grown lane - the fusion effect
 which is what the dial decides - and not a lexical-only system. The output says so under 'estimand'. Every
 hash is written in full; the replay control names the questions it could not reproduce.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import concurrent.futures
 import glob
 import hashlib

@@ -22,6 +22,24 @@ session so a train of prompts on one topic surfaces the bridge once, not every t
 Fail-safe silent on any error. Reads stdin (hook JSON), writes injection JSON to stdout.
 """
 import sys, os, io, json, re, time, bisect, threading
+
+# 5 Nov 2026 (claude-95df24fa): a resident spread_server.py keeps this hook's loaded state warm (median 415 -> 50 ms
+# in the memo harness, output byte-identical 8/8). Ask it first, before the heavy imports below; on None (no server,
+# busy, declined, any error) the hook runs cold exactly as before. SPREAD_SERVER=0 turns it off.
+if __name__ == "__main__" and os.environ.get("SPREAD_SERVER", "1") != "0" and not os.environ.get("SPREAD_SERVER_CHILD"):
+    _raw = sys.stdin.read()
+    sys.stdin = io.StringIO(_raw)
+    _served = None
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import spread_client as _spread_client
+        _served = _spread_client.serve(_raw)
+    except Exception:
+        _served = None
+    if _served is not None:
+        sys.stdout.write(_served)
+        raise SystemExit(0)
+
 from collections import defaultdict
 
 import keyword_artifacts
@@ -75,6 +93,8 @@ DR = os.path.dirname(os.path.abspath(__file__))
 EDGES = os.path.join(DR, "spread_edges.tsv")
 # Links of memories written since the nightly build (build_spread_edges.py --fresh); merged while newer.
 EDGES_FRESH = os.path.join(DR, "spread_edges_fresh.tsv")
+GRAPH_CACHE = os.path.join(DR, ".spread_edges.parsed.pkl")   # _load_graph's parse, keyed on EDGES mtime+size
+HOOK_GRAPH_CACHE = os.path.join(DR, ".spread_edges.norec.pkl")  # _hook_graph's filtered parse, same key + pattern
 SAL = os.path.join(DR, "salience.tsv")
 STATE = os.path.join(DR, ".spread_fired.json")
 EMB = os.path.join(DR, "memory_embeddings.npz")   # optional semantic sidecar (build_memory_embeddings.py, box)
@@ -119,7 +139,7 @@ REDUNDANCY_MAX = 0.34  # drop a candidate whose description overlaps a lexical h
 # precise on a young graph, useful when it lands, silent on ~55% of prompts - and lifting the ceiling
 # needs a STABLE held-out eval plus body/embedding relevance, not another cheap graph signal fit to a
 # moving target. Left here so the next session neither re-runs the dead ends nor trusts a snapshot tune.
-DEDUP_SECS = 600
+DEDUP_SECS = 43200   # was 600; 141 of 198 Mac spread lines were repeats and none earned a use (30 Oct)
 # PER-SESSION RATE CAP (2026-09-22, F37 of the recall study). The per-slug dedup above stops one memory
 # repeating and does nothing about the total: over 30 days 4.7 pct of sessions took 65 pct of every
 # association delivered (one session took 195). Measured on the layer's own log (surfaced.tsv, 6,535 spread
@@ -296,6 +316,27 @@ def _load_habituation():
             for slug, n in counts.items() if n >= HABIT_START and slug not in read}
 
 
+def _edge_paths():
+    """spread_edges.tsv, plus spread_edges_fresh.tsv while it is newer than the nightly build."""
+    paths = [EDGES]
+    try:
+        if os.path.getmtime(EDGES_FRESH) > os.path.getmtime(EDGES):
+            paths.append(EDGES_FRESH)
+    except OSError:
+        pass
+    return paths
+
+
+def _edges_key():
+    """(mtime_ns, size) of each edge file _load_graph reads; the graph pickles key on it, so a new fresh file
+    or a new nightly build both invalidate them."""
+    key = ()
+    for p in _edge_paths():
+        st = os.stat(p)
+        key += (st.st_mtime_ns, st.st_size)
+    return key
+
+
 def _load_graph(with_keywords=False, include_base=False):
     """Load the memory graph.
 
@@ -304,6 +345,21 @@ def _load_graph(with_keywords=False, include_base=False):
     internal callers opt into ``include_base=True``. Changing the default tuple shape broke the
     owner's ``brain.py recall`` command outright.
     """
+    # Parsing spread_edges.tsv (95k lines) cost 0.74 s of a 4.4 s hook run on 30 Oct; a pickle of the parse loads in
+    # about a third of that. Keyed on the file's mtime and size, written atomically, any failure falls back to the parse.
+    try:
+        key = _edges_key()
+    except Exception:
+        key = None
+    if key is not None:
+        try:
+            import pickle
+            with io.open(GRAPH_CACHE, "rb") as f:
+                ck, adj, deg, deg_base = pickle.load(f)
+            if ck == key:
+                return (adj, deg, deg_base) if include_base else (adj, deg)
+        except Exception:
+            pass
     adj = defaultdict(list)      # slug -> [(neighbor, weight)]
     deg = defaultdict(float)     # slug -> total incident weight (fan-out normalizer)
     deg_base = defaultdict(float)  # ...the same, counting memory-to-memory edges only
@@ -318,13 +374,7 @@ def _load_graph(with_keywords=False, include_base=False):
     # got (baseline choice preserved unless the richer graph only ADDS), which costs a second
     # spread per event and deserves its own measured pass, not a late-night constant tweak.
     # Create graph_fire/KEYWORD_GRAPH_ENABLED to switch it on.
-    paths = [EDGES]
-    try:
-        if os.path.getmtime(EDGES_FRESH) > os.path.getmtime(EDGES):
-            paths.append(EDGES_FRESH)
-    except OSError:
-        pass
-    for path in paths:
+    for path in _edge_paths():
         try:
             with io.open(path, encoding="utf-8", errors="replace") as f:
                 next(f, None)
@@ -343,6 +393,18 @@ def _load_graph(with_keywords=False, include_base=False):
                         deg_base[a] += w; deg_base[b] += w
         except Exception:
             continue
+    if key is not None and adj:
+        try:
+            import pickle
+            tmp = "%s.%d.tmp" % (GRAPH_CACHE, os.getpid())
+            with io.open(tmp, "wb") as f:
+                pickle.dump((key, adj, deg, deg_base), f, protocol=pickle.HIGHEST_PROTOCOL)
+            os.replace(tmp, GRAPH_CACHE)
+        except Exception:
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
     return (adj, deg, deg_base) if include_base else (adj, deg)
 
 
@@ -370,6 +432,44 @@ def _without_session_records(adj, deg, deg_base):
         if not SESSION_RECORD.match(node):
             _reset(node, [(nb, w) for nb, w in adj[node] if not SESSION_RECORD.match(nb)])
     return adj2, deg2, deg_base2
+
+
+def _hook_graph():
+    """_without_session_records(*_load_graph(include_base=True)), with the filtered graph kept in its own pickle.
+    The filter cost 0.2-0.27 s a prompt on 1 Nov (5.9k records in a 29k-node graph), more than loading the parse.
+    Keyed on EDGES mtime+size and the record pattern; used only while _load_graph is this module's own (a caller
+    that swaps it in gets its graph filtered as before); any failure falls back to filtering."""
+    if _load_graph is not _LOAD_GRAPH_OWN:
+        return _without_session_records(*_load_graph(include_base=True))
+    try:
+        key = _edges_key() + (SESSION_RECORD.pattern,)
+    except Exception:
+        key = None
+    import pickle
+    if key is not None:
+        try:
+            with io.open(HOOK_GRAPH_CACHE, "rb") as f:
+                ck, adj, deg, deg_base = pickle.load(f)
+            if ck == key:
+                return adj, deg, deg_base
+        except Exception:
+            pass
+    adj, deg, deg_base = _without_session_records(*_load_graph(include_base=True))
+    if key is not None and adj:
+        tmp = "%s.%d.tmp" % (HOOK_GRAPH_CACHE, os.getpid())
+        try:
+            with io.open(tmp, "wb") as f:
+                pickle.dump((key, adj, deg, deg_base), f, protocol=pickle.HIGHEST_PROTOCOL)
+            os.replace(tmp, HOOK_GRAPH_CACHE)
+        except Exception:
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
+    return adj, deg, deg_base
+
+
+_LOAD_GRAPH_OWN = _load_graph
 
 
 class _MembersWithoutRecords(object):
@@ -1020,15 +1120,74 @@ def _desc(slug, idx):
     txt = (m.group(1) if m else "").strip()
     if not txt:
         # fall back to the memory's description frontmatter / first prose line
-        try:
-            with io.open(os.path.join(MEM, slug + ".md"), encoding="utf-8", errors="replace") as handle:
-                body = handle.read()
-            dm = re.search(r'description:\s*"?(.+?)"?\s*\n', body)
-            if dm:
-                txt = dm.group(1).strip()
-        except Exception:
-            pass
+        txt = _file_desc(slug)
     return txt[:200]
+
+
+# MEMORY.md keeps only the newest ~100 index lines, so _desc falls back to the file for nearly every candidate: ~310
+# reads a prompt, 0.1-0.33 s by disk state (1 Nov). DESC_CACHE keeps slug -> (size, mtime_ns, description[:200]),
+# answered while the file keeps that stat (the embedding loader's rule) and saved when a prompt added entries.
+DESC_CACHE = os.path.join(DR, ".spread_desc_cache.marshal")
+_FDESC = {}
+
+
+def _fdesc_cache():
+    got = _FDESC.get("c")
+    if got is None:
+        import marshal
+        try:
+            with open(DESC_CACHE, "rb") as fh:
+                got = marshal.load(fh)
+            if not isinstance(got, dict):
+                got = {}
+        except Exception:
+            got = {}
+        _FDESC["c"] = got
+        import atexit
+        atexit.register(_fdesc_save)     # hook_dispatch runs hooks in-process and ends in sys.exit, so this runs
+    return got
+
+
+def _fdesc_save():
+    if not _FDESC.get("dirty"):
+        return
+    import marshal
+    tmp = "%s.%d.tmp" % (DESC_CACHE, os.getpid())
+    try:
+        with open(tmp, "wb") as fh:
+            marshal.dump(_FDESC["c"], fh)
+        os.replace(tmp, DESC_CACHE)
+        _FDESC["dirty"] = False
+    except Exception:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+
+
+def _file_desc(slug):
+    path = os.path.join(MEM, slug + ".md")
+    try:
+        st = os.stat(path)
+    except OSError:
+        return ""
+    cache = _fdesc_cache()
+    hit = cache.get(slug)
+    if hit is not None and hit[0] == st.st_size and hit[1] == st.st_mtime_ns:
+        return hit[2]
+    txt = ""
+    try:
+        with io.open(path, encoding="utf-8", errors="replace") as handle:
+            body = handle.read()
+        dm = re.search(r'description:\s*"?(.+?)"?\s*\n', body)
+        if dm:
+            txt = dm.group(1).strip()
+    except Exception:
+        return txt
+    # the stat was taken before the read, so a file written in between leaves an entry no later stat matches
+    cache[slug] = (st.st_size, st.st_mtime_ns, txt[:200])
+    _FDESC["dirty"] = True
+    return txt
 
 
 def _status_hint(slug, desc):
@@ -1294,7 +1453,7 @@ def main():
             current_seeds[current] = max(current_seeds.get(current, 0.0), activation)
         seeds = current_seeds
         lex = {superseded.get(slug, slug) for slug in lex}
-        adj, deg, deg_base = _without_session_records(*_load_graph(include_base=True))
+        adj, deg, deg_base = _hook_graph()
         if not adj:
             return
         mw = _load_mistake_weights()
@@ -1539,4 +1698,12 @@ if __name__ == "__main__":
         raise
     except Exception:
         pass
-    main()
+    # The cyclic collector found nothing to free in a ~1 s hook, but once the graph is loaded each pass walked it:
+    # 0.737 -> 0.661 s CPU per prompt with it paused (1 Nov 2026, 5 of 5 pairs). Re-enabled after, since the
+    # dispatcher may run other hooks in this same process.
+    import gc as _gc
+    _gc.disable()
+    try:
+        main()
+    finally:
+        _gc.enable()

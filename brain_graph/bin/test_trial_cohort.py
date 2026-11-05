@@ -1,5 +1,11 @@
 """The diffuse-line trial's persistent first-exposure cohort (dot D7CB6565's source review, 6 Oct 2026, P1-3).
 Run: python test_trial_cohort.py"""
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util
 import os
 import sys

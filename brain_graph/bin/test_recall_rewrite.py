@@ -1,4 +1,10 @@
 """Controls for recall_rewrite.py. Keys stay local: only found / not found and ranks are printed."""
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json
 import os
 import re

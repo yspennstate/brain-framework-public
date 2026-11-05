@@ -10,6 +10,12 @@ whose memories the topic reads like, so an agent can open that session's memorie
 
 usage: python3 transactive_index.py --eval | --build | who "<topic>"
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections, json, math, os, random, re, sys
 
 MEM = os.path.expanduser("~/.claude/projects/{{BRAIN_SLUG}}/memory")

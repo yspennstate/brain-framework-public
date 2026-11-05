@@ -12,6 +12,12 @@ report lists every case with his words for a reader to check.
 
     python prospective_orders_check.py [--since "YYYY-MM-DD HH:MM"] [--bar 30] [--out PATH]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import json
 import os

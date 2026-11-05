@@ -14,6 +14,12 @@ wrote or recalled (7,795 of 45,087 on 3 Nov). This writes, beside it and never i
 Nothing is inferred: every edge is a link, a path or a frontmatter field the memory's author wrote. Idempotent (rewrites
 the stage dir each run). Adoption into live recall is a separate, tested step.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json, os, re, sys, time
 
 HOME = os.path.expanduser("~")

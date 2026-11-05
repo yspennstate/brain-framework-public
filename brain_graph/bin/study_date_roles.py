@@ -15,6 +15,12 @@ date arm can move directly. Counts only in the result; per-question ranks go to 
 
     python study_date_roles.py OUT_JSON [--skip-keys]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import hashlib
 import io
 import json

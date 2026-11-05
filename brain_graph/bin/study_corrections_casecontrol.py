@@ -28,6 +28,12 @@ or verdict row changes it even when the cut does not move), and the per-moment r
 its id is the sha256 of all of them. Digests, counts and cutoffs only: no transcript text. verify_casecontrol.py
 recomputes the result from the rows file and refuses a missing or altered one.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import hashlib
 import json
 import os

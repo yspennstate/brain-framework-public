@@ -9,6 +9,12 @@ Controls:
  B. the file held open for 60 ms: True after retrying, new state, no tmp left
  C. the file held open throughout: False within a second, no exception, old state intact, tmp removed, one log line
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util
 import json
 import os

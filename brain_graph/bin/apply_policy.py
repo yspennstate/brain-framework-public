@@ -7,6 +7,12 @@ learner turns them on from its own judgments). Only the bars move; the rest of p
 
     python apply_policy.py <results json> [--dry]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json
 import os
 import sys

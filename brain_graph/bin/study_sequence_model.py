@@ -12,6 +12,12 @@ common next-new item overall) and against order-free co-occurrence (the same cou
 
     python study_sequence_model.py OUT_JSON [--fast]     (--fast: the same moments and verdicts in O(n log n))
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import glob
 import json

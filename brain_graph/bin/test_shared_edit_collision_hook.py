@@ -4,6 +4,12 @@ the same stdout and exit code on silent and loud payloads, each from the same st
 
     python test_shared_edit_collision_hook.py
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json
 import os
 import shutil

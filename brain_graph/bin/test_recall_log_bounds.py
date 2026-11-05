@@ -6,6 +6,12 @@ The directory defaults to the live files; ROWS_JSONL defaults to the newest grap
 quarantine (whole body and graph lists as recall used them). Nothing live is written: log_recall writes to a
 temporary path.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import glob
 import importlib.util
 import json

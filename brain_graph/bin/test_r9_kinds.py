@@ -10,6 +10,12 @@ Controls:
  3. with the default cache the fast layer asks session_kinds.kind, the store's own call (monkeypatched here)
  4. four processes that each load the cache, wait, add 25 kinds and save: all 100 plus the 2 already there survive
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util
 import json
 import os

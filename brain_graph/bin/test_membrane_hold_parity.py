@@ -31,6 +31,12 @@ With OLD_LIVE_MEMBRANE, the same steps on the membrane before this change must d
     session, in both arms, must fail P7; N7: one whose memory channel ignores the memory the evaluation named or held,
     in both arms, must fail P8 (the checks can fail on a symmetric regression).
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import copy
 import importlib.util
 import json

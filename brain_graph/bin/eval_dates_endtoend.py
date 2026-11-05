@@ -14,6 +14,12 @@ Rows stay in the study folder; the result holds counts only.
     python eval_dates_endtoend.py build
     python eval_dates_endtoend.py run OUT_JSON [--workers 3] [--only bank|ep|agent]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import concurrent.futures
 import importlib.util
 import json

@@ -768,18 +768,7 @@ def search_nodes(mem: str | os.PathLike[str] | Path, query: str,
     need = 1 if len(q) <= 3 else 2
     df, n_docs = _idf_table()
     q_mass = sum(_idf(t, df, n_docs) for t in q) or 1.0
-    corpus = []
-    for slug in iter_manifest_slugs(mem):
-        if failures is None:
-            docs = load_documents(mem, slug)
-        else:
-            try:
-                docs = load_documents(mem, slug)
-            except Exception as exc:
-                failures.append((slug, type(exc).__name__))
-                continue
-        dl, counts = _bundle_tokens(slug, docs)
-        corpus.append((slug, dl, counts))
+    corpus = _search_corpus(mem, failures)
     if not corpus:
         return []
     avgdl = max(1.0, sum(dl for _s, dl, _c in corpus) / len(corpus))
@@ -800,6 +789,25 @@ def search_nodes(mem: str | os.PathLike[str] | Path, query: str,
             continue
         scored.append((slug, float(strength)))
     return sorted(scored, key=lambda row: (-row[1], row[0]))[:max(1, limit)]
+
+
+def _search_corpus(mem: str | os.PathLike[str] | Path,
+                   failures: list | None = None) -> list[tuple[str, int, dict]]:
+    """(slug, token count, per-token counts of its verified attachment text) for every bundle, in manifest order; failures as for
+    search_nodes. Its own function so brain.py's recall cache can keep it under the bundle files' identity."""
+    corpus = []
+    for slug in iter_manifest_slugs(mem):
+        if failures is None:
+            docs = load_documents(mem, slug)
+        else:
+            try:
+                docs = load_documents(mem, slug)
+            except Exception as exc:
+                failures.append((slug, type(exc).__name__))
+                continue
+        dl, counts = _bundle_tokens(slug, docs)
+        corpus.append((slug, dl, counts))
+    return corpus
 
 
 def search_text_for_node(mem: str | os.PathLike[str] | Path, slug: str) -> str:

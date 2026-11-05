@@ -4,6 +4,12 @@ title and body agree with that claim's statement fields? For every mismatching r
 copy given (earliest first), and do an edge's endpoints exist and verify? Read-only.
     python graph_digest_reseal_check.py LIVE SRC OLDER [OLDER ...]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import json
 import sqlite3

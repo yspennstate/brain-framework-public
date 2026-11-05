@@ -86,6 +86,12 @@ key is NO ACTION with enforcement off on the tool's connection), P6 P6, P7 P7, P
                                              [--keep]
 --tool tests another copy of the tool (default: the installed one).
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import hashlib
 import io
 import json

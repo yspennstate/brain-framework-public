@@ -18,6 +18,12 @@ sessions still running, so an unbounded rerun scores more moments than the run i
 against the committed 124,344). Bounded at the committed run's load time, the equal-credit models must reproduce its
 figures (sequence 15/462, co-use 36/497 at the 2 percent bar) before a lag number is read.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import bisect
 import collections
 import json

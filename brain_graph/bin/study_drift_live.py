@@ -24,6 +24,12 @@ sidecar), union (share with neither). Primary: union against word, per case, pai
 17:0x: a store cut on 1 Sep knew 78 pct of the ask words and little of September's territory).
 Counts only in OUT_JSON; per-moment rows (session prefix, time, scores, case flag - no words) go to study/.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json
 import os
 import random

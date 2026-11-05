@@ -11,6 +11,12 @@ Two parts, both with calib_orders_fast's replay and serving rule (stability 2, e
 
     python calib_orders_log.py OUT_JSON [--since "YYYY-MM-DD HH:MM"] [--membrane PATH] [--labels PATH] [--workers N]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import json
 import multiprocessing as mp

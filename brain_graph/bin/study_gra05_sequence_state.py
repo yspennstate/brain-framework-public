@@ -21,6 +21,12 @@ three scores with tool errors as the label are a separate endpoint, scored over 
     python study_gra05_sequence_state.py OUT_JSON [--cut "2026-09-01 00:00"] [--k 5] [--seed 7]
 Counts only in OUT_JSON; per-moment rows (session prefix, time, scores, case flag - no item names) go to study/.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import json
 import os

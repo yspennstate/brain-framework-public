@@ -21,11 +21,51 @@ def available():
     return os.path.exists(os.path.join(MODEL_DIR, "model.onnx")) and os.path.exists(os.path.join(MODEL_DIR, "tokenizer.json"))
 
 
+def _user_site():
+    try:
+        import site
+        us = site.getusersitepackages()
+    except Exception:
+        return ""
+    return us if us and os.path.isdir(us) else ""
+
+
+def runtime_reachable():
+    """Whether onnxruntime and tokenizers can be imported here, from sys.path or (python -s) the user site."""
+    import importlib.util
+    if importlib.util.find_spec("onnxruntime") and importlib.util.find_spec("tokenizers"):
+        return True
+    us = _user_site()
+    return bool(us) and all(os.path.isdir(os.path.join(us, m)) for m in ("onnxruntime", "tokenizers"))
+
+
+def _import_runtime():
+    """onnxruntime and tokenizers. On the Mac both live in the user site-packages, which python -s (the hooks and most
+    harnesses) leaves off sys.path: embed() then returned None and a -s process lost its query lane after the first
+    recall (30 Oct 2026). The user site goes on sys.path for this import only, so -s keeps meaning -s for the rest."""
+    try:
+        import onnxruntime, tokenizers
+        return onnxruntime, tokenizers
+    except ImportError:
+        us = _user_site()
+        if not us or us in sys.path:
+            raise
+    sys.path.append(us)
+    try:
+        import onnxruntime, tokenizers
+    finally:
+        try:
+            sys.path.remove(us)
+        except ValueError:
+            pass
+    return onnxruntime, tokenizers
+
+
 def _session():
     if "sess" in _STATE:
         return _STATE["sess"], _STATE["tok"]
-    import onnxruntime as ort
-    from tokenizers import Tokenizer
+    ort, tokenizers = _import_runtime()
+    Tokenizer = tokenizers.Tokenizer
     so = ort.SessionOptions()
     so.intra_op_num_threads = 2          # a query is one short sequence; never grab the machine
     so.log_severity_level = 3

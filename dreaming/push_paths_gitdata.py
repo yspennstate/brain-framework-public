@@ -9,6 +9,12 @@ in between is refused, as push_paths.sh's own retry refuses it. The ref moves on
 usage: push_paths_gitdata.py SLUG BASE C0 MSG path1 [path2 ...]     token in env PP_TOK
 exit 0 landed / 3 refused or failed / 4 the API itself is unusable here (caller may try another route)
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import base64, threading, concurrent.futures, json, os, subprocess, sys, time, urllib.error, urllib.request
 
 API = "https://api.github.com/repos/"

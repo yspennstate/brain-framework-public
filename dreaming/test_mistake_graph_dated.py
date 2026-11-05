@@ -6,6 +6,12 @@ that the dated entries come out as their own records. Reads no live state.
 
     python test_mistake_graph_dated.py [OLD_MISTAKE_GRAPH_PY]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util
 import os
 import subprocess

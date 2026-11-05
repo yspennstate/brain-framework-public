@@ -10,6 +10,12 @@ src<<32|dst, so appending nodes leaves every existing key valid. cites edges who
 dropped (a new file node with one edge would only be a dead end). The live dial is untouched: an arm points at the copy
 with BRAIN_GRAPH_STORE.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json, os, shutil, sys, time
 import numpy as np
 

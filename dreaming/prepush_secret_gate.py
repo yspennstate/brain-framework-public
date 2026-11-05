@@ -32,6 +32,12 @@ then; a base the first range does not cover is scanned too, and after three move
 cannot close is the moment between its own exit and the remote's ref update: an update of an existing ref is guarded by
 the old id git sends with it, a new ref by nothing but this re-check.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import os
 import re
 import subprocess

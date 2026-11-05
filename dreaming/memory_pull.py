@@ -18,6 +18,12 @@ files within seconds. Dry run by default; --apply writes. MEMORY.md index lines 
     python3 memory_pull.py --apply         write up to 200 missing files, refresh recall
     python3 memory_pull.py --max 50 --apply
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import base64, json, os, re, subprocess, sys, time
 from datetime import datetime, timedelta, timezone
 

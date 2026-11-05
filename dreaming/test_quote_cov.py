@@ -9,6 +9,12 @@
 
     python test_quote_cov.py      (a second or two; ALL PASS at the end)
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import ast
 import importlib
 import os

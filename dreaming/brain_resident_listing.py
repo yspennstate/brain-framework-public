@@ -9,6 +9,12 @@ listing dirty and the next call does one full listing. Development copy: not wir
 
     python resident_listing.py parity [rounds] [gap_s]    # resident vs _fast_listing while agents write
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import ctypes, importlib.util, json, os, sys, threading, time
 from ctypes import wintypes
 

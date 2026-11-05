@@ -2,6 +2,12 @@
 
     python test_hookcall.py      (about 10 s; prints PASS / FAIL per control and ALL PASS at the end)
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import os
 import sys
 import tempfile

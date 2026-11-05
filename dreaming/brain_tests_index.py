@@ -2,6 +2,12 @@
 first, with the memories that name it (status, slug, the result line from the description). Writes
 ~/brain/online/BRAIN_TESTS_INDEX.md; with --publish (the download job, online_memory_pull.py, passes it) also puts it on ai-memories main as
 brain_improvement/TESTS_INDEX.md through the contents API (one writer: this Mac)."""
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import hashlib
 import importlib.util
 import json

@@ -10,6 +10,12 @@ the client audit records that the server answered it; SERVER_STOP stops the serv
 Needs only the math_brain library (../mathbrain/src or ../src) and its dependency, cryptography. Skipped on Windows.
 Takes about 15 seconds.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json, os, shutil, subprocess, sys, tempfile, time
 
 if os.name == "nt":

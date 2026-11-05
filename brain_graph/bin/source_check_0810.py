@@ -17,6 +17,12 @@ and edges of the batch are read by hand against the campaign ledger; this script
 STORE may be a fixture copy; the batch is every claim created on 2026-08-10 whose domain names a Wikipedia lead or a
 QA correction. With --offline the Wikipedia leads come from CACHE_JSON only (a fixture run must not refetch).
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import hashlib
 import io
 import json

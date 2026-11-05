@@ -16,6 +16,12 @@ Correctness rules:
 Launched windowless by the client (python.exe with CREATE_NO_WINDOW, so its own children inherit a hidden
 console). Read-only on the brain except what recall itself writes (its usage logs). Never deletes anything.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import contextlib, functools, io, json, os, secrets, socket, socketserver, sys, threading, time
 
 D = os.path.dirname(os.path.abspath(__file__))

@@ -32,6 +32,12 @@ file is never an empty cohort. Records whose identity is not an evaluation id (l
 are counted apart and left out of the contrast. The learner's own cohort_status is carried through.
 
 Trial 3, exact-name cards: exposures by arm only; its outcome is not wired."""
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import datetime
 import glob
 import hashlib

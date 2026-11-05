@@ -8,6 +8,12 @@ its own transcript.
     python test_live_membrane_quota.py [path/to/live_membrane.py]     (default: the copy beside this file)
 Exit 0 when every control passes.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util
 import json
 import os

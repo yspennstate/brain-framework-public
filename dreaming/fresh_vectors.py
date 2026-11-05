@@ -12,6 +12,11 @@ A row the next sidecar covers drops out of the next overlay; an unchanged row ke
     python fresh_vectors.py               write the overlay (task BrainFreshVectors15m, windowless, BelowNormal)
     python fresh_vectors.py --dry         count what it would encode; write nothing
     python fresh_vectors.py --out PATH    write somewhere else (tests)
+
+The Mac has no 15-minute task: on 30 Oct the overlay last ran at 19:47 and 26 memories filed by 20:44 had no vector, so
+the meaning lane could not see them (W06 eval7: hit@5 1/10 before a hand run, 2/10 after). brain.py remember() now
+calls spawn_detached() after each write. A run holds LOCK while it works; a spawn finding a live holder returns its pid,
+and a run reads the folder again before it exits, so a memory written during a run is picked up by a second pass.
 """
 import sys
 if __name__ == "__main__" and ("-h" in sys.argv[1:] or "--help" in sys.argv[1:]):
@@ -32,11 +37,15 @@ MIN_TEXT = 40        # embedding_row_current's own floor
 BUDGET_S = 480       # stop encoding here and write what is done (run_bounded kills the task at 600 s)
 CHUNK = 4
 SCHEMA = 1
+LOCK = OUT + ".lock"
+LOCK_STALE_S = BUDGET_S + 120
+_HOLDING = False     # set by run_locked; a --out or --dry run holds no lock and checks none
 
 
 def log(msg):
     line = "%s %s" % (time.strftime("%Y-%m-%d %H:%M:%S"), msg)
     try:
+        os.makedirs(os.path.dirname(LOG), exist_ok=True)     # the Mac has no embedding_refresh folder of its own
         with io.open(LOG, "a", encoding="utf-8") as fh:
             fh.write(line + "\n")
     except OSError:
@@ -248,6 +257,7 @@ def main():
                 n = 0
             if n < 1:
                 break
+            touch_lock()
             part = idx[j:j + n]
             j += n
             tc = time.time()
@@ -277,7 +287,135 @@ def write_overlay(out, rows, emb, sr, ea, np):
     np.savez(buf, slugs=np.array([r[0] for r in rows], dtype="U"), text_sha256=np.array([r[1] for r in rows], dtype="U64"),
              vectors=mat, model=np.array(sr.EXPECTED_EMB_MODEL), schema=np.array(SCHEMA),
              written_at=np.array(time.strftime("%Y-%m-%dT%H:%M:%S%z")))
+    if not still_mine():
+        log("lock now held by pid %s; this run's %d rows were listed before it lost the lock, so the overlay is left to "
+            "the holder (%.1fs)" % (holder(), len(rows), time.time() - T_START))
+        return 0
     ea.atomic_replace_bytes(out, buf.getvalue())
+
+
+def _alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+
+
+def holder():
+    """The pid of a run holding LOCK now, else None (a dead or stale holder counts as none)."""
+    try:
+        if time.time() - os.stat(LOCK).st_mtime > LOCK_STALE_S:
+            return None
+        with io.open(LOCK, encoding="utf-8") as fh:
+            pid = int(fh.read().split()[0])
+        return pid if pid != os.getpid() and _alive(pid) else None
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def take_lock():
+    for _ in range(2):
+        try:
+            fd = os.open(LOCK, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            if holder():
+                return False
+            try:
+                os.remove(LOCK)            # stale or dead holder
+            except OSError:
+                pass
+            continue
+        with os.fdopen(fd, "w") as fh:
+            fh.write("%d %.0f\n" % (os.getpid(), time.time()))
+        return True
+    return False
+
+
+def still_mine():
+    """False only when this run took LOCK and LOCK now names another pid or is gone. The lock goes stale by age, so a
+    run paged out past LOCK_STALE_S loses it to the next spawn while it is still alive (3 Nov 04:23-04:44: pid 75819
+    sat 21 min in swap, woke and wrote a list taken before two newer runs, and the overlay fell from 390 rows to 383)."""
+    if not _HOLDING:
+        return True
+    try:
+        with io.open(LOCK, encoding="utf-8") as fh:
+            return int(fh.read().split()[0]) == os.getpid()
+    except (OSError, ValueError, IndexError):
+        return False
+
+
+def touch_lock():
+    """Keep a working run's lock fresh, so a slow but live run is not judged stale between chunks."""
+    if _HOLDING and still_mine():
+        try:
+            os.utime(LOCK)
+        except OSError:
+            pass
+
+
+def newest_memory_mtime():
+    import spread_recall as sr
+    best = 0
+    with os.scandir(sr.MEM) as it:
+        for e in it:
+            if e.name.endswith(".md"):
+                try:
+                    best = max(best, e.stat().st_mtime_ns)
+                except OSError:
+                    pass
+    return best
+
+
+def run_locked():
+    """main() under LOCK, again while memories newer than the last pass's start keep arriving (three passes at most)."""
+    if "--out" in sys.argv or "--dry" in sys.argv:
+        return main()
+    global _HOLDING
+    if not take_lock():
+        log("another run holds the lock (pid %s); left to it" % holder())
+        return 0
+    _HOLDING = True
+    try:
+        for _ in range(3):
+            start = time.time_ns()
+            rc = main()
+            if rc != 0 or not still_mine() or newest_memory_mtime() < start:
+                return rc
+        return rc
+    finally:
+        if still_mine():     # a run that lost the lock must not delete the new holder's
+            try:
+                os.remove(LOCK)
+            except OSError:
+                pass
+
+
+def spawn_detached():
+    """Start a windowless, single-flight run and return at once: the live holder's pid when one is running, else the new
+    child's pid, or None on any failure (the memory is saved either way). The child runs without -s, since the encoder
+    lives in the user site-packages."""
+    import subprocess
+    running = holder()
+    if running:
+        return running
+    try:
+        logf = io.open(os.path.join(D, "embedding_refresh", "fresh_vectors.spawn.log"), "a", encoding="utf-8")
+        p = subprocess.Popen([sys.executable, "-B", os.path.abspath(__file__)], cwd=D, stdin=subprocess.DEVNULL,
+                             stdout=logf, stderr=subprocess.STDOUT, close_fds=True, start_new_session=True)
+        # Write the child's pid into LOCK now: a second spawn a moment later would otherwise see no holder before the
+        # child takes the lock itself (30 Oct, two pids). The child finds its own pid there and takes the lock over.
+        try:
+            fd = os.open(LOCK, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "w") as fh:
+                fh.write("%d %.0f" % (p.pid, time.time()))
+        except OSError:
+            pass
+        return p.pid
+    except Exception:
+        return None
 
 
 if __name__ == "__main__":
@@ -285,5 +423,8 @@ if __name__ == "__main__":
         import psutil
         psutil.Process().nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
     except Exception:
-        pass
-    sys.exit(main())
+        try:
+            os.nice(10)      # no Windows priority class on macOS
+        except Exception:
+            pass
+    sys.exit(run_locked())

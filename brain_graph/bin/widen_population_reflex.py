@@ -4,6 +4,12 @@ matched with re.I as the hook does; --write edits instincts_learned.json (backup
 entry through instinct_prime._fire.
     python widen_population_reflex.py [--write] [--via-hook]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json
 import os
 import re

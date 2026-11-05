@@ -11,6 +11,12 @@ Every path the build reads or writes is in a temporary directory; nothing live i
  M5 claim sizes (use histories) are the same as the module before this change gives
 With --old, the module before this change must make the A-B edge from S1 alone in M1 (the check can fail).
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import hashlib
 import importlib.machinery
 import importlib.util

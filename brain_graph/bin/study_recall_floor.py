@@ -14,6 +14,12 @@ it), both rules applied offline, at 8 rows (recall's default) and at 40 (the his
 
     python study_recall_floor.py CANDIDATE.py OUT.json
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import hashlib
 import io
 import json

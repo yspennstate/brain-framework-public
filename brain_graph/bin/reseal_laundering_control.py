@@ -6,6 +6,12 @@ it re-sealed before (28 Sep 09:4x, claude-825b1305). The live store and its back
 
     python reseal_laundering_control.py POPULATION_DIR SRC_DIR WORK_DIR OUT_JSON
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import glob
 import io
 import json

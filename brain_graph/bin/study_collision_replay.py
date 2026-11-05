@@ -15,6 +15,12 @@ or LEDGER.md in any folder as one file and gave 20 fires at W = 30, not the 10 t
 B19-R41-REPLAY-FULLPATH-INPUT-UNSEALED-20260928). The claim arm reads the local mesh database and is not reproducible
 from committed files.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import io
 import json

@@ -11,6 +11,12 @@ A throwaway table and gate file.
  P5 stamped in the future: ignored
 With --old, the hook given must still read P3's table (N1; the check can fail).
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.machinery
 import importlib.util
 import json

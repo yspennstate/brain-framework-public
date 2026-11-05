@@ -13,6 +13,12 @@ first order's score clears the bar. Active session-hours are the distinct (sessi
 
     python study_reply_orders.py LABELS_JSON OUT_JSON
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import glob
 import json

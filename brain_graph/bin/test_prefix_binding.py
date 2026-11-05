@@ -9,6 +9,12 @@ Controls (temp log and temp STATUS; the live ones are never touched):
  P3 the first line rewritten in place, same length: the marks differ, so the start is found by time and a line is logged
  P4 a STATUS written before the marks existed: bytes mode, as before (nothing to check against)
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util
 import json
 import os

@@ -13,6 +13,12 @@ studies. Gold: every memory the session read. Counts only in the result.
 
     python study_session_knn.py OUT_JSON [--k 10] [--min-history 15]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import bisect
 import collections
 import json

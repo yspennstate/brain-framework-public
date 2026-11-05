@@ -12,6 +12,12 @@ target population. A target-population store needs an allowlist of admissible se
 
     python r7_clean_store.py OUT_DIR
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json
 import os
 import sys

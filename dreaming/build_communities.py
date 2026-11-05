@@ -13,6 +13,12 @@ pooled as "small communities". Writes communities.tsv (slug, community number, l
 TOPICS.md by it while it is under 3 days old. Read-only over the memory folder.
 Usage:  python build_communities.py [--quiet]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections, io, math, os, re, sys, time
 
 DR = os.path.dirname(os.path.abspath(__file__))

@@ -15,6 +15,12 @@ B01-R13-CORRECTION-CASECONTROL-EVIDENCE-GENERATION-UNBOUND-20260928).
     changed: refused (3)
 With --old the study before this change must have no evidence_generation (N1: the check can fail).
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import copy
 import importlib.util
 import json

@@ -25,6 +25,12 @@ the other half of the rule (everything still gets saved on GitHub).
 Install:   python github_push_cost_guard.py --install <clone> [<clone> ...]   (writes <git-common-dir>/hooks/pre-push)
 Selftest:  python github_push_cost_guard.py --selftest
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import fnmatch
 import io
 import json

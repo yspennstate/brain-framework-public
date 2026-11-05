@@ -8,6 +8,12 @@ alone, and missed 1,213 of his 5,269 prompts since 16 Aug and 59 of his 165 corr
 Controls on synthetic transcripts in a temp dir, plus one real transcript when it is present (his queued correction of
 26 Sep 20:11 in session fea50eb9). The pre-fix files fail the queued controls (checked at install).
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import json
 import os

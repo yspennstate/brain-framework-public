@@ -12,6 +12,12 @@ Three real Codex rollouts are copied into a temp ROOT/yyyy/mm/dd (read only; the
  N1 the capture before this change (OLD_CAPTURE_DIR, which must also hold its extract_touch_events.py) in P1's steps:
     extra events (the check can fail)
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import glob
 import os

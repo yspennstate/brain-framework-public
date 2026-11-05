@@ -7,6 +7,12 @@ per-session state, so each run starts clean). Digits are masked before comparing
 
     python equivalence_membrane_hook.py      exit 0 = identical on every payload
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import glob
 import json
 import os

@@ -3,6 +3,12 @@ ResearchStore.get_nodes / _edge_from_row do, recompute GraphNode.digest() / Grap
 stored digest column differs. Read-only on the database named (open it on a copy).
     python graph_digest_census.py STORE.sqlite3 SRC_DIR OUT.json
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import json
 import sqlite3

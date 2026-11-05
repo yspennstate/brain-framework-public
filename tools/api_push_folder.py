@@ -10,6 +10,12 @@ parent, move main with force=false. GitHub refuses a non-fast-forward, so nobody
 Files already at dest that are not in local_dir are replaced along with the folder: use a fresh dest.
 The token comes from `gh auth token` and stays in memory.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import base64, hashlib, json, os, subprocess, sys, time, urllib.error, urllib.request
 
 

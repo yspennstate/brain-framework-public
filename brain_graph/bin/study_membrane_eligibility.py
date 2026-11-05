@@ -15,6 +15,12 @@ Counts only in the output; the per-question rows name gold memories and go to th
 
     python study_membrane_eligibility.py OUT_JSON [--limit N]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import json
 import os

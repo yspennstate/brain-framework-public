@@ -1,4 +1,10 @@
 """The capture reads a transcript only up to its last complete line (complete_end, 27 Sep): five controls."""
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util, json, os, sys, tempfile
 sp = importlib.util.spec_from_file_location("X", os.path.expanduser(r"~/.claude/brain_graph/bin/extract_touch_events.py"))
 X = importlib.util.module_from_spec(sp); sys.path.insert(0, os.path.expanduser(r"~/.claude/brain_graph/bin")); sp.loader.exec_module(X)

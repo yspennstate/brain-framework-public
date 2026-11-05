@@ -16,6 +16,12 @@ projects folder, so nothing live is read or written. Counts only.
 8. a real sample: the live recall log and the extracted events of the last six hours, run dry against the live projects
    folder, count test workers and leave the weight unchanged (skipped when the extract is missing)
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util
 import json
 import os

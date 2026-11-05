@@ -8,6 +8,12 @@ rollout that carries a prompt only in developer context, and one that carries it
 
     python codex_resolver_origin_check.py OUT_JSON
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import io
 import json

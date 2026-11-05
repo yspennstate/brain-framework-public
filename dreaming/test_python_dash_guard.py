@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 """Controls both ways for danger_mode._python_dash (claude-5693aca3, 20 Oct 2026).
     python -s test_python_dash_guard.py"""
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json
 import os
 import subprocess

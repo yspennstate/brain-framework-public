@@ -13,6 +13,11 @@ sessions running concurrently cannot race on the file. Re-run it after any bulk 
 
 from __future__ import annotations
 
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import os
 import pickle
 import sys

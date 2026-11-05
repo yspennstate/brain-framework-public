@@ -5,6 +5,12 @@ opens for writing to go through keep_old. Nothing live is read or written except
 
     python test_quarantine_rows.py [BIN_DIR]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import os
 import re
 import sys

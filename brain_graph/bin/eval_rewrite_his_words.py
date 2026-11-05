@@ -9,6 +9,12 @@ RECALL_REWRITE_NO_LOG=1). Counts only in the result; rows stay in the study fold
 
     python eval_rewrite_his_words.py OUT_JSON [--workers 3] [--only bank|ep]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import concurrent.futures
 import json
 import math

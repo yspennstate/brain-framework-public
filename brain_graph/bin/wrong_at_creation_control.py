@@ -15,6 +15,12 @@ The live store, its backups, the object folder and the math brain repository are
     python wrong_at_creation_control.py POPULATION_DIR SRC_DIR WORK_DIR STUDY_DIR OUT_JSON
 STUDY_DIR holds concepts_formulas.json of the clean run and wiki_leads_cache.json.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import glob
 import io
 import json

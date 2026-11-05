@@ -10,6 +10,12 @@ other hooks' sections (his own prompts, echoed by the owner-prompts hook, carry 
 
     python study_scar_fire_moviehook.py LABELS_JSON POSTHOC_JSON OUT_JSON
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import glob
 import io
 import json

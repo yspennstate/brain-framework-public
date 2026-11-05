@@ -8,6 +8,12 @@ events, pairs, co-activation pairs and total weight of each, how edge weights mo
 only one holds, the hubs, and the overlap of the 1,000 heaviest edges. The live store is not touched; the two stores
 are written to a temp folder and removed unless --keep-stores names one.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json
 import os
 import shutil

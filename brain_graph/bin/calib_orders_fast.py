@@ -13,6 +13,12 @@ his ask and his correction.
 
     python calib_orders_fast.py SINCE_YYYY-MM-DD OUT_JSON [--membrane PATH] [--workers N] [--labels PATH]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import importlib.util
 import json

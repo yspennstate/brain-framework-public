@@ -17,6 +17,12 @@ finding asks for) is consumed to its end, then changed:
  P10 the learner killed after learning and before its cursor was saved: run again, nothing is learned twice
 With --old, the learner given must miss P1 (no reset, no rows: N1) and not report P6's truncation (N2).
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.machinery
 import importlib.util
 import json

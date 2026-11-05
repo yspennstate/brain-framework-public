@@ -5,6 +5,12 @@ once, as Codex JSON, in the first only; every evaluation of all three is logged.
 
     python test_codex_orders.py [PATH_TO_live_membrane.py] [PATH_TO_codex_orders_hook.py]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util
 import json
 import os

@@ -9,6 +9,12 @@ which fields), and which the export lacks.
 
     python compare_batch_to_export.py STORE REPO COMMIT OUT_JSON
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import io
 import json
 import sqlite3

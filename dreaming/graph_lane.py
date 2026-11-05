@@ -13,6 +13,12 @@ Defaults for both, and for the walk's own parameters, are in brain_graph_dial.js
 
     python graph_lane.py "a question"      # the graph's own top memories for a question, and the dial in force
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json
 import os
 import sys

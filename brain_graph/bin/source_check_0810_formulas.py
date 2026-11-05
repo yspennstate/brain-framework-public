@@ -12,6 +12,12 @@ A and B are computed; C is printed for a person to judge and the judgement is re
 
     python source_check_0810_formulas.py CONCEPTS_JSON WIKI_CACHE OBJECTS_ROOT OUT_JSON OUT_MD
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import difflib
 import io
 import json

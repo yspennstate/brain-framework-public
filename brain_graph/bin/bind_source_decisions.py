@@ -11,6 +11,12 @@ decision whose row cannot be matched that way gets no hash, and the re-seal refu
 Only reads the store and the backups (read-only connections). Prints OUT's sha256, the value the re-seal's
 --decisions-sha256 must name.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import hashlib
 import io
 import json

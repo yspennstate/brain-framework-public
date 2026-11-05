@@ -8,6 +8,12 @@ quotes (or bare) as an escaped dollar; inside single quotes nothing expands. So 
 "C:\\...\\memory\\$f" leases the literal text '...memory$f' and covers no file, with exit code 0. That happened on 14
 Sep, on 27 Sep and on 30 Sep. The commands below are the text the hook receives, before the Bash tool halves anything.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util
 import json
 import os

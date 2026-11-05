@@ -3,6 +3,12 @@ and transcripts in a temporary directory. Every restriction is checked both ways
 failed. Transcript fixtures follow the real format: an Agent or Workflow tool_use with an id, an async-launch
 acknowledgment as its tool result, and a queue-operation task notification carrying the tool-use id and a status.
 Run: python test_trial_analysis.py"""
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import datetime
 import importlib.util
 import json

@@ -9,6 +9,12 @@ store or the index build. Counts only; no memory text is printed.
 4. fresh_memories: questions written after the last scan make exactly that memory fresh; switch off ignores the store
 5. (--live-index) the published index carries the questions of a sample of expanded memories
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util
 import json
 import os

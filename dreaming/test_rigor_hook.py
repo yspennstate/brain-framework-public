@@ -17,6 +17,12 @@ Fail-open: any error prints nothing.
   python3 test_rigor_hook.py --selftest    check triggers and rate limits on sample payloads
 claude-48dd2a83, 3 Nov 2026.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json, os, re, sys, time, zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))

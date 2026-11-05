@@ -9,6 +9,12 @@ repository's export committed 15 Aug 17:01 UTC (a2e0b08ed9), the 22 Aug backup, 
 
     python batch_rows_first_record.py POPULATION_DIR REPO OUT_JSON [--export-commit HASH]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import datetime
 import io
 import json

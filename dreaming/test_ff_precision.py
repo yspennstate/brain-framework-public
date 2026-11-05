@@ -13,6 +13,12 @@ Controls (synthetic precision; fake gfcore and forward_feed modules; the fire an
  6. the hint of an ff fire quotes the ff record ('1 of 10 ... forward feed'); a regex fire quotes the pooled record
     ('6 of 20'); an ff fire with no ff record falls back to the pooled one
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util
 import os
 import sys

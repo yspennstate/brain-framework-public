@@ -15,6 +15,12 @@ ranks of the reworded bank go to the quarantine.
 
     python study_expansion_filter.py OUT_JSON [--skip-keys]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import hashlib
 import json

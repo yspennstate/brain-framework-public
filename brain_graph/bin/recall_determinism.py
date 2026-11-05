@@ -7,6 +7,12 @@ STORE_DIR and SIDECAR are pinned copies (a live store is rebuilt under a running
 cache built first (BRAIN_GRAPH_STORE=STORE_DIR python graph_lane.py --build). 27 Sep result: 0 of 120 questions differed
 across three hash seeds at the live dial (results/RECALL_DETERMINISM_2026-09-27.json).
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import concurrent.futures, json, os, re, shutil, subprocess, sys, tempfile, time
 HOME = os.path.expanduser("~")
 DR = os.path.join(HOME, ".claude", "dreaming")

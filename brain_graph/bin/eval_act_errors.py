@@ -14,6 +14,12 @@ Read-only; aggregates only (no command text is printed).
 
     python eval_act_errors.py [OUT_JSON] [--window 20] [--min-n 5] [--days N] [--exclude TOOL,TOOL]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import json
 import os

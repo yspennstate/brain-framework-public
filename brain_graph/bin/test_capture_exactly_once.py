@@ -15,6 +15,12 @@ uses, names) and the fast layer's pairs.
  N1 negative control, the capture before this change (OLD_CAPTURE_DIR) in P4's steps: its events are NOT the reference
     (the check can fail)
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import glob
 import json

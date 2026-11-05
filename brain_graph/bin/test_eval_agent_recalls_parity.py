@@ -8,6 +8,12 @@ folder and the session classifier gets an empty transcript index.
 
     python test_eval_agent_recalls_parity.py
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json
 import os
 import sys

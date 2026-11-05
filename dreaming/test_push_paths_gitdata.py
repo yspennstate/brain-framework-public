@@ -5,6 +5,12 @@
 Builds a small git repository in a temporary folder and replaces the GitHub API with a fake, so nothing goes over the
 network. Needs git on PATH.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import hashlib
 import importlib.util
 import os

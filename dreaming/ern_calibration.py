@@ -18,6 +18,12 @@ whether the felt error fired on that call. Reports:
 usage: python3 ern_calibration.py [--since-hours N] [--tool Bash] [--json] [--ledger] [transcript.jsonl ...]
        --ledger appends one row per run to ern_calibration.tsv beside this file (for the dream to trend)
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections, glob, json, os, sys, time
 from datetime import datetime
 

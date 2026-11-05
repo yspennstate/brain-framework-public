@@ -16,6 +16,12 @@ With --old OLD.py the old builder is run for E1 (it takes about three minutes on
 
     python test_judge_window_seek.py [--old fire_judge_nightly.py.bak_seek_20260928]
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.machinery
 import importlib.util
 import io

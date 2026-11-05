@@ -16,6 +16,12 @@ one does. Controls:
  T6 a lock held right now by another call: no line within a second, that lock left in place (held through the module's
     own lock since the lock became the operating system's, 28 Sep)
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import errno
 import importlib.util
 import json

@@ -3,6 +3,12 @@ built from a synthetic log; a fast layer is written by hand with one pair the st
 it does not (file -> dir /dnew). The place scores the installed membrane reports must equal
 ln((cnt / out) / (in / total)) x ln(1 + cnt) over the two layers, each faded to the moment asked; with the fast layer
 off they must equal the store's own score, and the new folder must be absent."""
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json
 import math
 import os

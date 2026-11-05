@@ -21,6 +21,12 @@ written: a row carries a 12-character hash of its prompt.
 
     python codex_verdicts_merge.py OUT_MERGED.jsonl OUT_REPORT.json
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import hashlib
 import io

@@ -12,6 +12,12 @@ the next open step. It lets the stop through when:
   - the status file is missing (nothing to work from).
 Every refusal is appended to ~/brain/keep_working.log.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import json, os, re, sys, time
 
 HOME = os.path.expanduser("~")

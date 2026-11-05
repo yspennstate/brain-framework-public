@@ -28,6 +28,12 @@ receiver behaviour in both arms, and the learner's state is compared. Nothing li
 With --old-learner the learner before this change must fail L1 and L2 (N1, N2); with --old-membrane the membrane before
 this change must leave the total-estimand HOLD row without the candidate (N3).
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import contextlib
 import copy
 import importlib.machinery

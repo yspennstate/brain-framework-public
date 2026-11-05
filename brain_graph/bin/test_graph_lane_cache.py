@@ -19,6 +19,12 @@ needs the new walk (the code before read the old one); D1-D4 hold the walk's dis
 used while the identity matches, refused for a store rolled back to other edges with an older time (the time rule used
 it), a same-size npz with a changed member reads as new, and a cache written before identities keeps the time rule.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import importlib.util
 import os
 import sqlite3

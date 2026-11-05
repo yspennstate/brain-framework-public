@@ -6,6 +6,12 @@ Windowless: launched by recall_keeper.vbs (task RecallKeeperLogon); the server r
 Normal priority (4 Nov: BelowNormal starved it). Never started with python -s (the clients run without it). Stop: create RECALL_KEEPER_STOP here.
 claude-738954b6, 30 Oct 2026.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import ctypes, json, os, subprocess, sys, time
 from pathlib import Path
 

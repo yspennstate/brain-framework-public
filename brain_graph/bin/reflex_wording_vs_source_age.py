@@ -10,6 +10,12 @@ source memory was modified after its own wording last changed is listed, oldest 
 
     python reflex_wording_vs_source_age.py OUT_JSON
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import glob
 import io
 import json

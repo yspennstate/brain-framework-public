@@ -4,6 +4,12 @@ Every path the build reads or writes is pointed into a temporary directory; noth
 
     python test_math_use_sessions.py
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import hashlib
 import importlib.util
 import json

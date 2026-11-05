@@ -11,6 +11,12 @@ Cases: the corrections of STANDING_ORDERS_LABELS_2026-09-27.json that have a rep
 in the same sessions with none of his corrections or repeats (those labels plus every case of the drift study's rows)
 within 30 minutes after them, up to 60, drawn with a fixed seed.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import glob
 import json
 import os

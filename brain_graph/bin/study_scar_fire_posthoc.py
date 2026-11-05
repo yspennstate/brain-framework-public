@@ -31,6 +31,12 @@ Version 2, 28 Sep 12:3x, after two scheduled audits of version 1:
       tested (last_wording_carries); a row carries the case number, not the session key, and the ask to the hour. The
       classes never read the wording; with V1_JSON given, each class is checked equal to version 1's.
 """
+
+import sys
+if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
+    print(__doc__ or "No command-line options.")
+    raise SystemExit(0)
+
 import collections
 import glob
 import hashlib

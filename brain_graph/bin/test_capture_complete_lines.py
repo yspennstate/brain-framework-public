@@ -1,7 +1,7 @@
 """The capture reads a transcript only up to its last complete line (complete_end, 27 Sep): five controls."""
 import importlib.util, json, os, sys, tempfile
-sp = importlib.util.spec_from_file_location("X", "{{USERPROFILE}}/.claude/brain_graph/bin/extract_touch_events.py")
-X = importlib.util.module_from_spec(sp); sys.path.insert(0, r"{{USERPROFILE}}\.claude\brain_graph\bin"); sp.loader.exec_module(X)
+sp = importlib.util.spec_from_file_location("X", os.path.expanduser(r"~/.claude/brain_graph/bin/extract_touch_events.py"))
+X = importlib.util.module_from_spec(sp); sys.path.insert(0, os.path.expanduser(r"~/.claude/brain_graph/bin")); sp.loader.exec_module(X)
 d = tempfile.mkdtemp()
 p = os.path.join(d, "t.jsonl")
 line = lambda i: json.dumps({"type": "user", "sessionId": "abcdef12-0000", "timestamp": "2026-09-27T10:00:%02dZ" % i, "message": {"role": "user", "content": "hello %d" % i}}) + "\n"

@@ -28,7 +28,7 @@ PROJ = os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.
 KINDS = {b'"kind": "dir"': "dir", b'"kind": "proj"': "proj", b'"kind": "file"': "file", b'"kind": "mem"': "mem",
          b'"kind": "err"': "err", b'"kind": "host"': "host", b'"kind": "repo"': "repo"}
 TARGET_KINDS = ("dir", "proj", "mem", "file")
-TRIVIAL = re.compile(r"^(dir|proj):~/(\.claude/projects(/{{BRAIN_SLUG}}(/memory)?)?|[^/]+|\.claude/[^/]+)$", re.I)
+TRIVIAL = re.compile(r"^(dir|proj):~/(\.claude/projects(/[^/]+(/memory)?)?|[^/]+|\.claude/[^/]+)$", re.I)
 SKIP_MEM = {"memory", "mistakes", "index_archive", "predictions", "state_of_mind", "open_questions", "autobiography",
             "user_model", "curiosity", "conscience", "intentions", "salience"}
 HORIZON, CONTEXT_S = 1800.0, 600.0

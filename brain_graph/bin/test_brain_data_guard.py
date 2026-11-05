@@ -10,16 +10,16 @@ import brain_data_guard as G  # noqa: E402
 DENY = [
     r"rm -rf ~/.claude/projects/{{BRAIN_SLUG}}/abc.jsonl",
     r"rm -f {{USERPROFILE}}/.claude/brain_graph/events_touch.jsonl",
-    r"cd /tmp && rm -r {{USERPROFILE}}/.codex/sessions/2026/07",
-    r"Remove-Item {{USERPROFILE}}\.codex\sessions\2026\09 -Recurse -Force",
-    r"Get-ChildItem {{USERPROFILE}}\.claude\projects -Filter *.jsonl | Remove-Item",
-    r"""python -c "import os; os.remove(r'{{USERPROFILE}}/.claude/brain_graph/live/fires.jsonl')" """,
-    r"del {{USERPROFILE}}\.claude\dreaming\instinct_fires.2026-07.tsv",
+    r"cd /tmp && rm -r ~/.codex/sessions/2026/07",
+    r"Remove-Item ~\.codex\sessions\2026\09 -Recurse -Force",
+    r"Get-ChildItem ~\.claude\projects -Filter *.jsonl | Remove-Item",
+    r"""python -c "import os; os.remove(os.path.expanduser(r'~/.claude/brain_graph/live/fires.jsonl'))" """,
+    r"del ~\.claude\dreaming\instinct_fires.2026-07.tsv",
     r"git -C ~/ai-memories-and-functionality rm -r 11_raw_session_transcripts/claude_projects",
     r"find ~/.claude/projects -name '*.jsonl' -mtime +30 -delete",
     r"find {{USERPROFILE}}/.claude/dreaming/.math_sense_sessions -type f -exec rm {} +",
     r"sudo rm ~/ai-memories-and-functionality/12_cognitive_architecture/brain_graph/results/LIVE_MEMBRANE_STUDY_x.json",
-    r"rm {{USERPROFILE}}/bank_recall_keys_quarantine/recall_keys.jsonl",
+    r"rm ~/bank_recall_keys_quarantine/recall_keys.jsonl",
 ]
 ALLOW = [
     r"rm -f /tmp/x.json",
@@ -32,10 +32,10 @@ ALLOW = [
     r"""grep -rn "rm -rf" ~/.claude/dreaming/brain.py""",
     r"rm -rf ~/movie_projects/x/renders",
     r"git -C ~/ai-memories-and-functionality status --short",
-    r"""python -c "print(open('{{USERPROFILE}}/.claude/brain_graph/STATUS.json').read())" """,
+    r"""python -c "print(open(os.path.expanduser(r'~/.claude/brain_graph/STATUS.json')).read())" """,
     r"mv ~/.claude/brain_graph/logs/old.log ~/.claude/brain_graph/logs/archive/old.log",
     r"rm -rf ~/.claude/brain_graph/study/store_wfB_hist",
-    r"""python -c "import os; d=open('{{USERPROFILE}}/.claude/projects/x.jsonl').read(); os.remove('/tmp/y')" """,
+    r"""python -c "import os; d=open(os.path.expanduser(r'~/.claude/projects/x.jsonl')).read(); os.remove('/tmp/y')" """,
     r"git -C ~/ai-memories-and-functionality rm --cached 05_other/file.txt",
     r"rm -f {{USERPROFILE}}/.claude/brain_graph/repo_roots_cache.json",
 ]
@@ -48,7 +48,7 @@ def hook(cmd, tool="Bash"):
     p = subprocess.run([sys.executable, "-s", os.path.join(os.path.expanduser("~"), ".claude", "dreaming",
                                                            "brain_data_guard.py")],
                        input=json.dumps({"tool_name": tool, "tool_input": {"command": cmd}, "session_id": "guard-test"}).encode(),
-                       capture_output=True, timeout=60, creationflags=0x08000000)
+                       capture_output=True, timeout=60, creationflags=0x08000000 if os.name == "nt" else 0)
     out = p.stdout.decode("utf-8", "replace")
     return p.returncode, ("deny" in out and "permissionDecision" in out)
 

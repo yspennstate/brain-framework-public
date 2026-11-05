@@ -39,7 +39,7 @@ CASE_WINDOW, CLEAR, WINDOW = 600.0, 1800.0, 600.0
 TRAIN_DAYS = 31
 NEG = ("correction", "repeat")
 STATE_KINDS = {"dir", "file", "mem", "proj", "repo", "err", "host"}
-TRIVIAL = re.compile(r"^(dir|proj):~/(\.claude/projects(/{{BRAIN_SLUG}}(/memory)?)?|[^/]+|\.claude/[^/]+)$", re.I)
+TRIVIAL = re.compile(r"^(dir|proj):~/(\.claude/projects(/[^/]+(/memory)?)?|[^/]+|\.claude/[^/]+)$", re.I)
 SKIP_MEM = {"memory", "mistakes", "index_archive", "predictions", "state_of_mind", "open_questions", "autobiography",
             "user_model", "curiosity", "conscience", "intentions", "salience"}
 ALPHA, MIN_SUPPORT = 5.0, 3

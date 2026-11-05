@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest import mock
 import unittest
 
-LIVE = Path('{{USERPROFILE}}/.claude/brain_graph/bin/doc_expand.py')
+LIVE = Path(os.path.expanduser(r'~/.claude/brain_graph/bin/doc_expand.py'))
 spec=importlib.util.spec_from_file_location('held_doc_expand',LIVE)
 mod=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)

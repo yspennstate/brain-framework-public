@@ -29,8 +29,9 @@ HOME = os.path.expanduser("~")
 MEM = os.path.join(HOME, ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "memory")
 OUT_DIR = os.path.join(HOME, ".claude", "brain_graph", "study", "doc_expansion")
 OUT = os.path.join(OUT_DIR, "expansions.jsonl")
-CLAUDE = os.path.join(HOME, ".local", "bin", "claude.exe")
-WORK = r"{{USERPROFILE}}\doc_expand_work"
+CLAUDE = os.path.join(HOME, ".local", "bin", "claude.exe" if os.name == "nt" else "claude")
+WORK = (os.path.join(os.environ.get("PUBLIC", HOME), "doc_expand_work") if os.name == "nt"
+        else os.path.join(HOME, ".claude", "brain_graph", "live", "doc_expand_work"))
 NOWIN = 0x08000000 if os.name == "nt" else 0
 LOCK = threading.Lock()
 PROMPT = """[headless-worker] Below are short notes from a private collection about someone's own projects (software,

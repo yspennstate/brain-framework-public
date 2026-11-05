@@ -21,7 +21,7 @@ MEM = os.path.join(HOME, ".claude/projects/{{BRAIN_SLUG}}/memory")
 STORE = os.path.join(HOME, ".claude/dreaming/graph_lane_store")
 OUT = os.path.join(HOME, ".claude/dreaming/graph_lane_stage_memlayer")
 LINK = re.compile(r"\[\[([^\]|#]+)")
-PATH = re.compile(r"(~/[^\s;,'\"`)\]]+|{{USERPROFILE}}/[^\s;,'\"`)\]]+)")
+PATH = re.compile(r"(~/[^\s;,'\"`)\]]+|~/[^\s;,'\"`)\]]+)")
 
 
 def main():

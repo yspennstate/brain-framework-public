@@ -45,7 +45,7 @@ SLUG_DAY = re.compile(r"_(20\d\d)_(\d\d)_(\d\d)")
 TOKEN = re.compile(r"[a-z][a-z0-9]{2,}")
 NOISE = {"users", "owner", "appdata", "local", "temp", "claude", "scratchpad", "projects", "com", "www", "http", "https",
          "exe", "bin", "tmp", "the", "and", "for", "with", "src", "lib", "home", "jsonl", "json", "txt", "html", "memory",
-         "{{BRAIN_SLUG}}", "python", "bash", "powershell", "tool", "cmd", "file", "dir", "proj", "said", "kw", "hook"}
+         MEM.split(os.sep)[-2].lower(), "python", "bash", "powershell", "tool", "cmd", "file", "dir", "proj", "said", "kw", "hook"}
 WEEKS = [("2026-09-01 00:00", "X_drift0901"), ("2026-09-08 00:00", "X_drift0908"), ("2026-09-15 00:00", "X_drift0915"),
          ("2026-09-22 00:00", "X_drift0922")]
 ARMS = ("ask", "context", "graph", "both")

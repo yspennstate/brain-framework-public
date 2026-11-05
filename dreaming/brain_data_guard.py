@@ -22,6 +22,7 @@ import sys
 if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
     print(__doc__ or "No command-line options.")
     raise SystemExit(0)
+
 import json
 import os
 import re
@@ -36,9 +37,13 @@ PROTECTED = re.compile(
     r"mathbrain_silence|coactivation|spread_edges|keyword_graph|keyword_nodes|\.math_sense_sessions)|"
     r"brain-repo[\\/]+(?:11_raw_session_transcripts|01_ai_consciousness|"
     r"12_cognitive_architecture[\\/]+(?:brain_graph|brain_improvement|audits|dreaming))|"
-    r"math-store-build[\\/]+local[\\/]+population|math-store-main[\\/]+export|bank_recall_keys_quarantine)")
+    r"math-store-build[\\/]+local[\\/]+population|math-store-main[\\/]+export|bank_recall_keys_quarantine|"
+    r"codex_fleet[\\/]+movies[\\/]+out\b)")
+# the film pictures (his 11 Oct order "no pictures should be deleted locally", 5 Oct "i want to make other videos out
+# of these images"); a kit runner deleted 1,954 of them on 11 Oct, minutes after he said no, past an advisory reflex
+PICTURES = re.compile(r"(?i)codex_fleet[\\/]+movies[\\/]+out\b")
 PATHLIKE = re.compile(r"""[^\s'"`;|&()<>]*(?:\.claude|\.codex|brain-repo|math-store-build|"""
-                      r"""math-store-main|bank_recall_keys_quarantine)[^\s'"`;|&()<>]*""", re.I)
+                      r"""math-store-main|bank_recall_keys_quarantine|codex_fleet)[^\s'"`;|&()<>]*""", re.I)
 DERIVED = re.compile(r"(?i)(?:\.tmp\b|\.new\b|\.old\b|\.lock\b|\.pyc\b|__pycache__|[\\/]store\.(?:new|old)\b|"
                      r"sidecar\.sqlite\.new|[\\/]study[\\/]+(?:store_wf|sidecar_wf|cut)|[\\/]live[\\/]+sessions\b|"
                      r"\.tmp\.\d+|(?:^|[\\/_.-])cache(?:[\\/_.-]|$))")
@@ -74,6 +79,67 @@ REPO_REL = re.compile(r"(?i)(?:^|[\s'\"])(?:\./)?((?:11_raw_session_transcripts|
                       r"[^\s'\"`;|&()<>]*)")
 
 
+SANDBOX = re.compile(r"^(?:/private)?/tmp/|^/var/folders/")
+
+
+def _resolve(path, cmd):
+    """Expand $VAR and ${VAR} from VAR=value assignments in the same command: a test that builds a fake home
+    (S=<scratchpad>; H=$S/fakehome; HOME=$H) writes '$H/.claude/dreaming/...' and that is not brain data."""
+    env = dict(re.findall(r"(?:^|[\s;&(])([A-Za-z_]\w*)=([^\s;&|()<>'\"]+)", cmd))
+    for _ in range(4):
+        out = re.sub(r"\$\{?([A-Za-z_]\w*)\}?", lambda m: env.get(m.group(1), m.group(0)), path)
+        if out == path:
+            break
+        path = out
+    return path
+
+
+def _lost(p, cmd):
+    return bool(PROTECTED.search(p)) and not DERIVED.search(p) and not SANDBOX.search(_resolve(p, cmd))
+
+
+# 5 Nov: PY_DELETE_ARG reads only a literal straight inside the call, so os.remove(os.path.expanduser('~/.claude/..')),
+# os.remove(os.path.join(os.path.expanduser("~"), ".claude", "projects", ..)) and Path('~/..').expanduser().unlink()
+# all passed (a framework test fixture found the first). Read the call's whole argument instead and join its string
+# literals; a join with no home anchor (a test's own temp dir) stays allowed.
+PY_DEL_CALL = re.compile(r"(?:os\.remove|os\.unlink|shutil\.rmtree|os\.rmdir|os\.removedirs|send2trash(?:\.send2trash)?)\(")
+PY_DEL_METHOD = re.compile(r"\.(?:unlink|rmdir)\(")
+PY_LIT = re.compile(r"""r?(['"])(.*?)(?<!\\)\1""")
+PY_HOME = re.compile(r"expanduser|Path\.home\(\)|environ(?:\.get\(|\[)\s*\\?['\"](?:HOME|USERPROFILE)|getenv\(\s*\\?['\"](?:HOME|USERPROFILE)")
+
+
+def _balanced(s, i):
+    """Text from s[i] (just past an opening paren) to its closing paren, or to the end."""
+    depth = 1
+    for j in range(i, min(len(s), i + 600)):
+        depth += {"(": 1, ")": -1}.get(s[j], 0)
+        if depth == 0:
+            return s[i:j]
+    return s[i:i + 600]
+
+
+def _py_delete_targets(cmd):
+    spans = [_balanced(cmd, m.end()) for m in PY_DEL_CALL.finditer(cmd)]
+    for m in PY_DEL_METHOD.finditer(cmd):
+        head = cmd[max(0, m.start() - 400):m.start()]
+        head = re.split(r";|\n", head)[-1]
+        k = max(head.rfind("Path("), head.rfind("Path.home("))
+        if k >= 0:
+            spans.append(head[k:])
+    out = []
+    for sp in spans:
+        lits = [x.group(2).strip("\\") for x in PY_LIT.finditer(sp)]
+        lits = [x for x in lits if x and x not in ("~",)] if PY_HOME.search(sp) else [x for x in lits if x]
+        if not lits:
+            continue
+        p = "/".join(x.strip("/\\") if i else x.rstrip("/\\") for i, x in enumerate(lits))
+        if PY_HOME.search(sp) and not p.startswith(("~", "/")):
+            p = "~/" + p
+        if p.startswith(("~", "/")) or re.match(r"^[A-Za-z]:", p):
+            out.append(p)
+    return out
+
+
 def verdict(cmd, cwd=""):
     """(deny, protected paths named) for one command string; cwd resolves a git path relative to the brain repo."""
     cmd = cmd or ""
@@ -81,8 +147,11 @@ def verdict(cmd, cwd=""):
     if re.search(r"(?i)\bpython[\w.]*\b|\bpy\s", cmd):
         for m in PY_DELETE_ARG.finditer(cmd):
             p = m.group(2) or m.group(4) or ""
-            if PROTECTED.search(p) and not DERIVED.search(p):
+            if _lost(p, cmd):
                 return True, [p]
+        hit = [p for p in _py_delete_targets(cmd) if _lost(p, cmd)]
+        if hit:
+            return True, hit
     in_repo = "brain-repo" in (cwd or "").replace("\\", "/").lower()
     for pl in pipelines(cmd):
         segs = pl.split("|")
@@ -102,6 +171,28 @@ def verdict(cmd, cwd=""):
                             if g.group(2) == "clean" or rel:
                                 return True, ["brain-repo/" + (rel[0] if rel else "(git clean)")]
                         deletes = True
+        # 31 Oct: moving a protected file out of the brain or truncating one loses it as surely as rm; a probe of the
+        # live dispatcher found "mv <log> /tmp/" and ": > <log>" passed with only a warning. A move that stays inside
+        # protected ground (a rename, a rotation into brain_graph) is allowed; ">>" appends and "2>" stay allowed.
+        for w, s in zip(words, segs):
+            toks = [t.strip("'\"") for t in s.split()]
+            if w == "mv" and "mv" in [t.rsplit("/", 1)[-1] for t in toks]:
+                args = toks[[t.rsplit("/", 1)[-1] for t in toks].index("mv") + 1:]
+                args = [a for a in args if not a.startswith("-")]
+                if len(args) >= 2 and not PROTECTED.search(args[-1]):
+                    src_hit = [a for a in args[:-1] if _lost(a, cmd)]
+                    if src_hit:
+                        return True, src_hit
+            elif w == "truncate":
+                hit = [p for p in PATHLIKE.findall(s) if _lost(p, cmd)]
+                if hit:
+                    return True, hit
+        # a '>' inside a quoted string (a grep pattern, an echo) is text; a quoted path right after '>' is still a target
+        bare = re.sub(r"(?<!>)(?<!> )('[^']*'|\"[^\"]*\")", "Q", pl)
+        for m in re.finditer(r"(?<![>&\d])>(?![>&])\s*([^\s;|&()<>]+)", bare):
+            tgt = m.group(1).strip("'\"")
+            if _lost(tgt, cmd):
+                return True, [tgt]
         if not deletes:
             continue
         named = [m.group(0) for m in PATHLIKE.finditer(pl)]
@@ -126,9 +217,14 @@ def main():
     if not deny:
         return
     reason = ("BRAIN DATA IS NEVER DELETED (his law, 26 Sep 2026: 'the most important research product on this whole "
-              "computer is the brain'). This command deletes %s. Keep it; if space is short, tell him and move it only "
+              "computer is the brain'). This command deletes, moves out or truncates %s. Keep it; if space is short, tell him and move it only "
               "with his word and a verified copy. Rebuildable files (.tmp .new .old .lock, the rebuilt store and "
               "sidecar) are not protected." % ", ".join(sorted(set(hit))[:3]))
+    if any(PICTURES.search(h) for h in hit):
+        reason = ("PICTURES ARE NEVER DELETED LOCALLY (his order, 11 Oct 2026: 'no pictures should be deleted locally'; "
+                  "5 Oct: 'i want to make other videos out of these images'). This command deletes, moves out or "
+                  "truncates %s. That holds after an upload and after a sha256 check, and to free disk: free it "
+                  "somewhere else, or tell him." % ", ".join(sorted(set(hit))[:3]))
     try:
         os.makedirs(os.path.dirname(LOG), exist_ok=True)
         with open(LOG, "a", encoding="utf-8") as fh:

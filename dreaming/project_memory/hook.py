@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import sys
 import time
 from pathlib import Path
@@ -101,14 +102,26 @@ def handle(data: dict) -> dict | None:
         prompt = _owner_payload(str(data.get("prompt") or ""))
         if not prompt.strip():
             return None
-        with ProjectMemoryStore(busy_timeout_ms=250) as store:
-            event_id, _created = store.ingest_prompt(
-                prompt, source_id="hook", source_seq=time.time_ns(), session=session,
-                occurred_at=utc_now(), provenance="unknown", runtime="claude-hook",
-                cwd=str(data.get("cwd") or ""), source_project="", config=config,
-            )
-            projects = _event_projects(store, event_id)
-            offers = offer_context(store, session=session, project_ids=projects)
+        # The hourly runner holds the write lock for 2.5-6 s near the end of a run, and a 250 ms wait then failed
+        # closed into a false contract warning. A locked store gets one more try with a long wait; source_seq and
+        # occurred_at are fixed first, so the retry is the same occurrence.
+        # Checkpointing is left to the runner: with a 21 MB WAL the first commit of a prompt paid 1.3 s for it (3 ms
+        # without). 10,000 pages (40 MB) still bounds the WAL if the runner is deferred for hours.
+        source_seq, occurred_at = time.time_ns(), utc_now()
+        for busy_ms in (250, 8000):
+            try:
+                with ProjectMemoryStore(busy_timeout_ms=busy_ms, wal_autocheckpoint=10000) as store:
+                    event_id, _created = store.ingest_prompt(
+                        prompt, source_id="hook", source_seq=source_seq, session=session,
+                        occurred_at=occurred_at, provenance="unknown", runtime="claude-hook",
+                        cwd=str(data.get("cwd") or ""), source_project="", config=config,
+                    )
+                    projects = _event_projects(store, event_id)
+                    offers = offer_context(store, session=session, project_ids=projects)
+                break
+            except sqlite3.OperationalError as exc:
+                if busy_ms != 250 or "locked" not in str(exc):
+                    raise
         context = _render_offers(offers)
         if context:
             return {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",

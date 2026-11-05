@@ -258,6 +258,22 @@ CREATE TABLE IF NOT EXISTS classification_rebuilds (
 );
 
 CREATE INDEX IF NOT EXISTS idx_prompt_session ON prompt_events(session_hmac, ingest_seq DESC);
+-- Covers the source-binding check every store open runs: a cold full scan of prompt_events cost 280 ms, 10 ms here.
+CREATE INDEX IF NOT EXISTS idx_prompt_binding ON prompt_events(source_id, source_content_hmac, content_hmac);
+-- The session's authoritative events in sort order, for session_prior and the later-event check. Looped sessions are
+-- almost all automation rows, so idx_prompt_session made each prompt read the whole session (2,691 rows, 18-45 ms
+-- cold) to find four; this index holds only rows passing AUTHORITATIVE_EVENT_SQL (106 for that session). Same rows
+-- on all 594 sessions, two cutoffs each (5 Nov).
+-- Rows that break the source binding, and nothing else: empty while the store is sound. The binding COUNT every open
+-- runs walked all of idx_prompt_binding (20,541 non-hook rows, ~500 pages): 93 ms cold after a minute idle, which was
+-- most of the prompt hook's ~170 ms; it now reads this empty index. Same count as a full scan, and a planted bad
+-- update and bad insert are both counted (5 Nov).
+CREATE INDEX IF NOT EXISTS idx_prompt_binding_bad ON prompt_events(ingest_seq)
+  WHERE (source_id='hook' AND source_content_hmac IS NOT NULL) OR
+        (source_id<>'hook' AND (source_content_hmac IS NULL OR source_content_hmac<>content_hmac));
+CREATE INDEX IF NOT EXISTS idx_prompt_session_auth ON prompt_events(session_hmac, occurred_at, source_id, source_seq, event_id)
+  WHERE provenance='owner' AND source_id<>'hook' AND source_content_hmac IS NOT NULL
+    AND source_content_hmac=content_hmac AND projection_version>=5;
 CREATE INDEX IF NOT EXISTS idx_clause_event ON clauses(event_id, ordinal);
 CREATE INDEX IF NOT EXISTS idx_clause_span ON clauses(span_id);
 CREATE INDEX IF NOT EXISTS idx_disposition_event ON coverage_dispositions(event_id, span_id);

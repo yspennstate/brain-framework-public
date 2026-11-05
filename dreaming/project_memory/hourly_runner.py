@@ -15,6 +15,10 @@ from .review import acknowledge, hour_bucket, mark_shard_served, offer_context, 
 from .sources import PromptOccurrence, commit_manifests, scan_sources
 from .store import ProjectMemoryStore, config_path, utc_now
 
+# The hooks wait 250-500 ms so a prompt never stalls; this background runner can wait for them instead of failing
+# the dream step (1 Nov 2026: "database is locked" in _install_schema while a hook wrote).
+RUNNER_BUSY_TIMEOUT_MS = 30000
+
 
 def _below_normal() -> None:
     if os.name != "nt":
@@ -121,7 +125,7 @@ def ingest_occurrences(store: ProjectMemoryStore, rows: list[PromptOccurrence], 
 def discover(cfg_path: Path) -> int:
     base = load_config(None)
     base["sources"] = json.loads(os.environ.get("PROJECT_MEMORY_SOURCES_JSON", "[]"))
-    with ProjectMemoryStore() as store:
+    with ProjectMemoryStore(busy_timeout_ms=RUNNER_BUSY_TIMEOUT_MS) as store:
         rows, _source_rows, _pending = scan_sources(store, base)
     metadata = [{"project": row.source_project, "cwd": row.cwd} for row in rows]
     config = discover_candidates(metadata)
@@ -168,7 +172,7 @@ def _record_deferral_in_store(store: ProjectMemoryStore, reason: str) -> None:
 
 
 def _record_deferral(reason: str) -> None:
-    with ProjectMemoryStore() as store:
+    with ProjectMemoryStore(busy_timeout_ms=RUNNER_BUSY_TIMEOUT_MS) as store:
         _record_deferral_in_store(store, reason)
 
 
@@ -204,7 +208,7 @@ def hourly(cfg_path: Path) -> int:
         print("project-memory hourly: no local config; run discover first", file=sys.stderr)
         return 2
     config = load_config(cfg_path)
-    with ProjectMemoryStore() as store, _single_runner(store.root):
+    with ProjectMemoryStore(busy_timeout_ms=RUNNER_BUSY_TIMEOUT_MS) as store, _single_runner(store.root):
         _health(store, "running")
         try:
             digest = classification_digest(config)
@@ -278,7 +282,7 @@ def hourly(cfg_path: Path) -> int:
 
 
 def status_command() -> int:
-    with ProjectMemoryStore() as store:
+    with ProjectMemoryStore(busy_timeout_ms=RUNNER_BUSY_TIMEOUT_MS) as store:
         prompts = int(store.db.execute("SELECT COUNT(*) FROM prompt_events").fetchone()[0])
         clauses = int(store.db.execute("SELECT COUNT(*) FROM clauses").fetchone()[0])
         projects = int(store.db.execute("SELECT COUNT(*) FROM projects WHERE active=1").fetchone()[0])
@@ -349,7 +353,7 @@ def main(argv: list[str] | None = None) -> int:
             print("project-memory reclassification: deferred (compute state %s/%s)"
                   % (status, mode))
             return 75
-        with ProjectMemoryStore() as store, _single_runner(store.root):
+        with ProjectMemoryStore(busy_timeout_ms=RUNNER_BUSY_TIMEOUT_MS) as store, _single_runner(store.root):
             progress = lambda message: print(
                 "project-memory reclassification: " + message,
                 file=sys.stderr,
@@ -377,7 +381,7 @@ def main(argv: list[str] | None = None) -> int:
             print("project-memory reclassification applied: " +
                   json.dumps(receipt, sort_keys=True))
             return 0
-    with ProjectMemoryStore() as store:
+    with ProjectMemoryStore(busy_timeout_ms=RUNNER_BUSY_TIMEOUT_MS) as store:
         if args.command == "read-offer":
             payload = read_offer(store, args.token, shard_index=args.shard, record_delivery=False)
             sys.stdout.write(payload)

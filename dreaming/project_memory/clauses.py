@@ -42,13 +42,17 @@ _DELIVERABLE = re.compile(
 _CONTEXT = re.compile(r"(?i)^\s*(?:because|given|background|context|for\s+reference|i\s+am|i['’]m)\b")
 _PRIORITY = re.compile(r"(?i)\b(?:must|every|each|exactly|all|never|do\s+not|don['’]?t|make\s+sure|critical|before)\b")
 
+# Inflected forms count (30 Oct 2026): "never deleted" or "don't start them" matched no verb here, fell to the
+# forbid-every-op default below, and so warned on every read and run that shared a word with the clause.
 _OP_PATTERNS = (
-    ("delete", re.compile(r"(?i)\b(?:delete|remove|erase)\b")),
-    ("write", re.compile(r"(?i)\b(?:write|edit|change|modify|overwrite)\b")),
-    ("push", re.compile(r"(?i)\b(?:push|publish|release)\b")),
-    ("deploy", re.compile(r"(?i)\b(?:deploy|launch|start)\b")),
-    ("execute", re.compile(r"(?i)\b(?:run|execute|invoke)\b")),
-    ("network", re.compile(r"(?i)\b(?:send|message|email|upload|download)\b")),
+    ("delete", re.compile(r"(?i)\b(?:delet|remov|eras)(?:e|es|ed|ing)\b")),
+    ("write", re.compile(r"(?i)\b(?:(?:re|over)?writ(?:e|es|ing)|(?:re|over)?written|(?:re)?wrote|edit(?:s|ed|ing)?|chang(?:e|es|ed|ing)"
+                         r"|modif(?:y|ies|ied|ying))\b")),
+    ("push", re.compile(r"(?i)\b(?:push(?:es|ed|ing)?|publish(?:es|ed|ing)?|releas(?:e|es|ed|ing))\b")),
+    ("deploy", re.compile(r"(?i)\b(?:deploy(?:s|ed|ing)?|launch(?:es|ed|ing)?|start(?:s|ed|ing)?)\b")),
+    ("execute", re.compile(r"(?i)\b(?:run|runs|ran|running|execut(?:e|es|ed|ing)|invok(?:e|es|ed|ing))\b")),
+    ("network", re.compile(r"(?i)\b(?:send(?:s|ing)?|sent|messag(?:e|es|ed|ing)|email(?:s|ed|ing)?"
+                           r"|upload(?:s|ed|ing)?|download(?:s|ed|ing)?)\b")),
 )
 
 

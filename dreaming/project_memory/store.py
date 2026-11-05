@@ -8,6 +8,7 @@ import os
 import secrets
 import sqlite3
 import subprocess
+import sys
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -81,9 +82,29 @@ def _ensure_private_dir(path: Path) -> None:
         pass
 
 
+_PRIO_DARWIN_PROCESS = 4
+_PRIO_DARWIN_BG = 0x1000
+
+
+def _darwin_background() -> int:
+    if sys.platform != "darwin":
+        return 0
+    try:
+        return os.getpriority(_PRIO_DARWIN_PROCESS, 0)
+    except OSError:
+        return 0
+
+
+def _set_darwin_background(value: int) -> None:
+    try:
+        os.setpriority(_PRIO_DARWIN_PROCESS, 0, value)
+    except OSError:
+        pass
+
+
 class ProjectMemoryStore:
     def __init__(self, path: Path | None = None, *, root: Path | None = None,
-                 busy_timeout_ms: int = 500) -> None:
+                 busy_timeout_ms: int = 500, wal_autocheckpoint: int | None = None) -> None:
         self.root = (root or state_root()).resolve()
         _ensure_private_dir(self.root)
         self.path = (path or database_path()).resolve()
@@ -94,6 +115,8 @@ class ProjectMemoryStore:
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.execute("PRAGMA busy_timeout=%d" % int(busy_timeout_ms))
+        if wal_autocheckpoint is not None:
+            self.db.execute("PRAGMA wal_autocheckpoint=%d" % int(wal_autocheckpoint))
         self._install_schema()
 
     def _load_key(self) -> bytes:
@@ -195,14 +218,23 @@ class ProjectMemoryStore:
 
     @contextmanager
     def immediate(self):
-        self.db.execute("BEGIN IMMEDIATE")
+        # Every prompt hook waits on this lock. A darwin Background runner (launchd ProcessType) holding it at load 25
+        # ran 0.3 s of work in 4-131 s and failed hooks closed; leave Background while the lock is held.
+        background = _darwin_background()
+        if background:
+            _set_darwin_background(0)
         try:
-            yield
-        except Exception:
-            self.db.rollback()
-            raise
-        else:
-            self.db.commit()
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                yield
+            except Exception:
+                self.db.rollback()
+                raise
+            else:
+                self.db.commit()
+        finally:
+            if background:
+                _set_darwin_background(_PRIO_DARWIN_BG)
 
     def ensure_projects(self, config: dict) -> None:
         now = utc_now()

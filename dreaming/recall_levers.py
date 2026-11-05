@@ -39,8 +39,10 @@ PROVEN = {
              "53202072716ee9a9"},     # brain-framework (heapq top-k), 306/306 on two seeds, control 75/306,
                                       # 60.6 -> 12.1 ms (ab_bm25_lineage.py, 5 Nov 10:20 on the Mac's postings)
     "emb": {"467b923b88d89822",       # Mac light-loader lineage, 21/21 (5 Nov)
-            "012f6f954ea04578"},      # brain-framework (lever-8 sidecar): 11/11 equal on every attribute, control
+            "012f6f954ea04578",       # brain-framework (lever-8 sidecar): 11/11 equal on every attribute, control
                                       # caught, 94 -> 25 ms (ab_emb_lineage.py, 5 Nov); BRAIN_EMB_LAZY=1 falls back
+            "e1093f7d5d9aa5cc"},      # the union loader with read_known_bytes: 9/9 twice, control
+                                      # caught, 88-109 -> 21-33 ms; without read_known_bytes the attribute check refuses it
     "spread": {"fa0f3a9249918eb6"},   # same source on the Mac and in brain-framework, 60/60 (5 Nov)
 }
 

@@ -140,6 +140,26 @@ def stem_hit(titles, stems):
     return any(any(s in k for s in st) for k in keys)
 
 
+# THE HOOK THIS RUN SCORES IS NAMED (3 Nov 2026).
+# HOOK is the math_sense.py beside this file, so a copy of the eval in another folder scores that folder's copy. On 2 Nov five
+# runs from a sandbox scored a 20:05 copy with neither vocab file beside it while being read as the live hook. Every run now
+# prints the path, its sha256, whether it is byte-identical to ~/.claude/dreaming/math_sense.py, and any neighbour file missing.
+NEIGHBOURS = ("math_anchor_vocab.json", "math_vouch_vocab.json", "math_block_parse.py")
+
+
+def hook_identity():
+    import hashlib
+    def sha(p):
+        try:
+            return hashlib.sha256(open(p, "rb").read()).hexdigest()[:16]
+        except OSError:
+            return None
+    live = os.path.join(os.path.expanduser("~"), ".claude", "dreaming", "math_sense.py")
+    h, lv = sha(HOOK), sha(live)
+    return {"path": HOOK, "sha256_16": h, "live_sha256_16": lv, "same_as_live": bool(h and h == lv),
+            "missing_neighbours": [n for n in NEIGHBOURS if not os.path.exists(os.path.join(HERE, n))]}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bank", default=BANK)
@@ -151,6 +171,9 @@ def main():
     args = ap.parse_args()
     env = dict(kv.split("=", 1) for kv in args.env)
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    ident = hook_identity()
+    print("hook %s sha256 %s | same as live: %s%s" % (ident["path"], ident["sha256_16"], ident["same_as_live"],
+          (" | MISSING beside it: " + ", ".join(ident["missing_neighbours"])) if ident["missing_neighbours"] else ""), flush=True)
 
     bank = json.load(open(args.bank, encoding="utf-8"))
     jobs = []
@@ -195,6 +218,8 @@ def main():
         for r in rows:
             fh.write(json.dumps(r, ensure_ascii=False) + "\n")
     summary, lines = summarize(rows, env, args.bank)
+    summary["hook"] = ident
+    lines.insert(0, "hook sha256 %s same as live %s" % (ident["sha256_16"], ident["same_as_live"]))
     for line in lines:
         print(line)
     with open(keep_old(args.out + ".summary.json"), "w", encoding="utf-8") as fh:

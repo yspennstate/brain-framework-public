@@ -99,12 +99,30 @@ def decide(payload, now=None, state_dir=None):
         st["last_fired"] = now
         st["fires"] = int(st.get("fires") or 0) + 1
     tmp = path + ".%d.tmp" % os.getpid()
+    # 2026-09-14: os.replace over a file another session has open raises WinError 5 on Windows, and
+    # this hook runs in every concurrent session at once. The bare `except: pass` swallowed that, so
+    # the update was LOST (the reminder re-fired on state it never managed to write) and the tmp was
+    # orphaned - 364 of them in seven days, the oldest a week old. The sharing violation is transient,
+    # so retry briefly; the tmp is removed either way.
     try:
         with io.open(tmp, "w", encoding="utf-8") as fh:
             json.dump(st, fh)
-        os.replace(tmp, path)
+        for _attempt in range(5):
+            try:
+                os.replace(tmp, path)
+                break
+            except OSError:
+                if _attempt == 4:
+                    raise
+                time.sleep(0.05)
     except Exception:
         pass
+    finally:
+        try:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+        except Exception:
+            pass
     if not fire:
         return {}
     text = _once(str(payload.get("session_id") or ""), ROUTING % ROUTING_DOC)

@@ -79,6 +79,17 @@ STREAMS = {
 }
 # a stream checked on a shorter clock than the three days above: both of these are written every night
 STREAM_MAX_AGE = {"judged_nightly.jsonl": 1.5 * 86400.0, "reflex_precision.json": 1.5 * 86400.0}
+
+
+def _stale_hint(fn, platform=None):
+    """What a STALE line should add when the cause is known. The judge's verdicts come from a model reading
+    DREAM_AGENDA.md's J sections in the REM pass, and run_dream.py (the runner off Windows) has no REM pass, so there
+    the log ages until an awake agent judges the cases. 5 Nov 2026: a Mac read 'producer may have stopped' for
+    1.7 days while nothing was broken and nothing would ever write it."""
+    if fn == "judged_nightly.jsonl" and (platform or sys.platform) != "win32":
+        return (" - no REM pass on this runner, so nothing judges fires unless an awake agent does:"
+                " judge DREAM_AGENDA.md's J, J2 and J3 cases and append the verdicts")
+    return ""
 # .X_fired.json stamp -> the hook it belongs to, and whether it stamps only on a positive fire
 STAMPS = {
     # a folder since 2026-09-02 (instinct_prime keeps one state file per session); the retired single file read
@@ -543,7 +554,7 @@ def main():
             else:
                 note = "MISSING (producer never ran)"
         elif age > STREAM_MAX_AGE.get(fn, 3 * DAY):
-            note = f"STALE {_fmt(age)} - producer may have stopped"; stale.append(fn)
+            note = f"STALE {_fmt(age)} - producer may have stopped" + _stale_hint(fn); stale.append(fn)
         else:
             note = f"fresh {_fmt(age)}" + ("" if first else (", grew" if grew else ", no growth"))
       except Exception as e:

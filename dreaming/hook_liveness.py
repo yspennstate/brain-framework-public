@@ -88,7 +88,7 @@ def _stale_hint(fn, platform=None):
     1.7 days while nothing was broken and nothing would ever write it."""
     if fn == "judged_nightly.jsonl" and (platform or sys.platform) != "win32":
         return (" - no REM pass on this runner, so nothing judges fires unless an awake agent does:"
-                " judge DREAM_AGENDA.md's J, J2 and J3 cases and append the verdicts")
+                " judge DREAM_AGENDA.md's J, J2 and J3 cases with judge_agenda.py (show, template, write)")
     return ""
 # .X_fired.json stamp -> the hook it belongs to, and whether it stamps only on a positive fire
 STAMPS = {

@@ -13,12 +13,17 @@ adds only NEW events (past the store's water mark), so it is cheap and idempoten
 
 Runs at low priority; safe to call every dream.
 """
-import argparse, os, sys
+import argparse, json, os, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import adapt_live
 import grow
+
+RAN_STAMP = os.path.join(HERE, ".grow_ran.json")   # value-birth marker for hook_liveness:
+# net.sqlite3's own mtime is re-stamped by mere READERS (any NetStore connect - measured
+# 2026-07-15 when a read-only eval re-stamped it), so the db mtime is freshness theater.
+# This stamp is written only when grow actually RAN.
 
 
 def main(argv=None):
@@ -78,6 +83,11 @@ def main(argv=None):
         print("dream_grow: first full build complete")
     else:
         grow.main(["--db", a.db, "--events", ev])
+    try:
+        with open(RAN_STAMP, "w", encoding="utf-8") as f:
+            json.dump({"ran": time.strftime("%Y-%m-%dT%H:%M:%S"), "db": a.db}, f)
+    except Exception:
+        pass   # the stamp is telemetry; growth itself already succeeded
     return 0
 
 

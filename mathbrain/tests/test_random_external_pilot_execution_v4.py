@@ -50,6 +50,7 @@ def policy(
 ) -> execution.RandomExternalExecutionPolicyV4:
     executable = tmp_path / "codex.exe"
     executable.write_bytes(b"MZ\x00\x00synthetic-native-binary")
+    executable.chmod(0o755)
     provenance = capture_codex_executable_provenance(str(executable))
     return execution.freeze_random_external_execution_policy_v4(
         executable_provenance=provenance,

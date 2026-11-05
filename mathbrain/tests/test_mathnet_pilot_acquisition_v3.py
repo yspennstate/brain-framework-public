@@ -138,7 +138,7 @@ def _prepared(
         for item in EXPECTED_MATHNET_SHARDS_V3
     )
     paths = tuple(
-        Path(f"C:/private-mathnet-cache/shard-{item.ordinal:05d}.parquet")
+        Path(Path.cwd().anchor, "private-mathnet-cache", f"shard-{item.ordinal:05d}.parquet")
         for item in EXPECTED_MATHNET_SHARDS_V3
     )
     return PreparedPinnedMathNetSourceV3._create(

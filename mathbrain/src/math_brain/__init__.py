@@ -181,3 +181,52 @@ __all__ = [
 ]
 
 __version__ = "0.1.0"
+
+# The calibration and recurrence names the research-line tests import from the package root. They
+# load on first use, so `import math_brain.retrieval` on the recall hook path does not pay ~15 ms
+# for modules it never touches.
+_LAZY_EXPORTS = {
+    "calibration_plan_v3": (
+        "AxisCounts",
+        "CalibrationPlan",
+        "ManifestRow",
+        "MaterializedCaseBinding",
+        "SelectionManifest",
+        "preregistration_commitment",
+        "selection_ticket",
+        "validate_materialization",
+    ),
+    "calibration_protocol_v3": (
+        "CalibrationOutcomeBinding",
+        "CalibrationOutcomeLink",
+        "PreregisteredCorpus",
+        "PreregistrationCandidate",
+        "VerifierIdentityBinding",
+        "bind_calibration_outcomes",
+        "build_preregistered_corpus",
+        "verify_calibration_outcome_binding",
+    ),
+    "recurrence_manifest_v3": (
+        "RecurrenceBindingBankEntryV3",
+        "RecurrenceBindingBankManifestV3",
+        "build_preregistered_recurrence_source_role_claim_bank_v3",
+        "build_recurrence_binding_bank_manifest_v3",
+        "verify_preregistered_recurrence_source_role_claim_bank_v3",
+    ),
+}
+_LAZY_SOURCE = {name: module for module, names in _LAZY_EXPORTS.items() for name in names}
+
+
+def __getattr__(name: str):
+    module = _LAZY_SOURCE.get(name)
+    if module is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    from importlib import import_module
+
+    value = getattr(import_module(f".{module}", __name__), name)
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_LAZY_SOURCE))

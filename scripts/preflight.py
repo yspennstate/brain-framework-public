@@ -21,6 +21,7 @@ mistaken for a green everywhere.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import os
 import subprocess
 import sys
@@ -33,6 +34,11 @@ FAST = [
     ("private-label guard", [sys.executable, "scripts/check_no_private_labels.py"], "."),
     ("guard's own controls", [sys.executable, "-m", "pytest",
                               "scripts/test_check_no_private_labels.py", "-q"], "."),
+    # Static and under two seconds, so the fast gates catch a vendored math brain module that lost
+    # names its importers use; only the --full run would otherwise see it.
+    ("math brain imports", [sys.executable, "scripts/check_mathbrain_imports.py"], "."),
+    ("import check controls", [sys.executable, "-m", "pytest",
+                               "scripts/test_check_mathbrain_imports.py", "-q"], "."),
     # proofswarm is its own check: without its dependencies (Pydantic 2) its two collection errors
     # used to interrupt the whole core run, so dreaming, mesh and governor went untested as well.
     ("core suites", [sys.executable, "-m", "pytest", "dreaming", "mesh", "governor",
@@ -44,8 +50,17 @@ FAST = [
     ("smoke (end to end)", [sys.executable, "scripts/smoke_framework.py"], "."),
 ]
 FULL_EXTRA = [
-    ("math brain", [sys.executable, "-m", "pytest", ".", "-q"], "mathbrain"),
+    # One module that fails to import used to stop the whole suite at collection (5 Nov 2026:
+    # five import errors hid the other 1,100 tests). Collection errors still fail the check.
+    ("math brain", [sys.executable, "-m", "pytest", ".", "-q",
+                    "--continue-on-collection-errors"], "mathbrain"),
 ]
+# Checks that need packages the framework does not ship. When one is missing the check is skipped
+# and named under "not covered", so a machine without them neither fails every run nor passes
+# silently. Install with: pip install -e methods/proofswarm
+REQUIRES = {
+    "proofswarm": ("pydantic",),
+}
 # Named so a green is honest about its own edges.
 NOT_COVERED = [
     "a whole-tree pytest run - two test_network.py basenames collide, see the README",
@@ -81,10 +96,17 @@ def main(argv=None) -> int:
 
     checks = FAST + (FULL_EXTRA if args.full else [])
     print("preflight: %d checks%s\n" % (len(checks), " (--full)" if args.full else ""))
-    failed = [label for label, cmd, cwd in checks if not run(label, cmd, cwd)]
+    failed, skipped = [], []
+    for label, cmd, cwd in checks:
+        absent = [m for m in REQUIRES.get(label, ()) if importlib.util.find_spec(m) is None]
+        if absent:
+            print("  skip %-22s         %s not installed" % (label, ", ".join(absent)))
+            skipped.append("%s - %s not installed" % (label, ", ".join(absent)))
+        elif not run(label, cmd, cwd):
+            failed.append(label)
 
     print("\nnot covered by this run:")
-    for item in NOT_COVERED:
+    for item in NOT_COVERED + skipped:
         if args.full and item.startswith("the math brain"):
             continue
         print("  - %s" % item)
@@ -92,7 +114,9 @@ def main(argv=None) -> int:
     if failed:
         print("\n%d check(s) FAILED: %s" % (len(failed), ", ".join(failed)))
         return 1
-    print("\nall %d passed - safe to push" % len(checks))
+    ran = len(checks) - len(skipped)
+    print("\nall %d run passed%s - safe to push" % (
+        ran, " (%d skipped, listed above)" % len(skipped) if skipped else ""))
     return 0
 
 

@@ -14,8 +14,9 @@ import hmac
 import json
 import math
 import re
+from collections.abc import Mapping
 from dataclasses import fields
-from typing import Any, Mapping
+from typing import Any
 
 from .codex_runner import (
     AppServerProtocolError,
@@ -24,15 +25,14 @@ from .codex_runner import (
     locked_initialize_request_json,
 )
 
-
 PRIVATE_ARTIFACT_SCHEMA = "org.math-research-brain/private-codex-run-result"
-PRIVATE_ARTIFACT_SCHEMA_VERSION = 2
+PRIVATE_ARTIFACT_SCHEMA_VERSION = 3
 PRIVATE_ARTIFACT_CLASSIFICATION = "private_raw_evaluation_evidence"
 # Keep this independent lower-layer cap aligned with attempt_ledger.MAX_PAYLOAD_BYTES.
 MAX_PRIVATE_ARTIFACT_BYTES = 64 * 1024 * 1024
 
 _DIGEST_PATTERN = re.compile(r"sha256:[0-9a-f]{64}\Z")
-_CONTENT_DIGEST_DOMAIN = b"math-brain/private-codex-run-result/v2\x00"
+_CONTENT_DIGEST_DOMAIN = b"math-brain/private-codex-run-result/v3\x00"
 _MAX_JSON_NESTING = 128
 _ENVELOPE_KEYS = {
     "content_digest",
@@ -56,6 +56,7 @@ _RESULT_SCHEMA = (
     ("solver_process_isolation_policy_digest", "str", True),
     ("codex_home_directory_device", "int", True),
     ("codex_home_directory_inode", "int", True),
+    ("codex_home_path_digest", "str | None", True),
     ("codex_home_initial_auth_only", "bool", True),
     ("codex_home_cleanup_verified", "bool", True),
     ("credential_leak_scan_passed", "bool", True),
@@ -289,9 +290,7 @@ def _audit_from_json(value: object) -> IsolationAudit:
 
 
 def _assert_type_sensitive_request_evidence(result: CodexRunResult) -> None:
-    expected_initialized = _canonical_json_bytes(
-        {"method": "initialized", "params": {}}
-    )
+    expected_initialized = _canonical_json_bytes({"method": "initialized", "params": {}})
     if result.initialize_request_json != locked_initialize_request_json():
         raise CodexArtifactError("initialize request is not type-exact locked evidence")
     if result.initialized_notification_json != expected_initialized:
@@ -307,9 +306,7 @@ def _assert_type_sensitive_request_evidence(result: CodexRunResult) -> None:
     if not isinstance(turn_params, dict) or "outputSchema" not in turn_params:
         raise CodexArtifactError("turn/start output schema evidence is missing")
     if _canonical_json_bytes(turn_params["outputSchema"]) != result.output_schema_json:
-        raise CodexArtifactError(
-            "turn/start output schema is not type-exact retained evidence"
-        )
+        raise CodexArtifactError("turn/start output schema is not type-exact retained evidence")
 
 
 def _result_to_json(result: CodexRunResult) -> dict[str, object]:
@@ -404,9 +401,10 @@ def deserialize_codex_run_result(raw: bytes) -> CodexRunResult:
         raise CodexArtifactError("private artifact envelope fields differ from the schema")
     if envelope.get("schema") != PRIVATE_ARTIFACT_SCHEMA:
         raise CodexArtifactError("private artifact schema identifier is unsupported")
-    if type(envelope.get("schema_version")) is not int or envelope[
-        "schema_version"
-    ] != PRIVATE_ARTIFACT_SCHEMA_VERSION:
+    if (
+        type(envelope.get("schema_version")) is not int
+        or envelope["schema_version"] != PRIVATE_ARTIFACT_SCHEMA_VERSION
+    ):
         raise CodexArtifactError("private artifact schema version is unsupported")
     if envelope.get("privacy_classification") != PRIVATE_ARTIFACT_CLASSIFICATION:
         raise CodexArtifactError("private artifact classification is missing or unsafe")
@@ -423,11 +421,11 @@ def deserialize_codex_run_result(raw: bytes) -> CodexRunResult:
 
 
 __all__ = [
-    "CodexArtifactError",
     "MAX_PRIVATE_ARTIFACT_BYTES",
     "PRIVATE_ARTIFACT_CLASSIFICATION",
     "PRIVATE_ARTIFACT_SCHEMA",
     "PRIVATE_ARTIFACT_SCHEMA_VERSION",
+    "CodexArtifactError",
     "deserialize_codex_run_result",
     "serialize_codex_run_result",
 ]

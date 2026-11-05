@@ -364,6 +364,38 @@ except Exception:
 
 # ---- 3. staleness candidates ----
 stale = []
+
+
+def _lit_gate(p):
+    """A lowercase literal every match of marker p must contain ("" = no safe gate). Conservative: any
+    alternation or character class gives no gate; group contents (lookaheads included) are ignored; a
+    character made optional by ? * {..} is dropped. Measured 3 Nov: the sweep 43.0 s -> 5.4 s, same 52 hits,
+    because a re.I search over 223 MB per marker loses the literal fast path."""
+    q = re.sub(r"\((?:[^()\\]|\\.)*\)", "\x00", p)
+    if "|" in q.replace("\\|", "") or "(" in q or "[" in q:
+        return ""
+    best, cur, i = "", [], 0
+    while i <= len(q):
+        ch = q[i] if i < len(q) else "\x00"
+        if ch == "\\" and i + 1 < len(q) and not q[i + 1].isalnum():
+            cur.append(q[i + 1]); i += 2; continue
+        if ch == "\\" or ch in ".^$*+?{}\x00":
+            if ch in "*?{" and cur:
+                cur.pop()
+            if len(cur) > len(best):
+                best = "".join(cur)
+            cur = []
+            if ch == "{":
+                j = q.find("}", i)
+                i = len(q) if j < 0 else j + 1
+            else:
+                i += 2 if ch == "\\" else 1
+            continue
+        cur.append(ch); i += 1
+    return best.lower()
+
+
+_STALE_MK = {mk: (_lit_gate(mk), re.compile(mk, re.I)) for _e, _t, _s, _mks in CURRENT_FACTS for mk in _mks}
 for fn, m in mems.items():
     hay = m["body"].lower()
     # already reconciled? a prior dream annotated it - don't re-flag (the 07-07 dream's find)
@@ -373,7 +405,7 @@ for fn, m in mems.items():
         # a memory dated on/after the fact became current IS the current record
         if m["event_date"] and m["event_date"] >= since:
             continue
-        if any(re.search(mk, hay, re.I) for mk in markers):
+        if any(_STALE_MK[mk][0] in hay and _STALE_MK[mk][1].search(hay) for mk in markers):
             stale.append((fn, entity, truth))
             break
 
@@ -633,9 +665,29 @@ with io.open(OUT, "w", encoding="utf-8") as f:
     # >10 times must enter a designated connection-agent workflow during
     # dreaming. The helper revalidates the signed production generation before
     # exposing candidates; any failure is rendered as a loud degraded section.
+    def _strong_section_with_timeout(budget_s=300):
+        """2026-10-19 REM: strong_node_agenda_section() ran unbounded INSIDE the open agenda file. On
+        10-19 the corpus scan finished at 20:09 (OUT truncated to 0 bytes at open), this call then ran
+        until the 1800 s cap killed the tree at 20:23, and the buffered header never reached disk: a
+        0-byte agenda for the third pass running (03:30, 12:17, 20:23) on a disk reading at ~11 MB/s.
+        Same shape as the journal-written-last scar (2026-09-14): the valuable output must not wait
+        behind unbounded work. Built in a child under a timeout, like the judge section; a timeout or
+        a child failure raises and renders as the loud DEGRADED section below."""
+        import os as _os, subprocess as _sp, sys as _sys
+        _here = _os.path.dirname(_os.path.abspath(__file__))
+        code = ("import sys; sys.path.insert(0, %r); import brain as b; "
+                "sys.stdout.reconfigure(encoding='utf-8'); "
+                "sys.stdout.write(b.strong_node_agenda_section() or '')" % _here)
+        proc = _sp.run([_sys.executable, "-c", code], capture_output=True, timeout=budget_s, cwd=_here,
+                       creationflags=getattr(_sp, "CREATE_NO_WINDOW", 0))
+        if proc.returncode != 0:
+            raise RuntimeError("strong-node child exited %d: %s"
+                               % (proc.returncode, proc.stderr.decode("utf-8", "replace")[-300:]))
+        return proc.stdout.decode("utf-8", "replace")
+
+    f.flush()   # the header is on disk before any bounded-but-slow step (10-19: a kill lost it all)
     try:
-        import brain as _brain
-        _strong_section = _brain.strong_node_agenda_section()
+        _strong_section = _strong_section_with_timeout()
         if _strong_section:
             f.write("\n" + _strong_section)
     except Exception as _strong_exc:
@@ -645,6 +697,7 @@ with io.open(OUT, "w", encoding="utf-8") as f:
             % " ".join(str(_strong_exc).split())[:400]
         )
 
+    f.flush()
     # ---- Mistakes: ~30% of every dream is this (owner 2026-07-08). The owner's corrections - every
     # time he said "that's a mistake" or "not what I wanted" - are the highest-signal learning data
     # the brain has. A rotating sample surfaces each dream so the whole ledger gets worked over time.

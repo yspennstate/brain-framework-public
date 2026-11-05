@@ -42,3 +42,5 @@ filmbrain/store/
 # resident recall server state
 dreaming/brain_recall_server/
 dreaming/recall_fastcache/
+# instinct_prime appends its slow-call record beside itself, so a test run in a checkout dirtied a tracked file
+dreaming/instinct_slow_calls.tsv

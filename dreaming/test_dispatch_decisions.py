@@ -160,12 +160,18 @@ def fallback_controls(m):
     return r
 
 
+# Native paths: os.path.basename splits on backslashes only on Windows, so a Windows-path literal fails C1 and C3 on a Mac
+# while the dispatcher is right (5 Nov 2026). The dispatcher never sees a foreign path on its own machine.
+NATIVE_HOOK = os.path.join(os.sep, "x", "hook.py")
+NATIVE_OTHER = os.path.join(os.sep, "x", "other_hook.py")
+
+
 def identity_controls(m):
     r = {}
     pm = os.path.expanduser(r"~/.claude/hooks/project_memory_hook.py")
     ph = os.path.expanduser(r"~/.claude/hooks/project_memory_hot_hook.py")
     names = [m._entry_basename('python -S -B "%s"' % pm, []), m._entry_basename("python", ["-S", "-B", ph]),
-             m._entry_basename("python", ["-B", r"C:\x\hook.py", "--hook-runtime", "claude"])]
+             m._entry_basename("python", ["-B", NATIVE_HOOK, "--hook-runtime", "claude"])]
     r["C1"] = (names == ["project_memory_hook.py", "project_memory_hot_hook.py", "hook.py"], "C1 names: %s" % names)
     # C2 runs on files that exist. as_python_argv tests os.path.exists after FORCE_SUBPROCESS, and the two paths above
     # have been gone since the hooks moved to .brain-framework\runtime, so on them it answered None whether or not a
@@ -181,16 +187,23 @@ def identity_controls(m):
         got = [os.path.basename(x) if x else None for x in got]
         # The hot hook leaves the forced set only for a dispatcher that hands it its payload as bytes (STDIN_BYTES_OK):
         # its first line is sys.stdin.buffer.read(). Every other hook keeps the io.StringIO.
-        hot_ok = "project_memory_hot_hook.py" in getattr(m, "STDIN_BYTES_OK", ())
-        want = [None, "project_memory_hot_hook.py" if hot_ok else None, None]
+        # On 3 Nov 2026 the prompt hook joined it too (claude-baabdcd6), so each name is read from the list: a listed
+        # hook runs in-process with bytes, an unlisted one stays forced with a StringIO, and hook.py is never listed.
+        listed = getattr(m, "STDIN_BYTES_OK", ())
+        hot_ok = "project_memory_hot_hook.py" in listed
+        want = [n if n in listed else None for n in ("project_memory_hook.py", "project_memory_hot_hook.py")] + [None]
         stdin_ok = True
         if hot_ok:
             text = '{"prompt": "א › ok"}'
-            s1, s2 = m._stdin_for(xph, text), m._stdin_for(xpm, text)
-            try:
-                stdin_ok = s1.buffer.read() == text.encode("utf-8") and isinstance(s2, io.StringIO) and s2.read() == text
-            except AttributeError:          # a StringIO handed to the hot hook: the 15 Sep failure
-                stdin_ok = False
+            for xp in (xpm, xph, xh):
+                st = m._stdin_for(xp, text)
+                try:
+                    if os.path.basename(xp) in listed:
+                        stdin_ok &= st.buffer.read() == text.encode("utf-8")
+                    else:
+                        stdin_ok &= isinstance(st, io.StringIO) and st.read() == text
+                except AttributeError:          # a StringIO handed to a listed hook: the 15 Sep failure
+                    stdin_ok = False
     finally:
         shutil.rmtree(cd, ignore_errors=True)
     r["C2"] = (got == want and stdin_ok, "C2 on files that exist, own process (None) or in-process: %s; the hot hook's stdin "
@@ -199,7 +212,7 @@ def identity_controls(m):
     ran_ = []
 
     def fake_entries(event, tool_name, settings_path=None, *a, **k):
-        return [("python", ["-S", "-B", pm]), ("python", ["-S", ph]), ("python", [r"C:\x\other_hook.py"])]
+        return [("python", ["-S", "-B", pm]), ("python", ["-S", ph]), ("python", [NATIVE_OTHER])]
 
     def fake_sub(cmd, args, payload, budget=None):
         ran_.append(os.path.basename(args[-1]))

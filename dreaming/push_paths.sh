@@ -106,7 +106,16 @@ for p in sys.argv[3:]:
     if [ -n "$REMOVED" ]; then echo "REFUSED: ${REMOVED#* } would lose ${REMOVED%% *} line(s) that origin/main has (set ALLOW_REMOVALS=1 if intended)"; exit 3; fi
   fi
   C=$(git commit-tree "$T" -p "$P" -m "$MSG") || exit 3
-  SCAN=$(python "$HOME/.claude/dreaming/scan_secrets.py" --range "$P..$C" 2>&1); SRC=$?
+  # A scan that dies on a git TimeoutExpired (cold pack opens under disk contention) is retried twice, 30 s apart; any
+  # other result, clean or a finding, is taken at once. Without the retry a push of memories was refused twice in one
+  # night on that timeout alone.
+  for scan_try in 1 2 3; do
+    SCAN=$(python "$HOME/.claude/dreaming/scan_secrets.py" --range "$P..$C" 2>&1); SRC=$?
+    if [ $SRC -ne 0 ] && echo "$SCAN" | grep -q "TimeoutExpired" && [ $scan_try -lt 3 ]; then
+      echo "secret scan timed out (try $scan_try), retrying in 30 s"; sleep 30; continue
+    fi
+    break
+  done
   echo "$SCAN" | tail -2
   if [ $SRC -ne 0 ] || ! echo "$SCAN" | grep -qx "secret scan clean"; then echo "REFUSED: scan not clean (rc $SRC)"; exit 2; fi
   SIG0="$SIG"; C0="$C"; PB="$P"

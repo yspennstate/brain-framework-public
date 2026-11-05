@@ -160,6 +160,24 @@ def spelling_fold(raw):
     return add
 
 
+# NUMBERS WITH UNITS (5 Nov 2026, from the laptop line). "why did a NEXT file grow to 36 MB" found nothing: the
+# normaliser drops "36" and "mb" when they stand apart, while the memory (and ~1,150 others) index the joined form
+# ("36mb", "8gb", "14_8gb", "50ms"). Rejoin a number and a size or time unit written apart ("36 MB", "1.5 GB",
+# "450 ms", "36-MB") into the indexed form; an unknown joined token scores nothing. BRAIN_RECALL_SYN_UNIT=0 leaves it out.
+_UNIT_ON = os.environ.get("BRAIN_RECALL_SYN_UNIT", "1") != "0"
+_UNIT = re.compile(r"(?<![\w.])(\d+(?:[.,]\d+)?)(?:\s+|\s*-\s*)(kb|mb|gb|tb|ms)\b", re.I)
+
+# The same loss for percents, minutes, basis points and hours: "a 40% drop" reaches the scorer as "drop" (the number and
+# the sign both gone), "12 pct" as "pct", while ~5,000 memories index "40pct", ~100 "29min", ~240 "25bp", ~400 "30h".
+# Rejoin them into the indexed spelling. A bare "h" is left out (a variable or a typo as often as an hour).
+# BRAIN_RECALL_SYN_UNIT2=0 leaves this row out.
+_UNIT2_ON = os.environ.get("BRAIN_RECALL_SYN_UNIT2", "1") != "0"
+_UNIT2_MAP = {"%": "pct", "pct": "pct", "percent": "pct", "min": "min", "mins": "min", "minutes": "min", "minute": "min",
+              "bp": "bp", "bps": "bp", "hours": "h", "hour": "h", "hrs": "h", "hr": "h"}
+_UNIT2 = re.compile(r"(?<![\w.])(\d+(?:[.,]\d+)?)(?:\s*(%)|(?:\s+|\s*-\s*)(pct|percent|minutes|minute|mins|min|bps|bp"
+                    r"|hours|hour|hrs|hr)\b)", re.I)
+
+
 def expand(query, raw=None):
     """Match the phrases on `raw` (the question as asked) and append to `query` (what BM25 scores). They differ in
     brain.py: the spell normaliser drops short words, so 'too old' reaches the scorer as 'old' and would never match."""
@@ -167,4 +185,15 @@ def expand(query, raw=None):
     if os.environ.get("BRAIN_RECALL_SYN", "1") == "0" or not query or not raw:
         return query
     add = [w for rx, w in _RX if rx.search(raw) and not _HAS[w].search(raw)]
+    add = list(dict.fromkeys(add))  # two rows can add the same word; once is enough
+    if _UNIT_ON:
+        for n, u in _UNIT.findall(raw):
+            j = n.replace(".", "_").replace(",", "_") + u.lower()
+            if j not in add and j not in query.split():
+                add.append(j)
+    if _UNIT2_ON:
+        for n, a, b in _UNIT2.findall(raw):
+            j = n.replace(".", "_").replace(",", "_") + _UNIT2_MAP[(a or b).lower()]
+            if j not in add and j not in query.split():
+                add.append(j)
     return query + " " + " ".join(add) if add else query

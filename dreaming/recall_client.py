@@ -27,7 +27,10 @@ def try_server(argv):
         if endpoint['stamp'] != stamp or endpoint['environment'] != environment:
             return None
         signature=endpoint['code']
-        timeout = min(60.0,max(.01,float(os.environ.get('MATH_RECALL_SERVER_TIMEOUT','30.0'))))
+        # 5 Nov 2026: 30 s / cap 60 sent 23 of 513 calls that day to a COLD run (store + model load in the caller, up to
+        # 623 s under load) while the sequential server still finished the abandoned call, and every client queued
+        # behind it timed out too. Waiting for the warm answer is cheaper than loading a second copy.
+        timeout = min(600.0,max(.01,float(os.environ.get('MATH_RECALL_SERVER_TIMEOUT','180.0'))))
         deadline = time.monotonic()+timeout
         with socket.create_connection(('127.0.0.1',int(endpoint['port'])),timeout=min(.1,timeout)) as sock:
             sock.settimeout(timeout)

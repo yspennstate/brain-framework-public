@@ -4008,8 +4008,99 @@ def _tuple_exact_first(query, hits):
 _RELAY_OR_PICTURE_HEAD = _lazy_re(
     r"^\s*(?:﻿)?(?:<agent-message\b|Another Claude session sent a message\b|<cross-session-message\b"
     r"|<task-notification\b|<agent-notification\b|<hook_prompt\b|<system-reminder\b|<local-command-stdout\b"
-    r"|<recommended_plugins\b|You are (?:a|the) picture maker\b|You are checking (?:the )?pictures drawn for\b)", re.I)
+    r"|<recommended_plugins\b|You are (?:a|the) picture maker\b|You are checking (?:the )?pictures drawn for\b"
+    r"|Next stage \(\d{4}-\d\d-\d\d \d\d:\d\d(?::\d\d)? UTC\)\. Read\b)", re.I)
+# 2026-11-05 (claude-1e0a23c2): the dated stage prompt of a board-driven worker loop too ('Next stage (2026-11-05 07:09
+# UTC). Read ...BOARD.md'). It is fixed procedure and its maths lives in the board files the worker reads; in 24 h it
+# drew 30 hard_deadline and 11 integrity_budget silences against 9 serves, all 9 the same off-topic draft. Anchored on
+# the dated stamp, so a question that merely begins 'Next stage' still reaches the gate.
 RELAY_SKIP = os.environ.get("MATHBRAIN_RELAY_SKIP", "1").strip() not in ("0", "off", "false")
+
+# A REPEATED PROMPT WITH A KNOWN ANSWER (5 Nov 2026, claude-1e0a23c2, MATHBRAIN_REPEAT_SKIP, default on). Loop sessions
+# send the same tick prompt every 5-10 minutes. Measured 5 Nov on a day of mathbrain_silence.tsv: 682 of 1,259 silences
+# were a prompt identical (same session, same fingerprint) to one that had already ended in a post-ranking silence -
+# 264 incoherent_weak_block, 418 all_dedup_suppressed - each after a full store load and ranking. Inside one context
+# (no compaction since) the same prompt meets the same store and the same shown-ids shard, so the verdict is already
+# known. The memo is per session, scoped to the newest compaction and to 2 h; a compaction, a new prompt, an unreadable
+# index or a harness session all fall through to the full run.
+REPEAT_SKIP = os.environ.get("MATHBRAIN_REPEAT_SKIP", "1").strip() not in ("0", "off", "false")
+REPEAT_SKIP_TTL_S = 7200.0
+_REPEAT_REASONS = ("incoherent_weak_block", "all_dedup_suppressed")
+
+
+def _repeat_fp(data):
+    p = str((data or {}).get("prompt") or "")
+    return hashlib.sha1(p.encode("utf-8", "replace")).hexdigest()[:16] if p else ""
+
+
+def _repeat_ctx(sid):
+    try:
+        import once_per_context as _opc
+        return float(_opc.last_compaction_at(sid) or 0.0)
+    except Exception:
+        return None
+
+
+def _repeat_path(sid):
+    return os.path.join(SESSION_DIR, "repeat_%s.json" % re.sub(r"[^0-9A-Za-z_-]", "", sid)[:64])
+
+
+def _repeat_known_silence(data):
+    """The reason this exact prompt already went silent in this session and context, or None."""
+    try:
+        sid = str((data or {}).get("session_id") or "")
+        if SHADOW or not re.match(r"^[0-9a-f]{8}-", sid):
+            return None
+        fp = _repeat_fp(data)
+        if not fp:
+            return None
+        with io.open(_repeat_path(sid), encoding="utf-8") as f:
+            e = (json.load(f) or {}).get(fp)
+        if not isinstance(e, dict) or time.time() - float(e.get("ts", 0) or 0) >= REPEAT_SKIP_TTL_S:
+            return None
+        ctx = _repeat_ctx(sid)
+        if ctx is None or ctx != float(e.get("ctx", -1.0)):
+            return None
+        return str(e.get("reason") or "")[:40] or None
+    except Exception:
+        return None
+
+
+def _repeat_record(data, reason):
+    try:
+        sid = str((data or {}).get("session_id") or "")
+        if SHADOW or not re.match(r"^[0-9a-f]{8}-", sid):
+            return
+        fp = _repeat_fp(data)
+        ctx = _repeat_ctx(sid)
+        if not fp or ctx is None:
+            return
+        path = _repeat_path(sid)
+        now = time.time()
+        try:
+            with io.open(path, encoding="utf-8") as f:
+                rec = json.load(f)
+            if not isinstance(rec, dict):
+                rec = {}
+        except Exception:
+            rec = {}
+        rec = {k: v for k, v in rec.items() if isinstance(v, dict) and now - float(v.get("ts", 0) or 0) < REPEAT_SKIP_TTL_S}
+        rec[fp] = {"reason": reason.split(":")[0], "ts": now, "ctx": ctx}
+        if len(rec) > 50:
+            rec = dict(sorted(rec.items(), key=lambda kv: -float(kv[1].get("ts", 0)))[:50])
+        os.makedirs(SESSION_DIR, exist_ok=True)
+        tmp = "%s.tmp.%d.%d" % (path, os.getpid(), int(now * 1000) % 1000000)
+        with io.open(tmp, "w", encoding="utf-8") as f:
+            json.dump(rec, f)
+        try:
+            os.replace(tmp, path)
+        except OSError:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+    except Exception:
+        pass
 
 # SESSION CONTEXT FOR CONTINUATIONS (MATHBRAIN_SESSION_CONTEXT, default 0 = OFF; 2026-09-23, round 6).
 # T6 judged what this hook serves on 60 of his own math-thread prompts: every math question it missed while the store
@@ -4987,6 +5078,11 @@ def _main_body(data, out):
     if RELAY_SKIP and _RELAY_OR_PICTURE_HEAD.match(prompt):
         _silence_note(data, "skip_relay_or_picture_batch")
         return
+    if REPEAT_SKIP:
+        _rk = _repeat_known_silence(data)
+        if _rk:
+            _silence_note(data, "skip_repeat_known:" + _rk)
+            return
     _use_begin(str(data.get("session_id") or data.get("thread_id") or ""))
     prompt = _his_spelling(prompt)
     prompt = _typo_fix(prompt)
@@ -6008,6 +6104,8 @@ def _silence_note(data, reason, harness_only=False):
             _fp = ""
         with io.open(os.path.join(HOME, ".claude", "dreaming", name), "a", encoding="utf-8") as h:
             h.write("%.0f\t%s\t%s\t%s\n" % (time.time(), sess[:12], reason, _fp))
+        if real and REPEAT_SKIP and str(reason).split(":")[0] in _REPEAT_REASONS:
+            _repeat_record(data, str(reason))
     except Exception:
         pass
 

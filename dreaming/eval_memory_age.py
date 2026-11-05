@@ -35,6 +35,7 @@ files, sidecars, mtimes, or module sources are written.
 from __future__ import print_function
 
 import argparse
+import gzip
 import hashlib
 import inspect
 import io
@@ -70,6 +71,7 @@ FRONTMATTER = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)", re.
 TRANSIENT = re.compile(r"^(transient_|codex_round\d|.*round\d+.*cycle\d+.*agent|.*_loop\d+)", re.I)
 DREAM_SKIP = {"MEMORY.md", "INDEX_ARCHIVE.md"}
 SCAN_CACHE = HOME / ".claude" / "dreaming" / "memory_age_scan_cache.json"
+CORPUS_CACHE = HOME / ".claude" / "dreaming" / "memory_age_corpus_cache.json.gz"
 _NEEDLE = b'"type":"create"'
 _CHUNK = 16 << 20
 _HEAD = 4096
@@ -144,25 +146,118 @@ def permissive_birth(row, tz):
     return Birth(datetime.fromtimestamp(epoch, tz).date(), source, float(epoch))
 
 
-def load_corpus(mem_dir):
-    rows = []
-    for path in sorted(mem_dir.glob("*.md"), key=lambda p: p.name.lower()):
+_BODY_HEAD = 1600  # the only part of a body any resolver reads (strict_birth, raw_evidence)
+
+
+def _corpus_key():
+    h = hashlib.sha256()
+    h.update(inspect.getsource(_corpus_fields).encode("utf-8"))
+    h.update(repr((FRONTMATTER.pattern, FRONTMATTER.flags, TRANSIENT.pattern, TRANSIENT.flags,
+                   _BODY_HEAD)).encode("utf-8"))
+    return h.hexdigest()[:16]
+
+
+def _corpus_fields(name, body):
+    """What the resolvers need from one memory: [head, frontmatter, transient]. The frontmatter is kept as
+    offsets into the head when it lies inside it, else as text."""
+    match = FRONTMATTER.search(body or "")
+    fm = match.group(1) if match else ""
+    head = body[:_BODY_HEAD]
+    fm_ref = [match.start(1), match.end(1)] if match and match.end(1) <= _BODY_HEAD else fm
+    transient = bool(TRANSIENT.search(name) or "type: transient" in body[:400].lower())
+    return [head, fm_ref, transient]
+
+
+def load_corpus(mem_dir, cache=_DEFAULT_CACHE):
+    """One row per memory file. Size and mtime come from the directory listing (os.scandir opens no file);
+    with the default memory folder a file is read only when its size or mtime moved since the last run
+    (CORPUS_CACHE). Measured 1 Nov 2026: a cold open costs 0.4-1.4 s on this box under load, and reading
+    all 41k files is what made this step take 28-50 minutes in the dream."""
+    if cache is _DEFAULT_CACHE:
+        cache = CORPUS_CACHE if _norm(mem_dir) == _norm(DEFAULT_MEM) else None
+    key = None
+    old = {}
+    if cache is not None:
         try:
-            body = path.read_text(encoding="utf-8", errors="replace")
-            mtime = path.stat().st_mtime
+            key = _corpus_key()
+        except (OSError, TypeError):
+            key = None
+        if key:
+            blob = _load_gz_json(cache)
+            files = blob.get("files") if blob.get("key") == key else None
+            old = files if isinstance(files, dict) else {}
+    entries = []
+    try:
+        with os.scandir(str(mem_dir)) as it:
+            for entry in it:
+                if entry.name.lower().endswith(".md"):
+                    entries.append(entry)
+    except OSError:
+        return []
+    entries.sort(key=lambda e: e.name.lower())
+    rows = []
+    fresh = {}
+    for entry in entries:
+        path = mem_dir / entry.name
+        try:
+            if not entry.is_file():
+                continue
+            st = entry.stat()
         except OSError:
             continue
+        e = old.get(entry.name)
+        if (isinstance(e, list) and len(e) == 5 and e[0] == st.st_size and e[1] == st.st_mtime_ns):
+            head, fm_ref, transient = e[2], e[3], e[4]
+            mtime = st.st_mtime
+        else:
+            try:
+                body = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            head, fm_ref, transient = _corpus_fields(entry.name, body)
+            mtime = st.st_mtime
+        fresh[entry.name] = [st.st_size, st.st_mtime_ns, head, fm_ref, transient]
+        fm = head[fm_ref[0]:fm_ref[1]] if isinstance(fm_ref, list) else fm_ref
         rows.append({
             "path": path,
-            "name": path.name,
+            "name": entry.name,
             "stem": path.stem,
-            "body": body,
-            "frontmatter": _frontmatter(body),
+            "body": head,
+            "frontmatter": fm,
             "mtime": mtime,
-            "transient": bool(TRANSIENT.search(path.name) or
-                              "type: transient" in body[:400].lower()),
+            "transient": transient,
         })
+    if cache is not None and key and fresh != old:
+        _save_gz_json(cache, {"key": key, "files": fresh})
     return rows
+
+
+def _norm(p):
+    return os.path.normcase(os.path.abspath(str(Path(p).expanduser().resolve())))
+
+
+def _load_gz_json(path):
+    try:
+        with gzip.open(str(path), "rt", encoding="utf-8") as fh:
+            blob = json.load(fh)
+        return blob if isinstance(blob, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_gz_json(path, blob):
+    """Atomic; a cache that cannot be written only costs the next run a longer read."""
+    tmp = "%s.tmp.%d" % (path, os.getpid())
+    try:
+        with gzip.open(tmp, "wt", encoding="utf-8", compresslevel=3) as fh:
+            json.dump(blob, fh, separators=(",", ":"))
+        os.replace(tmp, str(path))
+    except Exception:
+        try:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+        except OSError:
+            pass
 
 
 def transcript_paths(project_dir, archive_dir):

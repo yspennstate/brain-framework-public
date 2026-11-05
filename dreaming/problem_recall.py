@@ -32,6 +32,7 @@ import argparse
 import collections
 import datetime as _dt
 import gzip
+import heapq
 import json
 import math
 import os
@@ -118,12 +119,21 @@ GREEK = {"α": "alpha", "β": "beta", "γ": "gamma", "δ": "delta", "ε": "epsil
          "τ": "tau", "υ": "upsilon", "φ": "phi", "χ": "chi", "ψ": "psi", "ω": "omega", "ϕ": "phi", "ϵ": "epsilon"}
 
 
+_GREEK_TABLE = None
+
+
 def _ascii(s):
     """Greek letters to their names (the ledgers write 'kappa', a restatement may write the letter), accents and
-    super/subscripts folded, so both spellings meet."""
+    super/subscripts folded, so both spellings meet. Plain ASCII passes through; otherwise one str.translate over every
+    code point whose lower() is a GREEK key (30 Oct: the per-character loop was 45 s of each rebuild; same output on
+    all 85,815 claim cards)."""
+    global _GREEK_TABLE
+    if s.isascii():
+        return s
     import unicodedata
-    s = "".join((" %s " % GREEK[c.lower()]) if c.lower() in GREEK else c for c in s)
-    return unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+    if _GREEK_TABLE is None:
+        _GREEK_TABLE = {cp: " %s " % GREEK[chr(cp).lower()] for cp in range(0x110000) if chr(cp).lower() in GREEK}
+    return unicodedata.normalize("NFKD", s.translate(_GREEK_TABLE)).encode("ascii", "ignore").decode("ascii")
 
 
 def words(s):
@@ -401,7 +411,9 @@ def store_text_matches(probs, op200, store, limit=5):
         q = words("%s %s %s" % (r.get("title", ""), r.get("title", ""), short(r.get("statement", ""), 600)))
         if not q:
             continue
-        sc = sorted(bm.scores(q).items(), key=lambda x: -x[1])[:limit]
+        # nlargest == sorted(..., reverse)[:limit], ties kept in insertion order (30 Oct: 112 -> 86 ms CPU a query;
+        # 20,000 synthetic dicts, 5,778 with ties, all equal)
+        sc = heapq.nlargest(limit, bm.scores(q).items(), key=lambda x: x[1])
         if not sc:
             continue
         top = sc[0][1]
@@ -437,12 +449,43 @@ def build_index():
     return idx
 
 
+REBUILD_LOCK = os.path.join(CACHE_DIR, "rebuild.lock")
+REBUILD_LOCK_SECONDS = 2 * 3600    # one background rebuild at a time; a lock older than this is treated as dead
+
+
+def start_background_rebuild():
+    """Rebuild the index in a detached, windowless, normal-priority process; at most one at a time."""
+    try:
+        if os.path.exists(REBUILD_LOCK) and time.time() - os.path.getmtime(REBUILD_LOCK) < REBUILD_LOCK_SECONDS:
+            return False
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        with open(REBUILD_LOCK, "w") as fh:
+            fh.write("%d %s\n" % (os.getpid(), _dt.datetime.now().isoformat(timespec="seconds")))
+        # NORMAL, named: with no class flag Windows gives the child its parent's class, and agent shells run
+        # BelowNormal. A BelowNormal rebuild sat 30 min on 2 cpu-s in the store read on 30 Oct (busy box).
+        flags = 0x08000000 | 0x00000200 | 0x00000020  # CREATE_NO_WINDOW | NEW_PROCESS_GROUP | NORMAL_PRIORITY_CLASS
+        subprocess.Popen([sys.executable, "-s", os.path.abspath(__file__), "--rebuild-only"],
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         close_fds=True, creationflags=flags if os.name == "nt" else 0,
+                         start_new_session=os.name != "nt")  # off Windows: its own session, so a closing shell's hangup misses it
+        return True
+    except Exception:
+        return False
+
+
 def load_index(refresh=False):
-    if not refresh and os.path.exists(CACHE) and time.time() - os.path.getmtime(CACHE) < STALE_SECONDS:
+    # A stale cache is served at once and rebuilt in the background (30 Oct: under load a rebuild ran past 600 s, so
+    # every call after the 6 h mark rebuilt in the foreground, timed out, and the cache was never refreshed).
+    # The header line prints when the index was built; --refresh still rebuilds in the foreground.
+    if not refresh and os.path.exists(CACHE):
         try:
+            age = time.time() - os.path.getmtime(CACHE)
             with gzip.open(CACHE, "rt", encoding="utf-8") as fh:
                 idx = json.load(fh)
             if idx.get("version") == INDEX_VERSION:
+                if age >= STALE_SECONDS and start_background_rebuild():
+                    print("problem_recall: index is %.1f h old; rebuilding in the background" % (age / 3600),
+                          file=sys.stderr)
                 return idx
         except Exception:
             pass
@@ -912,7 +955,23 @@ def main(argv=None):
     ap.add_argument("--statement", action="store_true", help="also print the ledger statement")
     ap.add_argument("--refresh", action="store_true", help="rebuild the index first")
     ap.add_argument("--json", action="store_true", help="print the matched ids and scores as JSON (for measurement)")
+    ap.add_argument("--rebuild-only", action="store_true", help=argparse.SUPPRESS)
     args = ap.parse_args(argv)
+    if args.rebuild_only:
+        try:
+            try:  # normal I/O and memory priority too (a task parent can hand down I/O 1 / memory 2)
+                sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+                import bm25
+                bm25._raise_io_mem_priority()
+            except Exception:
+                pass
+            build_index()
+        finally:
+            try:
+                os.remove(REBUILD_LOCK)
+            except OSError:
+                pass
+        return 0
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:

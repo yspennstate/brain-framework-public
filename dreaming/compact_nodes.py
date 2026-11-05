@@ -49,6 +49,11 @@ import re
 import subprocess
 import sys
 import time
+try:
+    from shared_read import open_shared as _open_shared_ro
+except Exception:
+    def _open_shared_ro(path, binary=False):
+        return io.open(path, "rb") if binary else io.open(path, encoding="utf-8")
 
 HOME = os.environ.get("COMPACT_HOME") or os.path.expanduser("~")
 ROOT = os.environ.get("COMPACT_NODES_ROOT") or os.path.join(HOME, ".claude", "brain_graph", "compactions")
@@ -157,7 +162,7 @@ def _open_tasks(session_id, runtime="claude", extra_agent=None):
     if extra_agent:
         agents.add(extra_agent)
     try:
-        with io.open(CHECKLIST, encoding="utf-8") as fh:
+        with _open_shared_ro(CHECKLIST) as fh:
             st = json.load(fh)
     except (OSError, ValueError):
         return []
@@ -1106,6 +1111,72 @@ def ensure_anchors():
         _append(INDEX + ".anchors", {"at": _now().isoformat(timespec="seconds"), "name": name, "anchor_written": True})
         n += 1
     return n
+
+
+def ensure_orphan_nodes(days=2, min_age_s=300, dry=False):
+    """Give an INDEX row and an anchor to a node file that has neither. save_node writes the node, then the anchor, then
+    the row; a PostCompact hook cut off between them (a second compaction of the same session 54-97 s later, 3 of 1,137
+    on 2-3 Nov) leaves a node that ensure_anchors cannot see, because it walks INDEX rows only.
+    Walks the last `days` date folders, skips files younger than `min_age_s` (a live writer may be between its steps),
+    rebuilds anchor and row from the node's own frontmatter. Never deletes; returns the names repaired."""
+    known = {r.get("name") for r in _index_rows()}
+    out, now = [], time.time()
+    for k in range(days):
+        day = os.path.join(ROOT, (_now() - _dt.timedelta(days=k)).strftime("%Y-%m-%d"))
+        try:
+            files = os.listdir(day)
+        except OSError:
+            continue
+        for fn in files:
+            if not (fn.startswith("compaction_") and fn.endswith(".md")) or fn[:-3] in known:
+                continue
+            node = os.path.join(day, fn)
+            try:
+                if now - os.path.getmtime(node) < min_age_s:
+                    continue
+                text = io.open(node, encoding="utf-8", errors="replace").read()
+            except OSError:
+                continue
+            if not text.startswith("---"):
+                continue
+            head, _, body = text[3:].partition("\n---\n")
+            fm = {}
+            for ln in head.splitlines():
+                if ":" in ln:
+                    a, b = ln.split(":", 1)
+                    fm[a.strip()] = b.strip()
+            name = fm.get("name") or fn[:-3]
+            if name in known or not fm.get("created_at"):
+                continue
+            summary, _, conn = body.partition("\n\nConnected:\n")
+            links = [x[2:] for x in conn.splitlines() if x.startswith("- ")]
+            tasks = [t.strip() for t in fm.get("tasks", "").split(",") if t.strip()]
+            boundary = fm.get("node_type") == "compaction_boundary_metadata"
+            agent = {a: fm[a] for a in AGENT_KEYS if fm.get(a)} or None
+            try:
+                when = _dt.datetime.fromisoformat(fm["created_at"])
+            except ValueError:
+                continue
+            out.append(name)
+            if dry:
+                continue
+            anchor = os.path.join(MEM, name + ".md")
+            if not os.path.exists(anchor):
+                anchor = write_anchor(name, summary.strip(), when, fm.get("runtime", "claude"), fm.get("session_id", ""),
+                                      node, links, tasks, metadata_only=boundary, agent=agent)
+            row = {"at": when.isoformat(timespec="seconds"), "name": name, "runtime": fm.get("runtime", "claude"),
+                   "session_id": fm.get("session_id", ""), "trigger": fm.get("trigger", ""),
+                   "chars": int(fm.get("chars") or len(summary)), "sha256": fm.get("sha256"),
+                   "node": node.replace(os.sep, "/"), "tasks": tasks, "previous": fm.get("previous") or None,
+                   "related": [s.strip() for s in fm.get("related", "").split(",") if s.strip()],
+                   "anchor": str(anchor).replace(os.sep, "/"), "backfilled": "ensure_orphan_nodes"}
+            if agent:
+                row.update(agent)
+            if boundary:
+                row["anchor_privacy"] = "metadata_only_codex_boundary"
+            _append(INDEX, row)
+            known.add(name)
+    return out
 
 
 def _load_state():
@@ -2187,6 +2258,10 @@ def main():
                          **({"agent_id": agent["agent_id"]} if agent else {})))
     if path:
         print("compaction summary saved as its own brain node: %s" % path.replace(os.sep, "/"))
+    try:   # an earlier PostCompact cut off between node and row is repaired by the next one (3 Nov)
+        ensure_orphan_nodes()
+    except Exception:  # noqa: BLE001 - repair must never fail the hook
+        pass
     tp = data.get("transcript_path", "")
     if path and not agent and sid and tp and os.path.isdir(os.path.join(os.path.dirname(tp), sid, "subagents")):
         _spawn_late_attribution()

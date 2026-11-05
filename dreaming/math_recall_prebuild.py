@@ -41,7 +41,12 @@ def below_normal():
     got = {}
     try:
         import psutil
-        psutil.Process().nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+        # Normal by default since 29 Oct: at below-normal on a busy machine the build took 7,397 s (02:25-04:28) while
+        # a recall call at normal priority built the same state in about 3.5 min (04:28:45-04:32), and the prebuild's
+        # state, read two hours earlier, was already outside the callers' 2,700 s window, so it was never used. At most
+        # six builds an hour still bound its share. MATH_RECALL_PREBUILD_PRIORITY=below_normal restores the old class.
+        low = os.environ.get("MATH_RECALL_PREBUILD_PRIORITY", "").strip().lower() in ("below_normal", "low")
+        psutil.Process().nice(psutil.BELOW_NORMAL_PRIORITY_CLASS if low else psutil.NORMAL_PRIORITY_CLASS)
         got["priority"] = hex(int(psutil.Process().nice()))
     except Exception as exc:
         got["priority"] = "error %s" % type(exc).__name__
@@ -132,6 +137,82 @@ def hold_run_lock(folder):
     return True
 
 
+WRITE_AGE_S = float(os.environ.get("MATH_RECALL_PREBUILD_WRITE_AGE_S", "900") or 900)
+SIDECAR_WAL_MAX = float(os.environ.get("MATH_RECALL_SIDECAR_WAL_MB", "64") or 64) * 1024 * 1024
+
+
+def trim_sidecar_wal(store, limit=None, timeout=120):
+    """Fold the signal sidecar's write-ahead log into its database and cut the log to zero bytes when it is past
+    `limit` (SQLite's TRUNCATE checkpoint; no row changes). Returns a log fragment, or "" when there was nothing to do.
+
+    Why: on 31 Oct the sidecar's log stood at 809 MB from one full rewrite and nothing ever shrank it. On Windows,
+    when no process holds the database open, the next opener truncates the -shm index and rebuilds it by reading every
+    log frame, 4 KB at a time - 809 MB at 0.25-0.5 MB/s on this disk. fastrecall_delta.extend's first signal query
+    paid that: one-card extends of 1,773, 2,543 and 3,664 s, while a four-card extend with the sidecar already held
+    open took 1.7 s. Readers waiting behind the rebuild got "database is locked"."""
+    limit = SIDECAR_WAL_MAX if limit is None else limit
+    db = str(store) + ".signals.sqlite"
+    wal = db + "-wal"
+    try:
+        size = os.path.getsize(wal)
+    except OSError:
+        return ""
+    if size <= limit:
+        return ""
+    import sqlite3
+    t0 = time.time()
+    try:
+        con = sqlite3.connect(db, timeout=timeout)
+        try:
+            busy, frames, done = con.execute("pragma wal_checkpoint(TRUNCATE)").fetchone()
+        finally:
+            con.close()
+    except Exception as exc:
+        return "sidecar log %d MB, trim failed %s: %s" % (size >> 20, type(exc).__name__, str(exc)[:120])
+    after = os.path.getsize(wal) if os.path.exists(wal) else 0
+    return "sidecar log %d MB -> %d MB in %.1f s (busy %s, frames %s/%s)" % (size >> 20, after >> 20,
+                                                                         time.time() - t0, busy, done, frames)
+
+
+def name_now(fr, R, mr, store):
+    """The prepared state's name as the code on disk computes it NOW (fastrecall's formula). A run that loaded old code
+    keeps its old name in memory; on 31 Oct a prebuild started 05:23 wrote recall_6d83d047 back at 06:53, after a landing
+    at 06:51 had renamed the live state to 6a6cc269 - a dead 462 MB pair that _prune (newest first, 800 MB) would have
+    kept over the live one."""
+    return hashlib.sha256(("%d|%s|%s|%s|%s" % (fr.FORMAT, sys.version, fr._code_key(R, mr.__file__, mr.derive_tool),
+                                               fr._env_key(), os.path.normcase(os.path.abspath(store)))
+                           ).encode("utf-8")).hexdigest()[:24]
+
+
+def write_back(fr, P, st, t_read, current=None):
+    """Write an extended state over the one on disk, so callers load it inside their window instead of extending from
+    an ever older base (29 Oct: the 10:53 build was past the 2,700 s window an hour later, every call extended from it,
+    one extend took 59 s, and six hours on the base fell off DELTA_MAX_AGE_S into a full build of 900-1,600 s). Tested
+    on a copy first: the written and reloaded state answered 40 of 40 searches with the same cards, order and scores,
+    with the same links, corpus, ids and tool maps, and the next open loaded it with no build. Only a state more than
+    WRITE_AGE_S old is rewritten: the write is 460 MB (about 20 s on this disk)."""
+    try:
+        age = time.time() - float(P.s.get("read_at") or 0)
+        # extended_links: a run that added only links between known cards (fastrecall_delta._read_links, 4 Nov)
+        if not (st.get("extended") or st.get("extended_links")) or age < WRITE_AGE_S or not st.get("path"):
+            return " (not written, base %d s old)" % age
+        if current is not None:
+            now = current()
+            if not os.path.basename(st["path"]).startswith("recall_%s." % now):
+                return " (not written: the code changed during the run, the state is now recall_%s)" % now
+        t0 = time.time()
+        heavy = dict(P.heavy())
+        heavy.pop("_delta", None)
+        P.s["key"] = heavy["key"] = P.key
+        P.s["read_at"] = t_read
+        path = st["path"]
+        fr._write(path[:-2] + ".heavy.m", heavy)
+        fr._write(path, P.s)
+        return " (written in %.1f s, base was %d s old)" % (time.time() - t0, age)
+    except Exception as exc:
+        return " (write failed %s: %s)" % (type(exc).__name__, str(exc)[:120])
+
+
 def main(argv):
     if "--status" in argv:
         mr_folder = os.environ.get("MATH_RECALL_CACHE_DIR") or os.path.join(HERE, "cache", "math_recall")
@@ -163,8 +244,11 @@ def main(argv):
     state = read_state(state_path)
     import math_brain.retrieval as R
     store = mr.STORE_PATH
-    sig = hashlib.sha256(("%s|%s|%s|%s|%s" % (
-        sys.version, fr._code_key(R, mr.__file__), fr._env_key(),
+    trimmed = trim_sidecar_wal(store)
+    if trimmed:
+        log(folder, "%s %s" % (stamp(), trimmed))
+    sig =hashlib.sha256(("%s|%s|%s|%s|%s" % (
+        sys.version, fr._code_key(R, mr.__file__, mr.derive_tool), fr._env_key(),
         os.path.normcase(os.path.abspath(store)), fr._store_key(store))).encode("utf-8")).hexdigest()[:24]
     state["last_check"] = stamp()
     state["process"] = proc
@@ -188,9 +272,15 @@ def main(argv):
     secs = time.time() - t1
     if P is not None and st.get("fast"):
         after = hashlib.sha256(("%s|%s|%s|%s|%s" % (
-            sys.version, fr._code_key(R, mr.__file__), fr._env_key(),
+            sys.version, fr._code_key(R, mr.__file__, mr.derive_tool), fr._env_key(),
             os.path.normcase(os.path.abspath(store)), fr._store_key(store))).encode("utf-8")).hexdigest()[:24]
         result = ("built" if st.get("built") else "loaded") + (", %d s behind the store" % st["stale_s"] if st.get("stale_s") else "")
+        # lead 3: say whether the in-memory extend ran or why it was refused, so a full build is never unexplained
+        if st.get("extended") is not None:
+            result += ", extended by %s card(s) in %s s" % (st["extended"], st.get("extend_s")) + write_back(
+                fr, P, st, t1, current=lambda: name_now(fr, R, mr, store))
+        elif st.get("extend_refused"):
+            result += ", extend refused: %s" % str(st["extend_refused"])[:160]
         if after == sig:
             state["good_sig"], state["path"] = sig, st.get("path")
         else:

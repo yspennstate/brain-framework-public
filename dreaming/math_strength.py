@@ -191,6 +191,49 @@ def _episode(rec, sk, t):
     return True
 
 
+
+def _npz_member_memmap(path, name):
+    """A read-only memmap of one STORED (uncompressed) .npy member of an .npz, or None if it cannot be mapped."""
+    try:
+        import struct, zipfile
+        import numpy as np
+        with zipfile.ZipFile(path) as z:
+            info = z.getinfo(name)
+        if info.compress_type != zipfile.ZIP_STORED:
+            return None
+        with open(path, "rb") as fh:
+            fh.seek(info.header_offset)
+            hdr = fh.read(30)
+            if hdr[:4] != b"PK\x03\x04":
+                return None
+            nlen, xlen = struct.unpack("<HH", hdr[26:30])
+            fh.seek(info.header_offset + 30 + nlen + xlen)
+            ver = np.lib.format.read_magic(fh)
+            if ver == (1, 0):
+                shape, fortran, dtype = np.lib.format.read_array_header_1_0(fh)
+            elif ver == (2, 0):
+                shape, fortran, dtype = np.lib.format.read_array_header_2_0(fh)
+            else:
+                return None
+            off = fh.tell()
+        if dtype.hasobject:
+            return None
+        return np.memmap(path, dtype=dtype, mode="r", offset=off, shape=shape, order="F" if fortran else "C")
+    except Exception:
+        return None
+
+SAVE_EVERY = float(os.environ.get("MATH_STRENGTH_SAVE_EVERY") or 300)     # seconds since the saved fold
+SAVE_BYTES = int(os.environ.get("MATH_STRENGTH_SAVE_BYTES") or 65536)       # unsaved log bytes (~110 lines)
+
+
+def _save_due(built0, off0, st):
+    """Write the folded state back only when the saved copy is old or far behind. Before 31 Oct every recall rewrote the
+    whole state file (3.2 MB) because the previous recall's own log line was always new; on a busy disk that was 4.5 s
+    of a 20.6 s recall. Skipping is safe: the next reader folds the same lines again from the saved offsets."""
+    behind = (st.get("offset", 0) - off0[0]) + (st.get("fetch_offset", 0) - off0[1])
+    return behind < 0 or behind >= SAVE_BYTES or time.time() - built0 >= SAVE_EVERY
+
+
 class Strengths:
     """Read side. Load once per process: Strengths.load(linked=fn) where fn(a, b) says whether two cards share a
     typed link (needed only to judge a seen-then-used step as a followed link)."""
@@ -212,8 +255,10 @@ class Strengths:
         except Exception:
             st = None
         self = cls(st or _empty(), linked)
+        built0 = float(self.st.get("built") or 0)
+        off0 = (self.st.get("offset", 0), self.st.get("fetch_offset", 0))
         try:
-            if self._fold() and save:
+            if self._fold() and save and (st is None or _save_due(built0, off0, self.st)):
                 self._save()
         except Exception:
             pass
@@ -361,11 +406,25 @@ class Strengths:
         try:
             import numpy as np
             want = {c for k in keys for c in k.split("|")}
-            with np.load(VECS, allow_pickle=False) as f:
-                ids = [str(x) for x in f["slugs"]]
-                ix = {s: i for i, s in enumerate(ids) if s in want}
+            # RECALL-10X (30 Oct): map the stored members instead of np.load reading and CRC-checking ~150 MB per call;
+            # slugs are matched in blocks so the peak stays ~14 MB, not 136 MB, on a box at 90+ pct commit.
+            sl, ve = _npz_member_memmap(VECS, "slugs.npy"), _npz_member_memmap(VECS, "vecs.npy")
+            if sl is not None and ve is not None:
+                w = np.array(sorted(want), dtype=sl.dtype)
+                ix = {}
+                for s0 in range(0, sl.shape[0], 16384):
+                    blk = sl[s0:s0 + 16384]
+                    for j in np.flatnonzero(np.isin(blk, w)):
+                        ix[str(blk[j])] = s0 + int(j)
                 rows = sorted(set(ix.values()))
-                sub = np.asarray(f["vecs"][rows], dtype=np.float32) if rows else None
+                sub = np.asarray(ve[rows], dtype=np.float32) if rows else None
+                del sl, ve
+            else:
+                with np.load(VECS, allow_pickle=False) as f:
+                    ids = [str(x) for x in f["slugs"]]
+                    ix = {s: i for i, s in enumerate(ids) if s in want}
+                    rows = sorted(set(ix.values()))
+                    sub = np.asarray(f["vecs"][rows], dtype=np.float32) if rows else None
             pos = {r: j for j, r in enumerate(rows)}
             if sub is not None:
                 sub /= np.maximum(np.linalg.norm(sub, axis=1, keepdims=True), 1e-9)
@@ -389,8 +448,9 @@ class Strengths:
         try:
             os.close(fd)
             tmp = STATE + ".tmp%d" % os.getpid()
+            data = json.dumps(self.st, separators=(",", ":"))   # one write: json.dump streams ~10^5 small writes (0.46 -> 0.08 s, same bytes)
             with open(tmp, "w", encoding="utf-8") as fh:
-                json.dump(self.st, fh, separators=(",", ":"))
+                fh.write(data)
             try:
                 os.replace(tmp, STATE)
             except OSError:

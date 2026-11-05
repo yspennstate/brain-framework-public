@@ -62,6 +62,7 @@ def main(argv=None):
                     break
     outcomes = os.path.join(a.home, ".claude", "dreaming", "outcomes.jsonl")
     retr = os.path.join(a.home, ".claude", "dreaming", "retrievals.tsv")
+    mreads = os.path.join(a.home, ".claude", "dreaming", "memory_reads.tsv")
     ev = os.path.join(os.path.dirname(a.db), "events_full.jsonl")
 
     args = ["--out", ev]
@@ -73,6 +74,8 @@ def main(argv=None):
         args = ["--memory-dir", mem] + args
     if os.path.exists(retr):
         args = ["--retrievals", retr] + args
+    if os.path.exists(mreads):
+        args = ["--memory-reads", mreads] + args
     adapt_live.main(args)
 
     if not os.path.exists(a.db):

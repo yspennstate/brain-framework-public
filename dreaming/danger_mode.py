@@ -312,6 +312,48 @@ def _python_dash(cmd):
     return ""
 
 
+# A gate piped into tail/head/sed hands the shell the LAST stage's exit, so `scan_secrets.py | tail -1 && git push`
+# pushes when the scan fails or never ran. Four scar cards (10 Sep, 3 Oct, 1 Nov, 3 Nov) and it recurred on 5 Nov 17:05
+# with the scanner path wrong: the push went out unscanned. Refused, not warned, like the python dash.
+# A pipeline that ends in grep is a gate by design (grep's own exit is the test); `set -o pipefail` lifts the refusal.
+# claude-42778e9b, 5 Nov 2026. PIPEGATE_GUARD=0 turns it off.
+_GATE = re.compile(r"\b(?:scan_secrets|check_no_private_labels|export_public|prepush_secret_gate|check_gate"
+                   r"|brain_regression_gate|pytest)\b")
+_MUTATE = re.compile(r"\bgit\s+(?:-[cC]\s+\S+\s+)*(?:push|commit)\b|\bsafe_push\b|\bgh\s+(?:release|pr\s+merge)\b")
+_MASKERS = {"tail", "head", "sed", "cut", "cat", "tee", "awk", "sort", "uniq", "wc", "tr", "less", "column", "fold"}
+
+
+def _piped_gate(cmd):
+    """The gate segment whose exit a pipe hides from a later && commit or push, or ''."""
+    cmd = cmd or ""
+    if "pipefail" in cmd:
+        return ""
+    # quoted text is a message or a fixture, not a pipeline (3 of 61 fires on 21 days of real commands were a mesh
+    # --body or a python string quoting the shape); "$(...)" in double quotes still runs, so it is kept
+    cmd = re.sub(r"\"(?:\\.|[^\"\\])*\"|'[^']*'",
+                 lambda m: m.group(0) if m.group(0).startswith('"$(') else "''", cmd)
+    pending = ""
+    for part in re.split(r"(&&|\|\||;|\n)", cmd):
+        if part in ("&&",):
+            continue
+        if part in ("||", ";", "\n"):
+            pending = ""
+            continue
+        if pending and _MUTATE.search(part):
+            return pending.strip()[:160]
+        stages = [s.strip() for s in re.split(r"(?<![|>&])\|(?![|&])", part)]
+        if part.split()[:1] in (["["], ["[["], ["test"]):      # [ "$(scan | tail -1)" = "clean" ] is itself the gate,
+            continue                                             # and a test later in the chain keeps an earlier one
+        if len(stages) < 2 or not any(_GATE.search(s) for s in stages[:-1]):
+            continue
+        last = stages[-1].split()
+        if last and os.path.basename(last[0]) in _MASKERS:
+            pending = part
+        else:
+            pending = ""
+    return ""
+
+
 def _score(text):
     hits = {}
     live_action = False
@@ -511,6 +553,17 @@ def main():
                         "Git Bash an empty heredoc or /dev/null reads as a console, Python opens its REPL and loops on "
                         "WinError 123, hanging the whole command (six times on 19-20 Oct). Write the script with the Write "
                         "tool and run it by file name, or use python -c for one line." % _seg)}}))
+                return
+        # REFUSED, not warned: a gate whose exit a pipe hides from a later commit or push (see _piped_gate).
+        if ev == "PreToolUse" and data.get("tool_name") == "Bash" and os.environ.get("PIPEGATE_GUARD", "1") != "0":
+            _seg = _piped_gate((data.get("tool_input", {}) or {}).get("command", "") or "")
+            if _seg:
+                sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": ("REFUSED (piped gate): in '%s' the shell reads the last stage's exit, "
+                        "not the gate's, so the commit or push after && runs even when the gate fails or never ran. "
+                        "Let the gate's own exit decide: drop the pipe, end the pipeline in grep -q on the pass line, "
+                        "or start the command with set -o pipefail." % _seg)}}))
                 return
         # On an EDIT/WRITE, the danger is not the text mentioning money/secrets/production - it's writing
         # a real credential VALUE (the token-leak shape). Score edits on that alone, so the gut stops

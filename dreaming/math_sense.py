@@ -28,6 +28,38 @@ import json
 import os
 import random
 import re
+
+
+class _LazyRe:
+    """A module-level pattern compiled on first use (5 Nov 2026): the module ran ~60 top-level re.compile calls on every
+    prompt (the dispatcher runs it fresh each time, ~10 ms) while the gate turns most prompts away using a few of them.
+    Same arguments to re.compile, so the same pattern object behaviour; every attribute is the compiled pattern's."""
+    __slots__ = ("_args", "_kw", "_rx")
+
+    def __init__(self, *args, **kw):
+        self._args, self._kw, self._rx = args, kw, None
+
+    def _get(self):
+        rx = self._rx
+        if rx is None:
+            rx = self._rx = re.compile(*self._args, **self._kw)
+        return rx
+
+    @property
+    def pattern(self):
+        a = self._args[0] if self._args else None
+        return a if isinstance(a, (str, bytes)) else self._get().pattern
+
+    def __getattr__(self, name):
+        return getattr(self._get(), name)
+
+    def __repr__(self):
+        return repr(self._get())
+
+
+def _lazy_re(*args, **kw):
+    return _LazyRe(*args, **kw)
+
 import sys
 import time
 
@@ -172,14 +204,14 @@ MAX_CAMPAIGN_SLOTS = 1
 #: slots on famous queries is unchanged at 4.6 percent.
 DEMOTION_MARGIN = 1.0
 
-CAMPAIGN_PAT = re.compile(
+CAMPAIGN_PAT = _lazy_re(
     r"fpp|first-passage|first passage|percolation|rademacher[ _]singularity",
     re.IGNORECASE,
 )  # 2026-09-01: rs cluster added to the cap alongside fpp - pure safety; the famous-query
    # negative control measured 0 rs intrusions even uncapped, and the cap costs rs nothing
    # on its own topical queries (a cap, not a topic filter, as the original note says)
 
-MATH_ANCHORS = re.compile(
+MATH_ANCHORS = _lazy_re(
     r"\b(theorem|lemma|corollary|proposition|proof|prove|definition|axiom|conjecture|"
     r"integral|derivative|matrix|matrices|eigenvalue|eigenvector|group|subgroup|ring|field|"
     r"vector space|topolog\w*|manifold|measure|sigma.algebra|lebesgue|banach|hilbert|"
@@ -197,7 +229,7 @@ MATH_ANCHORS = re.compile(
     r"fermat|bernoulli|chebyshev|minkowski|weierstrass|bolzano|dedekind|cantor|godel|shannon)\b",
     re.IGNORECASE,
 )
-LATEX_RE = re.compile(r"\$[^$]{2,}\$|\\(?:frac|sum|int|forall|exists|mathbb|sqrt)\b")
+LATEX_RE = _lazy_re(r"\$[^$]{2,}\$|\\(?:frac|sum|int|forall|exists|mathbb|sqrt)\b")
 
 # Mathematics written as plain prose still carries notation, and the gate used to see
 # only LaTeX. Measured 2026-08-22 on 37 one-per-family probes and 400 of his own
@@ -205,13 +237,13 @@ LATEX_RE = re.compile(r"\$[^$]{2,}\$|\\(?:frac|sum|int|forall|exists|mathbb|sqrt
 # retrieval ran (a dominated-convergence question saying "integral" but never
 # "theorem"), while adding this signal fires on 5 more of his prompts in 400 - 1.2%,
 # about a second per hundred - and those five are his own campaign questions.
-ASCII_MATH_RE = re.compile(
+ASCII_MATH_RE = _lazy_re(
     r"[A-Za-z]_\{?[0-9nkij]\}?|[A-Za-z0-9)]\^\{?[0-9nkpq]\}?|"
     r"\bE\[[^\]]{1,40}\]|\bP\([^)]{1,40}\)|<=|>=|!=|->|\bsum_|\bint_|\blim_"
 )
 
 
-STRONG_ANCHORS = re.compile(
+STRONG_ANCHORS = _lazy_re(
     r"\b(theorem|lemma|corollary|axiom|conjecture|holomorphic|meromorphic|"
     r"euler|gauss|riemann|hilbert|banach|cauchy|fourier|laplace|lebesgue|dirichlet|"
     r"noether|galois|erdos|kolmogorov|poincare|brouwer|frobenius|lagrange|legendre|"
@@ -229,7 +261,7 @@ STRONG_ANCHORS = re.compile(
 # brain-graph and column-list prompts - the cost of the two-anchor rule). Rejected on the same measurement: "warning"
 # (45 fires, none Chevalley-Warning), "abel" (his typo for able), "holder" (the English word). Fresh bank: the gate
 # passes 62 -> 85 unnamed, 72 -> 88 named of 89; the six must-stay-silent probes stay silent.
-STRONG_ANCHORS_2 = re.compile(
+STRONG_ANCHORS_2 = _lazy_re(
     r"\b(theorems|lemmas|corollaries|conjectures|axioms|"
     r"sylow|burnside|cayley|tur[aá]n|ramsey|menger|kuratowski|urysohn|tychonoff|tietze|zorn|dilworth|sperner|"
     r"k[oö]nig|erd[oő]s|ko-rado|szemer[eé]di|lov[aá]sz|kruskal|katona|"
@@ -302,7 +334,7 @@ def _derived_anchor_vocab():
 # store's own eponyms +0 each; none breaks a must-stay-silent probe; together they rescue all three. REJECTED on the
 # same measurement: prov(es|ed|en|ing) as a weak anchor - +57 fires, sampled as owner campaign orders and film
 # surgery prompts, not mathematics. The rejected word stays out; MATHBRAIN_ANCHORS_3=0 still restores the 09-11 gate.
-STRONG_ANCHORS_3 = re.compile(
+STRONG_ANCHORS_3 = _lazy_re(
     r"\b(?:(?:open\s+problems?|problems?|questions?|conjectures?|lemmas?|theorems?|propositions?|corollar(?:y|ies)|"
     r"ansatz|hypothes[ie]s)\s+\d+(?:\.\d+)*|"
     r"brownian|unimodal\w*|(?:arc|vertex|edge)-transitive|spectral gap|(?:relaxation|mixing|cover|hitting) times?|"
@@ -322,12 +354,12 @@ STRONG_ANCHORS_3 = re.compile(
 # quasi-geodesics definition - on a ReLU-iteration research order). The DNF pattern is upper case and does not take CNF.
 # MATHBRAIN_PROGRAM_ANCHORS=0 restores the gate without them.
 PROGRAM_ANCHORS_ON = os.environ.get("MATHBRAIN_PROGRAM_ANCHORS", "1").strip() not in ("0", "", "off", "false")
-PROGRAM_ANCHORS = re.compile(r"\bFEI\+?(?![\w-])|\bDNFs?\b|\bLTFs?\b|\bKKL\b")
-PROGRAM_ANCHORS_WORDS = re.compile(
+PROGRAM_ANCHORS = _lazy_re(r"\bFEI\+?(?![\w-])|\bDNFs?\b|\bLTFs?\b|\bKKL\b")
+PROGRAM_ANCHORS_WORDS = _lazy_re(
     r"\b(walsh|read-k|total influences?|threshold (?:gates?|functions?)|"
     r"monotone (?:boolean )?functions?)\b", re.IGNORECASE)
 # weak: two of these (or one plus notation) open the gate, like MATH_ANCHORS; never alone
-WEAK_ANCHORS_2 = re.compile(
+WEAK_ANCHORS_2 = _lazy_re(
     r"\b(vertex|vertices|edges|clique|planar|subgraph|bipartite|monochromatic|colou?rings?|labelled trees|"
     r"subsets|shatter\w*|orbits?|fixed points?|cyclic groups?|finitely generated|ideal|almost every|"
     r"locally integrable|invertible|normal space|closed sets|tangent space|exponential map|multipliers|"
@@ -349,11 +381,11 @@ WEAK_ANCHORS_2 = re.compile(
 # (two anchors, or one plus notation, open the gate); the strong ones open it alone. Used only here, never in the
 # long-text density of _nonmath_text. MATHBRAIN_ANCHORS_4=0 restores the gate without them.
 ANCHORS_4_ON = os.environ.get("MATHBRAIN_ANCHORS_4", "1").strip() not in ("0", "", "off", "false")
-WEAK_ANCHORS_4 = re.compile(
+WEAK_ANCHORS_4 = _lazy_re(
     r"\b(eigen(?:values|vectors|functions|spaces)|polynomials|permutations|integrals|manifolds|inequalities|geodesics|"
     r"martingales|bijections|variances|latin squares|norms|measures|random variables|simplex|polytopes?|"
     r"stochastically)\b", re.IGNORECASE)
-STRONG_ANCHORS_4 = re.compile(
+STRONG_ANCHORS_4 = _lazy_re(
     r"\b(ginibre|gumbel|ces[aà]ro|volterra|pollaczek|khinchine?|rayleigh|total[- ]variation|commute[- ]times?|"
     r"spectral-gap|supermodular\w*|orthomorphisms?|interlacements?|subset sums?|radius of convergence)\b", re.IGNORECASE)
 
@@ -365,14 +397,14 @@ STRONG_ANCHORS_4 = re.compile(
 # prompt hands retrieval words it cannot match. RMT (+105 pruning-project work orders) and spectral/operator norm (admits an
 # absent-target control) were rejected on the same run. MATHBRAIN_ANCHORS_5=0 restores the gate without it.
 ANCHORS_5_ON = os.environ.get("MATHBRAIN_ANCHORS_5", "1").strip() not in ("0", "", "off", "false")
-STRONG_ANCHORS_5 = re.compile(r"\bsingular[- ]values?\b", re.IGNORECASE)
+STRONG_ANCHORS_5 = _lazy_re(r"\bsingular[- ]values?\b", re.IGNORECASE)
 # A POSSESSIVE NAME BEFORE AN INEQUALITY, IDENTITY, FORMULA OR CRITERION IS A MATH ANCHOR (MATHBRAIN_ANCHORS_POSSESSIVE, default on;
 # campaign mb10d, 25 Sep, arm cand63). The eponym lists leave out "holder" and "young" as English words, so "What does Holder's
 # inequality say about the product of two functions?" and "State Young's inequality for convolutions" were refused at the gate, and
 # so was the hook-path bank's "Wald's identity for the expectation of a randomly stopped sum". Counted before it ran: it admits none
 # of his 11,644 archived prompts and one bank question (Wald). "theorem" and "lemma" are strong anchors already.
 ANCHORS_POSSESSIVE_ON = os.environ.get("MATHBRAIN_ANCHORS_POSSESSIVE", "1").strip() not in ("0", "", "off", "false")
-STRONG_ANCHORS_POSSESSIVE = re.compile(r"\b[A-Z][a-zà-ÿ]+(?:-[A-Z][a-zà-ÿ]+)*['’]s?\s+(?:inequalit(?:y|ies)|identit(?:y|ies)|formula|criterion)\b")
+STRONG_ANCHORS_POSSESSIVE = _lazy_re(r"\b[A-Z][a-zà-ÿ]+(?:-[A-Z][a-zà-ÿ]+)*['’]s?\s+(?:inequalit(?:y|ies)|identit(?:y|ies)|formula|criterion)\b")
 
 # HIS SPELLING (MATHBRAIN_HIS_SPELLING, default on; campaign mb10d, 25 Sep, arm cand49). His orders about our results are typed
 # fast ("the full proof of the 5 singualr value version", "all the poorfs"), and neither the gate nor retrieval can read a
@@ -410,7 +442,7 @@ _HIS_SPELLING = {
     "proability": "probability", "proabability": "probability",
     "poorfs": "proofs",
 }
-_HIS_SPELLING_RE = re.compile(r"\b(" + "|".join(sorted(map(re.escape, _HIS_SPELLING), key=len, reverse=True)) + r")\b",
+_HIS_SPELLING_RE = _lazy_re(r"\b(" + "|".join(sorted(map(re.escape, _HIS_SPELLING), key=len, reverse=True)) + r")\b",
                               re.IGNORECASE)
 
 
@@ -461,7 +493,7 @@ _TYPO_FIX = {
     "proability": "probability", "proabability": "probability",
     "poorfs": "proofs",
 }
-_TYPO_FIX_RE = re.compile(r"\b(" + "|".join(sorted(map(re.escape, _TYPO_FIX), key=len, reverse=True)) + r")\b",
+_TYPO_FIX_RE = _lazy_re(r"\b(" + "|".join(sorted(map(re.escape, _TYPO_FIX), key=len, reverse=True)) + r")\b",
                           re.IGNORECASE)
 
 
@@ -484,9 +516,9 @@ def _typo_fix(text):
 # and retrieval: the symbol accents (\" \' \` \^) inside a word only - a JSON \" at a word start is left alone - and the letter
 # accents (\H \v \c \u \k \r) with one braced letter anywhere.
 LATEX_ACCENTS_ON = os.environ.get("MATHBRAIN_LATEX_ACCENTS", "1").strip() not in ("0", "off", "false", "")
-_LATEX_ACC_BR = re.compile(r"\{\\[\"'`^]([A-Za-z])\}")
-_LATEX_ACC_SYM = re.compile(r"(?<=[A-Za-z])\\[\"'`^](?:\{([A-Za-z])\}|([A-Za-z]))")
-_LATEX_ACC_LET = re.compile(r"\\[Hvcukr]\{([A-Za-z])\}")
+_LATEX_ACC_BR = _lazy_re(r"\{\\[\"'`^]([A-Za-z])\}")
+_LATEX_ACC_SYM = _lazy_re(r"(?<=[A-Za-z])\\[\"'`^](?:\{([A-Za-z])\}|([A-Za-z]))")
+_LATEX_ACC_LET = _lazy_re(r"\\[Hvcukr]\{([A-Za-z])\}")
 
 
 def _latex_accents(text):
@@ -506,7 +538,7 @@ def _latex_accents(text):
 # same fix costs +0.85pp and the new fires are mathematical. A mathematician writes
 # single-letter variables (X_1, a_n, S_n); snake_case identifiers have multi-letter
 # segments, and a word boundary separates the two cleanly. DO NOT REMOVE THE \b.
-STRUCTURAL_MATH_RE = re.compile(
+STRUCTURAL_MATH_RE = _lazy_re(
     r"\b[A-Za-z]_\{?[0-9nkijmp]\}?\b"
     r"|\b[A-Za-z]\^\{?[0-9nkpqd]\}?\b"
     r"|\bE\[[^\]]{1,40}\]"
@@ -519,7 +551,7 @@ STRUCTURAL_MATH_RE = re.compile(
 # `convergen\w*` never matched the base verb - "converge", "converges", "converged" all
 # missed while only "convergence"/"convergent" hit. Plus the probability idioms the
 # original list omitted ("almost surely" was absent while "almost everywhere" was there).
-EXTRA_ANCHORS = re.compile(
+EXTRA_ANCHORS = _lazy_re(
     r"\b(almost surely|i\.i\.d|iid|in distribution|in probability|"
     r"inner product|expectation|subsequence|converg\w*|poisson|erlang(?=\s+(?:mixture|distribution)\b)|mmpp|"
     r"phase.type|convexity|convex(?=\s+(?:in|function|combination|hull|cone|set|optimization)\b)|concavity|concave(?=\s+(?:in|function)\b)|second moments?|random sums?)\b",
@@ -547,7 +579,7 @@ EXTRA_ANCHORS = re.compile(
 #
 # That is an eighth of the +0.85pp the last widening cost. Same discipline as the \b lesson
 # above: hand-written negatives passed there too, and only real traffic found the defect.
-GREEK_ANCHORS = re.compile(
+GREEK_ANCHORS = _lazy_re(
     r"\b(chi|kappa|mu|phi|psi|omega|epsilon|zeta|iota|upsilon)\b",
     re.IGNORECASE,
 )
@@ -566,14 +598,14 @@ GREEK_ANCHORS = re.compile(
 # lattice config"); the health check's negative case did, and it fired - so these words open
 # only the anchor-plus-notation path in _math_gate (see there), never the two-anchor path.
 # Never promote these to MATH_ANCHORS or STRONG_ANCHORS.
-ENUMERATION_ANCHORS = re.compile(
+ENUMERATION_ANCHORS = _lazy_re(
     r"\b(self.avoiding|lattice|random walk\w*|enumerat\w*|generating function\w*)\b",
     re.IGNORECASE,
 )
 
 # A prompt that carries an argument the reader is checking, rather than a question to look up: three or more
 # numbered steps, or the words that name the act of checking one. Used only by the kind preference below.
-ARGUMENT_SHAPE = re.compile(
+ARGUMENT_SHAPE = _lazy_re(
     r"(?:(?:^|\n)\s*\d+[.)]\s.*){3,}|\b(first invalid step|is the proof correct|audit the (?:numbered )?argument"
     r"|which step (?:is|fails)|find the error in the proof)\b",
     re.IGNORECASE | re.DOTALL,
@@ -588,12 +620,12 @@ ARGUMENT_SHAPE = re.compile(
 # made the way proofs make one: "by/from/using/applying/via <Name>'s [one or two words] theorem|lemma|...", or "by Lemma 3.2" /
 # "Lemma~\ref". 0 switches it off.
 ARG_PROOFTEXT = os.environ.get("MATHBRAIN_ARG_PROOFTEXT", "1").strip() not in ("0", "off", "false", "")
-_PROOF_LATEX_RE = re.compile(
+_PROOF_LATEX_RE = _lazy_re(
     r"\\(?:le|leq|ge|geq|lesssim|gtrsim|int|iint|sum|prod|frac|dfrac|tfrac|sqrt|mathbb|mathcal|mathbf|mathrm|operatorname"
     r"|lambda|sigma|mu|nu|epsilon|varepsilon|delta|alpha|beta|gamma|theta|omega|Omega|phi|varphi|psi|xi|eta|tau|rho|kappa"
     r"|infty|cdot|langle|rangle|det|tr|log|exp|sup|inf|max|min|lim|partial|nabla|to|mapsto|subset|subseteq|in|notin"
     r"|forall|exists|times|otimes|oplus|circ|quad|qquad|left|right|big|Big|norm|abs|mathsf|hat|tilde|bar|overline)(?![A-Za-z])")
-_PROOF_CITE_RE = re.compile(
+_PROOF_CITE_RE = _lazy_re(
     r"\b(?:[Bb]y|[Ff]rom|[Uu]sing|[Aa]pplying|[Vv]ia)\s+(?:the\s+)?"
     r"[A-Z][\w'’]+(?:(?:--|[-‐-―])[A-Z][\w'’]+)*(?:'s|’s)?(?:\s+[a-z][a-z-]{2,}){0,2}\s+"
     r"(?:theorem|lemma|inequality|formula|identity|principle|decomposition|criterion|bound|estimate|test|complement)\b"
@@ -614,7 +646,7 @@ _PROOF_CITE_RE = re.compile(
 # about; cand56's rehearsal). "By Lemma~\ref{...}" is still a citation under the older rule, and the curated names are one too.
 PROOF_REF_CUE = os.environ.get("MATHBRAIN_PROOF_REF_CUE", "0").strip() not in ("0", "off", "false", "")
 NAME_CUE = os.environ.get("MATHBRAIN_NAME_CUE", "1").strip() not in ("0", "off", "false", "")
-_PROOF_REF_RE = re.compile(r"\b(?:Lemma|Lemmas|Theorem|Theorems|Proposition|Corollary|Claim)[~\s]*\\(?:ref|cref|eqref)\{|\\cite[a-z]*\{")
+_PROOF_REF_RE = _lazy_re(r"\b(?:Lemma|Lemmas|Theorem|Theorems|Proposition|Corollary|Claim)[~\s]*\\(?:ref|cref|eqref)\{|\\cite[a-z]*\{")
 
 
 def _proof_text(prompt):
@@ -666,12 +698,12 @@ TECHNICAL_PROSE_FAMILIES = (
     re.compile(r"\blog[- ]convex(?:ity)?\b", re.IGNORECASE),
     re.compile(r"\bmonotonicity\b", re.IGNORECASE),
 )
-TECHNICAL_PROSE_REASONING = re.compile(
+TECHNICAL_PROSE_REASONING = _lazy_re(
     r"\b(prove|derive|compute|calculate|construct|determine|establish|show|"
     r"factor\w*|multipl\w*|imply|implies|satisf\w*|converg\w*|convex\w*|"
     r"monotonic\w*|independen\w*|insufficient|equal\w*)\b", re.IGNORECASE,
 )
-TECHNICAL_PROSE_ACTION = re.compile(
+TECHNICAL_PROSE_ACTION = _lazy_re(
     r"\b(rename|copy|move|delete|remove|open|download|upload|render|export|"
     r"resize|recolor|format|retitle|enlarge|translate|spellcheck|pronounc\w*|"
     r"capitaliz\w*|summarize|find|locate|bigger|smaller|larger|bold|italic)\b",
@@ -682,7 +714,7 @@ TECHNICAL_PROSE_ACTION = re.compile(
 # mathematical prompt - it buys nothing and costs "the sample paths of the walk", which is core vocabulary in
 # his domain. `strings?` is the same shape (a string in a language is mathematics). The nouns that do the work
 # are unambiguous: captions 12 admin / 0 maths, movies 8/0, files 7/0, reports 7/0, headings 6/0.
-TECHNICAL_PROSE_ARTIFACT = re.compile(
+TECHNICAL_PROSE_ARTIFACT = _lazy_re(
     r"\b(file(?:name)?s?|folders?|directories|reports?|documents?|pdfs?|videos?|movies?|"
     r"clips?|captions?|titles?|fonts?|slides?|labels?|thumbnails?|screenshots?|"
     r"assets?|narration|headings?)\b", re.IGNORECASE,
@@ -719,8 +751,8 @@ NONMATH_GATE = os.environ.get("MATHBRAIN_NONMATH_GATE", "1").strip() not in ("0"
 NONMATH_MIN_WORDS = int(os.environ.get("MATHBRAIN_NONMATH_MIN_WORDS", "150") or 150)
 NONMATH_DENSITY = float(os.environ.get("MATHBRAIN_NONMATH_DENSITY", "0.015") or 0.015)
 NONMATH_SHARE = float(os.environ.get("MATHBRAIN_NONMATH_SHARE", "0.70") or 0.70)
-_NONMATH_WORD = re.compile(r"[A-Za-z]{2,}")
-_NONMATH_LATEX = re.compile(r"\\[A-Za-z]+")
+_NONMATH_WORD = _lazy_re(r"[A-Za-z]{2,}")
+_NONMATH_LATEX = _lazy_re(r"\\[A-Za-z]+")
 _STORE_DF = None
 _STORE_N = None
 
@@ -819,7 +851,7 @@ TRADING_GATE = (TRADING_WORDS is not None
 # those labels, so the out-of-sample check is his archive and his traffic after 24 Sep 16:00. MATHBRAIN_VERDICT_GATE=0
 # switches it off.
 VERDICT_GATE = os.environ.get("MATHBRAIN_VERDICT_GATE", "1").strip() not in ("0", "off", "false", "")
-VERDICT_WORDS = re.compile(
+VERDICT_WORDS = _lazy_re(
     r"\b(publishable|publishability|referee[- ]style|referee report|peer[- ]review|accept(?:ed)? for publication|"
     r"minor revision|major revision|substantial revision|not ready for submission|resubmit)\b"
     # "verdict" only as a reviewer's heading or with its owner - a solver's "UNSAT verdict" is mathematics
@@ -846,8 +878,8 @@ def _verdict_text(prompt, data):
 # cards. A match is skipped when the text before it in the same clause ends in a prohibition (never, don't, do not, must
 # not, avoid) and at most three words. Measured on his last 3,000 prompts: all 117 that carry the vocabulary still fire;
 # bare "no" and "not" are left out because "is there no access from the <book word> box" is a question about the book.
-_PROHIBITION = re.compile(r"(?i)\b(never|don'?t|do not|must not|mustn'?t|avoid)\b(?:\s+\S+){0,3}\s*$")
-_CLAUSE_BREAK = re.compile(r"[.;,!?\n]")
+_PROHIBITION = _lazy_re(r"(?i)\b(never|don'?t|do not|must not|mustn'?t|avoid)\b(?:\s+\S+){0,3}\s*$")
+_CLAUSE_BREAK = _lazy_re(r"[.;,!?\n]")
 
 
 def _prohibited_mention(prompt, m):
@@ -1058,7 +1090,7 @@ def _lead_filter(prompt, chosen, pinned=()):
 # that name and kind and its head holds at most three more words. Over his 17,944 archived prompts it admits none the gate
 # refused (a looser cut, name and kind anywhere in a title, admitted 72, nearly all junk); no probe breaks.
 GATE_NAMED_KIND = os.environ.get("MATHBRAIN_GATE_NAMED_KIND", "1").strip() not in ("0", "off", "false", "")
-_GATE_NEW_KINDS = re.compile(r"^(?:alternatives?|series|propert(?:y|ies)|(?:[A-Z]-)?tests?|iterations?|methods?|bounds?|"
+_GATE_NEW_KINDS = _lazy_re(r"^(?:alternatives?|series|propert(?:y|ies)|(?:[A-Z]-)?tests?|iterations?|methods?|bounds?|"
                              r"transforms?|calculus|expansions?|duality|conjectures?|tricks?)$", re.I)
 _GATE_TITLE_HEADS = None
 
@@ -1133,7 +1165,7 @@ def _math_gate(prompt):
 # prompts (campaign tools/measure_gate_unicode.py, class re_exp_letter): 1,765 carry one, none newly admitted; no probe
 # breaks; on every bank one question changes - that one, silent to its own theorem card first. 0 switches it off.
 EXP_LETTER = os.environ.get("MATHBRAIN_EXP_LETTER", "1").strip() not in ("0", "off", "false", "")
-EXP_LETTER_RE = re.compile(r"(?:(?<![A-Za-z0-9_])[A-Za-z0-9]|\))\^\{?[a-z]\}?(?![A-Za-z0-9_])")
+EXP_LETTER_RE = _lazy_re(r"(?:(?<![A-Za-z0-9_])[A-Za-z0-9]|\))\^\{?[a-z]\}?(?![A-Za-z0-9_])")
 
 
 def _legacy_math_gate(prompt):
@@ -1431,7 +1463,7 @@ ORIGIN_HINT = os.environ.get("MATHBRAIN_ORIGIN_HINT", "1").strip() not in ("0", 
 # untagged, the open problem statements "as read from the source" untagged.
 # MATHBRAIN_HOUSE_PROVENANCE adds a deployment's own provenance prefixes (a regular expression, matched at the start).
 _HOUSE_PROV_EXTRA = os.environ.get("MATHBRAIN_HOUSE_PROVENANCE", "").strip()
-_HOUSE_PROV_RE = re.compile(r"^(transported from the main brain memory|scar layer|typed (from|refinement)|owner result|"
+_HOUSE_PROV_RE = _lazy_re(r"^(transported from the main brain memory|scar layer|typed (from|refinement)|owner result|"
                             r"T\d+ correction|round-\d+ correction"
                             + ("|" + _HOUSE_PROV_EXTRA if _HOUSE_PROV_EXTRA else "") + ")", re.I)
 
@@ -1500,7 +1532,7 @@ def _is_campaign(node):
 
 #: an encyclopedic opening - "In mathematics, X is ...", "Hoeffding's inequality is ..."
 #: - as opposed to a node whose body states the theorem.
-LEDE_RE = re.compile(
+LEDE_RE = _lazy_re(
     r"^(in mathematics|in probability|in the mathematical|in statistics|"
     r"in functional analysis|in measure theory|in combinatorics|in geometry|"
     # 2026-09-03: the harvest opens 184 of its 704 Wikipedia ledes with a field the list above
@@ -1549,7 +1581,7 @@ def _is_lede(node):
 # decimal numeral at all, so no reader could have answered from the block. This is causal: it reads the question's
 # own request and the card's own text, never the answer. It is a WEIGHT, not a gate - it reorders the candidates
 # retrieval already admitted and can never introduce a card or open a silent prompt.
-_ASKS_VALUE = re.compile(
+_ASKS_VALUE = _lazy_re(
     r"(?:to\s+(?:one|two|three|four|five|six|\d+)\s+decimals?"
     r"|\bdecimal places?\b"
     r"|\b(?:what|which)\s+(?:is|are|was|were)?\s*(?:the\s+)?"
@@ -1558,7 +1590,7 @@ _ASKS_VALUE = re.compile(
     r"|\bhow\s+(?:many|much|large|small)\b"
     r"|\b(?:compute|evaluate|give|state)\b[^?\n]{0,40}\b(?:value|constant|number|bound)\b)", re.IGNORECASE)
 _WORD_DIGITS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6}
-_DEC_RE = re.compile(r"\d+\.(\d+)")
+_DEC_RE = _lazy_re(r"\d+\.(\d+)")
 
 
 def _asked_precision(prompt):
@@ -1705,7 +1737,7 @@ follows holds implies proof step claim lemma theorem definition concept show sho
 # and mathcal and mathfrak anchored a tensor-triangulated definition to a topological-monoid item. Removing \name
 # before the word scan drops those two cards and changes nothing on the 101 judged cards of 09-22, whose arguments are
 # prose (campaign_2026-09-23_ab30_tokens/tools/math_card_anchor_rules.py, MATH_CARD_ANCHOR_RULES.json).
-_LATEX_CMD = re.compile(r"\\[A-Za-z]+")
+_LATEX_CMD = _lazy_re(r"\\[A-Za-z]+")
 
 
 # DASHES FOLD IN THE WORD-SET TESTS (MATHBRAIN_DASH_FOLD, default on; campaign mb10d, 25 Sep, arm cand55). An argument writes
@@ -1814,7 +1846,7 @@ def _title_is_the_query(query, title):
 # questions name an identifier, so the cue cannot fire there), timing a wash on interleaved pairs.
 # The pattern carries NO backslash on purpose: an escape written through a generator arrived once as the 0x08
 # byte and the regex silently matched nothing. Character classes say the same thing and cannot be mangled.
-_IDENT_RE = re.compile(
+_IDENT_RE = _lazy_re(
     '(?:problem|question|ansatz|conjecture|section|exercise)[ ]+([0-9]{1,3}(?:[.][0-9]{1,3})?)'
     '|(?<![0-9.])([0-9]{1,2}[.][0-9]{1,2})(?![0-9.])',
     re.IGNORECASE)
@@ -3079,8 +3111,8 @@ PREFLOOR = PREFLOOR_MODE == 1          # mode 1: the whole candidate list is flo
 # Mode 1 measured 2026-09-12 03:0x: campaign served 16 -> 18 of 20 and value-in-block 12 -> 14, but it filled a third
 # slot with an off-target hub on 24 of the 40 open-problem questions (cards 87 -> 111); mode 2 is the same gain
 # without the fill - only an empty block or a missing lexical favourite changes anything.
-_TUPLE_RE = re.compile(r"\(\s*-?\d+\s*,\s*-?\d+\s*\)")
-_CLAUSE_RE = re.compile(r"(?<=[.;?!])\s+|,\s+and\s+|;\s+")
+_TUPLE_RE = _lazy_re(r"\(\s*-?\d+\s*,\s*-?\d+\s*\)")
+_CLAUSE_RE = _lazy_re(r"(?<=[.;?!])\s+|,\s+and\s+|;\s+")
 
 
 def _clause_subqueries(prompt):
@@ -3123,7 +3155,7 @@ _KIND_WORD = (r"theorem|lemma|inequality|principle|criterion|identity|formula|de
 # 4 and in both prompt and proper-name order. It PAYS only when the block is widened with it:
 #   5 cards + 6,000 chars, wide extractor:  60 items / 96 results   (against 60 / 85 at the default)
 # So the scarce resource is the slot, not the query. Default narrow; switch both dials together or neither.
-_NAMED_RESULT_RE_WIDE = re.compile(
+_NAMED_RESULT_RE_WIDE = _lazy_re(
     r"(?:\b((?:(?:von|van|de|del|della|der|den|du|la|le|ten|ter|of)\s+)?"
     r"[A-Z][\w'’À-ſ]+(?:[-‐-―][A-Z][\w'’À-ſ]+)*"
     r"(?:\s+(?:(?:von|van|de|del|della|der|den|du|la|le|ten|ter)\s+)?[A-Z][\w'’À-ſ]+){0,2}"
@@ -3131,7 +3163,7 @@ _NAMED_RESULT_RE_WIDE = re.compile(
     r"|(?:\b(" + _KIND_WORD + r")\s+of\s+([A-Z][\w'’À-ſ]+(?:[-‐-―][A-Z][\w'’À-ſ]+)*)\b)"
     r"|(?:\b((?:[a-z][a-z-]{2,}\s+){1,3})(" + _KIND_WORD + r")\b)"
 )
-_NAMED_RESULT_RE = re.compile(
+_NAMED_RESULT_RE = _lazy_re(
     # a proper name in front of the kind word: "Lax-Milgram theorem", "Holder's inequality"
     r"(?:\b([A-Z][\w'’À-ſ]+(?:(?:--|[-‐-―])[A-Z][\w'’À-ſ]+)*"
     r"(?:\s+[A-Z][\w'’À-ſ]+){0,2})\s*'?s?\s+(" + _KIND_WORD + r")\b)"
@@ -3341,7 +3373,7 @@ _LABEL_CONTEXT = [
 ]
 CURATED_LABELS = os.environ.get("MATHBRAIN_CURATED_LABELS", "1").strip() not in ("0", "off", "false", "")
 CURATED_SUPERSEDE = os.environ.get("MATHBRAIN_CURATED_SUPERSEDE", "1").strip() not in ("0", "off", "false", "")
-_LABEL_KEY_RE = re.compile(r"\\(?:ref|cref|Cref|eqref|autoref)\{([^{}]{2,80})\}")
+_LABEL_KEY_RE = _lazy_re(r"\\(?:ref|cref|Cref|eqref|autoref)\{([^{}]{2,80})\}")
 # OFF by default (arm cand57's count, 25 Sep): in his archive the form is mostly an AUTHOR PAIR - "from Higson--Prodan", "by
 # Hammond--Miller", "use the Kumjian--Renault" - in pasted referee reports (16 prompts), and "via Quasi-Gaussianity" is not a name;
 # its one bank case, "apply Cauchy--Schwarz", is covered by the curated list.
@@ -3349,12 +3381,12 @@ SUBQ_BARE_DOUBLE = os.environ.get("MATHBRAIN_SUBQ_BARE_DOUBLE", "1").strip() not
 # ON since arm cand65 as an EXTRACTOR only - it acts on prompts already read as arguments; as a CITATION CUE it stays off
 # (MATHBRAIN_BARE_DOUBLE_CUE): as a cue it made three of his pasted referee reports arguments (arm cand57's count).
 BARE_DOUBLE_CUE = os.environ.get("MATHBRAIN_BARE_DOUBLE_CUE", "0").strip() not in ("0", "off", "false", "")
-_BARE_DOUBLE_RE = re.compile(
+_BARE_DOUBLE_RE = _lazy_re(
     r"\b(?:[Bb]y|[Ff]rom|[Uu]sing|[Uu]se|[Aa]pply|[Aa]pplying|[Aa]pplied|[Vv]ia|[Ii]nvoke|[Ii]nvoking)\s+(?:the\s+)?"
     r"([A-Z][a-zà-ÿ]+(?:(?:--|[-‐-―])[A-Z][a-zà-ÿ]+)+)(?![\w'’‐-―-])"
     r"(?!\s+(?:" + _KIND_WORD_NAMED + r")\b)")
 
-_QUOTED_RE = re.compile(r"[\"“”]([^\"“”]{8,160})[\"“”]")
+_QUOTED_RE = _lazy_re(r"[\"“”]([^\"“”]{8,160})[\"“”]")
 
 
 def _quoted_subqueries(prompt, limit=4):
@@ -3437,9 +3469,9 @@ def _expand_aliases(prompt):
 # Three-Lines card at rank 1, the other 7 unchanged. "Hewitt-Savage zero-one" stays unserved: "0" and "1" have no
 # postings, so a 0-1 card cannot be reached through the prefilter by either spelling. MATHBRAIN_NUMWORD=0 turns it off.
 _NUMW = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
-_NUMW_HY = re.compile(r"\b[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+\b")
-_NUMW_WORD = re.compile(r"(?<![a-z])(%s)(?![a-z])" % "|".join(_NUMW), re.I)
-_NUMW_DIG = re.compile(r"(?<![0-9])(10|[0-9])(?![0-9])")
+_NUMW_HY = _lazy_re(r"\b[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+\b")
+_NUMW_WORD = _lazy_re(r"(?<![a-z])(%s)(?![a-z])" % "|".join(_NUMW), re.I)
+_NUMW_DIG = _lazy_re(r"(?<![0-9])(10|[0-9])(?![0-9])")
 
 
 def _numword_others(prompt):
@@ -3771,7 +3803,7 @@ SUBQ_EPONYM_EXACT = os.environ.get("MATHBRAIN_SUBQ_EPONYM_EXACT", "1").strip() n
 # sub-query whose possessive form finds no candidate asks again with the plain name beside it (a fallback since arm cand62);
 # nothing else reads the changed text.
 SUBQ_POSSESSIVE = os.environ.get("MATHBRAIN_SUBQ_POSSESSIVE", "1").strip() not in ("0", "off", "false", "")
-_POSSESSIVE_RE = re.compile(r"\b([A-Za-zÀ-ſ][A-Za-zÀ-ſ-]{2,})(['’])s\b")
+_POSSESSIVE_RE = _lazy_re(r"\b([A-Za-zÀ-ſ][A-Za-zÀ-ſ-]{2,})(['’])s\b")
 
 
 def _name_parts(text):
@@ -3973,7 +4005,7 @@ def _tuple_exact_first(query, hits):
 # 2026-11-05 (claude-1e0a23c2): the picture REVIEW head too. The film line's headless reviewers start 'You are checking
 # pictures drawn for the documentary ...'; in the 24 h to 5 Nov 08:4x all 59 hard_deadline silences in the real-session log
 # were those sessions, each holding the hook 60-69 s before it gave up and served nothing.
-_RELAY_OR_PICTURE_HEAD = re.compile(
+_RELAY_OR_PICTURE_HEAD = _lazy_re(
     r"^\s*(?:﻿)?(?:<agent-message\b|Another Claude session sent a message\b|<cross-session-message\b"
     r"|<task-notification\b|<agent-notification\b|<hook_prompt\b|<system-reminder\b|<local-command-stdout\b"
     r"|<recommended_plugins\b|You are (?:a|the) picture maker\b|You are checking (?:the )?pictures drawn for\b)", re.I)
@@ -4000,11 +4032,11 @@ SESSION_CTX_DIR = os.environ.get("MATHBRAIN_SESSION_CTX_DIR") or os.path.join(HO
                                                                               ".math_session_ctx")
 SESSION_CTX_TTL_S = 3 * 3600
 SESSION_CTX_CHARS = 2000
-CONTINUATION_CUE = re.compile(
+CONTINUATION_CUE = _lazy_re(
     r"\b(proofs?|prove[ns]?|proving|solve[ds]?|solving|solutions?|conjectures?|theorems?|lemmas?|bounds?|limits?|"
     r"infinit[ey]|estimates?|inequalit(?:y|ies)|constants?|converge\w*|counterexamples?|close are we|full problem)\b",
     re.I)
-CONTINUATION_ADMIN = re.compile(
+CONTINUATION_ADMIN = _lazy_re(
     r"\b(push\w*|commit\w*|github|repos?|repository|e-?mail\w*|upload\w*|download\w*|overleaf|zip|acknowledg\w*|"
     r"funding|affiliat\w*|cite[sd]?|citations?|abstract|titles?|format\w*|folders?|website|youtube|movies?|films?|"
     r"videos?|images?|pictures?|render\w*|narrat\w*|thumbnails?|slides?|episodes?|usage|how long|timeline)\b", re.I)
@@ -4056,7 +4088,7 @@ def _session_math_context(session_id, prompt):
 # did not admit takes this route; nothing the gate admits changes.
 GATE_VOUCH = os.environ.get("MATHBRAIN_GATE_VOUCH", "1").strip() not in ("0", "off", "false", "")
 _VOUCH = {"route": False, "vocab": None, "card": None}
-_VOUCH_WORD = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*")
+_VOUCH_WORD = _lazy_re(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*")
 _VOUCH_STOP = frozenset("""about above after again against because before being below between both could doing during each
 further having itself might myself other ought ourselves should their theirs them themselves there these those through under
 until where which while would yours yourself yourselves what when with from into once only same some such than that then this
@@ -4323,8 +4355,8 @@ def _far_block_z(prompt, ids):
 _QC = os.environ.get("MATHBRAIN_QUOTE_COV", "0.75").strip().lower()
 QUOTE_COV = None if _QC in ("", "0", "off", "false") else float(_QC)
 QUOTE_MAX_WORDS = int(os.environ.get("MATHBRAIN_QUOTE_MAX_WORDS", "20") or 20)
-_QUOTE_RE = re.compile(r'"([^"\n]{3,120})"')
-_ACRO_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*$")
+_QUOTE_RE = _lazy_re(r'"([^"\n]{3,120})"')
+_ACRO_RE = _lazy_re(r"^[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*$")
 
 
 def _quote_uncovered(prompt, hits):
@@ -4806,7 +4838,7 @@ def _reset_per_prompt_state():
 RECALL_POINTER = os.environ.get("MATHBRAIN_RECALL_POINTER", "1").strip() not in ("0", "off", "false", "")
 _NOTE_POINTER = "Full note: python ~/.claude/dreaming/math_note.py SOURCE_ID"
 _RECALL_POINTER = "Card + links: python ~/.claude/dreaming/math_recall.py --id ID"
-_TRACE_TERM = re.compile(r"""matched (?:normalized term|title phrase) ['"](.+?)['"]\s*$""")
+_TRACE_TERM = _lazy_re(r"""matched (?:normalized term|title phrase) ['"](.+?)['"]\s*$""")
 
 
 def _matched_terms(hit, k):

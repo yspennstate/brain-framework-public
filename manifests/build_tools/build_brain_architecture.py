@@ -9,7 +9,7 @@ Reads every memory file in the live brain (claude/memory) and generates, under
   GRAPH.md        - wiki-link graph: hubs, backlinks, orphans, node size by usage
   STATS.md        - corpus statistics
 
-Re-run any time:  python manifests/build_tools/build_brain_architecture.py <repo_root>
+Re-run any time:  python manifests/build_tools/build_brain_architecture.py <repo_root> [<live memory dir>]
 Pure read-only over the memory files; only writes into brain/.
 """
 import os, re, sys, io
@@ -24,9 +24,21 @@ if any(a in ("-h", "--help") for a in sys.argv[1:]):
 
 ROOT = sys.argv[1] if len(sys.argv) > 1 else "."
 CONS = os.path.join(ROOT, "01_ai_consciousness")
-LIVE = os.path.join(CONS, "claude", "memory")
+# optional second argument: the live memory folder, when the repo's mirror of it lags (the Mac has no
+# mirror step; its views describe ~/.claude/projects/<slug>/memory, 30 Oct 2026)
+LIVE = sys.argv[2] if len(sys.argv) > 2 else os.path.join(CONS, "claude", "memory")
 OUT  = os.path.join(CONS, "brain")
 os.makedirs(OUT, exist_ok=True)
+
+import contextlib
+@contextlib.contextmanager
+def _out(name):
+    """Write a view to name.tmp and rename it over the old one, so a build stopped by its cap (RELATED.md
+    takes over an hour on a loaded Mac) leaves the previous generation instead of a cut-off file."""
+    path = os.path.join(OUT, name)
+    with io.open(path + ".tmp", "w", encoding="utf-8") as fh:
+        yield fh
+    os.replace(path + ".tmp", path)
 DREAMING = os.path.join(ROOT, "12_cognitive_architecture", "dreaming")
 sys.path.insert(0, DREAMING)
 from supersession import active_supersessions
@@ -144,6 +156,7 @@ FM_DESC = re.compile(r"^description:\s*(.+)$", re.M)
 FM_TYPE = re.compile(r"^\s*type:\s*(\w+)", re.M)
 WIKI    = re.compile(r"\[\[([^\]\|#]+)\]\]")
 DATE_F  = re.compile(r"(202[4-7])[_-](0[1-9]|1[0-2])(?:[_-](\d{2}))?")
+_THIS_MONTH = __import__("time").strftime("%Y-%m")
 
 # Topic rules: first match wins (ordered). These are DEPLOYMENT-SPECIFIC - a brain's subjects are
 # whatever the person it serves works on. Point BRAIN_TOPICS_FILE at a JSON file to replace them:
@@ -214,7 +227,13 @@ for fn in sorted(os.listdir(LIVE)):
                         ("session_","transient")):
             if low.startswith(pre): mtyp = ty; break
         mtyp = mtyp or "unfiled"
-    m = DATE_F.search(fn) or DATE_F.search(desc)
+    # the LAST date in a file name is when the memory was written; an earlier one is its subject
+    # (job_2025_03_31_..._2026_08_05 filed under 2025-03). A description date is only a fallback and
+    # never one past this month (a future date in one description put a memory under 2027-12).
+    fm = list(DATE_F.finditer(fn))
+    m = fm[-1] if fm else DATE_F.search(desc)
+    if m and not fm and m.group(1) + "-" + m.group(2) > _THIS_MONTH:
+        m = None
     date = (m.group(1) + "-" + m.group(2)) if m else "undated"
     links = [l.strip() for l in WIKI.findall(text)]
     mems.append((fn, name, desc, mtyp, date, links, len(text.split())))
@@ -239,7 +258,7 @@ def resolve_link(target):
 # ---------- STATS ----------
 by_type = Counter(m[3] for m in mems)
 total_words = sum(m[6] for m in mems)
-with io.open(os.path.join(OUT, "STATS.md"), "w", encoding="utf-8") as f:
+with _out("STATS.md") as f:
     f.write("# Brain statistics\n\n")
     f.write(f"- live memories: **{len(mems)}** ({total_words:,} words)\n")
     if n_archived_transient:
@@ -255,14 +274,38 @@ with io.open(os.path.join(OUT, "STATS.md"), "w", encoding="utf-8") as f:
 durable = [m for m in mems if m[3] != "transient"]
 n_transient = len(mems) - len(durable)
 groups = defaultdict(list)
+# Communities of the association graph (build_communities.py in the dreaming folder) group the memories when that
+# map is under 3 days old: on 30 Oct they put a session's next read in the cluster of the one before 5.4x as often as
+# chance, against 1.6x for the keyword buckets below. Memories not in the graph keep their keyword topic.
+_comm = {}
+_comm_path = os.environ.get("BRAIN_COMMUNITIES_TSV") or os.path.expanduser(
+    os.path.join("~", ".claude", "dreaming", "communities.tsv"))
+try:
+    import time as _t
+    if _t.time() - os.path.getmtime(_comm_path) < 3 * 86400:
+        with io.open(_comm_path, encoding="utf-8", errors="replace") as _fh:
+            next(_fh, None)
+            for _ln in _fh:
+                _p = _ln.rstrip("\n").split("\t")
+                if len(_p) >= 3:
+                    _comm[_p[0]] = (int(_p[1]), _p[2])
+except (OSError, ValueError):
+    _comm = {}
 for m in durable:
-    groups[topic_of(m[0] + " " + m[1], m[2])].append(m)
-with io.open(os.path.join(OUT, "TOPICS.md"), "w", encoding="utf-8") as f:
+    c = _comm.get(m[0][:-3])
+    groups[c[1] if c else topic_of(m[0] + " " + m[1], m[2])].append(m)
+with _out("TOPICS.md") as f:
     _arch = n_archived_transient + n_transient
     f.write(f"# The brain by topic\n\n{len(durable)} durable memories, grouped (newest "
             f"first). {_arch} transient agent-scratch checkpoints are archived in "
             f"`claude/memory/transient/` (never deleted) and excluded from this view.\n")
-    order = [t[0] for t in TOPICS] + ["Other"]
+    if _comm:
+        f.write("\nGroups are communities of the association graph (links and co-reads), named by their most "
+                "typical words and best-connected memory; memories outside the graph keep a keyword topic.\n")
+    # equal-sized groups are ordered by name: a set alone came out in hash order, so two builds differed (1 Nov 2026)
+    _labels = sorted({v[1] for v in _comm.values()}, key=lambda l: (-len(groups.get(l, ())), l))
+    order = [l for l in _labels if not l.startswith("small communities")] + \
+            [l for l in _labels if l.startswith("small communities")] + [t[0] for t in TOPICS] + ["Other"]
     for g in order:
         if g not in groups: continue
         rows = sorted(groups[g], key=lambda m: m[4], reverse=True)
@@ -275,7 +318,7 @@ with io.open(os.path.join(OUT, "TOPICS.md"), "w", encoding="utf-8") as f:
 by_month = defaultdict(list)
 for m in mems:
     by_month[m[4]].append(m)
-with io.open(os.path.join(OUT, "TIMELINE.md"), "w", encoding="utf-8") as f:
+with _out("TIMELINE.md") as f:
     f.write("# The brain as a timeline\n\nEpisodic axis: what was learned when (by filename/description date).\n")
     for month in sorted(by_month, reverse=True):
         rows = sorted(by_month[month], key=lambda m: m[0], reverse=True)
@@ -297,7 +340,7 @@ for fn, name, desc, mtyp, date, links, w in mems:
 linked = set(backlinks) | {m[0] for m in mems if m[5]}
 orphans = [m for m in mems if m[0] not in linked]
 hubs = Counter({k: len(v) for k, v in backlinks.items()})
-with io.open(os.path.join(OUT, "GRAPH.md"), "w", encoding="utf-8") as f:
+with _out("GRAPH.md") as f:
     f.write("# The brain's link graph\n\n")
     f.write(f"{sum(len(v) for v in backlinks.values())} resolved links, {len(broken)} dangling (fine — they mark future memories), {len(orphans)} orphan memories.\n")
     f.write("\n## Hubs (most linked-to)\n\n")
@@ -344,7 +387,7 @@ def count_md(p):
         return sum(1 for x in os.listdir(os.path.join(CONS, p)) if x.endswith(".md"))
     except Exception:
         return 0
-with io.open(os.path.join(OUT, "BRAIN_INDEX.md"), "w", encoding="utf-8") as f:
+with _out("BRAIN_INDEX.md") as f:
     f.write("""# BRAIN INDEX — every memory store in this repo
 
 The brain has strata. Newest and authoritative first.
@@ -407,14 +450,29 @@ for fn, name, desc, mtyp, date, links, w in mems:
 # keep distinctive terms: appear in >=2 and <=12% of memories
 cap = max(3, int(0.12 * len(mems)))
 terms = {t: fs for t, fs in inv.items() if 2 <= len(fs) <= cap}
-with io.open(os.path.join(OUT, "SEARCH.md"), "w", encoding="utf-8") as f:
+# each term shows its 20 most specific memories (fewest distinctive terms), not the first 20 by name, and a memory
+# still on no list joins the list of its rarest term: the alphabetical cut left 3,089 of 28,710 memories unlisted
+# (31 Oct 2026); this pick lists every memory that has a description
+nterm = defaultdict(int)
+for fs in terms.values():
+    for x in fs: nterm[x] += 1
+shown = {t: set(sorted(fs, key=lambda x: (nterm[x], x))[:20]) for t, fs in terms.items()}
+listed = set().union(*shown.values()) if shown else set()
+rarest = {}
+for t, fs in terms.items():
+    for x in fs:
+        if x not in listed and (x not in rarest or (len(fs), t) < rarest[x]):
+            rarest[x] = (len(fs), t)
+for x, (_, t) in rarest.items():
+    shown[t].add(x)
+with _out("SEARCH.md") as f:
     f.write("# Keyword search index\n\n")
     f.write(f"Inverted index over memory names + descriptions ({len(terms)} distinctive terms). "
-            "Ctrl-F a term to jump to the memories that mention it.\n\n")
+            "Ctrl-F a term to jump to the memories that mention it; a long term lists its most specific ones.\n\n")
     for t in sorted(terms):
-        fs = sorted(terms[t])
-        links_md = ", ".join(f"[{x[:-3]}](../claude/memory/{x})" for x in fs[:20])
-        more = f" +{len(fs)-20}" if len(fs) > 20 else ""
+        fs = terms[t]
+        links_md = ", ".join(f"[{x[:-3]}](../claude/memory/{x})" for x in sorted(shown[t]))
+        more = f" +{len(fs)-len(shown[t])}" if len(fs) > len(shown[t]) else ""
         f.write(f"- **{t}** ({len(fs)}): {links_md}{more}\n")
 
 # ---------- RELATED (associative graph via shared distinctive terms) ----------
@@ -430,6 +488,13 @@ def current_fname(fn):
     current = SUPERSEDED.get(slug, slug) + ".md"
     return current if current in fn_meta else fn
 
+# Each term's members under their current names, made once: related() used to rebuild this set for every memory
+# that holds the term, which with ~29k memories was most of an 85-minute view build (1 Nov 2026). raw counts the
+# terms a memory shares with fn under its own file name, so |mine | memterms[other]| = |mine| + |theirs| - raw[other]
+# without building the union. Same counts and scores as before; nlargest returns sorted(..., reverse=True)[:k].
+import heapq
+cur_terms = {t: {current_fname(candidate) for candidate in fs} for t, fs in terms.items()}
+
 def related(fn, k=6):
     if current_fname(fn) != fn:
         return []
@@ -437,10 +502,11 @@ def related(fn, k=6):
     myslug = fn[:-3] if fn.endswith(".md") else fn
     coact = COACT.get(myslug, {})
     cand = Counter()
+    raw = Counter()
     for t in mine:
-        for other in {current_fname(candidate) for candidate in terms[t]}:
-            if other != fn:
-                cand[other] += 1
+        cand.update(cur_terms[t])
+        raw.update(terms[t])
+    cand.pop(fn, None)
     # Hebbian: memories read together with this one are neighbours even with no shared vocabulary
     for oslug in coact:
         ofn = current_fname(oslug + ".md")
@@ -449,8 +515,9 @@ def related(fn, k=6):
     if not cand:
         return []
     scored = []
+    nmine = len(mine)
     for other, shared in cand.items():
-        union = len(mine | memterms.get(other, set())) or 1
+        union = (nmine + len(memterms.get(other, ())) - raw.get(other, 0)) or 1
         _sc = shared / union
         _cw = coact.get(other[:-3] if other.endswith(".md") else other, 0)
         if _cw:
@@ -458,9 +525,8 @@ def related(fn, k=6):
         if other in UNCONSCIOUS:
             _sc *= 0.25   # latent substrate: still a neighbour, never a leading one
         scored.append((_sc, shared, other))
-    scored.sort(reverse=True)
-    return scored[:k]
-with io.open(os.path.join(OUT, "RELATED.md"), "w", encoding="utf-8") as f:
+    return heapq.nlargest(k, scored)
+with _out("RELATED.md") as f:
     f.write("# Associative map (auto-linked)\n\n")
     f.write("For each memory, the most similar other memories by shared distinctive terms "
             "(Jaccard over the search vocabulary). This is the brain's *implicit* graph — "

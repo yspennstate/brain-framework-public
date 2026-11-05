@@ -45,6 +45,7 @@ def probes(governor, monkeypatch):
         "sysctl": "total = 1024.00M  used = 128.50M  free = 895.50M (encrypted)\n",
         "ioreg": '    "HIDIdleTime" = 2000000000\n',
         "ps": " 100 12.5 2048 /usr/bin/python3\n 101 2.0 1024 /bin/bash\n",
+        "vm_stat": "Pageins: 10.\nSwapins:                 1000.\nSwapouts:                2000.\n",
     }
     calls = []
 
@@ -175,7 +176,7 @@ def test_cycle_publishes_complete_state_atomically(governor, probes, monkeypatch
     assert state["governor"].endswith("(observe only)")
     assert isinstance(state["cycle_ms"], int) and state["cycle_ms"] >= 0
     assert len(state["ts"]) == 19
-    assert {argv[0] for argv, _ in probes[1]} == {"top", "memory_pressure", "sysctl", "ioreg", "ps"}
+    assert {argv[0] for argv, _ in probes[1]} == {"top", "memory_pressure", "sysctl", "ioreg", "ps", "vm_stat"}
 
 
 @pytest.mark.parametrize("free, disk, status, reasons, mode", [
@@ -234,6 +235,40 @@ def test_unknown_samples_reset_cpu_and_preserve_nulls(governor, probes, monkeypa
     for key in ("cpu_pct", "mem_free_pct", "swap_used_mb", "owner_idle_s", "disk_free_gb"):
         assert state[key] is None
     assert (state["status"], state["mode"]) == ("ok", "owner_present_polite")
+
+
+def write_prev(governor, pages, t_epoch):
+    Path(governor.STATE_DIR).mkdir(parents=True, exist_ok=True)
+    Path(governor.STATE).write_text(json.dumps(dict(swap_io_pages=pages, t_epoch=t_epoch)))
+
+
+@pytest.mark.parametrize("rate, status, reasons, mode", [
+    (4999, "ok", [], "owner_present_polite"),
+    (5000, "warn", ["swap_paging"], "owner_present_polite"),
+    (14999, "warn", ["swap_paging"], "owner_present_polite"),
+    (15000, "distress", ["swap_thrash"], "throttle"),
+])
+def test_swap_traffic_gate(governor, probes, monkeypatch, rate, status, reasons, mode):
+    monkeypatch.setattr(governor.time, "time", lambda: 1060.0)
+    write_prev(governor, 3000 - rate * 60, 1000.0)
+    state = governor.cycle()
+    assert state["swap_io_ps"] == rate
+    assert (state["status"], state["reasons"], state["mode"]) == (status, reasons, mode)
+    assert (state["swap_io_pages"], state["t_epoch"]) == (3000, 1060.0)
+
+
+@pytest.mark.parametrize("prev", [None, (5000, 1000.0), (1000, 1060.0), (1000, None)])
+def test_swap_traffic_needs_a_usable_pair(governor, probes, monkeypatch, prev):
+    monkeypatch.setattr(governor.time, "time", lambda: 1060.0)
+    if prev is not None:
+        write_prev(governor, *prev)
+    state = governor.cycle()
+    assert state["swap_io_ps"] is None and state["status"] == "ok"
+
+
+def test_swap_io_unparsed(governor, probes):
+    probes[0]["vm_stat"] = "Pageins: 10.\n"
+    assert governor.swap_io() is None
 
 
 def test_distress_still_throttles_when_owner_away(governor, probes):

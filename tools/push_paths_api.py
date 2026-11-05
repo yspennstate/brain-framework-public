@@ -79,6 +79,8 @@ def listed(call, commit, paths):
     def entries(sha):
         if sha not in cache:
             st, t = call("GET", f"/git/trees/{sha}")
+            if st != 200:
+                raise RuntimeError(f"tree {sha} listing failed: {st} {str(t.get('message'))[:120]}")
             if t.get("truncated"):
                 raise RuntimeError(f"tree {sha} listing truncated")
             cache[sha] = {e["path"]: (e["type"], e["sha"]) for e in t.get("tree", [])}
@@ -234,8 +236,14 @@ def main():
         time.sleep(2)
     else:
         print("could not land after 8 tries"); return 1
-    got = listed(call, nc["sha"], todo) or {}
-    bad = [p for p in todo if got.get(p) != local[p]]
+    for attempt in range(2):
+        got = listed(call, nc["sha"], todo) or {}
+        bad = [p for p in todo if got.get(p) != local[p]]
+        if not bad:
+            break
+        if attempt == 0:
+            print(f"readback: {len(bad)} not matched yet, reading the landed commit again", flush=True)
+            time.sleep(10)
     if bad:
         print("readback differs:", bad); return 1
     print(f"landed {nc['sha'][:10]} on {a.branch}: {len(todo)} files, every blob read back")

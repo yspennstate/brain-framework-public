@@ -479,6 +479,12 @@ class Brain:
         rc = 0
         old_argv = sys.argv
         sys.argv = [os.path.join(D, "brain.py")] + list(argv)
+        # slow-call stack samples (6 Nov 2026, Mac): a sampling thread, no tracing; rows only for calls of 500 ms+
+        try:
+            import brain_call_sampler
+            smp = brain_call_sampler.begin()
+        except Exception:
+            smp = None
         t0 = time.time()
         try:
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
@@ -502,6 +508,15 @@ class Brain:
                 pass
         self.calls += 1
         pf1 = _faults()
+        if smp is not None:
+            try:
+                smp.stop()
+                smp.write(os.path.join(STATE_DIR, "slow_samples.jsonl"), int((time.time() - t0) * 1000),
+                          {"op": (argv or ["?"])[0], "dropped": dropped,
+                           "pf": [pf1[0] - pf0[0], pf1[1] - pf0[1]] if pf0 and pf1 else None,
+                           "miss_s": {k: round(v, 2) for k, v in self.miss.items() if v >= 0.05}})
+            except Exception:
+                pass
         return {"rc": rc, "out": out.getvalue(), "err": err.getvalue(), "ms": int((time.time() - t0) * 1000),
                 "dropped": dropped, "calls": self.calls,
                 "pf": [pf1[0] - pf0[0], pf1[1] - pf0[1]] if pf0 and pf1 else None,

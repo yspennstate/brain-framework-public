@@ -789,9 +789,57 @@ _CTAIL = {}
 _CTAIL_FS = re.compile(r"^\s*full_summary:\s*(\S.*?)\s*$", re.M)
 
 
+# A resident process (the recall server) re-read the 9 MB tail cache on every new compaction, the file it had itself
+# written at the last one: marshal.load took 247 ms of a change call, and the 2.7 MB long-memory tail cache another
+# 73 ms (6 Nov 2026, claude-95df24fa). _marshal_memo keeps the last value loaded from or dumped to each cache file under
+# that file's identity (size, mtime_ns, inode, ctime_ns, taken from the open handle); a file replaced or rewritten
+# gets a new identity and is read again. BRAIN_MARSHAL_MEMO=0 turns it off.
+_MARSHAL_MEMO = {}
+
+
+def _marshal_ident(st):
+    return (st.st_size, st.st_mtime_ns, st.st_ino, st.st_ctime_ns)
+
+
+def _marshal_load_memo(path):
+    import marshal
+    with open(path, "rb") as fh:
+        if os.environ.get("BRAIN_MARSHAL_MEMO", "1") == "0":
+            return marshal.load(fh)
+        ident = _marshal_ident(os.fstat(fh.fileno()))
+        got = _MARSHAL_MEMO.get(path)
+        if got is not None and got[0] == ident:
+            return got[1]
+        v = marshal.load(fh)
+    _MARSHAL_MEMO[path] = (ident, v)
+    return v
+
+
+def _marshal_dump_memo(path, value):
+    """marshal.dump to path through a temp file and os.replace, then keep value under the new file's identity."""
+    import marshal
+    tmp = "%s.%d.tmp" % (path, os.getpid())
+    with open(tmp, "wb") as fh:
+        marshal.dump(value, fh)
+        fh.flush()
+        st = os.fstat(fh.fileno())
+        mine = (st.st_ino, st.st_size, st.st_mtime_ns)
+    os.replace(tmp, path)
+    if os.environ.get("BRAIN_MARSHAL_MEMO", "1") != "0":
+        # the rename moves the file's ctime, so the identity is taken after it; the inode, size and mtime must still be
+        # the temp file's, or another writer got in between and the next load reads the file
+        try:
+            st = os.stat(path)
+            if (st.st_ino, st.st_size, st.st_mtime_ns) == mine:
+                _MARSHAL_MEMO[path] = (_marshal_ident(st), value)
+            else:
+                _MARSHAL_MEMO.pop(path, None)
+        except OSError:
+            _MARSHAL_MEMO.pop(path, None)
+
+
 def _ctail_index(bm25mod):
     """(tails, tdf): anchor slug -> (term counts, length) of its summary's lines outside the anchor, and their df."""
-    import marshal
     key = _ctail_key()
     # The tails are read through anchors in bm25mod.MEM, so the cache belongs to that folder. One shared file let a
     # recall on another folder (BRAIN_MEM_DIR) reuse the live folder's tails, which then stood for anchors that folder
@@ -801,8 +849,7 @@ def _ctail_index(bm25mod):
         return _CTAIL["ix"]
     prev = {}
     try:
-        with open(cache, "rb") as fh:
-            got = marshal.load(fh)
+        got = _marshal_load_memo(cache)
         if len(got) == 3:
             prev = got[2]
         if tuple(tuple(x) for x in got[0]) == key:
@@ -870,10 +917,7 @@ def _ctail_index(bm25mod):
     ix = (tails, tdf)
     try:
         if not _mem_scope_throwaway(bm25mod):
-            tmp = "%s.%d.tmp" % (cache, os.getpid())
-            with open(tmp, "wb") as fh:
-                marshal.dump((key, ix, files), fh)
-            os.replace(tmp, cache)
+            _marshal_dump_memo(cache, (key, ix, files))
     except Exception:
         pass
     _CTAIL.update(key=key, mem=bm25mod.MEM, ix=ix)
@@ -1203,8 +1247,7 @@ def _mtail_cached(sigs, bm25mod=None):
     files = _MTAIL.get("files")
     if files is None:
         try:
-            with open(_mem_scoped(MTAIL_CACHE, bm25mod), "rb") as fh:
-                files = marshal.load(fh)[1]
+            files = _marshal_load_memo(_mem_scoped(MTAIL_CACHE, bm25mod))[1]
         except Exception:
             return None
     try:

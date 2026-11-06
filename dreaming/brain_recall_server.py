@@ -182,7 +182,16 @@ class Brain:
         # re-reads ~50k entries (parity 20/20 live, 2000-file burst and forced overflow equal, 10/10 ranked lists
         # equal in resident_ab.jsonl). BRS_RESIDENT_LISTING=0 turns it off; any failure leaves the memo path.
         self.resident = None
-        if os.environ.get("BRS_RESIDENT_LISTING", "1") != "0" and "_fast_listing" in self.g:
+        # macOS (6 Nov 2026): the same lever on FSEvents, for brain._bulk_listing (brain_resident_listing_mac.py has
+        # the parity: 46,233 of 46,233 entries, 45 of 45 scratch waves, live rounds; listing 99 -> 13 ms).
+        if os.environ.get("BRS_RESIDENT_LISTING", "1") != "0" and sys.platform == "darwin" and "_bulk_listing" in self.g:
+            try:
+                import brain_resident_listing_mac
+                self.resident = brain_resident_listing_mac.install(self)
+                log("resident listing (FSEvents) on")
+            except Exception as e:
+                log("resident listing (FSEvents) off: %s: %s" % (type(e).__name__, e))
+        elif os.environ.get("BRS_RESIDENT_LISTING", "1") != "0" and "_fast_listing" in self.g:
             try:
                 import brain_resident_listing
                 self.resident = brain_resident_listing.install(self)
@@ -676,6 +685,20 @@ def main():
             if time.time() - last["t"] > IDLE_EXIT:
                 log("idle exit")
                 break
+            # 6 Nov 2026 (claude-95df24fa, Mac): the resident listing's periodic full walk (FULL_EVERY, 600 s) ran inside
+            # whichever recall came after it fell due. Here it runs between calls, a tick or so early; a call that
+            # arrives meanwhile waits on the lock (~0.2 s). BRS_IDLE_FULL=0 turns it off.
+            rb = brain.resident
+            if (rb is not None and hasattr(rb, "refresh_if_due") and os.environ.get("BRS_IDLE_FULL", "1") != "0"
+                    and time.time() - last["t"] > 2 and lock.acquire(blocking=False)):
+                try:
+                    t = time.time()
+                    if rb.refresh_if_due(60):
+                        log("resident listing: periodic full walk between calls, %d ms" % ((time.time() - t) * 1000))
+                except Exception as e:
+                    log("idle full walk failed: %s: %s" % (type(e).__name__, e))
+                finally:
+                    lock.release()
     finally:
         try:
             with open(ENDPOINT, encoding="utf-8") as f:

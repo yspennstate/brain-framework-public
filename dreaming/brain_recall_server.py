@@ -55,6 +55,18 @@ MEMO_NAMES = ("_fc_get", "_load_superseded", "_memlist", "_fast_listing", "_arch
               "_fc_fresh_memories", "_fc_overlay", "_sup_rows")
 
 
+def _faults():
+    """(major, minor) page faults of this process so far, or None where getrusage is missing (Windows).
+    On a Mac under the film's memory pressure (6 Nov 2026) the idle server sat mostly compressed or swapped (762 MB
+    footprint, 42 MB resident), and a call after a gap paged its state back in; pf in the call row shows that."""
+    try:
+        import resource
+        ru = resource.getrusage(resource.RUSAGE_SELF)
+        return (ru.ru_majflt, ru.ru_minflt)
+    except Exception:
+        return None
+
+
 def _should_warm(env):
     """Every fresh server warms itself before its first caller unless BRS_WARMUP=0 (successor or not)."""
     return env.get("BRS_WARMUP", "1") != "0"
@@ -449,6 +461,7 @@ class Brain:
         return dropped
 
     def call(self, argv, env, cwd):
+        pf0 = _faults()
         dropped = self.refresh_state()
         self.miss.clear()
         saved_env = {}
@@ -488,8 +501,10 @@ class Brain:
             except OSError:
                 pass
         self.calls += 1
+        pf1 = _faults()
         return {"rc": rc, "out": out.getvalue(), "err": err.getvalue(), "ms": int((time.time() - t0) * 1000),
                 "dropped": dropped, "calls": self.calls,
+                "pf": [pf1[0] - pf0[0], pf1[1] - pf0[1]] if pf0 and pf1 else None,
                 "miss_s": {k: round(v, 2) for k, v in self.miss.items() if v >= 0.05}}
 
 
@@ -538,7 +553,8 @@ def main():
                                                          "op": (req.get("argv") or ["?"])[0], "ms": reply.get("ms"),
                                                          "sess": ((req.get("env") or {}).get("CLAUDE_CODE_SESSION_ID")
                                                                   or (req.get("env") or {}).get("CODEX_THREAD_ID") or "")[:8],
-                                                         "dropped": reply.get("dropped"), "miss_s": reply.get("miss_s")}) + "\n")
+                                                         "dropped": reply.get("dropped"), "miss_s": reply.get("miss_s"),
+                                                         "pf": reply.get("pf")}) + "\n")
                             except Exception:
                                 pass
                         if rss_bytes() > RSS_CAP:

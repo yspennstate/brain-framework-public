@@ -102,8 +102,14 @@ def _last_assistant(tp):
     # A fixed tail is not a turn: an unrelated tool from the prior continuation used to suppress a
     # current warning. The most recent user TEXT record (owner prompt or Stop-hook continuation) is the
     # boundary. If it fell outside the bounded read, borrow no observation from an unknown turn.
+    # 6 Nov 2026: the boundary is the LAST such record, so scan from the end and stop at it, and parse only lines that
+    # hold the literal "user" (a role of "user" is written that way in the JSON). The old forward pass json-decoded
+    # every line of the tail, ~4,000 records, 19 ms of this hook's ~35 ms cold.
     boundary = -1
-    for i, ln in enumerate(lines):
+    for i in range(len(lines) - 1, -1, -1):
+        ln = lines[i]
+        if '"user"' not in ln:
+            continue
         try:
             obj = json.loads(ln)
         except Exception:
@@ -113,6 +119,7 @@ def _last_assistant(tp):
         content = msg.get("content") if "content" in msg else obj.get("content")
         if role == "user" and _text_content(content).strip():
             boundary = i
+            break
     current_lines = lines[boundary + 1:] if boundary >= 0 else []
     observed = any(OBSERVE_RE.search(ln) for ln in current_lines)
     last = ""
@@ -292,11 +299,12 @@ def _h(x):
 
 
 def _selftest():
+    # the two invariants owner_report_contract ships with (a deployment's own codes are tested by its sidecar)
     bad = {
-        "grid_pnl_boundary": "Grid completed-pair P&L is -$123,000.",
+        "settled_number_without_provenance": "The pipeline earns $123k per year.",
         "financial_scope_incomplete": (
             "Account 7 put P&L is incomplete; three option legs are missing, "
-            "so \u201112,345 is understated."
+            "so -$12,345 is understated."
         ),
     }
     safe = (

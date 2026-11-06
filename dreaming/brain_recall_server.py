@@ -566,6 +566,26 @@ def main():
     log("serving pid %d port %d after %.1f s load" % (os.getpid(), port, time.time() - t0))
     th = threading.Thread(target=srv.serve_forever, daemon=True)
     th.start()
+    # 6 Nov 2026 (claude-95df24fa, Mac): a successor warms itself before its first caller. 98 of 115 server starts in
+    # 24 h were bm25 replacements, and the first call a fresh server answered cost p50 1484 ms (70 calls, 117 of the
+    # 170 s of live recall time). In-process, two warm-up recalls (1.4-2.3 s, log and refresh off) took the first real
+    # call to 136-228 ms against 680-1090 ms cold; one warm-up left it at 577-826. Only a successor does this: a server
+    # a client started has that client waiting on the lock. A caller arriving mid warm-up waits on the lock as usual.
+    # The per-call keys go in the env passed to call(): call() unsets any the env lacks. BRS_WARMUP=0 turns it off.
+    if os.environ.get("BRS_SUCCESSOR") == "1" and os.environ.get("BRS_WARMUP", "1") != "0":
+        def warm():
+            if not lock.acquire(timeout=1):
+                return
+            try:
+                tw = time.time()
+                for q in ("brain recall warm up of the lanes", "second warm call for the seed index"):
+                    brain.call(["recall", q], {"BRAIN_RECALL_LOG": "0", "BRAIN_RECALL_REFRESH": "0"}, D)
+                log("warm-up: 2 recalls in %d ms" % ((time.time() - tw) * 1000))
+            except Exception as e:
+                log("warm-up failed: %s: %s" % (type(e).__name__, e))
+            finally:
+                lock.release()
+        threading.Thread(target=warm, daemon=True).start()
     try:
         while not stop.wait(15):
             if time.time() - last["t"] > IDLE_EXIT:
@@ -589,7 +609,8 @@ def main():
             try:
                 import subprocess
                 subprocess.Popen([sys.executable, "-B", os.path.abspath(__file__)], cwd=D,
-                                 env={k: v for k, v in os.environ.items() if not k.startswith("BRAIN_")},
+                                 env=dict({k: v for k, v in os.environ.items() if not k.startswith("BRAIN_")},
+                                          BRS_SUCCESSOR="1"),
                                  stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                  close_fds=True, start_new_session=(os.name == "posix"),
                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))

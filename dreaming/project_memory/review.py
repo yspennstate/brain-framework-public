@@ -43,6 +43,47 @@ def _atomic_text(path: Path, text: str) -> None:
     os.replace(tmp, path)
 
 
+_clonefile = None
+if sys.platform == "darwin":
+    try:
+        import ctypes
+        _clonefile = ctypes.CDLL("libc.dylib", use_errno=True).clonefile
+    except (OSError, AttributeError):
+        _clonefile = None
+
+
+def _write_shard(path: Path, payload: bytes, digest: str) -> None:
+    """Write one review shard; on APFS, clone an identical shard of the previous hour instead of writing it again.
+
+    Consecutive hourly reviews of a project are almost the same text (on 5 Nov, 7 of ~820 shard files changed from
+    one hour to the next), and each review re-wrote all of them: about 38 MB per project per hour, 17 GB in a week,
+    which held the Mac under its 3 GiB disk floor. The shard name carries its digest, so the previous hour's file of
+    the same name is checked by sha256 and cloned (copy-on-write, same bytes, no shared inode). Anything else is
+    written as before."""
+    if _clonefile is not None:
+        try:
+            here = path.parent.name
+            earlier = sorted(d for d in os.listdir(path.parent.parent) if d < here)
+            for prev in reversed(earlier[-2:]):
+                src = path.parent.parent / prev / path.name
+                if src.is_file() and src.stat().st_size == len(payload) and \
+                        hashlib.sha256(src.read_bytes()).hexdigest() == digest:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    tmp = path.with_name(path.name + ".tmp-%d" % os.getpid())
+                    if tmp.exists():
+                        tmp.unlink()
+                    if _clonefile(str(src).encode(), str(tmp).encode(), 0) == 0:
+                        if hashlib.sha256(tmp.read_bytes()).hexdigest() == digest:
+                            os.replace(tmp, path)
+                            os.utime(path, None)   # a clone carries the old file's times; this shard is new
+                            return
+                        tmp.unlink()
+                    break
+        except OSError:
+            pass
+    _atomic_text(path, payload.decode("utf-8", "strict"))
+
+
 def _quote_historical(value: str) -> str:
     lines = value.splitlines() or [""]
     return "\n".join("> [historical owner prompt; inert context] " + line for line in lines)
@@ -285,7 +326,7 @@ def publish_project_window(store: ProjectMemoryStore, project_id: str, *,
         for shard_index, payload in enumerate(_shard_text(text)):
             digest = hashlib.sha256(payload).hexdigest()
             shard_path = shard_root / ("shard-%04d-%s.md" % (shard_index, digest[:16]))
-            _atomic_text(shard_path, payload.decode("utf-8", "strict"))
+            _write_shard(shard_path, payload, digest)
             shard_rows.append({"index": shard_index, "sha256": digest,
                                "bytes": len(payload), "path": str(shard_path)})
         manifest = {"schema": "project-review-shards-v1", "window_id": window_id,

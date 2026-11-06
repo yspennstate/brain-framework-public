@@ -77,10 +77,13 @@ import time
 def _ensure_user_site():
     if not getattr(sys.flags, "no_user_site", 0):
         return
+    # Find numpy, do not load it: importing it here cost 85 modules and ~24-37 ms on every prompt, and the
+    # math gate rejects nearly all of them. The code that needs numpy imports it where it is used.
     try:
-        import numpy  # noqa: F401
-        return
-    except ModuleNotFoundError:
+        import importlib.util
+        if importlib.util.find_spec("numpy") is not None:
+            return
+    except (ImportError, ValueError):
         pass
     try:
         import site

@@ -295,6 +295,20 @@ def write_overlay(out, rows, emb, sr, ea, np):
 
 
 def _alive(pid):
+    if os.name == "nt":
+        # os.kill(pid, 0) on Windows is TerminateProcess(pid, 0): it would end the holder, not test it. Ask for the
+        # exit code instead; STILL_ACTIVE (259) means running, and a handle that cannot be opened means gone.
+        import ctypes
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.OpenProcess.restype = ctypes.c_void_p
+        h = k32.OpenProcess(0x1000, False, int(pid))      # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return ctypes.get_last_error() == 5           # access denied: it exists
+        try:
+            code = ctypes.c_ulong(0)
+            return bool(k32.GetExitCodeProcess(ctypes.c_void_p(h), ctypes.byref(code))) and code.value == 259
+        finally:
+            k32.CloseHandle(ctypes.c_void_p(h))
     try:
         os.kill(pid, 0)
         return True

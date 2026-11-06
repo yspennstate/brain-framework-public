@@ -61,15 +61,86 @@ def _read_stdin_json():
         return None
 
 
-def gate_strength(prompt: str) -> float:
+# THE GATE'S VERDICT, KEPT PER PROMPT (6 Nov 2026). Importing brain.py for the gate cost about 20 ms a prompt (13 of
+# them its own copy of spread_recall), and the gate is silent on nearly every prompt. Its answer depends on three
+# things only: the prompt, recall_policy.json and brain.py's code. Loop sessions send the same text again and again
+# (2,120 prompts from 4 to 6 Nov held 42 distinct texts), so the answer is kept under a hash of the prompt, for as long
+# as both files keep the size, mtime and inode they had when it was computed. Any change to either empties the cache.
+# Only real (uuid) sessions write it. CANONICAL_ROUTE_GATE_CACHE=0 turns it off.
+GATE_CACHE = os.environ.get("CANONICAL_ROUTE_GATE_CACHE", os.path.join(DR, "canonical_route_gate_cache.json"))
+GATE_CACHE_MAX = 400
+
+
+def _gate_ident():
+    """[node, brain.py, its stat, policy, its stat] as the gate would read them, or None."""
+    try:
+        import importlib.util
+
+        spec = importlib.util.find_spec("brain")
+        bp = os.path.abspath(spec.origin) if spec and spec.origin else ""
+        if not bp:
+            return None
+        pol = os.environ.get("BRAIN_RECALL_POLICY", os.path.join(os.path.dirname(bp), "recall_policy.json"))
+        ident = [NODE, bp]
+        for p in (bp, pol):
+            st = os.stat(p)
+            ident += [p, st.st_mtime_ns, st.st_size, st.st_ino] if p == pol else [st.st_mtime_ns, st.st_size, st.st_ino]
+        return ident
+    except Exception:
+        return None
+
+
+def _gate_cached(key, ident):
+    try:
+        with io.open(GATE_CACHE, encoding="utf-8") as handle:
+            cache = json.load(handle)
+        if isinstance(cache, dict) and cache.get("ident") == ident:
+            v = (cache.get("v") or {}).get(key)
+            return None if v is None else float(v)
+    except Exception:
+        pass
+    return None
+
+
+def _gate_keep(key, ident, strength):
+    try:
+        try:
+            with io.open(GATE_CACHE, encoding="utf-8") as handle:
+                cache = json.load(handle)
+        except Exception:
+            cache = {}
+        v = cache.get("v") if isinstance(cache, dict) and cache.get("ident") == ident else None
+        v = dict(v) if isinstance(v, dict) else {}
+        v.pop(key, None)
+        v[key] = strength
+        while len(v) > GATE_CACHE_MAX:
+            v.pop(next(iter(v)))
+        tmp = GATE_CACHE + ".%d.tmp" % os.getpid()
+        with io.open(tmp, "w", encoding="utf-8") as handle:
+            json.dump({"ident": ident, "v": v}, handle)
+        os.replace(tmp, GATE_CACHE)
+    except Exception:
+        pass
+
+
+def gate_strength(prompt: str, session: str = "") -> float:
     """The recall path's own intent gate on this prompt; 0.0 means silent."""
+    use = GATE_CACHE not in ("", "0")
+    key = hashlib.sha256(prompt.encode("utf-8", "replace")).hexdigest()
+    ident = _gate_ident() if use else None
+    if ident is not None:
+        hit = _gate_cached(key, ident)
+        if hit is not None:
+            return hit
     import brain
 
     policy = brain._load_recall_policy()
     gate = (policy.get(NODE) or {}).get("intent_gate")
-    if not gate:
-        return 0.0
-    return float(brain._intent_gate_strength(prompt, gate) or 0.0)
+    strength = float(brain._intent_gate_strength(prompt, gate) or 0.0) if gate else 0.0
+    # kept only if neither file moved while it was computed, and only for a real session
+    if ident is not None and re.match(r"^[0-9a-f]{8}-", session or "") and _gate_ident() == ident:
+        _gate_keep(key, ident, strength)
+    return strength
 
 
 def _fresh(session: str) -> bool:
@@ -125,10 +196,10 @@ def route(data: dict) -> str | None:
     prompt = data.get("prompt", "") or ""
     if not prompt.strip() or prompt.lstrip().startswith(NOISE_PREFIXES):
         return None
-    strength = gate_strength(prompt)
+    session = str(data.get("session_id") or "")
+    strength = gate_strength(prompt, session)
     if strength <= 0.0:
         return None
-    session = str(data.get("session_id") or "")
     if not _fresh(session):
         return None
     _log_fire(session, strength, prompt)

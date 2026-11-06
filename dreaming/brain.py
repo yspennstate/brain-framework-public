@@ -2313,6 +2313,12 @@ def _sup_quiet(ss, changed, cur, ptr, inv):
     return True
 
 
+# The memo below outlives the call (6 Nov 2026, Mac): _fc_layer builds a new wrap for every recall, so a memo made
+# inside it was empty each time and the resident server rebuilt the 46k-row digest on every call (44 ms of 200, 12 of
+# 12 calls in a profile). Every entry is checked against its own key or rows before it is used.
+_FC_SUP_MEMO = {}
+
+
 def _fc_superseded_wrap(real):
     """brain._load_superseded (active_supersessions with frontmatter authority) read once per state of the memory
     folder, and carried across other agents' writes. The head entry, keyed by the index file and supersession.py,
@@ -2329,7 +2335,7 @@ def _fc_superseded_wrap(real):
     # (0.28 s) and re-read and re-dicted the stored listing (0.16 s). The digest is now joined from per-row repr
     # strings kept across calls (the same string, so the same digest), and the last stored listing is kept as a dict.
     # BRAIN_SUP_MEMO=0 turns it off.
-    memo = {}
+    memo = _FC_SUP_MEMO
 
     def _sig(rows):
         if os.environ.get("BRAIN_SUP_MEMO", "1") == "0":
@@ -2408,6 +2414,14 @@ def _fc_superseded_wrap(real):
     return _load_superseded
 
 
+def _fc_att_row(r):
+    """A copy of one corpus row, either shape: (slug, dl, counts) from these node docs or (slug, tokens) from an older
+    node-docs module (6 Nov 2026): unpacking three on pair rows raised inside the store's try, so the memo never filled
+    there and every recall reloaded and re-verified every bundle. Stored as attcorpus4, so a brain.py from before this
+    fix never reads pair rows under the name it unpacks as triples."""
+    return tuple(dict(x) if isinstance(x, dict) else list(x) if isinstance(x, list) else x for x in r)
+
+
 def _fc_attach_corpus_wrap(nd, real):
     """node_docs._search_corpus (every bundle loaded, verified and tokenized: 0.12-0.23 s of a one-shot recall, 30 Oct
     2026) kept under the identity of every file in the bundle store (size, mtime, inode, ctime) and the module. A miss
@@ -2428,14 +2442,14 @@ def _fc_attach_corpus_wrap(nd, real):
             key = _key(mem)
         except Exception:
             return real(mem, failures)
-        v = _fc_get("attcorpus3", key)
+        v = _fc_get("attcorpus4", key)
         if isinstance(v, list):
-            return [(s, dl, dict(c)) for s, dl, c in v]
+            return [_fc_att_row(r) for r in v]
         n0 = len(failures) if failures is not None else 0
         res = real(mem, failures)
         try:
             if (failures is None or len(failures) == n0) and _key(mem) == key:
-                _fc_put("attcorpus3", key, [(s, dl, c) for s, dl, c in res])
+                _fc_put("attcorpus4", key, [_fc_att_row(r) for r in res])
         except Exception:
             pass
         return res

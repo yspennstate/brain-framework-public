@@ -138,6 +138,46 @@ def _views_fresh():
         return False
 
 
+# 6 Nov: launchd runs the same `project_memory_cli.py hourly` every hour (com.brain.project-memory-hourly, at :39), so
+# when that job finished clean within the hour the dream's run only picks up the few dozen prompts since (34-55 rows
+# for 400-640 s on 5-6 Nov) that the next hourly run takes anyway, and the 19:30 dream reaches the step at :38, a
+# minute before the launchd fire, which then dies on hourly_runner_already_active. An incomplete, failed or deferred
+# last run does not count: then the dream runs the step, as before.
+PM_FRESH_S = 3600
+PM_RUNNING_S = 2700
+
+
+def _pm_recent():
+    """Why the dream's project-memory step need not run (the hourly job's last run was clean and recent, or one is
+    running now), or ''. Reads runner_health read-only; any trouble reading it means run the step."""
+    import sqlite3
+    from datetime import timezone
+    db = os.environ.get("PROJECT_MEMORY_DB") or os.path.join(
+        os.environ.get("PROJECT_MEMORY_STATE") or os.path.join(HOME, ".brain-framework", "state", "project_memory"),
+        "project_memory.sqlite3")
+    try:
+        c = sqlite3.connect("file:%s?mode=ro" % db, uri=True, timeout=2)
+        try:
+            row = c.execute("SELECT status, attempt_started_at, completed_at FROM runner_health "
+                            "WHERE runner_id='hourly'").fetchone()
+        finally:
+            c.close()
+        if not row:
+            return ""
+        status, started, done = row
+        now = datetime.now(timezone.utc)
+        age = lambda t: (now - datetime.fromisoformat(t)).total_seconds() if t else None
+        if status == "ok" and age(done) is not None and 0 <= age(done) < PM_FRESH_S:
+            return "the hourly job finished clean %d min ago" % (age(done) // 60)
+        if status == "running" and age(started) is not None and 0 <= age(started) < PM_RUNNING_S:
+            return "the hourly job is running, started %d min ago" % (age(started) // 60)
+    except Exception:
+        return ""
+    return ""
+
+
+
+
 def _publish_without_refresh(name, failed):
     """Why the embedding publish should not run, or ''. A staged file left by a failed refresh is stale."""
     if name != "embedding publish" or EMB_REFRESH[0] not in failed:
@@ -264,6 +304,9 @@ def main():
                 rc = 75
             elif name == "navigation views" and _views_fresh():
                 log("step deferred: navigation views (RELATED.md under %d h old)" % VIEWS_FRESH_H)
+                rc = 75
+            elif name == "project-memory hourly" and _pm_recent():
+                log("step deferred: project-memory hourly (%s)" % _pm_recent())
                 rc = 75
             elif stale:
                 # it would only be refused, after holding memory_write.lock against every remember for up to the cap

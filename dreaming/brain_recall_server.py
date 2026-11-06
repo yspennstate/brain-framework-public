@@ -55,6 +55,11 @@ MEMO_NAMES = ("_fc_get", "_load_superseded", "_memlist", "_fast_listing", "_arch
               "_fc_fresh_memories", "_fc_overlay", "_sup_rows")
 
 
+def _should_warm(env):
+    """Every fresh server warms itself before its first caller unless BRS_WARMUP=0 (successor or not)."""
+    return env.get("BRS_WARMUP", "1") != "0"
+
+
 def log(msg):
     try:
         with open(LOG, "a", encoding="utf-8") as f:
@@ -432,13 +437,15 @@ class Brain:
         for grp, paths in self.group_paths.items():
             sig = self._state_sig(paths)
             ttl_out = grp not in EXACT_GROUPS and now - self.filled.get(grp, 0) > STATE_TTL
-            if sig != self.sigs.get(grp) or ttl_out:
+            old_sig = self.sigs.get(grp)
+            if sig != old_sig or ttl_out:
                 for g, st in self.stores:
                     if g == grp:
                         st.clear()
                 self.sigs[grp] = sig
                 self.filled[grp] = now
-                dropped.append(grp)
+                # "folder~ttl" in the call row (6 Nov 2026): dropped on the TTL alone, its signature unchanged
+                dropped.append(grp if sig != old_sig else grp + "~ttl")
         return dropped
 
     def call(self, argv, env, cwd):
@@ -569,10 +576,13 @@ def main():
     # 6 Nov 2026 (claude-95df24fa, Mac): a successor warms itself before its first caller. 98 of 115 server starts in
     # 24 h were bm25 replacements, and the first call a fresh server answered cost p50 1484 ms (70 calls, 117 of the
     # 170 s of live recall time). In-process, two warm-up recalls (1.4-2.3 s, log and refresh off) took the first real
-    # call to 136-228 ms against 680-1090 ms cold; one warm-up left it at 577-826. Only a successor does this: a server
-    # a client started has that client waiting on the lock. A caller arriving mid warm-up waits on the lock as usual.
+    # call to 136-228 ms against 680-1090 ms cold; one warm-up left it at 577-826. A caller arriving mid warm-up waits on
+    # the lock as usual. At first only a successor warmed, on the belief that a client-started server has its client
+    # waiting; it does not (brain_recall_client starts the server and runs that call cold). On the Mac from 07:52 to
+    # 09:28 on 6 Nov the first live call on 4 warmed servers took 247-687 ms and on 5 unwarmed ones 897-2370 ms, so
+    # every fresh server warms now (_should_warm).
     # The per-call keys go in the env passed to call(): call() unsets any the env lacks. BRS_WARMUP=0 turns it off.
-    if os.environ.get("BRS_SUCCESSOR") == "1" and os.environ.get("BRS_WARMUP", "1") != "0":
+    if _should_warm(os.environ):
         def warm():
             if not lock.acquire(timeout=1):
                 return

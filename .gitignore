@@ -45,3 +45,4 @@ dreaming/recall_fastcache/
 # instinct_prime appends its slow-call record beside itself, so a test run in a checkout dirtied a tracked file
 dreaming/instinct_slow_calls.tsv
 dreaming/canonical_route_gate_cache.json
+dreaming/proof_sense_silent_cache.json

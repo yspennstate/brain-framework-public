@@ -25,6 +25,84 @@ STATE = os.path.join(HOME, ".claude", "dreaming", "proof_sense_state.json")
 REFIRE_S = 600
 MAX_CHECKS = 3
 
+# THE SILENT-VERDICT CACHE (6 Nov 2026). The lane is silent on almost every prompt, yet it paid about 28 ms cold to
+# compile the 337 patterns below before it could say so, and the prompts repeat (the loop sessions send the same tick:
+# 2,120 prompts from 4 to 6 Nov held 42 distinct texts). Silence is decided by is_math_argument alone, a pure function
+# of the prompt and of the code in this file and math_sense.py (its strong anchors), and a silent run writes nothing.
+# So a prompt found silent is kept under its sha256, valid while both files keep their mtime, size and inode; a repeat
+# exits here, before the compiles. Only silence is kept: a firing prompt runs in full every time (the knowledge file,
+# the Lean hint and the once-per-10-minutes state stay live). Stored only for a uuid session, only if neither file
+# moved during the run, at most 400 entries. PROOF_SENSE_SILENT_CACHE=0 turns it off (or names another file).
+_SC = os.environ.get("PROOF_SENSE_SILENT_CACHE") or os.path.join(HOME, ".claude", "dreaming", "proof_sense_silent_cache.json")
+_SC_KEEP = 400
+_SC_DATA = None        # the hook payload, read here once; main() uses it rather than reading stdin again
+_SC_IDENT = None
+
+
+def _sc_ident():
+    here = os.path.dirname(os.path.abspath(__file__))
+    out = []
+    for p in (os.path.abspath(__file__), os.path.join(here, "math_sense.py")):
+        st = os.stat(p)
+        out.append([p, st.st_mtime_ns, st.st_size, st.st_ino])
+    return out
+
+
+def _sc_key(prompt):
+    import hashlib
+    return hashlib.sha256(prompt.encode("utf-8", "replace")).hexdigest()
+
+
+def _sc_load(ident):
+    try:
+        with io.open(_SC, encoding="utf-8") as f:
+            d = json.load(f)
+        if isinstance(d, dict) and d.get("ident") == ident and isinstance(d.get("silent"), list):
+            return d["silent"]
+    except Exception:
+        pass
+    return []
+
+
+def _sc_store(prompt, session, ident):
+    """Keep this prompt as silent. Never raises."""
+    tmp = None
+    try:
+        if _SC == "0" or ident is None:
+            return
+        if not re.match(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", session):
+            return
+        if _sc_ident() != ident:
+            return
+        key = _sc_key(prompt)
+        keep = [k for k in _sc_load(ident) if k != key][-(_SC_KEEP - 1):] + [key]
+        tmp = "%s.tmp.%d" % (_SC, os.getpid())
+        with io.open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"ident": ident, "silent": keep}, f)
+        os.replace(tmp, _SC)
+    except Exception:
+        try:
+            if tmp:
+                os.remove(tmp)
+        except Exception:
+            pass
+
+
+if __name__ == "__main__" and len(sys.argv) == 1:
+    try:
+        _SC_DATA = json.load(sys.stdin)
+    except Exception:
+        raise SystemExit(0)            # what main() does with a payload it cannot read: nothing
+    if _SC != "0":
+        try:
+            _SC_IDENT = _sc_ident()
+            if _sc_key((_SC_DATA.get("prompt") or "")[:20000]) in set(_sc_load(_SC_IDENT)):
+                raise SystemExit(0)
+        except SystemExit:
+            raise
+        except Exception:
+            _SC_IDENT = None
+
 MATH_TOKEN = re.compile(r"\$[^$]{1,400}\$|\\\[|\\begin\{|\\(?:frac|sum|int|mathbb|mathcal|leq|geq|le|ge|infty|lim|sup|inf|alpha|beta|lambda|sigma|varepsilon|epsilon|mu|nu|rho|theta|omega)\b")
 STEP_LINE = re.compile(r"(?m)^\s*(?:\[step\s+)?\d{1,3}[.)\]]\s+\S")  # v7: three-digit step ids (a step 100 was silently invisible)
 PROOF_WORD = re.compile(r"\b(proof|lemma|theorem|proposition|corollary|argument|derivation|inequality|almost surely|martingale|measure)\b", re.I)
@@ -873,13 +951,16 @@ def render(text):
 
 
 def main():
-    try:
-        data = json.load(sys.stdin)
-    except Exception:
-        return
+    data = _SC_DATA
+    if data is None:
+        try:
+            data = json.load(sys.stdin)
+        except Exception:
+            return
     prompt = (data.get("prompt") or "")[:20000]
     block = render(prompt)
     if not block:
+        _sc_store(prompt, str(data.get("session_id") or ""), _SC_IDENT)
         return
     if _recently_fired(str(data.get("session_id") or "")):
         return

@@ -39,7 +39,9 @@ if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:
     print(__doc__ or "No command-line options.")
     raise SystemExit(0)
 
-import base64, json, os, re, socket, subprocess, sys, time, urllib.error, urllib.request
+import base64, json, os, re, socket, subprocess, sys, time
+# urllib.request is imported inside api() and gql(), the only two callers: at module level it cost 12 ms of the
+# inbox hook's 20 on every prompt, which only reads the local copy (6 Nov 2026).
 
 NOWIN = 0x08000000 if os.name == "nt" else 0          # CREATE_NO_WINDOW: never a console flash on Windows
 PY = "python3" if os.name != "nt" else '"%s"' % sys.executable   # how the printed hints call Python here
@@ -88,6 +90,7 @@ def token():
 
 
 def api(method, url, body=None, timeout=15, headers=None, with_headers=False):
+    import urllib.error, urllib.request
     h = {"Authorization": "Bearer " + token(), "Accept": "application/vnd.github+json",
          "X-GitHub-Api-Version": "2022-11-28", "Content-Type": "application/json"}
     h.update(headers or {})
@@ -110,6 +113,7 @@ def api(method, url, body=None, timeout=15, headers=None, with_headers=False):
 def gql(query, variables, timeout=15):
     """GraphQL has its own hourly budget. Once, the account's 5,000 REST calls an hour were all used by other agents
     while GraphQL still had 4,964 points, so every read and write here falls back to it."""
+    import urllib.request
     req = urllib.request.Request("https://api.github.com/graphql", method="POST",
                                  data=json.dumps({"query": query, "variables": variables}).encode(),
                                  headers={"Authorization": "Bearer " + token(), "Content-Type": "application/json"})

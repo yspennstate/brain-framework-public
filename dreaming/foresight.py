@@ -81,7 +81,50 @@ def _entries(text):
     return out
 
 
+_MIS_CACHE = os.environ.get("FORESIGHT_CACHE") or os.path.join(DR, "foresight_mistakes_cache.json")
+_MIS_HOME = (MEM, DR)
+
+
+def _mis_ident():
+    """What the parse reads: the ledger and the reflex table, by full path and [mtime_ns, size, inode]."""
+    out = []
+    for p in (os.path.join(MEM, "MISTAKES.md"), os.path.join(DR, "instincts.tsv")):
+        try:
+            s = os.stat(p)
+            out.append([p, s.st_mtime_ns, s.st_size, s.st_ino])
+        except OSError:
+            out.append([p, None, None, None])
+    return out
+
+
 def _mistakes():
+    """_mistakes_parse, cached on disk while the ledger and the reflex table are unchanged (6 Nov 2026: the parse was
+    ~26 ms of resume_checkpoint's ~37 ms on every Stop). FORESIGHT_CACHE=0 turns it off; a cache that cannot be read
+    or written only costs the parse."""
+    if _MIS_CACHE == "0" or (MEM, DR) != _MIS_HOME:   # a test that points MEM elsewhere never touches the cache
+        return _mistakes_parse()
+    ident = _mis_ident()
+    try:
+        import json
+        with io.open(_MIS_CACHE, encoding="utf-8") as f:
+            c = json.load(f)
+        if c.get("ident") == ident:
+            return [tuple(r) for r in c["rows"]]
+    except Exception:
+        pass
+    rows = _mistakes_parse()
+    try:
+        import json
+        tmp = "%s.%d.tmp" % (_MIS_CACHE, os.getpid())
+        with io.open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"ident": ident, "rows": rows}, f)
+        os.replace(tmp, _MIS_CACHE)
+    except Exception:
+        pass
+    return rows
+
+
+def _mistakes_parse():
     """Parse the correction ledger into (date, reflex_id, lesson) rows. reflex_id is the first token after
     'reflex:' - a name, or 'none' when the correction has no guard yet. A dated prose entry counts on the same terms:
     only when it states 'reflex:' (the ledger's header asks it to since 27 Sep)."""

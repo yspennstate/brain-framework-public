@@ -395,8 +395,12 @@ def strength_edges(edges, S, typed):
 # lexical index's 98,255 terms, 1,138 are possessives (talagrand's 64 cards, hall's 54, jensen's 116, janson's 19).
 # Each wording gets the other form of a name added: base -> base's when base's is at least 0.5 pct of base's own
 # document count and in 2 or more cards (that keeps group's, graph's, function's out), and base's -> base always.
-# Meta words are skipped. OFF by default since the 28 Oct A/B (mixed result); MATH_RECALL_POSSESSIVE=1 turns it on. Changing the two tokenizers instead would need the
-# prefilter index and the signal cache rebuilt.
+# Meta words are skipped. Summed into the wording (MATH_RECALL_POSSESSIVE=1) the 28 Oct A/B was mixed, so it stayed
+# off. As its own wording fused by rank ("swap") it is the default since 6 Nov 2026: on 40 cards with a possessive
+# title, asked by the bare name, a title word and a body word, 16 ranked better and 0 worse (10 of the 20 the plain
+# search left out came back); their exact titles and 40 bare-name control titles were 0 better, 0 worse (two seeds,
+# rule written before the run). MATH_RECALL_POSSESSIVE=0 turns it off. Changing the two tokenizers instead would
+# need the prefilter index and the signal cache rebuilt.
 _POSS_SKIP = {"paper", "author", "agent", "page", "image", "wikipedia", "claim", "source", "model", "campaign",
               "worker", "collector", "card", "lemma", "theorem"}
 
@@ -828,7 +832,7 @@ def main(argv=None):
                 why_kinds.update(learned_kinds)
                 why_edges = dict(edge_by_id)
                 why_edges.update({e.id: e for e in edges_s[len(edges):]})
-        _poss = os.environ.get("MATH_RECALL_POSSESSIVE", "0")
+        _poss = os.environ.get("MATH_RECALL_POSSESSIVE", "swap")
         if P is not None and _poss == "1":
             queries = possessive_variants(queries, P.s.get("lex") or {})
         elif P is not None and _poss == "swap":   # the other form as its own wording: fused by rank, never summed

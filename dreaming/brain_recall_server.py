@@ -40,6 +40,7 @@ RSS_CAP = int(float(os.environ.get("BRS_RSS_CAP_GB", "2.5")) * 1024 ** 3)
 # 5 Nov 03:44 (claude-7df69752): cap 3 -> 1. Rebuilds come about every 35 min (3 in 1 h 44 min on 5 Nov) and a fresh
 # server loads in 0.1 s, so exiting on the first one costs little and holds at most one dead generation (~157 MB).
 BM25_GEN_CAP = int(os.environ.get("BRS_BM25_GEN_CAP", "1"))
+BM25_STAY = int(os.environ.get("BRS_BM25_STAY", "12"))
 BM25_INDEX = os.path.join(D, "bm25_index.json.gz")
 
 
@@ -579,9 +580,52 @@ def main():
                         if g != last["bm25"]:
                             last["bm25"], last["gens"] = g, last["gens"] + 1
                         if BM25_GEN_CAP and last["gens"] >= BM25_GEN_CAP:
-                            log("bm25 index replaced %d times; exiting so its deleted postings files are freed" % last["gens"])
-                            last["respawn"] = True
-                            stop.set()
+                            # 6 Nov 2026 (claude-95df24fa, Mac): stay up through a rebuild when nothing deleted is
+                            # still held. The exits below were 92 of 117 server starts in 24 h, and a fresh server's
+                            # first live call was p50 1.33 s. brain_bm25_release closes the old postings connections,
+                            # clears the once-per-process df/usage caches and lists any regular file of 1 MB+ still
+                            # open with no name on disk; a non-empty list exits as before so the disk comes back.
+                            # In-process A/B (ab_release v1-v3): a released warm server equalled a cold process on
+                            # every query of every rebuild. At most BRS_BM25_STAY rebuilds in a row (default 12),
+                            # then one exit, so a cache nobody has found cannot drift for long. BRS_BM25_RELEASE=0
+                            # restores the plain exit.
+                            rel = None
+                            if os.environ.get("BRS_BM25_RELEASE", "1") != "0" and last.get("stayed", 0) < BM25_STAY:
+                                try:
+                                    import brain_bm25_release
+                                    rel = brain_bm25_release.release(brain.g)
+                                    if rel.get("held_deleted"):
+                                        # a rebuild that landed mid-call leaves the old BM25 object (and its
+                                        # postings connection) in the folder store until the next call drops it;
+                                        # drop every store now (a full refill in a warm process, ~0.2 s next
+                                        # call) and look again
+                                        import gc
+                                        for _grp, st in brain.stores:
+                                            st.clear()
+                                        brain.sigs.clear()
+                                        brain.filled.clear()
+                                        gc.collect()
+                                        rel = brain_bm25_release.release(brain.g)
+                                        rel["cleared"] = True
+                                except Exception as e:
+                                    log("bm25 release failed: %s: %s" % (type(e).__name__, e))
+                                    rel = None
+                            if rel is not None and not rel.get("held_deleted"):
+                                last["stayed"] = last.get("stayed", 0) + 1
+                                log("bm25 index replaced; released the old generation, staying up (%d in a row)%s"
+                                    % (last["stayed"], (" (closed %d dead postings connections; held by %s%s)"
+                                                         % (rel["dead_closed"], ", ".join(rel.get("dead_owners") or []),
+                                                            "; stores cleared" if rel.get("cleared") else ""))
+                                                        if rel.get("dead_closed") else
+                                                        (" (stores cleared)" if rel.get("cleared") else "")))
+                                last["gens"] = 0
+                            else:
+                                held = (rel or {}).get("held_deleted") or []
+                                log("bm25 index replaced %d times; exiting so its deleted postings files are freed%s"
+                                    % (last["gens"], (" (held: %s)" % ", ".join(os.path.basename(h[2]) or str(h[0])
+                                                                             for h in held[:3])) if held else ""))
+                                last["respawn"] = True
+                                stop.set()
                 finally:
                     last["t"] = time.time()
                     lock.release()

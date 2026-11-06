@@ -15,6 +15,7 @@ nightly job. Prints what to do about each failure rather than only that it faile
 """
 import io
 import json
+import re
 import os
 import subprocess
 import sys
@@ -57,8 +58,8 @@ DR = os.path.dirname(os.path.abspath(__file__))
 # username and correct on any other - and unlike a template token it is a real
 # value at import time.
 _BRAIN_SLUG = _brain_slug_resolve()
-MEM = os.path.join(os.path.expanduser("~"), ".claude", "projects",
-                   _BRAIN_SLUG, "memory")
+MEM = os.environ.get("BRAIN_MEM_DIR") or os.path.join(os.path.expanduser("~"), ".claude", "projects",
+                                                     _BRAIN_SLUG, "memory")
 
 problems = []
 
@@ -146,7 +147,11 @@ try:
     misses = []
     for fname in probes:
         slug = fname[:-3]
-        query = slug.replace("_", " ").rsplit(" 2026", 1)[0]
+        # Drop only a trailing _YYYY_MM_DD. A compaction slug ends in its own
+        # timestamp (..._20261101T105555); cutting at " 2026" left "compaction
+        # claude <id>", which every compaction of that session matches, and the
+        # newest one fell out of the top hits: a false LEXICAL DEGRADED.
+        query = re.sub(r"_20\d\d_\d\d_\d\d$", "", slug).replace("_", " ")
         out = subprocess.run(
             [sys.executable, os.path.join(DR, "bm25.py"), "query", query],
             capture_output=True, text=True, cwd=DR).stdout

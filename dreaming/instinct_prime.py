@@ -446,15 +446,60 @@ def _text_from(data):
     return ev, ""
 
 
+# 6 Nov 2026: exact_clauses.render is a pure function of the prompt text, but importing it compiles 38 regexes, 14 of
+# this hook's ~35 ms on a cold prompt. Loop prompts repeat, so the rendered line is kept per sha256(prompt), with the
+# stat of exact_clauses.py as the cache's identity (an edit there drops it). Stored only for a uuid session.
+# EXACT_CLAUSES_CACHE=0 turns it off (or names another file).
+_EC_CACHE = os.environ.get("EXACT_CLAUSES_CACHE") or os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "exact_clauses_render_cache.json")
+_EC_KEEP = 400
+_EC_UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+
+def _ec_ident():
+    try:
+        st = os.stat(os.path.join(os.path.dirname(os.path.abspath(__file__)), "exact_clauses.py"))
+        return [st.st_mtime_ns, st.st_size, st.st_ino]
+    except OSError:
+        return None
+
+
 def _exact_clause_context(event, text):
     """Intake-only exactness advisory, kept outside `fired` so no owner clause reaches FIRELOG."""
     if event != "UserPromptSubmit":
         return ""
+    use = _EC_CACHE != "0"
+    ident = _ec_ident() if use else None
+    key = hashlib.sha256(text.encode("utf-8", "surrogatepass")).hexdigest() if ident else None
+    data = None
+    if key:
+        try:
+            with io.open(_EC_CACHE, encoding="utf-8") as fh:
+                data = json.load(fh)
+            if data.get("ident") != ident:
+                data = None
+            elif key in data.get("v", {}):
+                return data["v"][key]
+        except Exception:
+            data = None
     try:
         import exact_clauses
-        return exact_clauses.render(text)
+        out = exact_clauses.render(text)
     except Exception:
         return ""
+    if key and _EC_UUID.match(str(_SLOW_EVENT.get("session") or "")) and _ec_ident() == ident:
+        try:
+            v = dict((data or {}).get("v", {}))
+            v[key] = out
+            if len(v) > _EC_KEEP:
+                v = dict(list(v.items())[-_EC_KEEP:])
+            tmp = "%s.%d.tmp" % (_EC_CACHE, os.getpid())
+            with io.open(tmp, "w", encoding="utf-8") as fh:
+                json.dump({"ident": ident, "v": v}, fh, separators=(",", ":"))
+            os.replace(tmp, _EC_CACHE)
+        except Exception:
+            pass
+    return out
 
 
 def _firelog_data(event, data, exact_ctx):

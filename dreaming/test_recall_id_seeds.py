@@ -61,6 +61,41 @@ def main():
                 fails.append("query %r seeded already, but its output changed with the identifier seeds on" % q)
         if recall("zzqx 404040") != recall("zzqx 404040", on=False):
             fails.append("a digit query with no BM25 hit must print the same as with the seeds off")
+
+        # The query-meaning lane must stay out of an id-only call: the vector of a bare number lands on unrelated
+        # memories, and on the live corpus their fused ranks buried the one memory holding it. Four memories cannot
+        # reproduce the burying, so this checks the mechanism with a fake lane that counts its calls. The rescue and the
+        # gate (which call the lane on their own) are off, leaving the fused-ranking call as the only one.
+        fake = ("import sys, brain\n"
+                "calls = []\n"
+                "def fake(q, k=None, floor=None):\n"
+                "    calls.append(q)\n"
+                "    return {'garden_watering_note': 1.0}\n"
+                "brain._query_semantic_scores = fake\n"
+                "brain._qlane_on = lambda: True\n"
+                "brain.recall(sys.argv[1])\n"
+                "print('LANE_CALLS %d' % len(calls))\n")
+
+        def recall_lane(q, keep=False):
+            e = dict(env, BRAIN_RECALL_QUERY_EMBED="1", BRAIN_RECALL_SEM_RESCUE="0", BRAIN_RECALL_GATE_T="0")
+            if keep:
+                e["BRAIN_RECALL_ID_QSEM"] = "1"
+            out = subprocess.run([sys.executable, "-c", fake, q], cwd=HERE, env=e, capture_output=True, text=True,
+                                 timeout=120).stdout
+            rows = [l.split("]")[-1].strip() for l in out.splitlines() if l.startswith("  ") and "] " in l]
+            calls = [int(l.split()[1]) for l in out.splitlines() if l.startswith("LANE_CALLS ")]
+            return rows, (calls[0] if calls else None)
+
+        rows, calls = recall_lane("7KDP-2210")
+        if rows[:1] != ["station_serial_swap"] or calls != 0:
+            fails.append("an id-only call must skip the meaning lane, got rows %s and %s lane calls" % (rows[:3], calls))
+        rows, calls = recall_lane("7KDP-2210", keep=True)
+        if rows[:1] != ["station_serial_swap"] or not calls:
+            fails.append("BRAIN_RECALL_ID_QSEM=1 should call the lane again (control for the fake), got rows %s and %s "
+                         "lane calls" % (rows[:3], calls))
+        rows, calls = recall_lane("station calibration serial swap")
+        if not calls:
+            fails.append("a call seeded through its words must still use the meaning lane, got %s lane calls" % calls)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     for f in fails:

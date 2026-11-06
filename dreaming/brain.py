@@ -4339,11 +4339,16 @@ def _recall_body(query, n=8):
     # foothold" although bm25.tokens keeps those digits. Here, after every other arm has had its turn, a query that still
     # has no seed and carries a digit takes BM25's hits on the raw query, at the task-id seeds' strength. A query that
     # seeded before is untouched, so its output is unchanged. BRAIN_RECALL_ID_SEEDS=0 turns it off.
+    # The query-meaning lane then buried the hit on the Mac: the vector of a bare number lands on unrelated memories,
+    # which the fusion ranked above the one memory holding it (a block height's memory at row 16). A call seeded only
+    # here skips that lane, as BRAIN_RECALL_QUERY_EMBED=0 would; BRAIN_RECALL_ID_QSEM=1 keeps it.
+    _id_only = False
     if not seeds and os.environ.get("BRAIN_RECALL_ID_SEEDS", "1") != "0" and re.search(r"\d", query or ""):
         try:
             import bm25 as _bm25id
             _id_hits = [h for h in _bm25id.BM25().score(query, 5) if h[0] not in disabled]
             if _id_hits:
+                _id_only = os.environ.get("BRAIN_RECALL_ID_QSEM", "0") != "1"
                 _id_max = _id_hits[0][1] or 1.0
                 for _slug, _s in _id_hits:
                     seeds[_slug] = 1.5 + 1.5 * _s / _id_max
@@ -4996,7 +5001,7 @@ def _recall_body(query, n=8):
         # Without the instruction the lane alone finds 58 of the reworded answers in its top five, with it 73. The
         # end-to-end A/B, the held half and BRAINDEV are in improve_1012/fronts/R11/NOTES.md.
         if qsem is None:
-            qsem = _query_semantic_scores(query)
+            qsem = {} if _id_only else _query_semantic_scores(query)
         _qfuse = _qlane_fuse()
         if _qfuse == "z":
             if _QLANE.get("query") == query and _QLANE.get("cos") is not None:

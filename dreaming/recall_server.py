@@ -74,6 +74,10 @@ def main():
     ap.add_argument('--parent-pid',type=int,default=0)
     ap.add_argument('--max-age',type=float,default=0)
     ap.add_argument('--test-controls',action='store_true')
+    # A server the client started on demand (recall_client._spawn, POSIX) leaves after --idle-exit seconds without a
+    # served call, and with --exit-on-stale once the code it serves changed, so the next caller starts a current one.
+    ap.add_argument('--idle-exit',type=float,default=0)
+    ap.add_argument('--exit-on-stale',action='store_true')
     args = ap.parse_args()
     if not args.store:
         print("no store: set MATHBRAIN_STORE or pass --store", file=sys.stderr)
@@ -296,6 +300,16 @@ def main():
                 break
             if args.max_age and time.monotonic()-started > args.max_age:
                 break
+            now = time.monotonic()
+            if args.idle_exit and now-state.get('last_end',started) > args.idle_exit:
+                break
+            if args.exit_on_stale and now-state.get('stale_checked',started) > 30:
+                state['stale_checked'] = now
+                try:
+                    if code_stamp(model_files) != state['stamp'] or code_key() != state['code']:
+                        break
+                except OSError:
+                    break
             server.handle_request()
         (HERE/'server_summary.json').write_text(json.dumps(dict(requests=state['requests'],failures=server.failures,
                 peak=server.peak,clean_stop=1))+'\n',encoding='utf-8')

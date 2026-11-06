@@ -38,6 +38,9 @@ PARENT = {}   # folder name -> the base it sits under on origin/main
 # brain_testing/, which this page never read; every folder there is a test.
 TESTING = "12_cognitive_architecture/brain_testing"
 PREFIX = {BASE: "", AUDITS: "audits/", TESTING: "brain_testing/"}
+# 6 Nov: brain_improvement/ALL_TESTS holds the manifest of every test (README, MANIFEST.tsv, LATEST_TEN.md, GAPS.md)
+# and links this index; it is not a test run
+MANIFEST_DIRS = {"ALL_TESTS"}
 
 
 def folders():
@@ -46,6 +49,8 @@ def folders():
                            capture_output=True, text=True, check=True)
         for l in r.stdout.split():
             n = l.rsplit("/", 1)[1]
+            if base == BASE and n in MANIFEST_DIRS:
+                continue
             if base != AUDITS or AUDIT_TESTS.search(n):
                 PARENT[n] = base
     return list(PARENT)

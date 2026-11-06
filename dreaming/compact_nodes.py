@@ -1037,7 +1037,28 @@ def save_node(summary, runtime, session_id, trigger, source_path="", when=None, 
     if math_draft:
         row["math_draft"] = math_draft
     _append(INDEX, row)
+    _overlay_vectors()
     return path
+
+
+def _overlay_vectors():
+    """Start the fresh-vector overlay for the anchor just written, as brain.py remember() does for its memories. On a
+    Mac (6 Nov 2026) the overlay ran only from remember(), so compaction anchors (35 of 253 rows that day) waited for
+    the next remember to get a vector: 20 memories had none for 1.5 h. Single-flight and detached; never in a test
+    folder (COMPACT_NODES_ROOT or COMPACT_ANCHOR_DIR set). COMPACT_NO_VECTORS=1 turns it off. POSIX only: on Windows
+    this would be a new spawn site from the PostCompact hook, and remember() still covers it there."""
+    if os.name == "nt" or os.environ.get("COMPACT_ANCHOR_DIR") or os.environ.get("COMPACT_NODES_ROOT") \
+            or os.environ.get("COMPACT_NO_VECTORS"):
+        return
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "fresh_vectors", os.path.join(os.path.dirname(os.path.abspath(__file__)), "fresh_vectors.py"))
+        fv = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fv)
+        fv.spawn_detached()
+    except Exception:
+        pass
 
 
 def _stage_math_draft(extra, name, runtime, session_id, source_path):

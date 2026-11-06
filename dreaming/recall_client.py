@@ -16,15 +16,52 @@ def _emit(stream, data):
         stream.write(data.decode('utf-8',errors='replace'))
         stream.flush()
 
+def _spawn(argv):
+    """Start a server for this call's store when none answers (6 Nov 2026): on Linux and macOS nothing else starts one
+    (install.py registers no keeper there), so every math recall ran cold. POSIX only; Windows keeps its logon
+    launcher. At most one start a minute (spawn.stamp); the server leaves after 20 idle minutes, at 6 h, or once its
+    code is stale. It inherits this caller's environment, so its environment key is the caller's. The server's own
+    probe still refuses a box short of memory or disk, and its per-store lock refuses a second one.
+    MATH_RECALL_SPAWN=0 turns this off."""
+    if os.name == 'nt' or os.environ.get('MATH_RECALL_SPAWN') == '0':
+        return None
+    try:
+        store = requested_store(argv)
+        if not store:
+            return None
+        stamp_file = HERE/'spawn.stamp'
+        try:
+            if time.time()-stamp_file.stat().st_mtime < 60:
+                return None
+        except OSError:
+            pass
+        stamp_file.write_text('%.0f\n' % time.time(),encoding='utf-8')
+        import subprocess
+        log = open(HERE/'recall_server_stdio.log','a',encoding='utf-8')
+        child = subprocess.Popen([sys.executable,str(HERE/'recall_server.py'),'--store',store,'--max-age','21600',
+                                  '--idle-exit','1200','--exit-on-stale'],cwd=str(HERE),stdin=subprocess.DEVNULL,
+                                 stdout=log,stderr=log,close_fds=True,start_new_session=True)
+        log.close()
+        return child.pid
+    except Exception:
+        return None
+
+
 def try_server(argv):
     if os.environ.get('MATH_RECALL_SERVER_DISABLE') == '1':
         return None
     try:
-        endpoint = json.loads((HERE/'endpoint.json').read_text(encoding='utf-8'))
+        try:
+            endpoint = json.loads((HERE/'endpoint.json').read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            _spawn(argv)
+            return None
         if endpoint['host'] != '127.0.0.1' or endpoint['store'] != requested_store(argv):
             return None
         stamp, environment = code_stamp(endpoint.get('model_files',())), env_key()
         if endpoint['stamp'] != stamp or endpoint['environment'] != environment:
+            if endpoint['stamp'] != stamp:
+                _spawn(argv)      # a stale on-demand server leaves within 30 s; a later start takes its place
             return None
         signature=endpoint['code']
         # 5 Nov 2026: 30 s / cap 60 sent 23 of 513 calls that day to a COLD run (store + model load in the caller, up to
@@ -32,7 +69,12 @@ def try_server(argv):
         # behind it timed out too. Waiting for the warm answer is cheaper than loading a second copy.
         timeout = min(600.0,max(.01,float(os.environ.get('MATH_RECALL_SERVER_TIMEOUT','180.0'))))
         deadline = time.monotonic()+timeout
-        with socket.create_connection(('127.0.0.1',int(endpoint['port'])),timeout=min(.1,timeout)) as sock:
+        try:
+            sock = socket.create_connection(('127.0.0.1',int(endpoint['port'])),timeout=min(.1,timeout))
+        except ConnectionRefusedError:
+            _spawn(argv)          # endpoint.json outlived its server
+            return None
+        with sock:
             sock.settimeout(timeout)
             send_frame(sock,dict(token=endpoint['token'],code=signature,environment=environment,
                                  argv=list(argv),program=sys.argv[0],

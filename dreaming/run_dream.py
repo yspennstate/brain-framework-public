@@ -187,7 +187,7 @@ def _publish_without_refresh(name, failed):
         age = "staged file from %s" % time.strftime("%Y-%m-%d %H:%M", time.localtime(os.path.getmtime(staged)))
     except OSError:
         age = "nothing staged"
-    return "the embedding refresh failed this run; %s" % age
+    return "the embedding refresh failed or did not run this run; %s" % age
 
 
 def _budget_cap(cap):
@@ -205,6 +205,25 @@ def _machine():
     except Exception:
         return "unknown"
 
+HEAVY_LOCK = os.environ.get("HEAVY_LOCK", os.path.join(HOME, ".claude", "compute", "heavy_job.lock"))
+HEAVY_WAIT_S = int(os.environ.get("DREAM_HEAVY_WAIT_S", "1800"))   # 0 = old behaviour (cap counts the wait)
+
+
+def _heavy_lock_line():
+    try:
+        with open(HEAVY_LOCK, encoding="utf-8", errors="replace") as fh:
+            return fh.read(200).strip()
+    except OSError:
+        return ""
+
+
+def _holds_heavy_lock(pid):
+    return _heavy_lock_line().split()[:1] == [str(pid)]
+
+
+def _heavy_holder():
+    return _heavy_lock_line()[:80] or "nobody (queue or calm wait)"
+
 
 def run_step(name, argv, cap=STEP_CAP):
     script = os.path.join(BASE, argv[0])
@@ -221,7 +240,31 @@ def run_step(name, argv, cap=STEP_CAP):
         # own process group, so a cap kills the lock waiter and its child together (the waiter's TERM trap frees the lock)
         p = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT, cwd=BASE, start_new_session=True,
                              env=dict(os.environ, PYTHONUTF8="1", DREAM_RUNNER="run_dream.py"))
+        # A heavy step's cap starts when its waiter holds heavy_job.lock (the lock's first field is the waiter's pid,
+        # which is p.pid), not at launch (6 Nov 2026): the film holds the lock for hours, and the 5 Nov 19:30 and
+        # 6 Nov 11:30 embedding refreshes spent their whole 1800 s queued and were reported as failures. A step still
+        # queued after HEAVY_WAIT_S is stopped and reported deferred (exit 75), like any step that did not run.
         try:
+            if heavy and HEAVY_WAIT_S > 0:
+                waited = 0.0
+                while p.poll() is None and not _holds_heavy_lock(p.pid):
+                    if waited >= HEAVY_WAIT_S:
+                        try:
+                            os.killpg(p.pid, 15)
+                            p.wait(timeout=30)
+                        except Exception:
+                            try:
+                                os.killpg(p.pid, 9)
+                            except Exception:
+                                pass
+                            p.wait()
+                        log("STEP DEFERRED: %s never got heavy_job.lock in %ds (held by: %s)" % (
+                            name, HEAVY_WAIT_S, _heavy_holder()))
+                        return 75
+                    time.sleep(2)
+                    waited += 2
+                if p.poll() is None:
+                    log("step %s: got heavy_job.lock after %.0fs; cap %ds starts now" % (name, time.time() - t0, cap))
             rc = p.wait(timeout=cap)
         except subprocess.TimeoutExpired:
             try:
@@ -297,7 +340,7 @@ def main():
             if os.path.exists(os.path.join(BASE, "STOP")):
                 log("STOP file present - tail stopped before %s; dream cycle STOPPED, not complete" % name)
                 return 3
-            stale = _publish_without_refresh(name, failed)
+            stale = _publish_without_refresh(name, failed + deferred)
             cap = _budget_cap(step[2] if len(step) > 2 else STEP_CAP)
             if not cap:
                 log("step deferred: %s (dream budget of %ds spent)" % (name, DREAM_BUDGET_S))

@@ -2338,13 +2338,21 @@ def _sup_base(ss, rows):
         return None
 
 
-def _sup_quiet(ss, changed, cur, ptr, inv):
+def _sup_quiet(ss, changed, cur, ptr, inv, old=None):
     """True when no changed file can move the answer: it carried no pointer before, carries none now, and no pointer
     or index line names it. Then the routes are the same and the file only adds or drops a slug nothing resolves
-    through, so active_supersessions gives the same map."""
+    through, so active_supersessions gives the same map.
+    A file a route names matters through its existence alone (resolve and the prose-pointer gate ask only whether it
+    is there), so with `old` given, one that was there before and is still there, holding no pointer either time, is
+    quiet too. Until 6 Nov 2026 an in-place edit of such a memory sent the next recall to the full reader.
+    BRAIN_SUP_NAMED_EDIT=0 restores that."""
+    if os.environ.get("BRAIN_SUP_NAMED_EDIT", "1") == "0":
+        old = None
     nc = os.path.normcase
     for name in changed:
-        if name in ptr or nc(name[:-3]) in inv:
+        if name in ptr:
+            return False
+        if nc(name[:-3]) in inv and (old is None or name not in old or name not in cur):
             return False
         if name in cur:
             try:
@@ -2439,7 +2447,7 @@ def _fc_superseded_wrap(real):
                 cur = dict(rows)
                 changed = [n for n, k in rows if n in recent or old.get(n) != k]
                 changed += [n for n in old if n not in cur]
-                if len(changed) <= _SUP_DELTA_MAX and _sup_quiet(_ss, changed, cur, ptr, set(inv)):
+                if len(changed) <= _SUP_DELTA_MAX and _sup_quiet(_ss, changed, cur, ptr, set(inv), old):
                     if not recent and hsig != sig:
                         _fc_put("superseded_rows", (key, sig), rows, keep=2)
                         _fc_put("superseded_head", key, (sig, ans, ptr, inv), keep=2)
@@ -3468,13 +3476,20 @@ def _status_from_index(slug, idx):
     if v is None:
         m = _STATUS_RX.search(line)
         v = m.group(1).lower() if m else "legacy"
+        v = _STATUS_ALIAS.get(v, v)
         if len(_STATUS_MEMO) > 400000:
             _STATUS_MEMO.clear()
         _STATUS_MEMO[line] = v
     return v
 
 
-_STATUS_RX = re.compile(r"\)\s*-\s*\[(PROVISIONAL|VERIFIED|OWNER-STATED|RETRACTED)\]", re.I)
+# 6 Nov 2026: a tag may carry words after it ("[VERIFIED data node]", "[REFUTED 5 Nov 21:3x - ...]"). The exact
+# pattern read 4,773 of 45,979 index lines on the Mac as untagged, 46 of them retracted or refuted claims that
+# recall then listed with no warning. A tag word followed by a space or punctuation and any text up to "]" now
+# counts, and REFUTED / WITHDRAWN read as retracted.
+_STATUS_RX = re.compile(r"\)\s*-\s*\[(PROVISIONAL|VERIFIED|OWNER-STATED|RETRACTED|REFUTED|WITHDRAWN)"
+                        r"(?:[\s,;:-][^\]\n]*)?\]", re.I)
+_STATUS_ALIAS = {"refuted": "retracted", "withdrawn": "retracted"}
 _STATUS_MEMO = {}
 
 
@@ -3535,7 +3550,7 @@ def _frontmatter_retracted(slug):
         if not fm:
             return False
         m = re.search(r"^\s*status:\s*(\S+)", fm.group(1), re.M)
-        return bool(m) and m.group(1).strip().strip("'\"").lower().startswith(("retracted", "withdrawn", "headline-retracted"))
+        return bool(m) and m.group(1).strip().strip("'\"").lower().startswith(("retracted", "withdrawn", "headline-retracted", "refuted"))
     except Exception:
         return False
 
@@ -4398,6 +4413,25 @@ def _recall_body(query, n=8):
                     lex = set(lex) | {_slug}
         except Exception as _id_exc:
             print("  [warn] identifier seeds skipped (%s: %s)" % (type(_id_exc).__name__, _id_exc))
+
+    # MEANING FOOTHOLD (6 Nov 2026). A query that shares no indexed word with any memory (a paraphrase: "the box we
+    # switched off last spring" for a note reading "retired the research server in April") had no seeds and returned
+    # at "no lexical foothold" below, before the query-meaning lane was ever read, although that lane exists for
+    # exactly this question. On six such paraphrase queries over fresh 105-138-memory brains, the lane alone ranked the
+    # right memory 2, 7, 27, 5, 9 and 2, while recall printed nothing for five of the six; with this block recall puts
+    # it in the top 10 for five of six. When every other arm has left no seed, the lane's top hits seed the call,
+    # scaled to 0..1 by the best cosine. A query with any lexical seed never reaches this block, so its result is
+    # unchanged (whole-question queries on the same brains: identical ranks). BRAIN_RECALL_QSEM_FOOTHOLD=0 turns it off.
+    if not seeds and not _id_only and query and os.environ.get("BRAIN_RECALL_QSEM_FOOTHOLD", "1") != "0":
+        try:
+            _qf = _query_semantic_scores(query)
+            _qtop = sorted(((s, v) for s, v in _qf.items() if s not in disabled and s not in sr.SKIP),
+                           key=lambda kv: -kv[1])[:max(n, 8)]
+            if _qtop and _qtop[0][1] > 0:
+                for _slug, _v in _qtop:
+                    seeds[_slug] = max(_v, 0.0) / _qtop[0][1]
+        except Exception as _qf_exc:
+            print("  [warn] meaning foothold skipped (%s: %s)" % (type(_qf_exc).__name__, _qf_exc))
 
     adj, deg = sr._load_graph()
     act = {}
@@ -6083,7 +6117,8 @@ _OWNER_FAMILY_RX2 = re.compile(r"[\s\"'\[\(\*_~#>|\u2600-\u27BF\u2B00-\u2BFF\U00
                                r"(?:OWNER|Owner)(?:'s)?\s+(?:HARD\s+|STANDING\s+|STANDARD\s+)?"
                                r"(?:RULE|LAW|ORDER|POLICY|CORRECTION|DIRECTIVE)", re.U)
 _OWNER_INDEX_LINE_RX = re.compile(r"-\s*\[([^\]]+?)\.md\]\([^)]*\)\s*[-\u2014]*\s*(.*)$")
-_OWNER_STATUS_TAG_RX = re.compile(r"\[(PROVISIONAL|VERIFIED|OWNER-STATED|RETRACTED)\]\s*")
+# 6 Nov 2026: words after the tag ("[OWNER-STATED 2026-08-04]") count, as in _STATUS_RX.
+_OWNER_STATUS_TAG_RX = re.compile(r"\[(PROVISIONAL|VERIFIED|OWNER-STATED|RETRACTED)(?:[\s,;:+-][^\]\n]*)?\]\s*")
 _OWNER_STATED = set()  # q40: slugs whose index line carries [OWNER-STATED], filled by _owner_family_texts
 _OWNER_ORDER_SLUG_RX = re.compile(r"owner_(order|law|rule|directive|allows)_")
 OWNER_ADVISORY_BUDGET_S = 1.5     # the join: what the filer waits at most, plus the OS's scheduling slack

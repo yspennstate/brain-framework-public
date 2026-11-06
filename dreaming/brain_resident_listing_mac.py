@@ -189,11 +189,28 @@ class ResidentBulk(object):
         e._st = s
         return e
 
-    def listing(self):
+    def patch_if_changed(self):
+        """Between calls: when the watcher has seen names since the last listing, patch them in now, so the next
+        recall's listing has nothing left but the barrier. Inside a call the patch competed with the call's own
+        threads for the GIL, and the FSEvents callback needs the GIL to deliver the sentinel: 27 served folder drops
+        on a Mac (6 Nov 2026) paid _memlist p50 220 ms, while the same patch path logged p50 33 ms. The listing a call
+        gets is built by the same patch code either way; only the moment the events are taken moves. True when it
+        ran. BRS_IDLE_PATCH=0 (in the server) turns it off."""
+        if self.watch.broken or self.order is None or not self.watch._changed:
+            return False
+        if not self.lock.acquire(blocking=False):
+            return False
+        self.lock.release()          # _listing takes it; a call that comes in between just waits on it
+        self.listing("idle_patch")
+        return True
+
+    def listing(self, tag=None):
         t0 = time.perf_counter()
         before = dict(self.counts)
         self._bar_ms = None
         try:
+            if tag:
+                self.counts[tag] = self.counts.get(tag, 0) + 1
             return self._listing()
         finally:
             if LOG_PATH:

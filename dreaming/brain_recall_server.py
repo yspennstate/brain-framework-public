@@ -244,6 +244,13 @@ class Brain:
             t = time.perf_counter()
             v = f(*a, **k)
             miss[attr] = miss.get(attr, 0.0) + time.perf_counter() - t
+            # _fc_overlay's None means "take the payload merge this time" (no sidecar yet, generation moved, ...).
+            # The postings sidecar lands 2 s to 5 min after its index and is not in the folder signature, so a kept
+            # None sent every later call down refresh_in_memory (~23k page faults, ~0.5 s, Mac 6 Nov 2026) until the
+            # next memory write. A None is not kept; each one is counted in the call row. BRS_OVL_NONE_MEMO=1 keeps it.
+            if v is None and attr == "_fc_overlay" and os.environ.get("BRS_OVL_NONE_MEMO", "0") != "1":
+                miss["_fc_overlay:none"] = miss.get("_fc_overlay:none", 0.0) + 1.0
+                return v
             store[key] = v
             return v
         if isinstance(holder, dict):
@@ -403,7 +410,12 @@ class Brain:
                 return hit[1]
             t = time.perf_counter()
             v = real(name, key)
-            miss["_fc_get"] = miss.get("_fc_get", 0.0) + time.perf_counter() - t
+            dt = time.perf_counter() - t
+            miss["_fc_get"] = miss.get("_fc_get", 0.0) + dt
+            # which entry the miss read (6 Nov 2026): on a Mac _fc_get missed on 46 of 107 folder drops, p50 0.11 s,
+            # and the total did not say which. Only the call row's miss_s carries it.
+            kk = "_fc_get:" + str(name)[:40]
+            miss[kk] = miss.get(kk, 0.0) + dt
             if v is not None:
                 try:
                     if st3(p) == s:
@@ -436,6 +448,18 @@ class Brain:
                 now = None
             if now != m:
                 return p
+        # A module imported after start joins the watch list when first seen (6 Nov 2026): modules brain.py imports
+        # inside a call were never in the start-time list, so an edit to one did not respawn the server. Its mtime is
+        # taken here, one call after its import, so an edit landing inside that one call is seen only at the next
+        # edit. BRS_LATE_IMPORT_WATCH=0 keeps the start-time list.
+        if os.environ.get("BRS_LATE_IMPORT_WATCH", "1") != "0":
+            for m in list(sys.modules.values()):
+                p = getattr(m, "__file__", None) or ""
+                if p and p not in self.code and p.endswith(".py") and os.path.abspath(p).lower().startswith(D.lower()):
+                    try:
+                        self.code[p] = os.stat(p).st_mtime_ns
+                    except OSError:
+                        self.code[p] = None
         return None
 
     def _state_sig(self, paths):
@@ -479,6 +503,13 @@ class Brain:
             if k.startswith(("CLAUDE", "CODEX", "AGENT")):
                 saved_env[k] = os.environ.get(k)
                 os.environ[k] = v
+        # 7 Nov 2026: a caller that sends no session id ran under the spawner's (its CLAUDE_CODE_SESSION_ID and
+        # ENTRYPOINT stayed in the server's environ), so script and Codex searches were logged as a person's
+        # (the research box: 179 of 2,607 served calls in 48 h). Unset every such name the caller did not send.
+        # BRS_POP_SESSION_ENV=0 restores the old behaviour.
+        if os.environ.get("BRS_POP_SESSION_ENV", "1") != "0":
+            for k in [k for k in os.environ if k.startswith(("CLAUDE", "CODEX", "AGENT")) and k not in env]:
+                saved_env[k] = os.environ.pop(k)
         for k in PER_CALL_ENV:   # the caller's value, or unset when the caller has none
             saved_env[k] = os.environ.get(k)
             if k in env:
@@ -695,8 +726,32 @@ def main():
                     t = time.time()
                     if rb.refresh_if_due(60):
                         log("resident listing: periodic full walk between calls, %d ms" % ((time.time() - t) * 1000))
+                    # and the names other writers touched since the last call are patched in now, not inside the
+                    # next recall (brain_resident_listing_mac.patch_if_changed). BRS_IDLE_PATCH=0 turns it off.
+                    elif hasattr(rb, "patch_if_changed") and os.environ.get("BRS_IDLE_PATCH", "1") != "0":
+                        rb.patch_if_changed()
                 except Exception as e:
                     log("idle full walk failed: %s: %s" % (type(e).__name__, e))
+                finally:
+                    lock.release()
+            # 6 Nov 2026 (Mac): the tail postings (brain._tail_postings: every compaction tail and long memory tail,
+            # packed) were rebuilt inside the first recall after each compaction: 17 of 46 slow calls sampled carried
+            # one, ~600 ms each. Here the rebuild runs between calls when the held index is no longer valid, with the
+            # same builder and the same validity test the call applies, so a call finds it current.
+            # BRS_IDLE_TPOST=0 turns it off.
+            g = brain.g
+            if (os.environ.get("BRS_IDLE_TPOST", "1") != "0" and os.environ.get("BRAIN_RECALL_CTAIL", "1") != "0"
+                    and "_tail_postings" in g and "_tpost_valid" in g and time.time() - last["t"] > 2
+                    and lock.acquire(blocking=False)):
+                try:
+                    import bm25 as _b
+                    ix = g["_TPOST"].get("ix")
+                    if ix is not None and not g["_tpost_valid"](ix, _b):
+                        t = time.time()
+                        g["_tail_postings"](_b)
+                        log("tail postings rebuilt between calls, %d ms" % ((time.time() - t) * 1000))
+                except Exception as e:
+                    log("idle tail postings failed: %s: %s" % (type(e).__name__, e))
                 finally:
                     lock.release()
     finally:

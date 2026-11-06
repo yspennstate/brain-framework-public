@@ -349,6 +349,8 @@ def main():
     ap.add_argument("--partner", default="your partner",
                     help="the person the brain works with (fills <PARTNER> in the agent instructions)")
     ap.add_argument("--apply", action="store_true", help="write (default: dry-run)")
+    ap.add_argument("--fetch-models", action="store_true",
+                    help="download the query-meaning model (133 MB) during install; otherwise only check for it")
     ap.add_argument("--merge-settings", action="store_true",
                     help="also merge the generated hook wiring into <HOME>/.claude/settings.json "
                          "(a dated backup is written first; hooks already there are kept)")
@@ -582,6 +584,34 @@ def main():
             print(f"  recall index: rc {p.returncode} {lines[0] if lines else ''}")
         except Exception as e:
             print(f"  recall index: not built ({type(e).__name__}); run {os.path.join(dreaming, 'bm25.py')} build")
+        # The query-meaning lane (query_embed.py) needs the ONNX model, which is not in the repository. Without it
+        # recall still runs and still prints "semantic on" (that flag is the seed-centroid lane), but a query that
+        # shares no word with a memory finds nothing. Fetch it with --fetch-models, or say plainly that it is missing.
+        fetch = os.path.join(dreaming, "fetch_bge_onnx.py")
+        if a.fetch_models and os.path.exists(fetch):
+            try:
+                p = subprocess.run([a.python, fetch], cwd=dreaming, env=env, capture_output=True, text=True, timeout=1800,
+                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                print(f"  query-meaning model fetch: rc {p.returncode}")
+            except Exception as e:
+                print(f"  query-meaning model fetch failed ({type(e).__name__})")
+        # the check is the call recall makes: a query vector or nothing
+        probe = ("import query_embed as q; m = q.available(); r = q.runtime_reachable(); "
+                 "v = q.embed('install check') if m and r else None; print(int(m), int(r), int(v is not None))")
+        try:
+            p = subprocess.run([a.python, "-c", probe], cwd=dreaming, env=env, capture_output=True, text=True,
+                               timeout=300, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            m, r, v = (p.stdout.strip().split() + ["0", "0", "0"])[:3]
+        except Exception:
+            m = r = v = "0"
+        if v == "1":
+            print("  query-meaning lane: on")
+        else:
+            print("  QUERY-MEANING LANE OFF: recall will not find a memory that shares no word with the query.")
+            if m != "1":
+                print(f"  fix: {a.python} {fetch}   (the model, 133 MB), or re-run install with --fetch-models")
+            if r != "1":
+                print(f"  fix: {a.python} -m pip install --user onnxruntime tokenizers")
 
     if not a.apply:
         print("\ndry-run only; re-run with --apply to write")

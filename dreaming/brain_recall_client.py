@@ -26,7 +26,10 @@ def _spawn():
         if exe.lower().endswith("pythonw.exe"):
             exe = exe[:-5] + ".exe"
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-        env = {k: v for k, v in os.environ.items() if not k.startswith("BRAIN_")}
+        # 6 Nov 2026: BRS_/BRL_ (the server's own switches) are stripped too. A test harness running with
+        # BRS_SAMPLE=0 BRL_LOG=0 started the shared server, and every caller after it ran with the slow-call
+        # sampler and the listing log off.
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("BRAIN_", "BRS_", "BRL_"))}
         subprocess.Popen([exe, "-B", os.path.join(D, "brain_recall_server.py")], cwd=D, env=env,
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          creationflags=flags, close_fds=True, start_new_session=(os.name == "posix"))

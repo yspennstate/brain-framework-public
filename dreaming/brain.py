@@ -4333,6 +4333,24 @@ def _recall_body(query, n=8):
         cand.sort(reverse=True)
         seeds = {slug: ov for ov, slug in cand[:25]}
 
+    # BARE-IDENTIFIER SEEDS (6 Nov 2026). The task-id seeds above close this gap for checklist ids only. A query that is
+    # just a serial, a short hash, a run id or a block height ('7KDP-2210', 'e1f2a3b', '604417') leaves sr._words with
+    # fewer than two letter-led words, every arm of the seeder comes back empty, and recall stopped at "no lexical
+    # foothold" although bm25.tokens keeps those digits. Here, after every other arm has had its turn, a query that still
+    # has no seed and carries a digit takes BM25's hits on the raw query, at the task-id seeds' strength. A query that
+    # seeded before is untouched, so its output is unchanged. BRAIN_RECALL_ID_SEEDS=0 turns it off.
+    if not seeds and os.environ.get("BRAIN_RECALL_ID_SEEDS", "1") != "0" and re.search(r"\d", query or ""):
+        try:
+            import bm25 as _bm25id
+            _id_hits = [h for h in _bm25id.BM25().score(query, 5) if h[0] not in disabled]
+            if _id_hits:
+                _id_max = _id_hits[0][1] or 1.0
+                for _slug, _s in _id_hits:
+                    seeds[_slug] = 1.5 + 1.5 * _s / _id_max
+                    lex = set(lex) | {_slug}
+        except Exception as _id_exc:
+            print("  [warn] identifier seeds skipped (%s: %s)" % (type(_id_exc).__name__, _id_exc))
+
     adj, deg = sr._load_graph()
     act = {}
     if seeds and adj:

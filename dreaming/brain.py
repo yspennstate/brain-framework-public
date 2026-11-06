@@ -1622,7 +1622,10 @@ def _fc_walk_load(gl, d):
     g = _diff.Diffusion.__new__(_diff.Diffusion)
     g.names, g.meta = v["names"], v["meta"]
     g.N = len(g.names)
-    g.id = _diff._name_index(g.names, path, store)   # sorted-order index, as Diffusion._load (2 Nov); BRAIN_WALK_NAME_INDEX=0 keeps the dict
+    # sorted-order index, as Diffusion._load (2 Nov); BRAIN_WALK_NAME_INDEX=0 keeps the dict. An older diffusion.py
+    # beside this file has no _name_index (6 Nov 2026): the dict, as before.
+    _ni = getattr(_diff, "_name_index", None)
+    g.id = _ni(g.names, path, store) if _ni is not None else {n: i for i, n in enumerate(g.names)}
     g.alpha, g.iters, g.dtype = alpha, iters, np.float32
     g.PT = _diff.CSR(z["data"], z["indices"], z["indptr"], g.N)
     g.dangling, g.p0, g.out_sum = z["dangling"], z["p0"], z["out_sum"]
@@ -6813,7 +6816,10 @@ def main():
         # this file already checks each row it uses (row_current / embedding_row_current), so the eager stat scan was
         # duplicate work (load median 4.3 -> 1.2 s, top-8 unchanged; recall10x/ab_walk_out.txt). Only the CLI, never the
         # importable recall(): hooks import this module in the dispatcher. BRAIN_EMB_LAZY=0 turns it off.
-        os.environ.setdefault("BRAIN_EMB_LAZY", "1")
+        # Not inside the recall server (6 Nov 2026): there the parsed sidecar stays resident between calls, and a
+        # lazy load re-read it on every call, 166 -> 259 ms p50 over 24 served recalls, same output.
+        if __name__ != "brain_recall_server_module":
+            os.environ.setdefault("BRAIN_EMB_LAZY", "1")
         # a query is never a flag (2026-09-22, Test A): a FIRE WHEN line pasted as "- the situation ..." begins
         # with "-" and used to be dropped whole, returning usage text - 322 of 1,038 lines in the F42 bank and
         # every bullet-led query the Opus agent sent. Only a bare option-shaped token is a flag.

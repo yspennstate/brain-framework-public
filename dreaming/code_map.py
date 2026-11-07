@@ -176,6 +176,18 @@ def query(q, budget=800, nfiles=5):
     data = load()
     refresh_if_stale()
     files = data["files"]
+    if os.environ.get("CODE_MAP_SYN", "1") != "0":
+        # the brain's hand-reviewed question-word -> stored-word table ("out of date" -> stale); original words kept.
+        # 7 Nov bench, 20 questions: top-5 14 -> 15, no question worse. Absent module: no change.
+        try:
+            sys.path.insert(0, HERE)
+            import brain_syn
+            q = brain_syn.expand(q)
+        except Exception:
+            pass
+        finally:
+            if sys.path and sys.path[0] == HERE:
+                sys.path.pop(0)
     qw = [w for w in dict.fromkeys(words(q))]
     if not qw:
         return "no searchable words in the question"

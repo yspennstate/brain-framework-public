@@ -54,7 +54,7 @@ MONEY_CTX = re.compile(
     r"premium|save[sd]?|saving|cost[s]?|costing|profit|earn[s]?|per month|/mo|/yr|expense|financing|rebalanc\w*)\b",
     re.I)
 # A qualifier - provenance OR hedge - ANYWHERE in the message means the number is not being passed as a
-# bare settled fact. Erring toward quiet: one of these suppresses. (A RANGE like $16-43k is handled below.)
+# bare settled fact. Erring toward quiet: one of these suppresses. (A RANGE like $10-20k is handled below.)
 QUALIFIER = re.compile(
     r"~|≈|\bproxy\b|\bproxies\b|\bestimat|\bapprox|\broughly\b|\bround(ed|ly)?\b|\babout \$|\baround \$|"
     r"\border of\b|\bballpark\b|\bindicative\b|\bplaceholder\b|\bpending\b|\breconcil|\bunverified\b|\bunknown\b|"
@@ -62,7 +62,7 @@ QUALIFIER = re.compile(
     r"\bmeasured\b|\bassum\w+|\bshould\b|\bmight\b|\bmay\b|\bcould\b|\blikely\b|\bprobably\b|\bi think\b|"
     r"\bi'?d need to check\b|\bballpark\b|\bwash\b|\brange\b|\bballpark\b|\bballpark\b",
     re.I)
-# A numeric RANGE reads as a hedge (I'm not committing to a point): $16-43k, 3.58-3.91%, $118-142k/mo.
+# A numeric RANGE reads as a hedge (I'm not committing to a point): $10-20k, 3.5-3.9%, $50-60k/mo.
 RANGE = re.compile(r"\$?\s?\d[\d,]*(?:\.\d+)?\s?[-–—]\s?\$?\d[\d,]*(?:\.\d+)?\s*(?:k|m|%|/mo|/yr|million)?", re.I)
 
 

@@ -99,6 +99,19 @@ install the hook wiring, fill in the identity templates, and let the first sessi
 writing memories. The system grows by use; nothing here requires the lived content it was
 extracted from.
 
+## The math brain
+
+The mathematical store that runs on this framework is published separately at
+[math-brain-public](https://github.com/yspennstate/math-brain-public): about thirteen
+thousand cards (definitions, theorems, proof techniques and the agents' own results) joined
+by typed links, with the importer, the recall tools, the prompt hook, a starter kit for a
+brain in another field, and the tests that measure what the store does for an agent.
+[docs/MATH_BRAIN_SETUP.md](docs/MATH_BRAIN_SETUP.md) takes a fresh machine from this
+framework to a working math brain: install, build the store, point the hook at it, teach
+the agent the recall habit, write back, dream. Answers to questions asked during a Mac
+setup, with a Mac dispatch-list template and the starter kit, are in
+[docs/setup-questions-2026-11/](docs/setup-questions-2026-11/).
+
 ## The mathematics, and how it keeps developing
 
 `docs/BRAIN_SCIENCE_AUDIT.md` audits the algorithms every layer runs — recall fusion,

@@ -1,0 +1,99 @@
+Answers to four questions about setting up brain-framework-public
+November 2026
+
+Files in this folder
+
+  ANSWERS.txt                              this file
+  setup-with-brain-framework.md            step-by-step: framework, math store, hook, recall habit, dream
+  hook_dispatch_list.macos.template.json   the framework's dispatch list in the form a Mac runs it
+  BRAIN_INSTALL_STATUS.template.md         a blank deployment record of the kind the Mac guide reads
+  field_brain_starter/                     the small brain kit with its own dream, copied from math-brain-public
+
+
+1. The Mac hook_dispatch_list.json and wake config
+
+The Mac's own dispatch list is the framework's dreaming/hook_dispatch_list.json with three
+mechanical changes, and nothing else. hook_dispatch_list.macos.template.json in this folder
+has them applied:
+
+  - every hook runs {{PYTHON}} -s (an absolute Python 3.11 or newer; macOS's /usr/bin/python3
+    is 3.9 and is too old);
+  - every path uses forward slashes;
+  - the two PowerShell wake entries become {{PYTHON}} -s {{CLAUDE_DIR}}/wake_brain.py --part 1
+    and --part 2.
+
+Replace {{PYTHON}}, {{CLAUDE_DIR}}, {{DREAMING}} and {{FLEET}} with your own paths (the
+bootstrap installer does this for the files it copies). The wake itself is hooks/wake_brain.py
+in the framework, installed as ~/.claude/wake_brain.py; the startup text is
+hooks/brain_startup.template.md rendered to ~/.claude/brain_startup.md. Run both wake parts
+by hand once before opening a session. A fresh install correctly warns that no dream has run yet.
+
+~/brain/BRAIN_INSTALL_STATUS.md and ~/brain/porting/ are the Mac's local records, not part of
+the framework, which is why they are not in the repository. The status file is the Mac's
+deployment log (a blank one is in this folder; dreaming/keep_working_brain.py reads it and keeps
+a session working while a "- [ ]" step is open). The porting folder held two one-off migration
+aids: port_posix.py, which previewed the Windows-to-POSIX rewrites on a staged copy, and
+hook_harness.py, which ran each installed hook once and wrote a results table. Neither is needed
+for a new install: the framework already carries the POSIX branches they produced, and the
+template here is their output for the dispatch list. If you want to check every hook, start a
+session and read the hook output, or run each command in the list by hand.
+
+The Mac also uses ~/.claude/dreaming/HOOK_DISPATCH_ENABLED as its switch: move it aside and
+every dispatched hook becomes a silent no-op, which is the quick way back from a broken edit.
+
+
+2. Does the REM phase run on the Mac, and how is it gated?
+
+No. The Mac runs the mechanical dream only. run_dream.py --type rem on the Mac still does the
+mechanical steps (filing, linking, consolidation, reflex compilation) and does not start the
+unattended language-model REM session that the Windows script runs. That session runs an agent
+without a person watching, and whether to allow it on a machine is the owner's decision, so the
+Mac was left without it.
+
+The gates on the Mac:
+
+  - nothing is scheduled; a nap is started by hand:
+      nice -n 15 "$BRAIN_PY" -s ~/.claude/dreaming/run_dream.py --type nap
+  - an exclusive flock on dream.lock stops two dreams running at once (leave the lock file in
+    place; its existence does not mean a dream is running);
+  - a STOP file beside the runner blocks a new cycle and is checked between steps;
+  - the runner continues past a failed step, so read the log for STEP FAILED, STEP CAPPED and
+    STEP SKIPPED rather than trusting the exit code.
+
+To schedule it, a launchd plist is the Mac equivalent of the Windows task; keep it out of
+~/Library/LaunchAgents until you have decided to run it unattended.
+
+
+3. examples/field_brain_starter/
+
+It is in the math-brain-public repository, not the framework one; the framework's dreaming
+README pointed at it with a relative link that only worked inside the math repository (now
+fixed). A copy is in this folder. It has twenty example records, a search tool, a prompt hook
+for Claude Code and Codex, a nightly dream with runners for Linux, macOS and Windows, and a
+ten-question test that compares an agent with and without the records. Start with its
+README.md; docs/brain-in-an-afternoon.md in math-brain-public walks a team through it in a day.
+Online: https://github.com/yspennstate/math-brain-public/tree/main/examples/field_brain_starter
+
+
+4. How the general corpus feeds the math store
+
+Export cards into a math store; do not have the store read Markdown. The two hold different
+things. The memory corpus is the agents' working notes, decisions and mistakes, written as
+Markdown with frontmatter. The math store holds typed cards (definition, theorem, proof,
+counterexample, attempt) with typed links, digests and provenance, and recall depends on that
+structure: card types, link types, and a digest check on every row.
+
+In the private system dreaming/math_transport.py does the carrying: it reads each memory's
+description, recognises a mathematical result, and writes it into the store as an unverified
+claim with a provenance row pointing back to the memory, superseding the earlier claim when the
+memory's description changes. It is written against the private store's schema and its own
+vocabulary filters, so treat it as a model. On a new install the supported path is the packet
+importer in math-brain-public (AGENTS_GUIDE.md section 6 and docs/adding-cards.md): an agent
+that lands a result writes a packet of cards and links, and the importer checks it before it
+goes in. A memory can still name the card ids it relates to, which is how the two halves point
+at each other.
+
+
+Both repositories:
+  https://github.com/yspennstate/brain-framework-public
+  https://github.com/yspennstate/math-brain-public

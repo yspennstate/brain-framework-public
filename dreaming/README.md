@@ -6,7 +6,7 @@ well yesterday's reflexes fired. Agents working in the day write records quickly
 keeps those pieces from becoming a pile.
 
 This folder is the full version, taken from a working system. A smaller version that needs only Python and any
-agent command-line tool is in [`examples/field_brain_starter/dream/`](../../examples/field_brain_starter/dream/README.md);
+agent command-line tool is in [`examples/field_brain_starter/dream/`](https://github.com/yspennstate/math-brain-public/tree/main/examples/field_brain_starter/dream) in the math-brain-public repository;
 start there, and come here when the starter's six agenda sections are no longer enough.
 
 ## The two halves

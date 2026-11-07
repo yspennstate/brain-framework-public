@@ -341,7 +341,7 @@ def _selftest() -> int:
         ("Set master=AAA and sub=BBB; use portfolio margin, not Reg D.", {"role", "target", "not"}),
         ("Include exactly two songs.", {"count"}),
         ("Deploy on AWS, not local.", {"target", "not"}),
-        ("Use long shorter-dated LEAPs and short longer-dated LEAPs.", {"leg", "tenor", "sign"}),
+        ("Use long shorter-dated calls and short longer-dated calls.", {"leg", "tenor", "sign"}),
     ]
     positives.extend([
         ("Use AWS and nothing else.", {"only"}),

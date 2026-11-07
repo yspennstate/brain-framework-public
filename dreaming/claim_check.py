@@ -197,12 +197,12 @@ def selftest():
     QUIET = [
         "The proxy suggests ~$95-120k/mo, but the real number is UNKNOWN pending the statement reconciliation.",
         "ABC options carry 3.81% vs the XYZ 3.71% - measured from exchange mids, essentially a wash.",
-        "Keep-ABC + short-XYZ + futures shows a proxy delta of roughly $16-43k/mo cheaper.",
+        "Keep-ABC + short-XYZ + futures shows a proxy delta of roughly $10-20k/mo cheaper.",
         "It costs about $650/mo, but that's an estimate with no commission data in the log.",
         "I released the index claim and notified the peer that it's free.",
         "The dream cycle completed at 17:53 after 12 minutes.",
         "The ABC short is $2.34M and the account cash is about $5.67M - both measured from the CSVs.",
-        "Financing is ~$27.7k/mo on borrow; the cash credit depends on the margin haircut, which a snapshot can't see.",
+        "Financing is ~$12k/mo on borrow; the cash credit depends on the margin haircut, which a snapshot can't see.",
     ]
     ok = True
     for t in FIRE:

@@ -45,44 +45,8 @@ import os as _ko_os, sys as _ko_sys  # noqa: E402
 _ko_sys.path.insert(0, _ko_os.path.join(_ko_os.path.expanduser("~"), ".claude", "brain_graph", "bin"))
 from quarantine_rows import keep_old  # noqa: E402  a rerun keeps the previous output (R13 trap 1, 27 Sep): brain data is never deleted
 
-# v2 (2026-09-03 20:1x): twenty-five more, same voice, to give the instrument power (one item of 25 is four points).
-# Run with --v2 to score all fifty; the first twenty-five alone remain the v1 baseline (5/25 first, 15/25 top five
-# before the note demotion; 6 and 18 after).
-BANK_V2_EXTRA = [
-    # 2026-09-11 evening: six questions on that week's memories, added AFTER the name-coverage boost was measured on
-    # the 50 above (a bank that never grows overfits its levers); the gate's n is 56 from here on
-    ("why did the math hook go quiet for a few days and how did we find it", ["the_math_hook_went_silent_for_four_days_three_gates_stacked_2026_09_11"]),
-    ("the semantic recall was dark, what happened to the embeddings", ["semantic_lane_dark_two_days_encode_box_deleted_2026_09_11"]),
-    ("what did the locate test say about the math brain", ["locate_the_fact_bank_l1_the_brain_answers_54_of_60_the_solver_alone_3_2026_09_11"]),
-    ("is the closing rebalancer working after the one fill change", ["closing_rebalancer_verified_0911_after_first_full_one_fill_close_0910_2026_09_11"]),
-    ("box 3 lanes go to which blob and when does the key expire", ["box3_lanes_ship_to_cncarchive26423_and_the_key_expires_0923_2026_09_10"]),
-    ("why did the dream run all day yesterday", ["the_memory_brain_evening_frontmatter_cache_slug_field_and_the_dream_that_rewrote_its_whole_graph_2026_09_11"]),
-    ("why did the hopfield capacity number in the bundle have to be fixed", ["an_authors_own_read_is_not_a_review_and_a_name_is_a_family_of_names_2026_09_03"]),
-    ("how is the math brain doing on a fresh test", ["fresh_tests_of_the_math_brain_and_the_brain_2026_09_03"]),
-    ("the 3cd deck, where did the median book come from", ["the_deck_is_cut_on_the_3cd_plateau_2026_09_03"]),
-    ("what did the code audit of the 3cd simulation find", ["the_3cd_code_audit_2026_09_03"]),
-    ("box 4 needs 16 cores, what vm size", ["box04_sixteen_cores_needs_easv5_and_scsi_2026_09_03"]),
-    ("how do i read the azure bill, which line is which box", ["reading_his_azure_billing_pages_which_box_is_which_2026_09_03"]),
-    ("the cpu load of the live trading stack", ["cpu_map_of_the_live_trading_stack_2026_09_03"]),
-    ("how to check if the research boxes are running", ["runbook_are_the_research_boxes_running_2026_09_02"]),
-    ("how do i use the uvix uvxy pair signal every day", ["how_to_use_the_uvix_uvxy_pair_daily_signal_2026_09_03"]),
-    ("why does the drawdown under 3cd happen", ["the_drawdown_under_3cd_is_the_held_shorts_into_the_fall_2026_09_03"]),
-    ("does the pre spike cut help", ["the_pre_spike_cut_buys_the_crash_week_2026_09_02", "pre_spike_beta_cut_reaches_the_drawdown_2026_09_02"]),
-    ("when should beta be zero", ["when_beta_should_be_zero_2026_09_03"]),
-    ("why did the gateways log out after the 3am restart", ["gateways_logged_out_after_the_0300_restart_and_box04_space_2026_09_03"]),
-    ("the lanes archive filled box 4 disk, what happened", ["the_rotate_loop_tars_nobody_uploads_ate_box04_disk_2026_09_02"]),
-    ("what is the biggest plateau under the current law", ["the_biggest_plateau_under_the_current_law_on_the_full_campaign_2026_09_02"]),
-    ("how do i restore a lane series from the blob", ["runbook_restoring_archived_lane_series_from_the_blob_2026_09_02"]),
-    ("the feeder thinks the lane is not done, the tombstone is zero bytes", ["feeder_done_test_must_accept_the_offloaders_zero_byte_tombstone_2026_09_02"]),
-    ("half size for the first six months, does that fix the young book tail", ["half_size_for_six_months_takes_the_young_book_tail_away_2026_09_03"]),
-    ("when does the insurance pay", ["the_insurance_pays_on_spikes_from_calm_not_on_the_crash_met_young_2026_09_03"]),
-    ("spike pair size, where is the knee", ["spike_pair_size_knee_at_three_quarters_2026_09_03"]),
-    ("what did the msys path rewrite break", ["msys_rewrites_posix_args_handed_to_native_launchers_2026_09_03"]),
-    ("the trading box move to gce, where is it", ["trading_gce_built_and_staged_cutover_pending_2026_09_03"]),
-    ("what does the version 3 book do differently from version 1", ["version_1_and_3_on_the_plateau_top20_and_median20_2026_09_03", "gist_the_version_3_night_2026_09_03"]),
-    ("why did the deep itm pause skip the account solve", ["the_deep_itm_pause_skipped_the_whole_account_solve_2026_09_02"]),
-    ("i hold an exclusive claim, do i have to read the inbox", ["scar_holding_a_box_claim_without_reading_the_inbox_2026_09_02"]),
-]
+# The second half of the bank (bank_v2_extra) is loaded from the same JSON file as the first; a bank is the
+# user's own questions and memory slugs and is never published with the framework.
 
 
 TIMEOUT_MARK = "__RECALL_TIMEOUT__"

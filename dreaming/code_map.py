@@ -7,11 +7,19 @@ what it calls, then answer with the matching symbols and their one-hop neighbour
 budget. Nothing is imported from Graphify; this uses the standard library's ast only.
 
   python code_map.py build [--root DIR ...]      parse *.py under each root (default ~/.claude/dreaming)
-  python code_map.py query "question" [--budget 800] [--files 5]
+  python code_map.py query "question" [--budget 800] [--files 5] [--meaning]
   python code_map.py stats
 
 The map is one JSON file (code_map.json beside this script, or CODE_MAP_PATH). A build re-parses only
-files whose size or mtime changed. Read-only on the code; writes only the map file.
+files whose size or mtime changed. Read-only on the code; writes only the map file and its vectors.
+
+Meaning lane (7 Nov 2026): a build also embeds each changed file (name, docstring, symbols) with the brain's
+bge-small encoder into code_map_emb.npz. A query keeps the word ranking's top two files and fills the rest
+by cosine to the question; on 20 held questions the right file reached the top five 19 times against 15.
+Loading the encoder costs 3-8 s, so the lane runs only when the word ranking's top score is under 15
+(CODE_MAP_MEANING_GATE); --meaning runs it on every query. On 8 later questions the gate held 5 of 8 and the
+lane on every query reached 6 of 8, none worse. CODE_MAP_MEANING=0 turns it off; without the vectors file or the
+encoder the word ranking answers alone.
 """
 import ast, io, json, math, os, re, sys, time, warnings
 warnings.simplefilter("ignore", SyntaxWarning)  # other files' escape warnings are not ours to print
@@ -19,6 +27,7 @@ warnings.simplefilter("ignore", SyntaxWarning)  # other files' escape warnings a
 HERE = os.path.dirname(os.path.abspath(__file__))
 MAP = os.environ.get("CODE_MAP_PATH") or os.path.join(HERE, "code_map.json")
 DEFAULT_ROOTS = [os.path.expanduser("~/.claude/dreaming")]
+EMB = (MAP[:-5] if MAP.endswith(".json") else MAP) + "_emb.npz"  # one bge-small vector per file
 VERSION = 1
 
 STOP = set("""a an the of to in on for and or is are was be by with what which where who how does do
@@ -123,11 +132,101 @@ def build(roots):
     with io.open(tmp, "w", encoding="utf-8") as fh:
         json.dump(data, fh, separators=(",", ":"))
     os.replace(tmp, MAP)
+    if os.environ.get("CODE_MAP_MEANING", "1") != "0":
+        try:
+            build_emb(files)
+        except Exception:
+            pass
     try:
         os.remove(MAP + ".refresh")
     except OSError:
         pass
     return len(files), reparsed
+
+
+def _embedder():
+    """The brain's bge-small encoder (query_embed.py beside this script), or None when it or numpy is absent."""
+    if "query_embed" in sys.modules:
+        qe = sys.modules["query_embed"]
+        return qe if qe.available() else None
+    for d in (HERE, os.path.expanduser("~/.claude/dreaming")):
+        if not os.path.exists(os.path.join(d, "query_embed.py")):
+            continue
+        try:
+            sys.path.insert(0, d)
+            import numpy  # noqa: F401
+            import query_embed
+            return query_embed if query_embed.available() else None
+        except Exception:
+            return None
+        finally:
+            if sys.path and sys.path[0] == d:
+                sys.path.pop(0)
+    return None
+
+
+def emb_text(key, r):
+    """What a file's vector is made of: its name, module docstring and every symbol with its docstring."""
+    return (os.path.basename(key) + ". " + (r.get("doc") or "")[:600] + " " + " ".join(
+        "%s: %s." % (s[0], s[3]) if len(s) > 3 and s[3] else str(s[0]) for s in r["syms"]))[:2000]
+
+
+def build_emb(files, limit=None):
+    """Embed the files whose size or mtime changed since the last build; keep the rest. Returns files embedded."""
+    qe = _embedder()
+    if qe is None:
+        return 0
+    import numpy as np
+    old = {}
+    try:
+        with np.load(EMB, allow_pickle=False) as z:  # closed at once: an open npz blocks the replace on Windows
+            for k, sig, v in zip(z["keys"], z["sig"], np.array(z["E"])):
+                old[str(k)] = (tuple(int(x) for x in sig), v)
+    except Exception:
+        pass
+    keys, sigs, rows, done = [], [], [], 0
+    for k in sorted(files):
+        r = files[k]
+        sig = (int(r.get("size", 0)), int(r.get("mtime", 0)))
+        prev = old.get(k)
+        if prev and prev[0] == sig:
+            v = prev[1]
+        elif limit is not None and done >= limit:
+            continue
+        else:
+            v = qe.embed(emb_text(k, r))
+            done += 1
+            if v is None:
+                continue
+        keys.append(k)
+        sigs.append(sig)
+        rows.append(np.asarray(v, "f4"))
+    if not rows:
+        return 0
+    tmp = EMB + ".tmp.npz"
+    np.savez(tmp, keys=np.array(keys), sig=np.array(sigs, dtype=np.int64), E=np.vstack(rows))
+    os.replace(tmp, EMB)
+    return done
+
+
+def meaning_rank(q, top=50):
+    """Files ranked by cosine between the question and each file's vector: [(key, cos)], or None."""
+    if os.environ.get("CODE_MAP_MEANING", "1") == "0" or not os.path.exists(EMB):
+        return None
+    qe = _embedder()
+    if qe is None:
+        return None
+    import numpy as np
+    try:
+        with np.load(EMB, allow_pickle=False) as z:
+            E, keys = np.array(z["E"]), np.array(z["keys"])
+        v = qe.embed(q)
+        if v is None:
+            return None
+        sc = E @ np.asarray(v, "f4")
+        return [(str(keys[j]), float(sc[j])) for j in np.argsort(-sc)[:top]]
+    except Exception:
+        return None
 
 
 def load(quiet=False):
@@ -173,6 +272,7 @@ def refresh_if_stale(max_age=3600):
 
 
 def query(q, budget=800, nfiles=5):
+    raw_q = q
     data = load()
     refresh_if_stale()
     files = data["files"]
@@ -230,7 +330,24 @@ def query(q, budget=800, nfiles=5):
     for f, hits in sym_hits.items():
         hits.sort(reverse=True)
         file_score[f] = file_score.get(f, 0) + hits[0][0] + 0.3 * sum(h for h, _ in hits[1:3])
-    ranked = sorted(file_score.items(), key=lambda kv: -kv[1])[:nfiles]
+    allr = sorted(file_score.items(), key=lambda kv: -kv[1])
+    # The meaning lane costs 3-8 s (loading the encoder), so it runs only when the word ranking looks weak:
+    # on the 7 Nov bench every miss had a top score of 14.0 or less and 14 of 16 hits scored above 15.
+    gate = float(os.environ.get("CODE_MAP_MEANING_GATE", "15"))
+    mr = []
+    if not allr or allr[0][1] < gate:
+        mr = [(k, c) for k, c in (meaning_rank(raw_q) or []) if k in files]
+    if mr:
+        # keep the word lookup's top two, then fill by meaning (7 Nov bench, 20 questions: top-5 15 -> 19, none worse)
+        ranked, seen, mcos = list(allr[:2]), {f for f, _ in allr[:2]}, dict(mr)
+        for f, c in mr + allr[2:]:
+            if len(ranked) >= nfiles:
+                break
+            if f not in seen:
+                seen.add(f)
+                ranked.append((f, file_score.get(f, 0.0)))
+    else:
+        ranked, mcos = allr[:nfiles], {}
     # callers: which files call a name defined in a ranked file
     defined = {}
     for f, _ in ranked:
@@ -251,7 +368,8 @@ def query(q, budget=800, nfiles=5):
     add("code_map: %d files, question words %s" % (len(files), " ".join(qw)))
     for rank, (f, sc) in enumerate(ranked, 1):
         r = files[f]
-        if not add("%d. %s  (%.1f)  %s" % (rank, f, sc, first_line(r.get("doc", "")) or "")):
+        tag = ("%.1f" % sc) if rank <= 2 or f not in mcos else "meaning %.2f" % mcos[f]
+        if not add("%d. %s  (%s)  %s" % (rank, f, tag, first_line(r.get("doc", "")) or "")):
             break
         for s, i in sorted(sym_hits.get(f, []), reverse=True)[:3]:
             q_, kind, line, doc = r["syms"][i][:4]
@@ -290,6 +408,8 @@ def main(argv):
         q = argv[1] if len(argv) > 1 else ""
         budget = int(argv[argv.index("--budget") + 1]) if "--budget" in argv else 800
         nf = int(argv[argv.index("--files") + 1]) if "--files" in argv else 5
+        if "--meaning" in argv:
+            os.environ["CODE_MAP_MEANING_GATE"] = "1e9"
         print(query(q, budget, nf))
         return 0
     if cmd == "stats":

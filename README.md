@@ -112,6 +112,10 @@ the agent the recall habit, write back, dream. Answers to questions asked during
 setup, with a Mac dispatch-list template and the starter kit, are in
 [docs/setup-questions-2026-11/](docs/setup-questions-2026-11/).
 
+To run agents on their own with this framework (a terminal agent, loop prompts that keep it
+working for days, and which parts of the framework a long-running agent leans on), see
+[docs/AGENTIC.md](docs/AGENTIC.md).
+
 ## The mathematics, and how it keeps developing
 
 `docs/BRAIN_SCIENCE_AUDIT.md` audits the algorithms every layer runs — recall fusion,

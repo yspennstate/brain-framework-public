@@ -47,7 +47,13 @@ More examples and the reasons behind each part are in
 - Starter prompts for a first session:
   [docs/agentic/starter-prompts.md](https://github.com/yspennstate/math-brain-public/blob/main/docs/agentic/starter-prompts.md)
 - Skills an agent can load to learn these habits:
-  [agent_tools/skills/](https://github.com/yspennstate/math-brain-public/tree/main/agent_tools/skills)
+  [agent_tools/skills/](https://github.com/yspennstate/math-brain-public/tree/main/agent_tools/skills).
+  The loop-writer skill turns a request like "keep working on this while I'm away" into a complete
+  loop prompt:
+  [loop-writer/SKILL.md](https://github.com/yspennstate/math-brain-public/blob/main/agent_tools/skills/loop-writer/SKILL.md)
+- Short answers to the questions people ask first (cost, how long a loop runs, what happens when
+  the context fills up):
+  [docs/agentic/faq.md](https://github.com/yspennstate/math-brain-public/blob/main/docs/agentic/faq.md)
 - A dated list of suggestions for prompts and loops, newest first:
   [docs/agentic/SUGGESTIONS.md](https://github.com/yspennstate/math-brain-public/blob/main/docs/agentic/SUGGESTIONS.md)
 - When the brain seems to do nothing:

@@ -7,8 +7,8 @@
  P4 MATHBRAIN_EXPANSION=0: no expansion words in the postings or the df table
  P5 an expansion that raises: the index and the df table are still written, the failure is recorded
  P6 MATHBRAIN_EXPANSION_MEMORY is handed to the expansion as its memory directory; unset, the prefilter names this
-    home's own memory folder (~/.claude/projects/<BRAIN_SLUG or the home's slug>/memory), as lived does since the
-    library lost its default on 30 Sep
+    install's own memory folder (projects/<slug>/memory under the home's Claude folder, the slug from $BRAIN_SLUG,
+    the installer's BRAIN_SLUG marker or the home path), as the library has had no default since 30 Sep
 
     python test_prefilter_sidecars.py      (a few seconds; ALL PASS at the end; a stub stands in for the expansion)
 """
@@ -116,7 +116,9 @@ def main():
     named = SEEN.get("memory_dir")
     build_in({})
     home = os.path.expanduser("~")
-    own = os.path.join(home, ".claude", "projects", os.environ.get("BRAIN_SLUG")
+    marker = os.path.join(HERE, "BRAIN_SLUG")
+    marked = open(marker, encoding="utf-8").read().strip() if os.path.isfile(marker) else ""
+    own = os.path.join(home, ".claude", "projects", os.environ.get("BRAIN_SLUG") or marked
                        or home.replace(":", "-").replace(chr(92), "-").replace("/", "-"), "memory")
     check(named and named.endswith("mem") and SEEN.get("memory_dir") == own and SEEN.get("ids") == ["card-a", "card-b"],
           "P6 memory dir %r then %r, cards %r" % (named, SEEN.get("memory_dir"), SEEN.get("ids")))

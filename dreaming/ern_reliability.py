@@ -138,7 +138,7 @@ def main():
     # append resolved verdicts to the scored series (idempotent per day-index). PREQUENTIAL / CAUSAL:
     # each past day is scored against the belief formed from the days BEFORE it only - never the final
     # rate. A one-step-ahead score can't peek at data the moment wouldn't have had (the lookahead scar:
-    # the May regime-VIX leak, 31 backlinks of fallout). Only days fully in the past are resolved, so a
+    # a regime filter that leaked the future, 31 backlinks of fallout). Only days fully in the past are resolved, so a
     # still-open "clean" day is never claimed prematurely.
     today = day_idx(now)
     already = set()

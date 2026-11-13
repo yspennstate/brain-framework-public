@@ -49,8 +49,8 @@ def payload(event, tool, sid):
     return json.dumps(d)
 
 
-# Hooks whose output legitimately differs between two identical calls (29 Oct, hook_dispatch_control re-run by
-# claude-a9b28e2d: waste_sense prints a live process census, owner_board_hook posts once per interval). A mismatch on
+# Hooks whose output legitimately differs between two identical calls (29 Oct, a re-run of
+# hook_dispatch_control: waste_sense prints a live process census, owner_board_hook posts once per interval). A mismatch on
 # one of these alone removed the whole allowlist, so every hook in every session ran as its own process.
 STATEFUL_TOLERATED = {"waste_sense.py", "owner_board_hook.py"}
 

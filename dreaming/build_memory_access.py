@@ -51,11 +51,14 @@ FIELDS = (
     "confidence", "artifact", "line", "evidence_sha256",
 )
 
-_MEMORY_MARKERS = (
+# Compared against lowercased paths, so the markers are lowercased too: an installed project
+# folder name keeps its capitals (the drive letter, the user name), and a marker that kept them
+# matched nothing, so no memory read was ever recorded.
+_MEMORY_MARKERS = tuple(m.lower() for m in (
     "/.claude/projects/{{BRAIN_SLUG}}/memory/",
     "/brain-repo/01_ai_consciousness/claude/memory/",
     "/.codex/memories/",
-)
+))
 _CONTEXT_FILES = {"recent_brain.md": "RECENT_BRAIN"}
 _SHELL_NAMES = {"bash", "powershell", "shell", "shell_command", "exec_command"}
 _COMMAND_PREFIX = r"(?:^|\|\s*)(?:&\s*)?(?:(?:sudo|command)\s+)?"

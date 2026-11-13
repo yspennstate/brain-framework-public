@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Walk the math store's links: a compact map of what lies around a card, and which way to step (claude-4a88bc43-f04,
+"""Walk the math store's links: a compact map of what lies around a card, and which way to step (
 12 Oct 2026, his 11 Oct 21:5x question: if the agent can walk along edges, with diffusion, and knows how diffusion and the
 brain work, can it find the information faster and cheaper?).
 

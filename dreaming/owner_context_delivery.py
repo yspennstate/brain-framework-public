@@ -159,7 +159,7 @@ def emit(engine, payload, runtime, writer, *, base_output=None, budget=9000, now
         return False
     # A SUBAGENT'S TOOL STEP IS NOT THE SESSION'S (2026-09-23, round 6). A subagent's tool calls fire the parent's
     # PreToolUse hooks under the parent's session id, so each of them drained the next part of the PARENT's queue into
-    # the subagent. Measured on the 06:07 delivery of session 96cda5f6: of 24 parts the session itself received 10;
+    # the subagent. Measured on the 06:07 delivery of session 5e55000e: of 24 parts the session itself received 10;
     # its two test subagents took 11 and 3 - history the session never saw, pushed into a control arm that was meant to
     # have none. A tool step that names an agent (agent_id / agent_type, or a transcript under .../subagents/) is left
     # alone; the parent's next prompt or tool step takes the part instead.
@@ -208,7 +208,7 @@ def emit(engine, payload, runtime, writer, *, base_output=None, budget=9000, now
             # workers start one `codex exec` per batch of five pictures; each batch session was handed the whole
             # hourly block, ~9 KB per tool step ("pending=22" at 06:17), about 200 KB of his prompts per batch across
             # ~150 batches a night, to a worker whose only job is to draw. The launcher head that the ledger and the
-            # checklist already skip (memory headless_codex_batches_were_recorded_as_his_asks_2026_09_23) marks the
+            # checklist already skip marks the
             # session headless on its first prompt; its tool steps then drain nothing. OWNER_PROMPTS_HEADLESS_SKIP=0
             # restores the old behaviour.
             if os.environ.get("OWNER_PROMPTS_HEADLESS_SKIP", "1") != "0":

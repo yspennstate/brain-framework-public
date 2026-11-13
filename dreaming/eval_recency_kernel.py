@@ -1,7 +1,7 @@
 import csv, glob, math, os, re, time
 from collections import defaultdict
 
-MEM = '~/.claude/projects/{{BRAIN_SLUG}}/memory'
+MEM = os.path.expanduser('~/.claude/projects/{{BRAIN_SLUG}}/memory')
 slug_date = re.compile(r'_(\d{4})_(\d{2})_(\d{2})(?:_|$)')
 created, mtype = {}, {}
 for path in glob.glob(MEM + '/*.md') + glob.glob(MEM + '/dreams/*.md'):
@@ -26,7 +26,7 @@ for path in glob.glob(MEM + '/*.md') + glob.glob(MEM + '/dreams/*.md'):
     mtype[slug] = t.group(1) if t else 'untyped'
 
 events = []
-with open('~/.claude/dreaming/retrievals.tsv', encoding='utf-8') as fh:
+with open(os.path.expanduser('~/.claude/dreaming/retrievals.tsv'), encoding='utf-8') as fh:
     for row in csv.DictReader(fh, delimiter='\t'):
         slug = row['slug'].strip()
         if slug in created:

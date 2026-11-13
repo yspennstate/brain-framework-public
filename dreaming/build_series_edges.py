@@ -101,7 +101,13 @@ def series_edges(k=4, weight=0.15):
             series[st] = ms
     if embedding_artifact is None:
         return [], series
-    import numpy as np
+    try:
+        import numpy as np
+    except ImportError:
+        # The embedding sidecar needs numpy to build and to read. Without it this brain has no
+        # embeddings, which is the same case as a missing sidecar: no semantic edges this pass.
+        # `pip install numpy` (and the embedding step) turns them on.
+        return [], series
     loaded = embedding_artifact.load_verified_embeddings(
         EMB, EMB_AUTHORITY, MEM, "BAAI/bge-small-en-v1.5", verify_all_rows=True
     )

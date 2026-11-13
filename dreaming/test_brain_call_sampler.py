@@ -31,12 +31,13 @@ def test_off_switch(monkeypatch):
 def test_a_slow_call_names_its_hot_function(monkeypatch, tmp_path):
     bcs = _sampler(monkeypatch, BRS_SAMPLE="1", BRS_SAMPLE_MS="2", BRS_SAMPLE_SLOW_MS="100")
     smp = bcs.begin()
-    _spin_here(0.3)
+    _spin_here(1.0)
     smp.stop()
     out = tmp_path / "slow.jsonl"
     smp.write(str(out), 300, {"op": "recall"})
     row = json.loads(out.read_text().splitlines()[0])
-    assert row["op"] == "recall" and row["samples"] > 10
+    # 2 ms is asked for, but Windows sleeps resolve near 15 ms and a loaded machine samples less: ask for a few
+    assert row["op"] == "recall" and row["samples"] >= 3
     assert row["self"][0][0].endswith(":_spin_here")
 
 

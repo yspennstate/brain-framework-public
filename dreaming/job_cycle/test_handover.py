@@ -39,6 +39,18 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 RESEED = os.path.join(HERE, "job_reseed.py")
 READMECLI = os.path.join(HERE, "job_readme.py")
+if not os.path.exists(os.path.join(HERE, "JOB_CYCLE_LIVE")):
+    # A fresh install has not armed the cycle (the file beside the scripts arms it machine-wide), and an unarmed
+    # hook prints nothing. Run the hooks from an armed copy in a temp dir rather than arm the install itself.
+    import atexit
+    _ARMED = tempfile.mkdtemp(prefix="job_cycle_armed_")
+    atexit.register(shutil.rmtree, _ARMED, True)
+    for _n in os.listdir(HERE):
+        if _n.endswith(".py"):
+            shutil.copyfile(os.path.join(HERE, _n), os.path.join(_ARMED, _n))
+    open(os.path.join(_ARMED, "JOB_CYCLE_LIVE"), "w").close()
+    RESEED = os.path.join(_ARMED, "job_reseed.py")
+    READMECLI = os.path.join(_ARMED, "job_readme.py")
 
 PASS, FAIL = [], []
 

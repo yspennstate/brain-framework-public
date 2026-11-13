@@ -1,7 +1,7 @@
 """A superseded_by pointer its author narrowed is a PART supersession for every reader (4 Oct 2026).
 
 dot 125873D4 found that spread_recall's hint cut the first token of "slug # only its third section" and told the reader
-to read the successor instead; claude:4a88bc43 found the same in the route map's lenient lead (which caught only '#')
+to read the successor instead; claude:5e550011 found the same in the route map's lenient lead (which caught only '#')
 and in live_sidecar, on a live memory whose qualifier is a parenthesis ("slug (the half-real part only, ...; the
 75-percent picture count stands)"). supersession.pointer_scope is the one classification; this checks it, the route map,
 and the recall hint, in a throwaway memory folder with the module caches pointed there too.

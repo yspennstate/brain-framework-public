@@ -255,6 +255,12 @@ def _compiled_gut_receipt(dreaming: Path, scope: str) -> tuple[dict, list[Findin
         hashes = {}
         for name in expected_names:
             expected = str(value["files"].get(name) or "")
+            if name == "instincts_learned.json" and expected == "absent":
+                # a new brain with no learned reflexes yet: the overlay must still be missing
+                if (dreaming / name).exists():
+                    raise ValueError("%s exists but its compile receipt says absent" % name)
+                hashes[name] = {"sha256": None, "bytes": 0}
+                continue
             if not re.fullmatch(r"[0-9a-f]{64}", expected):
                 raise ValueError("receipt hash for %s is malformed" % name)
             actual, size = _sha256(dreaming / name)

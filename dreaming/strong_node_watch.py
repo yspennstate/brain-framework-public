@@ -583,6 +583,17 @@ def main(argv=None) -> int:
             return 1
         _print_summary(report, freshness)
         return 0 if freshness == "fresh" and report.get("status") == "OBSERVED" else 1
+    if not os.environ.get("BRAIN_STRONG_NODE_TEST_MODE"):
+        import brain
+
+        # The reviewed scanner is installed by hand after its review and is not part of the
+        # starter kit, so a new brain has no runtime folder at all. That is not a broken pin:
+        # there is nothing to watch, and brain.py already reports the queue as DISABLED when no
+        # watch report exists. A runtime folder that is present but wrong still exits 2.
+        runtimes = os.path.dirname(os.path.abspath(brain.STRONG_NODE_PINNED_RUNTIME_DIR))
+        if not os.path.isdir(runtimes):
+            print("strong-node observe-only watch: no reviewed scanner installed (%s absent); nothing to watch" % runtimes)
+            return 0
     live_root = Path(args.live_root).resolve() if args.live_root else _live_root()
     report, code = run_watch_with_timeout(live_root)
     print("  wrote %s (exit %d)" % (live_root / LATEST_NAME, code))

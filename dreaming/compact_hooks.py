@@ -2,9 +2,8 @@
 """Compaction hooks: agents compact at task boundaries, sooner, and lose nothing when they do (9 Oct 2026: an agent that has finished
 a subject compacts then, compaction follows tasks rather than a full context, and it happens sooner).
 
-Fifty brain hooks in compact_hooks.jsonl (the math brain's fifty are HOOK_IDEAS_v6.jsonl under primary_directive/
-math_hooks). Each is fired by a measured signal; at most one per event (two right after a compaction); a per-session
-cooldown per hook; within a kind the hook shown least recently goes first, so the fifty rotate.
+Fifty-three brain hooks in compact_hooks.jsonl (a math brain can keep its own set beside them). Each is fired by a measured signal; at most one per event (two right after a compaction); a per-session
+cooldown per hook; within a kind the hook shown least recently goes first, so they rotate.
 - A task or subject ends: a checklist entry closed, a final report ("This was your ..."), a push, a commit, a released
   claim, a handoff sent, a report written to Downloads, a gate decision written, tests passed, a checkpoint written.
 - The context is large: the live token count from the transcript's last usage record (bands 200k, 250k, 280k, 350k,
@@ -298,7 +297,7 @@ def _named_on_disk(sp):
 def _this_compactions_rows(sid, sp, st):
     """The node rows written for THIS compaction, newest last: the session's rows from NODE_FRESH_S before the hook
     started on that no earlier SessionStart named, polled for up to sum(NODE_WAITS) seconds.
-    14 Oct 12:07:53 (claude-1789621d-r): the old half-hour window named compaction_claude_aeda7a9b_20261014T120520, a
+    14 Oct 12:07:53: the old half-hour window named compaction_claude_e5f6a7b8_20261014T120520, a
     sibling subagent's node 153 s old, as this compaction's; this compaction's own row landed at 12:07:55. A subagent's
     compaction reaches the hook with its parent's session id and transcript, so a session's window holds its siblings'
     nodes; and in any session that compacted in the half hour before, a lost node read as saved. Run this once per

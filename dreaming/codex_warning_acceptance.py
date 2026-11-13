@@ -59,6 +59,13 @@ GRAPH_NAME = "error_graph\\hook.py"
 HELP_GUARD_NAME = "codex_help_guard_hook.py"
 PROJECT_MEMORY_NAME = "project_memory_hook.py"
 PROJECT_MEMORY_HOT_NAME = "project_memory_hot_hook.py"
+# THE OBSERVER MAY BE WIRED THROUGH ITS GATE. error_graph_gate.py runs error_graph/hook.py with the same arguments and
+# stdin only while error_graph_runtime/ENABLED exists, so a machine that never reads the graph pays one interpreter start
+# per event instead of the engine import and its SQLite writes. Either form counts as the one observer per event; the
+# gate form is accepted only while its source still gates on that flag (checked below), so a gate that stopped gating
+# reads as a failure.
+GATE_NAME = "error_graph_gate.py"
+GATE_FLAG_MARKERS = ("error_graph_runtime", "ENABLED", "sys.exit(0)")
 
 
 _RAW_SCRIPT_PATHS: dict[str, str] = {}
@@ -78,6 +85,7 @@ EXPECTED_SCRIPTS = {
     REFLEX_NAME: _norm_script(str(Path.home() / ".claude" / "dreaming" / REFLEX_NAME)),
     STOP_GUARD_NAME: _norm_script(str(Path.home() / ".claude" / "dreaming" / STOP_GUARD_NAME)),
     GRAPH_NAME: _norm_script(str(Path.home() / ".claude" / "dreaming" / "error_graph" / "hook.py")),
+    GATE_NAME: _norm_script(str(Path.home() / ".claude" / "dreaming" / GATE_NAME)),
     HELP_GUARD_NAME: _norm_script(str(Path.home() / ".claude" / "dreaming" / HELP_GUARD_NAME)),
     PROJECT_MEMORY_NAME: _norm_script(
         str(Path.home() / ".brain-framework" / "runtime" / PROJECT_MEMORY_NAME)
@@ -213,7 +221,7 @@ def _command_shape_problem(command: str) -> str | None:
         return None
     if mode != "normal":
         return "only the project-memory hot hook may use Python -S -B"
-    if script == EXPECTED_SCRIPTS[GRAPH_NAME]:
+    if script in (EXPECTED_SCRIPTS[GRAPH_NAME], EXPECTED_SCRIPTS[GATE_NAME]):
         if extra != ["--hook-runtime", "codex"]:
             return "error-graph command must end with --hook-runtime codex"
     elif script in (
@@ -224,6 +232,21 @@ def _command_shape_problem(command: str) -> str | None:
     ):
         if extra:
             return "warning wrapper command has unexpected extra arguments"
+    return None
+
+
+GATE_SOURCE = EXPECTED_SCRIPTS[GATE_NAME]   # the selftest points this at a decoy to prove the check can fail
+
+
+def _gate_problem() -> str | None:
+    """The gate form counts as the observer only while it still gates on error_graph_runtime/ENABLED."""
+    try:
+        source = Path(_RAW_SCRIPT_PATHS.get(GATE_SOURCE, GATE_SOURCE)).read_text(encoding="utf-8-sig")
+    except Exception as exc:
+        return f"error-graph gate unreadable ({type(exc).__name__})"
+    missing = [m for m in GATE_FLAG_MARKERS if m not in source]
+    if missing:
+        return "error-graph gate does not gate on error_graph_runtime/ENABLED (missing %s)" % ", ".join(missing)
     return None
 
 
@@ -411,9 +434,14 @@ def validate(config: Any) -> list[str]:
             problems.append(
                 f"{event}: expected {expected_guard} completion/timed-work guard, found {stop_guard_count}"
             )
-        graph_count = sum(EXPECTED_SCRIPTS[GRAPH_NAME] in scripts for scripts in command_scripts)
+        graph_count = sum((EXPECTED_SCRIPTS[GRAPH_NAME] in scripts) or (EXPECTED_SCRIPTS[GATE_NAME] in scripts)
+                          for scripts in command_scripts)
         if graph_count != 1:
             problems.append(f"{event}: expected 1 shadow error-graph observer, found {graph_count}")
+        if any(EXPECTED_SCRIPTS[GATE_NAME] in scripts for scripts in command_scripts):
+            gate_problem = _gate_problem()
+            if gate_problem:
+                problems.append(f"{event}: {gate_problem}")
         for support_name in (HELP_GUARD_NAME, PROJECT_MEMORY_NAME, PROJECT_MEMORY_HOT_NAME):
             actual_support = sum(
                 support_name in _script_basenames(command) for command in commands
@@ -430,13 +458,16 @@ def validate(config: Any) -> list[str]:
 def _sample_config() -> dict[str, Any]:
     """Small, platform-realistic contract fixture; commands never execute."""
     python = r"C:\Python314\python.exe"
-    graph = python + r" -B ~\.claude\dreaming\error_graph\hook.py --hook-runtime codex"
-    reflex = python + r" -B ~\.claude\dreaming\codex_reflex_hook.py"
-    stop = python + r" -B ~\.claude\dreaming\codex_stop_guard.py"
-    help_guard = python + r" -B ~\.claude\dreaming\codex_help_guard_hook.py"
-    project_memory = python + r" -B ~\.brain-framework\runtime\project_memory_hook.py"
+    # The check compares exact absolute script paths and never expands "~", so the fixture spells the home out the
+    # way a real hooks.json does; a literal "~\" here made every core hook read as unapproved.
+    home = os.path.expanduser("~")
+    graph = python + " -B " + home + r"\.claude\dreaming\error_graph\hook.py --hook-runtime codex"
+    reflex = python + " -B " + home + r"\.claude\dreaming\codex_reflex_hook.py"
+    stop = python + " -B " + home + r"\.claude\dreaming\codex_stop_guard.py"
+    help_guard = python + " -B " + home + r"\.claude\dreaming\codex_help_guard_hook.py"
+    project_memory = python + " -B " + home + r"\.brain-framework\runtime\project_memory_hook.py"
     project_memory_hot = (
-        python + r" -S -B ~\.brain-framework\runtime\project_memory_hot_hook.py"
+        python + " -S -B " + home + r"\.brain-framework\runtime\project_memory_hot_hook.py"
     )
 
     dreaming = os.path.expanduser(r"~/.claude/dreaming")
@@ -457,6 +488,9 @@ def _sample_config() -> dict[str, Any]:
     advisory["ownerprompts"] = python + " -B " + dreaming + r"\owner_prompts_hook.py --hook --runtime codex"
     advisory["checklist"] = python + " -B " + dreaming + r"\task_checklist_hook.py --hook --runtime codex"
     advisory["archive"] = python + " -B " + dreaming + r"\prompt_archive.py --runtime codex"
+    # The board hook is counted in EXPECTED_HANDLER_COUNTS (18), so the fixture carries it too. Appended last on
+    # purpose: the known-bad cases below index into this list by position.
+    advisory["board"] = python + " -B " + dreaming + r"\owner_board_hook.py --hook --runtime codex"
 
     def handler(command: str) -> dict[str, Any]:
         return {"type": "command", "commandWindows": command, "timeout": 2}
@@ -466,7 +500,7 @@ def _sample_config() -> dict[str, Any]:
             "hooks": [handler(graph), handler(reflex), handler(project_memory), handler(stop)]
             + [handler(advisory[k]) for k in ("proof", "math", "waste", "push", "movie", "prime",
                                               "compute", "danger", "slow", "handoff",
-                                              "ownerprompts", "checklist", "archive")]
+                                              "ownerprompts", "checklist", "archive", "board")]
         }],
         "PreToolUse": [
             {"matcher": "*", "hooks": [handler(help_guard), handler(graph), handler(reflex)]},
@@ -588,6 +622,36 @@ def _selftest() -> int:
         stray_strong["hooks"]["Stop"][0]["hooks"].append(
             {"type": "command", "commandWindows": strong_cmd, "timeout": 5})
         cases.append(("strong-nodes outside PreToolUse", stray_strong, "unexpected strong-nodes fire handler"))
+    # THE GATED OBSERVER: the gate in place of the raw hook on all four events must pass; the gate beside the raw hook is
+    # two observers; the gate without its runtime argument is malformed; and a gate whose source no longer gates on
+    # error_graph_runtime/ENABLED must fail - a decoy source proves it can.
+    gate_cmd = good["hooks"]["PostToolUse"][0]["hooks"][0]["commandWindows"].replace(
+        "error_graph\\hook.py", "error_graph_gate.py")
+    gated = copy.deepcopy(good)
+    for ev, gi, hi in (("UserPromptSubmit", 0, 0), ("PreToolUse", 0, 1), ("PostToolUse", 0, 0), ("Stop", 0, 0)):
+        gated["hooks"][ev][gi]["hooks"][hi]["commandWindows"] = gate_cmd
+    gated_problems = validate(gated)
+    if gated_problems:
+        failures.append(f"gated observer contract rejected: {gated_problems!r}")
+    both = copy.deepcopy(gated)
+    both["hooks"]["PostToolUse"][0]["hooks"].append(copy.deepcopy(good["hooks"]["PostToolUse"][0]["hooks"][0]))
+    cases.append(("gate and raw observer on one event", both, "expected 1 shadow error-graph observer, found 2"))
+    gate_args = copy.deepcopy(gated)
+    gate_args["hooks"]["Stop"][0]["hooks"][0]["commandWindows"] = gate_cmd.replace(" --hook-runtime codex", "")
+    cases.append(("gate without its runtime argument", gate_args, "error-graph command must end with --hook-runtime codex"))
+    import tempfile
+    global GATE_SOURCE
+    saved_gate = GATE_SOURCE
+    with tempfile.TemporaryDirectory() as td:
+        decoy = Path(td) / "error_graph_gate.py"
+        decoy.write_text("import runpy\nrunpy.run_path('hook.py', run_name='__main__')\n", encoding="utf-8")
+        GATE_SOURCE = str(decoy)
+        try:
+            ungated = validate(gated)
+        finally:
+            GATE_SOURCE = saved_gate
+    if not any("does not gate on error_graph_runtime/ENABLED" in p for p in ungated):
+        failures.append(f"a gate that no longer gates was accepted: {ungated!r}")
     null_hooks: dict[str, Any] = {"hooks": None}
     cases.append(("invalid top level", null_hooks, "top-level hooks object missing or invalid"))
 

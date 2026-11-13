@@ -63,8 +63,10 @@ def main():
         print(__doc__ or os.path.basename(__file__))
         return
     write = "--write" in sys.argv[1:]
-    idx = io.open(INDEX, encoding="utf-8", errors="replace").read()
-    arc = io.open(ARCHIVE, encoding="utf-8", errors="replace").read()
+    # A new brain has no INDEX_ARCHIVE.md until the first index compaction or this pass writes
+    # one; a missing page reads as empty, and --write creates the archive when it appends.
+    idx = io.open(INDEX, encoding="utf-8", errors="replace").read() if os.path.exists(INDEX) else ""
+    arc = io.open(ARCHIVE, encoding="utf-8", errors="replace").read() if os.path.exists(ARCHIVE) else ""
     both = idx + arc
     missing = []
     for fn in sorted(os.listdir(MEM)):

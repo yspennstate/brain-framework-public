@@ -195,7 +195,7 @@ def main():
     random.shuffle(order)
     fold_of = {order[i]: i % folds for i in range(len(wiki))}
 
-    # STALE LABEL CORRECTED 2026-08-22 (session 95e8c38d): this was the deployed blend from
+    # STALE LABEL CORRECTED 2026-08-22 (session 5e55000b): this was the deployed blend from
     # 2026-07-10 to 2026-07-15 only. brain.py line 1160 - "Ranking is BM25-FIRST since 2026-07-15
     # (OQ#1164)" - and the blend now runs only under BRAIN_RECALL_BLEND=1. So CUR is a HISTORICAL
     # BASELINE, not "reality": a candidate that beats it has beaten the pre-07-15 ranker, which is

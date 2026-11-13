@@ -1,4 +1,4 @@
-"""Extend the dispatcher's in-process list with hooks proven equivalent; never removes a name (claude-1789621d, 13 Oct 2026).
+"""Extend the dispatcher's in-process list with hooks proven equivalent; never removes a name (13 Oct 2026).
 
 WHY. hook_dispatch.py runs a hook in its own process unless hook_dispatch_allow.json names it, and only
 hook_dispatch_control.py wrote that file: a full run over every hook of seven events, which deletes the list when a

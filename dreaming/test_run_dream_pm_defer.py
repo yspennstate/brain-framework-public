@@ -33,6 +33,11 @@ CASES = [  # (status, started min ago, completed min ago, want deferral)
 
 
 def main():
+    try:
+        import fcntl  # noqa: F401  (run_dream.py is the POSIX dream runner and imports it at the top)
+    except ImportError:
+        print("SKIP run_dream.py needs fcntl, which this platform lacks")
+        return 0
     tmp = tempfile.mkdtemp(prefix="pmdefer_")
     fails = []
     try:

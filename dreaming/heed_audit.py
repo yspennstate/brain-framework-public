@@ -60,6 +60,9 @@ def load_fires(days, until=None):
     until = until or time.time()
     cutoff = until - days * 86400
     out = []
+    if not os.path.exists(FIRELOG):
+        # A new brain has no fire log until its first reflex fires; that is zero fires, not an error.
+        return out
     with io.open(FIRELOG, encoding="utf-8", errors="replace") as f:
         for ln in f:
             p = ln.rstrip("\n").split("\t")

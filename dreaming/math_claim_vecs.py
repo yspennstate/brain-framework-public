@@ -14,8 +14,7 @@ The math hook's meaning channel keeps one vector per claim in claim_embeddings.n
 the file after an ingest: a claim filed today had no vector until someone ran the builder by hand, so the meaning channel
 could not name it, and the hook's agreement check (the words' first card must also be the meaning's first claim) picked
 its winner from whatever claims the file held. When the new claim is the right answer and an older one leads on the
-words and wins on meaning among the rest, the two agree on the older card and the gate yields to it (scheduled audit
-account01/B09 r31, 29 Sep 2026, the store-binding caveat of R68).
+words and wins on meaning among the rest, the two agree on the older card and the gate yields to it.
 
 coverage() names the current claims without a vector and the vectors that name no node of the store; the hook's agreement
 check counts nothing while either list is non-empty (math_sense._claim_vectors_cover_store holds the same rule, kept in
@@ -24,7 +23,7 @@ the claim's body through the brain's ONNX bge-small (query_embed.embed), which r
 1.000000 - and replaces the file only after writing the whole new one. The math transport calls extend() on every run, as
 it rebuilds the prefilter index.
 
-THE TEXT IS BOUND TOO (29 Sep, scheduled audits account03/B12 r56 and account04/B09 r75). Ids alone let a file made from
+THE TEXT IS BOUND TOO. Ids alone let a file made from
 one store pass against another store that holds the same ids with other text. The file records, per row, the store's
 digest of the node the vector goes with (node_digests), and a row whose digest differs from the store's counts as a claim
 without a current vector: extend() re-embeds it, and the hook names nobody until it has. A file that records no digests
@@ -39,12 +38,11 @@ body; nine candidate texts tried on a sample of 40). The digests bind every row 
 says which rows were shown to come from their text.
 
 rebuild() re-embeds the legacy rows from their claims' current text, so that the file holds no vector of unrecorded
-text (scheduled audits account04/B06 r76 and account04/B14 r8: a legacy row carried its node's current digest, and the
-hook's check read the digest and not row_source, so a vector of unknown text passed as bound). Since then a legacy row
+text. Since then a legacy row
 counts as a row without a vector of its current text: status() reports it, the hook names nobody while one is in the
 file, and extend() re-embeds it as it re-embeds a row whose text changed.
 
-EVERY FILE WRITTEN HERE CARRIES ITS SHA-256 (29 Sep, scheduled audits account03/B11 r90 and account04/B17 r74). The loader
+EVERY FILE WRITTEN HERE CARRIES ITS SHA-256. The loader
 used to tell one file from another by its inode, mtime and size and by each zip member's CRC-32, and a CRC-32 can be forced:
 two valid files with different vectors kept every field equal, so a long-lived process kept the old vectors while a fresh
 one read the new. The loader now keys on the SHA-256 of the bytes it reads, and every writer here publishes that digest
@@ -96,7 +94,7 @@ def check(ids, digests, store=STORE, sources=None):
     """{missing, phantom, drifted, legacy, duplicates, unbound}: current claims with no vector (a superseded claim needs
     none); vector ids naming no node of the store; rows whose recorded digest is not the store's (a superseded node's row
     is not judged); rows of unknown text (row_source legacy), whatever digest they carry; ids that name more than one row,
-    superseded or not (account04/B06 r75: one claim, two voices); and whether the file records digests at all. Digests
+    superseded or not; and whether the file records digests at all. Digests
     or sources that do not line up with the rows raise ValueError."""
     claims, superseded, node_digest = universe(store)
     have = [str(i) for i in ids]
@@ -131,7 +129,7 @@ def coverage(ids, store=STORE, digests=None, sources=None):
 
 def _read(path):
     import numpy as np
-    # no pickle: every field of this file is a float, bool or fixed-width string array (account04/B17 r14)
+    # no pickle: every field of this file is a float, bool or fixed-width string array
     with open(path, "rb") as fh:
         data = np.load(fh, allow_pickle=False)
         return {k: data[k] for k in data.files}
@@ -145,8 +143,7 @@ def _claim_text(title, body):
 
 def _texts(store, ids):
     """{id: (text, source, digest)}: the text each claim is embedded from (_claim_text), read in the same row as its
-    digest, so the digest a file records is always the digest of the text that was embedded or compared (account04/B09
-    r75, case 4)."""
+    digest, so the digest a file records is always the digest of the text that was embedded or compared."""
     ids = list(ids)
     if not ids:
         return {}
@@ -306,7 +303,7 @@ def extend(store=STORE, path=None, embed=None):
     if not os.path.exists(path):
         return 0, 0, "no claim vectors at %s; a first build is build_claim_vecs.py's job" % path
     # One run at a time: two runs that read the same file would each write a replacement built from it, and the later
-    # replace would drop the earlier one's rows (account04/B09 r75, case 7). The second run reads the first's file on
+    # replace would drop the earlier one's rows. The second run reads the first's file on
     # its next call.
     fd = _take_lock(path)
     if fd is None:
@@ -323,7 +320,7 @@ def _extend_locked(store, path, embed):
     ids = [str(x) for x in fields["slugs"]]
     dup = _duplicates(ids)
     if dup:
-        # a map from id to row would keep one of the rows and drop the other unseen (account04/B06 r75)
+        # a map from id to row would keep one of the rows and drop the other unseen
         return 0, len(ids), "%d id(s) name more than one row (e.g. %s); not extended; a full build replaces the file" % (
             len(dup), dup[0])
     if "node_digests" not in fields:
@@ -339,7 +336,7 @@ def _extend_locked(store, path, embed):
         return 0, len(ids), "%d vector(s) name no node of the store (e.g. %s); not extended" % (len(phantom), phantom[0])
     missing = sorted(claims - set(ids) - superseded)
     # a row of unknown text is re-embedded like a row whose text changed: the channel stays closed while one is in the
-    # file, so it is not left for someone to notice (account04/B06 r76)
+    # file, so it is not left for someone to notice
     src_in = [str(s) for s in fields["row_source"]] if "row_source" in fields else None
     drifted = [i for k, (i, d) in enumerate(zip(ids, recorded))
                if (i not in superseded and node_digest[i] != d) or (src_in is not None and src_in[k] == "legacy")]

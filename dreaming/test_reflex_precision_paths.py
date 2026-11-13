@@ -79,7 +79,7 @@ class PerPathPrecision(unittest.TestCase):
 
     def test_an_unknown_path_label_is_no_route(self):
         # the 2 Sep hand sheet put its source in the path field (27 Sep): the rows count overall, no route is made
-        rows = [_row("h%d" % i, "r6", "yes", "session 7dcb21b8 (vixramp), 2026-09-02 12:0x-19:4xZ", stratum="hand")
+        rows = [_row("h%d" % i, "r6", "yes", "session 5e55000f (vixramp), 2026-09-02 12:0x-19:4xZ", stratum="hand")
                 for i in range(4)]
         rows += [_row("g%d" % i, "r6", "no", "graph") for i in range(4)]
         out = self._build(rows)

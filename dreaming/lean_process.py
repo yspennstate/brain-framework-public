@@ -28,7 +28,7 @@ def cap_mb():
 
 
 def priority_class():
-    """8 Oct 21:1x (claude-4a88bc43, pp1's question): on the saturated laptop a BelowNormal compile never finishes - 0 of 32
+    """8 Oct 21:1x (pp1's question): on the saturated laptop a BelowNormal compile never finishes - 0 of 32
     on 8 Oct; a measured pair at 20:56-21:09, same compiler, Mathlib and imports: BelowNormal with Windows power throttling
     turned off timed out at 600 s with 21 s of CPU, Normal finished in 135 s at 4,097 MB. Throttling is not the cause;
     priority is. Normal while the compute governor says the owner is away (run_bounded.py's rule); BelowNormal while he is

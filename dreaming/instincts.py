@@ -75,7 +75,7 @@ INSTINCTS = [
       # Second branch fires on a reported $-per-period / signed-amount-last-period / X%-a-year. NOTE: this
       # also fires on DISCUSSION of a P&L, so the pre_report BLOCK side needs afec84b0's discuss-gate to
       # stay precise - the trigger only NUDGES; the block precision is the firing layer's.
-      trigger=r"(?:\b(drawdown|max ?dd|risk of ruin|near[- ]?ruin)\b)|(?:\b(leverage|lever(ed)?|20x|10x|blow ?up|worst[- ]?case)\b[^\n]{0,60}(?:book|account|acct|portfolio|nlv|p ?& ?l|pnl|equity|margin|puts?|leaps?|grid|market|drawdown|sharpe|hedge|letf|vix|vxn|\biv\b|option|\$))|(?:(?:book|account|acct|portfolio|nlv|p ?& ?l|pnl|equity|margin|puts?|leaps?|grid|market|drawdown|sharpe|hedge|letf|vix|vxn|\biv\b|option|\$)[^\n]{0,60}\b(leverage|lever(ed)?|20x|10x|blow ?up|worst[- ]?case)\b)|(?:(?:makes?|earns?|made|nets?|profit(?:s|ed)?|returns?|pull(?:ed|s|ing)? in|took in|bring(?:s|ing)? in|clear(?:ed|s)?) .{0,20}?[+-]?\$?\d[\d,.]* ?(?:k|m|million)? ?(?:per |a |/ ?|last |this |each )?(?:day|week|month|year|yr|mo|quarter)\b|[+-] ?\$?\d[\d,.]* ?(?:k|m|million)? (?:last|this|per|a|each) (?:day|week|month|year|yr|mo|quarter)\b|\$\d[\d,.]* ?k?/ ?(?:day|mo|yr|month|year|week)\b|\bmade \d[\d,.]* ?%|\d+ ?% (?:a |per )?(?:year|return|month)\b|(?:(?:makes?|made|earn(?:s|ed)?|net(?:s|ted)?|profit(?:s|ed)?|return(?:s|ed)?) [^\n]{0,20}?[+-]?\$?\d[\d,.]* ?(?:k|m|million)? ?in ?(?:under|about|just|less than|only)? ?\d* ?(?:day|week|month|year|yr|mo|quarter)s?\b))",
+      trigger=r"(?:\b(drawdown|max ?dd|risk of ruin|near[- ]?ruin)\b)|(?:\b(leverage|lever(ed)?|20x|10x|blow ?up|worst[- ]?case)\b[^\n]{0,60}(?:book|account|acct|portfolio|p ?& ?l|pnl|equity|margin|puts?|leaps?|grid|market|drawdown|sharpe|hedge|letf|vix|vxn|\biv\b|option|\$))|(?:(?:book|account|acct|portfolio|p ?& ?l|pnl|equity|margin|puts?|leaps?|grid|market|drawdown|sharpe|hedge|letf|vix|vxn|\biv\b|option|\$)[^\n]{0,60}\b(leverage|lever(ed)?|20x|10x|blow ?up|worst[- ]?case)\b)|(?:(?:makes?|earns?|made|nets?|profit(?:s|ed)?|returns?|pull(?:ed|s|ing)? in|took in|bring(?:s|ing)? in|clear(?:ed|s)?) .{0,20}?[+-]?\$?\d[\d,.]* ?(?:k|m|million)? ?(?:per |a |/ ?|last |this |each )?(?:day|week|month|year|yr|mo|quarter)\b|[+-] ?\$?\d[\d,.]* ?(?:k|m|million)? (?:last|this|per|a|each) (?:day|week|month|year|yr|mo|quarter)\b|\$\d[\d,.]* ?k?/ ?(?:day|mo|yr|month|year|week)\b|\bmade \d[\d,.]* ?%|\d+ ?% (?:a |per )?(?:year|return|month)\b|(?:(?:makes?|made|earn(?:s|ed)?|net(?:s|ted)?|profit(?:s|ed)?|return(?:s|ed)?) [^\n]{0,20}?[+-]?\$?\d[\d,.]* ?(?:k|m|million)? ?in ?(?:under|about|just|less than|only)? ?\d* ?(?:day|week|month|year|yr|mo|quarter)s?\b))",
       gut="When a risk estimate contradicts the measured record, treat the estimate as suspect, not authoritative. Never naively scale a modeled worst case; reproduce the mechanics and validate against current measured records before reporting.",
       sting="A prior leverage extrapolation predicted catastrophic drawdowns that contradicted the measured record; the mistake was promoting a scaled modeled worst case into current-book truth.",
       source="scar_dont_naively_scale_a_worst_case_2026_01_01"),
@@ -90,7 +90,7 @@ INSTINCTS = [
  dict(id="lookahead", mode="fire",
       trigger=r"(?:\b(regime|lookahead|look[- ]?ahead|filter(ed)? by|condition(ed)? on|select(ed)? by|in[- ]?sample|feature|predictor)\b|\b(?:simulator|model|backtest|replay)\b[^.\n]{0,140}\b(?:closing|end[- ]of[- ]day|published after|after the decision|future)\b[^.\n]{0,120}\b(?:before|earlier|morning|open|action)\b)",
       gut="Any filter/regime/feature must be CAUSAL - no peeking at data the moment wouldn't have had. Ask 'could I have known this in real time?' before trusting any conditioned result.",
-      sting="The May regime-VIX lookahead: 31 backlinks of fallout.",
+      sting="A regime filter read from data published after the decision: 31 backlinks of fallout.",
       source="self_model_failure_modes_2026_07_07"),
  dict(id="no_local_prod_daemon", mode="fire",
       trigger=r"(example_prod_service|example_approval_daemon|example_dispatcher|example_folder_guard|example_prod_stack|\bpoc\b|local.{0,25}(production|approval|bot|broker|dispatcher|stack))",
@@ -99,8 +99,8 @@ INSTINCTS = [
       source="never_start_local_prod_daemon_2026_01_10"),
  dict(id="heavy_compute_remote", mode="fire",
       trigger=r"\b(train(ing)?|gpu|cuda|torch|tensorflow|\.fit\(|full fit|sklearn|\d{3,}k? rows|batch[_ ]?size|epochs?)\b",
-      gut="Owner policy, 2026-09-06: NO DNN, MLP, torch or kernel-model TRAINING on this laptop's GPU; that training belongs on the authorized remote training box. The local GPU is for movie creation only: Blender, ComfyUI/LTX, NVENC and Manim, targeting 70 percent utilization. Keep useful movie work under per-workload mesh claims, BelowNormal priority and the existing background CPU affinity limits; preserve interface responsiveness. Before loading a movie model, read fresh compute_state.json and check combined physical RAM, commit and VRAM peaks; do not load a large model while a render fleet consumes headroom. Throttle on real pressure or UI slowdown, and stop GPU work on a new Display 4101/nvlddmkm fault. Every launcher must be windowless at process creation. For a prohibited queued trainer, set its STOP flag and notify the feeder's owner so it cannot relaunch. Boxes 1, 2 and 4 stay off; the protected box is not a research destination. Keep recording verified movie-craft lessons in the brain.",
-      sting="The September6 freeze combined movie contexts with a DNN queue at 97-99 percent GPU. The owner lowered movie utilization to 70 percent and moved training to the authorized remote training box, but the compiled seed still repeated the superseded 80 percent/model-work instruction. A new memory alone does not update the instruction agents actually receive.",
+      gut="Heavy training does not run on the interactive workstation. Before a fit, a GPU job or a large batch, size its peak memory, check the machine's current headroom, and send training to the machine set aside for it; the workstation's GPU and cores serve the work its owner does at the keyboard. Throttle on real pressure or a slowing interface, never on a schedule alone.",
+      sting="A GPU shared by several interactive workloads and a training queue at 97-99 percent froze the desktop. The policy changed the same day, but the compiled seed still repeated the old limit: a new memory alone does not update the instruction agents actually receive.",
       source="no_local_gpu_training_2026_09_06"),
  dict(id="ps1_hook_edit", mode="fire",
       trigger='(?i)(?:"file_path": "[^"]*(?:\\.ps1|\\.vbs|settings\\.json|instinct_prime\\.py|spread_recall\\.py|danger_mode\\.py|error_monitor\\.py|sourced_memory\\.py|math_sense\\.py|compute_sense\\.py|conscience\\.py|coactivation_(?:log|end)\\.py|claim_check\\.py|brain_switch\\.py|project_memory_(?:hot_)?hook\\.py|wake_brain[^"]*|sessionstart[^"]*)"|\\b(?:Set-Content|Out-File|Add-Content|tee|cp|copy|mv|move|sed\\s+-i|cat\\s*>+?)\\b[^\\n]{0,160}\\b\\S+\\.(?:ps1|vbs)\\b|>>?\\s*\\S*\\.(?:ps1|vbs)\\b|\\b(?:Register-ScheduledTask|schtasks\\s+/create|Set-ScheduledTask|New-ScheduledTask)\\b|\\b(?:Set-Content|Out-File|tee|json\\.dump|write_text|sed\\s+-i)\\b[^\\n]{0,120}settings\\.json)',
@@ -168,9 +168,9 @@ INSTINCTS = [
       sting="A real private key hit GitHub, verified retrievable; every push gets a secret scan now.",
       source="self_model_failure_modes_2026_07_07"),
  dict(id="ib_marks", mode="fire", validity="low",
-      trigger=r"\b(IB (model )?mark|fair value|mid[- ]?nlv|iv lane|mark_nlv|valuation)\b",
-      gut="mid/IV lanes use actual bid/ask mids, never IB model marks. This was violated before it became a hard rule - check which price feed you're trusting.",
-      sting="A dead mid-NLV streamer made fair=mark and re-stamped stale LEAP quotes as fresh.",
+      trigger=r"\b((?:broker|vendor|model) (?:model )?mark|fair value|valuation)\b",
+      gut="A valuation uses the observed prices, never a vendor's or broker's model mark. This was violated before it became a hard rule - check which feed you are trusting.",
+      sting="A dead quote feed made fair value equal the model mark and re-stamped stale quotes as fresh.",
       source="self_model_failure_modes_2026_07_07"),
  # 2026-09-25: of the week's 50 ack-gate stops, 4 were the act (three pushes, one rebase) and 3 a commit by pathspec;
  # the rest were read-only git looks (git log origin/master, rev-list origin/main..HEAD, merge-base), the word master in
@@ -197,8 +197,8 @@ INSTINCTS = [
       sting="Corrected repeatedly on 07-08 for premature stopping under an ongoing goal.",
       source="self_model_failure_modes_2026_07_07"),
  dict(id="stale_mark_banks", mode="fire", validity="high",
-      trigger=r"(?i)\b(forward[- ]?fill|ffill|carr(y|ied).{0,14}(mark|quote|mid)|stale.{0,10}(mark|quote|mid|exit)|frozen.{0,10}(mark|quote)|last (quoted|real|available).{0,10}(mark|mid|quote)|\.get\([^)]{0,24},\s*(pm|last|prev)|liquidat\w+ at|final (mark|nlv)|marks?\.get)\b",
-      gut="A carried mark is a claim about a PAST world. Any ledger that BANKS at a forward-filled price - an exit, a liquidation, a final NLV - inherits a bias with the drift's sign: in an up-tape, stale put marks sell high, systematically, and the totals inflate without any single number looking wrong. Before trusting a total, find every moment cash is banked and check WHEN that mark was last true; reprice the banking moments at the day's real spot.",
+      trigger=r"(?i)\b(forward[- ]?fill|ffill|carr(y|ied).{0,14}(mark|quote|mid)|stale.{0,10}(mark|quote|mid|exit)|frozen.{0,10}(mark|quote)|last (quoted|real|available).{0,10}(mark|mid|quote)|\.get\([^)]{0,24},\s*(pm|last|prev)|liquidat\w+ at|final (mark|value)|marks?\.get)\b",
+      gut="A carried mark is a claim about a PAST world. Any ledger that BANKS at a forward-filled price - an exit, a liquidation, a final account value - inherits a bias with the drift's sign: in an up-tape, stale put marks sell high, systematically, and the totals inflate without any single number looking wrong. Before trusting a total, find every moment cash is banked and check WHEN that mark was last true; reprice the banking moments at the day's real spot.",
       sting="A crowned book and related windowed canons carried substantial stale-exit inflation because many rolls banked days-old mids; the bias surfaced only after the owner challenged implausible crashes (07-08).",
       source="example_method_2026_01_03"),
  # pre-mortem (Klein 2007): on an IRREVERSIBLE move, prospective hindsight beats forward optimism.
@@ -386,7 +386,12 @@ def _atomic_write_text(path, text):
             pass
 
 
-def _file_sha256(path):
+def _file_sha256(path, allow_absent=False):
+    # A new brain has no learned overlay until the dream writes its first reflex; the receipt
+    # then records "absent", and the self-care check holds the file to that (it must still be
+    # missing, or the receipt is stale).
+    if allow_absent and not os.path.exists(path):
+        return "absent"
     with open(path, "rb") as handle:
         return hashlib.sha256(handle.read()).hexdigest()
 
@@ -443,7 +448,7 @@ def emit_compile_receipt(tsv_path, md_path, learned_path=None, receipt_path=None
         "compiled_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "reflex_count": len(INSTINCTS),
         "files": {
-            "instincts_learned.json": _file_sha256(learned_path),
+            "instincts_learned.json": _file_sha256(learned_path, allow_absent=True),
             "instincts.tsv": _file_sha256(tsv_path),
             "INSTINCTS.md": _file_sha256(md_path),
         },

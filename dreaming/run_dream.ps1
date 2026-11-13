@@ -639,16 +639,21 @@ try {
             # brain_improvement dashboard data-path self-test (2026-09-05, canonical contract gate 7):
             # reads STATUS/DASHBOARD and every source they name, writes DASHBOARD_SELFTEST.json;
             # a hard failure exits 1 and is logged as STEP FAILED, never fatal. Seconds, no network.
-            RunPy 'brain_improvement dashboard selftest' @('$env:USERPROFILE\brain-repo\12_cognitive_architecture\brain_improvement\dashboard_selftest.py')
+            # The path is built with Join-Path so $env:USERPROFILE expands; a brain without the optional
+            # brain_improvement dashboard skips both dashboard steps with one log line instead of failing nightly.
+            $biDir = Join-Path $env:USERPROFILE 'brain-repo\12_cognitive_architecture\brain_improvement'
+            $biPresent = Test-Path (Join-Path $biDir 'dashboard_selftest.py')
+            if ($biPresent) {
+                RunPy 'brain_improvement dashboard selftest' @((Join-Path $biDir 'dashboard_selftest.py'))
+            } else { Log 'brain_improvement dashboard not installed - selftest and refresh skipped' }
             # 2026-09-14: REGENERATE the dashboard, not only self-test it. The selftest had printed "dashboard
             # generated 56.0 h ago (refresh_dashboard.py has not run)" for two nights because nothing ran it.
             # refresh_dashboard.py asserts mesh claims on the four DASHBOARD.* targets under its --agent name, so
             # the runner claims them as brain-dream first and releases after; a denied claim (another agent is
             # regenerating it) skips the step and says so. Nonfatal throughout; ~2 minutes, no network.
-            if (-not (TailOver 'brain_improvement dashboard refresh')) {
+            if ($biPresent -and -not (TailOver 'brain_improvement dashboard refresh')) {
                 try {
-                    $biDir = '$env:USERPROFILE\brain-repo\12_cognitive_architecture\brain_improvement'
-                    $meshPy = '$env:USERPROFILE\brain-repo\12_cognitive_architecture\agent_mesh\agent_mesh.py'
+                    $meshPy = Join-Path $env:USERPROFILE 'brain-repo\12_cognitive_architecture\agent_mesh\agent_mesh.py'
                     $biRes = @("$biDir\DASHBOARD.json", "$biDir\DASHBOARD.json.codex-part", "$biDir\DASHBOARD.md", "$biDir\DASHBOARD.md.codex-part")
                     & python $meshPy hello --agent brain-dream --runtime brain --task 'nightly dream: dashboard refresh' 2>&1 | Out-Null
                     $claimArgs = @('claim', '--agent', 'brain-dream', '--mode', 'write', '--purpose', 'dream tail: regenerate the brain-improvement dashboard')

@@ -42,6 +42,9 @@ def _write(path, body):
     in between destroys the file with clean intent - that is how PREDICTIONS.md lost 254 lines of
     calibration history mid-dream on 07-21."""
     tmp = path + ".tmp"
+    # A new brain has no prompts folder until the prompt hook records its first prompt; the
+    # views are still written (with zero counts) so the index exists from the first dream.
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with io.open(tmp, "w", encoding="utf-8", newline="\n") as f:
         f.write(body)
     os.replace(tmp, path)

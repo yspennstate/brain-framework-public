@@ -166,7 +166,7 @@ def main():
     print("embeddings:", "cached %d vecs" % len(_emb_cache[0]) if _emb_cache else "SIDECAR ABSENT (semantic=0)")
 
     # candidate blends on the simplex (wl+wg+ws=1), plus the current point
-    # STALE BY TWO GENERATIONS, annotated 2026-08-22 (session 95e8c38d). This constant is the
+    # STALE BY TWO GENERATIONS, annotated 2026-08-22 (session 5e55000b). This constant is the
     # pre-2026-07-10 blend. It was superseded on 07-10 by 0.625/0.25/0.125 - which this file's OWN
     # docstring describes - and the whole blend architecture was retired on 2026-07-15, when
     # brain.py went BM25-FIRST (line 1160, OQ#1164); the blend now runs only under

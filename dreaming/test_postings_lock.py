@@ -57,6 +57,7 @@ class PostingsLockTests(unittest.TestCase):
         self.assertEqual(bm25.maybe_build_postings(self.idx, force=True), "another-build")
         self.assertEqual(self.built, [])
 
+    @unittest.skipIf(os.name == "nt", "bm25 has no cheap liveness probe on Windows; the lock's age alone decides there")
     def test_old_lock_of_a_live_holder_is_left_alone(self):
         Path(self.lock).write_text(str(os.getppid()))
         self.age(bm25.POSTINGS_LOCK_STALE_S + 5)

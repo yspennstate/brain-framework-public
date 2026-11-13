@@ -54,7 +54,9 @@ class BrainRecallLivenessTests(unittest.TestCase):
                 mock.patch.object(brain.sr, "_load_graph", return_value=({}, {})),
                 mock.patch.object(brain.sr, "_load_salience", return_value={}),
                 mock.patch.object(brain.sr, "_desc", side_effect=lambda slug, _idx: slug),
-                mock.patch.dict(os.environ, {"BRAIN_RECALL_BLEND": "1"}),
+                mock.patch.dict(os.environ, {"BRAIN_RECALL_BLEND": "1",
+                                             # the tail lane reads the real compaction and memory folders
+                                             "BRAIN_RECALL_CTAIL": "0"}),
             ):
                 output = io.StringIO()
                 with redirect_stdout(output):
@@ -102,7 +104,9 @@ class BrainRecallLivenessTests(unittest.TestCase):
                                              # FakeBM25 has no .df; the 07-24 spellfix
                                              # (QueryNormalizer(_bm.df)) would raise and the
                                              # bm25 block swallows it into lexical blindness.
-                                             "BRAIN_RECALL_SPELLFIX": "0"}),
+                                             "BRAIN_RECALL_SPELLFIX": "0",
+                                             # the tail lane reads the real compaction and memory folders
+                                             "BRAIN_RECALL_CTAIL": "0"}),
             ):
                 output = io.StringIO()
                 with redirect_stdout(output):

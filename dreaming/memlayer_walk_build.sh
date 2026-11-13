@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Builds the walk cache for graph_lane_store_memlayer once memory pressure is normal for 3 minutes running
-# (claude-1ca628ae, 3 Nov 23:2x; the 22:43 kernel panic came from stacking heavy jobs under pressure).
+# (claude-00000001, 3 Nov 23:2x; the 22:43 kernel panic came from stacking heavy jobs under pressure).
 L=~/.claude/dreaming/graph_lane_stage_memlayer/walk_build.log
 ok=0
 while [ $ok -lt 3 ]; do

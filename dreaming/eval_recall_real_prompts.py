@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""eval_recall_real_prompts.py - the SHIPPED recall path, on real owner prompts.
+"""eval_recall_real_prompts.py - the SHIPPED recall path, on real session prompts.
 
 Why this file exists (2026-09-14). eval_prompt_recall_fullstack.py answers a different question: it
 reimplements the blend from the seeder, the spread and the semantic lane so it can sweep the blend
@@ -8,8 +8,8 @@ nothing in its output, and an unchanged number from a blind instrument reads exa
 done". It is not evidence on that axis (gate_incomplete_is_not_a_pass_2026_07_16).
 
 This one calls `brain.recall()`, the function the CLI and the hooks call, over the same real
-prompt-to-reads episodes: what the owner actually typed, scored against what that session actually
-went on to read. It is independent of the 56-question owner-voice bank, so a rerank tuned on that
+prompt-to-reads episodes: what the user actually typed, scored against what that session actually
+went on to read. It is independent of the 56-question user-voice bank, so a rerank tuned on that
 bank can be falsified here.
 
     python eval_recall_real_prompts.py [--n N] [--k 8]
@@ -25,7 +25,11 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from eval_prompt_recall_fullstack import episodes   # noqa: E402
-from eval_brain_recall_fresh import recall as cli_recall  # the CLI path, exactly as the bank scores it
+try:
+    from eval_brain_recall_fresh import recall as cli_recall  # the CLI path, exactly as the bank scores it
+except ImportError:  # the CLI-path scorer is not shipped; --cli and --check-cli need it
+    def cli_recall(prompt, k):
+        raise SystemExit("--cli needs eval_brain_recall_fresh.py next to this file; the default in-process path does not")
 
 
 def _inproc_recall():

@@ -1,4 +1,4 @@
-"""error_graph's Claude hook under a name of its own (30 Oct 2026, claude-a52370f8).
+"""error_graph's Claude hook under a name of its own.
 
 hook_dispatch_list.json used to launch error_graph/hook.py through an inline `python -c` runpy with the folder
 hex-encoded. The dispatcher only runs a named .py file in-process, so error_graph always paid a fresh interpreter:

@@ -285,11 +285,12 @@ class SupersessionProducerTests(unittest.TestCase):
             memory_text(third, "Verified exact terminal crash recovery structure Cascadia controllers") + shared,
             encoding="utf-8")
         # The views builder ships beside this tree (framework root) and, in a deployment that keeps
-        # its brain in a separate repository, under that repository's root. Take the first that
-        # exists; a deployment names its own with BRAIN_VIEWS_BUILDER.
+        # its brain in a separate repository, under that repository's root; the installer puts it
+        # in <home>/brain-repo. Take the first that exists; a deployment names its own with
+        # BRAIN_VIEWS_BUILDER.
         candidates = [Path(os.environ["BRAIN_VIEWS_BUILDER"])] if os.environ.get("BRAIN_VIEWS_BUILDER") else []
         candidates += [parent / "manifests" / "build_tools" / "build_brain_architecture.py"
-                       for parent in (HERE.parents[0], HERE.parents[1])]
+                       for parent in (HERE.parents[0], HERE.parents[1], HERE.parents[1] / "brain-repo")]
         builder = next((c for c in candidates if c.exists()), candidates[-1])
         env = dict(os.environ)
         env["PYTHONPATH"] = str(HERE) + os.pathsep + env.get("PYTHONPATH", "")

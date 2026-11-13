@@ -16,7 +16,7 @@ Fail-safe silent on any error. Reads stdin (UserPromptSubmit JSON), writes injec
 """
 import sys, os, io, json, re, time
 
-# 5 Nov 2026 (claude-95df24fa): the resident spread_server.py hosts this hook too. Its time is the bm25 and
+# 5 Nov 2026: the resident spread_server.py hosts this hook too. Its time is the bm25 and
 # supersession imports plus the scoring, which the server keeps loaded: 30 of 30 outputs byte-identical (29 of them
 # non-empty), 134 -> 86 ms a fresh-process call. On None (no server,
 # busy, declined, any error) the hook runs cold exactly as before. SPREAD_SERVER=0 turns it off.

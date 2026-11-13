@@ -32,8 +32,9 @@ exist; the heed log has started collecting them. Guard: with no calibration data
 threshold is -inf (warn on everything) — maximum caution, already tested.
 
 ## fire.complete_hopfield -> the completion scorer
-An alternative to `complete()` inside the network's retrieval. Promote only if the live A/B
-(dev_turn1_hopfield_ab.py) shows it fires more AND its usefulness beats the recency baseline
+An alternative to `complete()` inside the network's retrieval. Promote only if a live A/B
+(not yet written: run `complete()` and `complete_hopfield()` side by side on the same turns, as
+`dev_turn_cluster_retrieval.py` does for cluster retrieval) shows it fires more AND its usefulness beats the recency baseline
 (0.309). If it also fires ~0%, the sparsity is fundamental and the next step is cluster
 retrieval (pool the top-M episodes), not a scorer swap. Guard: the k_min direct-evidence gate
 must still hold — spread cannot testify.

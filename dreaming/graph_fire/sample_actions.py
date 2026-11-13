@@ -11,7 +11,7 @@ each exactly as instinct_prime does (json.dumps(tool_input)), tags read-only, de
 import os, io, json, glob, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PROJ = "~/.claude/projects/{{BRAIN_SLUG}}"
+PROJ = os.path.expanduser("~/.claude/projects/{{BRAIN_SLUG}}")
 OUT = os.path.join(HERE, "typical_actions.jsonl")
 EXCLUDE_SESSION = "89f84043"   # this build session - not a typical workload
 N_FILES = 30           # overridable: --files=100 --max=2500 --out=typical_actions_big.jsonl

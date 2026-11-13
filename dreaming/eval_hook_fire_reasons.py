@@ -33,6 +33,8 @@ from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(os.path.expanduser("~"), ".claude", "brain_graph", "bin"))
+from quarantine_rows import keep_old  # noqa: E402  a rerun keeps the previous output
 
 
 def run_prompt(sr, prompt, tag, index):
@@ -67,6 +69,10 @@ def main():
     import eval_mistake_surfacing as em
     import spread_recall as sr
     prompts = em.harvest(n_files=8)[:args.n]
+    if not prompts:
+        # A new brain has no recorded sessions yet, so there is nothing to replay.
+        print("eval_hook_fire_reasons: no prompts in the recent transcripts yet; nothing to judge")
+        return 2
     mw = sr._load_mistake_weights()
     base = {k: getattr(sr, k) for k in ("MARGIN", "ACT_FLOOR", "SAL_FLOOR", "CAND_FLOOR")}
     habit_orig = sr._load_habituation
@@ -101,7 +107,7 @@ def main():
     rec = {"when": time.strftime("%Y-%m-%d %H:%M"), "n_prompts": len(prompts), "base_constants": base, "results": results,
            "seconds": round(time.time() - t0, 1)}
     if args.out:
-        with io.open(args.out, "w", encoding="utf-8") as f:
+        with io.open(keep_old(args.out), "w", encoding="utf-8") as f:
             json.dump(rec, f, indent=1)
     return 0
 

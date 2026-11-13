@@ -6,7 +6,7 @@ It went stale 07-23 -> 07-25 -> 07-29, costing four measured rediscoveries on
 07-28 and three manual box round-trips on 07-29/30.
 
 This package is the recorded fix option 1 from
-`embedding_sidecar_stale_box_rebuild_2026_07_24`: a dedicated windowless
+the stale-sidecar note: a dedicated windowless
 scheduled task that refreshes only when coverage demands it (missing > 40,
 any stale, or age > 36h), skips during dreams and box distress, ships the
 current authority for incremental reuse (seconds, not minutes), publishes

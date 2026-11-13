@@ -207,6 +207,9 @@ def fire_counts(days=None, claude_backed_only=False):
             have[sid] = bool(glob.glob(os.path.join(PROJ, sid[:8] + "*.jsonl")))
         return have[sid]
 
+    if not os.path.exists(FIRELOG):
+        # A new brain has no fire log until its first reflex fires; that is zero fires, not an error.
+        return per
     with io.open(FIRELOG, encoding="utf-8", errors="replace") as f:
         for ln in f:
             p = ln.rstrip("\n").split("\t")
@@ -242,7 +245,8 @@ def main():
         # paths; this makes that visible per night without a corpus build.
         per_m = collections.defaultdict(collections.Counter)
         cutoff = 0 if a.all else time.time() - a.days * 86400
-        with io.open(FIRELOG, encoding="utf-8", errors="replace") as f:
+        with io.open(FIRELOG if os.path.exists(FIRELOG) else os.devnull,
+                     encoding="utf-8", errors="replace") as f:
             for ln in f:
                 p = ln.rstrip("\n").split("\t")
                 if len(p) < 6:

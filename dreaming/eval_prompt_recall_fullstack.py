@@ -38,7 +38,7 @@ matched candidate universe, n=417). So bm25-first is a CLEAR WIN on BOTH deliber
 architecture dilutes bm25. brain.recall SHOULD be bm25-first (still deferred: high-blast-radius live-tool
 rewrite; implement + verify in a deliberate session, not on my just-corrected judgment at 2am).
 
-*** STALE HEADER CORRECTED 2026-08-22 (session 95e8c38d). IT IS NO LONGER DEFERRED AND HAS NOT BEEN
+*** STALE HEADER CORRECTED 2026-08-22 (session 5e55000b). IT IS NO LONGER DEFERRED AND HAS NOT BEEN
 SINCE 2026-07-15. brain.py line 1160: "Ranking is BM25-FIRST since 2026-07-15 (OQ#1164)"; the blend
 survives only behind the escape hatch BRAIN_RECALL_BLEND=1. This harness was never updated after its
 own recommendation shipped, so for five weeks its SHIP=(0.625,0.25,0.125) arm has been labelled

@@ -36,6 +36,9 @@ def fresh():
 
 def main():
     m = fresh()
+    # the package the hook itself imports: both production callers put BUILD_SRC on the path first
+    if os.path.isdir(m.BUILD_SRC) and m.BUILD_SRC not in sys.path:
+        sys.path.insert(0, m.BUILD_SRC)
     check(m._refusal_kwargs() == {"on_refusal": "all"}, "K1 installed package: on_refusal='all'")
 
     import math_brain
@@ -75,7 +78,10 @@ def main():
                              timeout=20).stdout.strip()
     except (OSError, subprocess.SubprocessError):
         url = ""
+    # An installed brain (and a clone of the framework) vendors the public package at ../mathbrain/src.
+    vendored = os.path.abspath(os.path.join(HERE, "..", "mathbrain", "src")) + os.sep
     check(os.path.abspath(si.__file__).startswith(os.path.abspath(os.path.join(HERE, "..", "..", "tt"))) or
+          os.path.abspath(si.__file__).startswith(vendored) or
           url.removesuffix(".git").endswith("/math-brain") or "PUBLIC_PKG_ANY" in os.environ,
           "K4 the package under test is the public one: %s (%s)" % (si.__file__, url.rsplit("/", 1)[-1] or "no remote"))
     from types import SimpleNamespace as NS

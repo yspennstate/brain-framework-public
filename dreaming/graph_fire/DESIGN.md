@@ -121,8 +121,10 @@ while looking perfect. Every surprising positive here got broken before it was b
     python recalibrate.py          # adapt on fresh negatives; refresh anchors when reflexes change
     rm ENABLED                     # revert everything to shadow (log-only), instantly, no code change
 
-The block-FP eval negatives are `prose_negatives.jsonl` (real assistant messages); regenerate with the
-sampler in `monitor`/`eval_real`. Test session ids MUST be non-hex-prefixed (e.g. `zztest-...`) or they
+The block-FP eval negatives are `prose_negatives.jsonl`, one JSON string per line, each a real assistant
+message from your own transcripts. It is not shipped, because it is made of private text: write your own.
+`green_act_guard.py` skips it when it is absent; the other negative set, `typical_actions.jsonl`, comes
+from `sample_actions.py`. Test session ids MUST be non-hex-prefixed (e.g. `zztest-...`) or they
 pollute the durable ledgers. `monitor.py` is the healer-first gate: if it ever shows a real-session block
 that is a correct message, tighten that branch or `rm ENABLED`.
 

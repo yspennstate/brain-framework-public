@@ -1,4 +1,4 @@
-"""How long does each reflex trigger take on a long tool call? (claude-1789621d, 13 Oct 2026, recall front R23;
+"""How long does each reflex trigger take on a long tool call? (13 Oct 2026, recall front R23;
 the built texts 14 Oct 2026, front R27)
 
 instinct_prime runs every trigger in instincts.tsv with re.findall over the JSON text of the tool call, cut at its

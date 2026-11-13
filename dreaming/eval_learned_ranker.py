@@ -133,7 +133,7 @@ def main():
                     mrr += 1.0 / (i + 1)
         return (h10 / n, h25 / n, mrr / n, n) if n else (0, 0, 0, 0)
 
-    # STALE LABEL CORRECTED 2026-08-22 (session 95e8c38d): the hand-tuned deliberate blend this
+    # STALE LABEL CORRECTED 2026-08-22 (session 5e55000b): the hand-tuned deliberate blend this
     # compares against stopped shipping on 2026-07-15, when brain.py went BM25-FIRST (line 1160,
     # OQ#1164); it now runs only under BRAIN_RECALL_BLEND=1. A learned ranker beating CUR has beaten
     # the pre-07-15 ranker, not the live tool. To ask the live question, score against the shipped

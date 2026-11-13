@@ -16,6 +16,7 @@ from types import SimpleNamespace as NS
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+sys.path.insert(0, os.environ.get("MATHBRAIN_SRC", os.path.join(HERE, "..", "mathbrain", "src")))
 results = []
 
 

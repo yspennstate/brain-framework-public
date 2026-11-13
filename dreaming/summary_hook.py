@@ -40,7 +40,7 @@ def main():
 def decide(inp):
     if inp.get("stop_hook_active"):
         return ""
-    reason = ("Summary hook (owner order 2026-09-07): before you stop, give a summary in at most eight short lines, "
+    reason = ("Summary hook: before you stop, give a summary in at most eight short lines, "
               "in two parts. WHAT I WAS TOLD TO DO: the orders you received in this session, in the owner's own words "
               "where you can, most recent last. WHAT I HAVE DONE SO FAR: what is finished and verified, what is running, "
               "what is still open or blocked and on whom. No process lists, no tool talk. Then stop.")

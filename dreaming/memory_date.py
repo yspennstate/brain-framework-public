@@ -46,13 +46,26 @@ def _epoch(y, mo, d):
     return time.mktime((int(y), int(mo), int(d or 1), 12, 0, 0, 0, 0, -1))
 
 
+_UTC_NAMES = {"UTC", "ETC/UTC", "GMT", "ETC/GMT", "Z", "ZULU", "UNIVERSAL"}
+
+
 def _trusted_timezone(timezone):
     if timezone is None:
         return _dt.datetime.now().astimezone().tzinfo
     if isinstance(timezone, str):
+        # zoneinfo reads the operating system's time-zone database, and Windows has none: there every name,
+        # "UTC" included, needs the tzdata package. UTC is the installer's default, so it resolves without
+        # tzdata; any other name that cannot be found stops with the fix rather than ageing memories against
+        # a guessed clock.
+        if timezone.strip().upper() in _UTC_NAMES:
+            return _dt.timezone.utc
         if ZoneInfo is None:
             raise ValueError("named timezones require Python zoneinfo")
-        return ZoneInfo(timezone)
+        try:
+            return ZoneInfo(timezone)
+        except (KeyError, ValueError) as exc:
+            raise ValueError("time zone %r not found (%s); on Windows run: python -m pip install tzdata, "
+                             "or set BRAIN_TIMEZONE=UTC" % (timezone, exc)) from None
     return timezone
 
 

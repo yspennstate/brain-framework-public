@@ -22,7 +22,7 @@ FIRES = os.path.join(DREAM, "instinct_fires.tsv")
 OUTCOMES = os.path.join(DREAM, "outcomes.jsonl")
 MISTAKES = os.path.join(os.path.dirname(os.path.dirname(DREAM)), "projects", "{{BRAIN_SLUG}}", "memory", "MISTAKES.md")
 if not os.path.exists(MISTAKES):
-    MISTAKES = "~/.claude/projects/{{BRAIN_SLUG}}/memory/MISTAKES.md"
+    MISTAKES = os.path.expanduser("~/.claude/projects/{{BRAIN_SLUG}}/memory/MISTAKES.md")
 
 _WORD = re.compile(r"[a-zA-Z][a-zA-Z0-9]{2,}")
 _STOP = set("""the a an and or of to in on for by is are was were be been being it its this that these those

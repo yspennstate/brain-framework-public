@@ -20,11 +20,12 @@ Read-only: opens the store, writes one JSONL of per-item results and prints a su
 """
 import sys, os, io, json, re, time, collections, statistics, argparse
 
-sys.path.insert(0, "~/math-brain-build/src")
+# The math package and its store; set MATH_BRAIN_SRC / MATH_BRAIN_STORE when they live elsewhere.
+sys.path.insert(0, os.environ.get("MATH_BRAIN_SRC") or os.path.expanduser("~/math-brain-build/src"))
 from math_brain.retrieval import retrieve
 from math_brain.store import ResearchStore
 
-STORE = "~/math-brain-build/local/population/brain.sqlite3"
+STORE = os.environ.get("MATH_BRAIN_STORE") or os.path.expanduser("~/math-brain-build/local/population/brain.sqlite3")
 OUT = os.path.expanduser("~/.claude/dreaming/state/math_selfretrieval.jsonl")
 
 

@@ -75,6 +75,7 @@ def main():
             return None
     F.inbox_cached = lambda *a, **k: cached_only()
     agent = "claude-" + sid[:8]
+    fresh = not os.path.exists(F.seen_path(agent))
     msgs, sp, seen = F.unseen(agent)
     if not msgs:
         return
@@ -86,7 +87,10 @@ def main():
     if len(msgs) > 5:
         lines.append("... %d more: %s %s check --agent %s --all" % (len(msgs) - 5, F.PY, fb, agent))
     print("\n\n".join(lines))
-    F.mark_seen(sp, seen, msgs)
+    # Mark only what was shown, so the sixth and older come with the next prompts; marking every unseen message
+    # lost them for good (a session prompting hourly missed 134 messages in a week). A brand-new session (no seen
+    # file yet) still marks the whole inbox seen, or its history would follow it prompt after prompt.
+    F.mark_seen(sp, seen, F.parse(cached_only()) if fresh else msgs[:5])
 
 
 if __name__ == "__main__":

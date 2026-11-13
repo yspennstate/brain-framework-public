@@ -10,7 +10,9 @@ D = os.path.dirname(os.path.abspath(__file__))
 STATE_DIR = os.path.join(D, "spread_server")
 ENDPOINT = os.path.join(STATE_DIR, "endpoint.json")
 SPAWN_STAMP = os.path.join(STATE_DIR, "spawn.stamp")
-READ_TIMEOUT = float(os.environ.get("SPREAD_CLIENT_TIMEOUT", "3"))
+# laptop 3 -> 12 s (macOS keeps 3): at 3 s, 22 of 105 served laptop calls finished after the client had gone
+# cold, so the box did both; a served call waiting its turn still beats a 15 s cold run.
+READ_TIMEOUT = float(os.environ.get("SPREAD_CLIENT_TIMEOUT", "12" if os.name == "nt" else "3"))
 
 
 def _spawn():
@@ -23,8 +25,11 @@ def _spawn():
             pass
         with open(SPAWN_STAMP, "w") as f:
             f.write(str(time.time()))
+        exe = sys.executable
+        if exe.lower().endswith("pythonw.exe"):   # laptop port (5 Nov): as brain_recall_client does
+            exe = exe[:-5] + ".exe"
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-        subprocess.Popen([sys.executable, "-s", "-B", os.path.join(D, "spread_server.py")], cwd=D,
+        subprocess.Popen([exe, "-s", "-B", os.path.join(D, "spread_server.py")], cwd=D,
                          env=dict(os.environ), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                          stderr=subprocess.DEVNULL, creationflags=flags, close_fds=True,
                          start_new_session=(os.name == "posix"))

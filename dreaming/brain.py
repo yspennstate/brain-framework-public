@@ -827,9 +827,12 @@ def _marshal_dump_memo(path, value):
     os.replace(tmp, path)
     if os.environ.get("BRAIN_MARSHAL_MEMO", "1") != "0":
         # the rename moves the file's ctime, so the identity is taken after it; the inode, size and mtime must still be
-        # the temp file's, or another writer got in between and the next load reads the file
+        # the temp file's, or another writer got in between and the next load reads the file. It comes from an open
+        # handle, as in the load: on Windows os.stat(path) reads the directory entry, whose ctime lags the file's, and
+        # an identity taken that way never matched a load's and the memo never hit.
         try:
-            st = os.stat(path)
+            with open(path, "rb") as fh:
+                st = os.fstat(fh.fileno())
             if (st.st_ino, st.st_size, st.st_mtime_ns) == mine:
                 _MARSHAL_MEMO[path] = (_marshal_ident(st), value)
             else:

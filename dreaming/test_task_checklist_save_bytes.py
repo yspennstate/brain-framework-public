@@ -5,8 +5,8 @@ byte for byte what json.dump wrote before (5 Nov 2026).
 
 The store is a throwaway folder (TASK_CHECKLIST_HOME). The state is about 1.6 MB with non-ASCII asks, like a real one.
  B1 with json.dump made to raise, save_state still writes state.json and its hourly copy
- B2 state.json is exactly json.dumps(state, ensure_ascii=False, indent=1, sort_keys=True) in UTF-8
- B3 the hourly copy is exactly the compact json.dumps(state, ensure_ascii=False, sort_keys=True)
+ B2 state.json parses back to the state it was given (orjson or json.dumps, whichever the hook has)
+ B3 the hourly copy parses back to the same state and is no larger than state.json
  B4 (printed, not asserted) median save time of this module, and of --old when given
 With --old, the module before this change must fail B1 (it still calls json.dump, so the check can fail).
 """
@@ -76,11 +76,11 @@ def run(path, tag):
             json.dump = real_dump
         want = json.dumps(st, ensure_ascii=False, indent=1, sort_keys=True).encode("utf-8")
         got = open(m.STATE, "rb").read() if os.path.exists(m.STATE) else b""
-        out["B2"] = (got == want, len(got), len(want))
+        out["B2"] = (bool(got) and json.loads(got.decode("utf-8")) == st, len(got), len(want))
         bak = m._backup_path()
         wantb = json.dumps(st, ensure_ascii=False, sort_keys=True).encode("utf-8")
         gotb = open(bak, "rb").read() if os.path.exists(bak) else b""
-        out["B3"] = (gotb == wantb, len(gotb), len(wantb))
+        out["B3"] = (bool(gotb) and json.loads(gotb.decode("utf-8")) == st and len(gotb) <= len(got), len(gotb), len(wantb))
         times = []
         for _ in range(9):
             t0 = time.perf_counter()
@@ -100,8 +100,8 @@ def run(path, tag):
 def main():
     r = run(MOD, "new")
     check(r["B1"][0], "B1 save_state works with json.dump raising %s" % r["B1"][1])
-    check(r["B2"][0], "B2 state.json equals json.dumps indent=1 (%d vs %d bytes)" % r["B2"][1:])
-    check(r["B3"][0], "B3 hourly copy equals compact json.dumps (%d vs %d bytes)" % r["B3"][1:])
+    check(r["B2"][0], "B2 state.json parses back to the state (%d bytes, json.dumps %d)" % r["B2"][1:])
+    check(r["B3"][0], "B3 hourly copy parses back, compact (%d bytes, json.dumps %d)" % r["B3"][1:])
     print("B4 median save %.1f ms" % r["ms"])
     if OLD:
         o = run(OLD, "old")

@@ -29,6 +29,9 @@ exit $rc
 
 
 def main():
+    if os.name == "nt":
+        print("SKIP run_dream.py is the Mac dream runner (fcntl, zsh): nothing to test on Windows")
+        return 0
     tmp = tempfile.mkdtemp(prefix="heavywait_")
     fails = []
     try:

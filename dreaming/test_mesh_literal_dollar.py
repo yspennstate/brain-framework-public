@@ -22,7 +22,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PATH = os.environ.get("DANGER_MODE_UNDER_TEST") or os.path.join(HERE, "danger_mode.py")
-MESH = "python ~/ai-memories-and-functionality/12_cognitive_architecture/agent_mesh/agent_mesh.py"
+MESH = "python ~/brain-repo/12_cognitive_architecture/agent_mesh/agent_mesh.py"
 
 REFUSE = {
     # the 30 Sep command, as typed: two backslashes before the variable

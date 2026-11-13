@@ -32,7 +32,7 @@ import tempfile
 
 BIN = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BIN)
-REPO = os.path.join(os.path.expanduser("~"), "ai-memories-and-functionality", "12_cognitive_architecture", "brain_graph")
+REPO = os.path.join(os.path.expanduser("~"), "brain-repo", "12_cognitive_architecture", "brain_graph")
 BINDING = os.path.join(REPO, "results", "CORRECTIONS_CASECONTROL_BINDING_2026-09-28.json")
 RESULTS = ("CORRECTIONS_CASECONTROL_2026-09-27.json", "CORRECTIONS_CASECONTROL_PLACEBO_2026-09-27.json")
 VER = os.path.join(BIN, "verify_casecontrol.py")

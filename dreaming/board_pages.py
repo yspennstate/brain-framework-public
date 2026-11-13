@@ -41,7 +41,7 @@ HOME = os.path.expanduser("~")
 # The project folder is the home path with separators as dashes: {{BRAIN_SLUG}} on the laptop, -Users-<name> on a Mac.
 PROMPTS = os.path.join(HOME, ".claude", "projects", re.sub(r"[:\\/]", "-", HOME), "memory", "prompts",
                        "owner_prompts_hourly.json")
-STATE = os.path.join(HOME, "ai-memories-and-functionality", "12_cognitive_architecture", "task_checklist", "state.json")
+STATE = os.path.join(HOME, "brain-repo", "12_cognitive_architecture", "task_checklist", "state.json")
 ASK_H, LOOP_H, AGENT_H = 72, 36, 24
 WORDS, PASTE = 600, 160
 
@@ -234,7 +234,7 @@ def agents_page(computer, now=None):
 
 
 MEMDIR = os.path.dirname(os.path.dirname(PROMPTS))
-LEDGER = os.path.join(HOME, "ai-memories-and-functionality", "12_cognitive_architecture", "brain_improvement",
+LEDGER = os.path.join(HOME, "brain-repo", "12_cognitive_architecture", "brain_improvement",
                       "IMPROVEMENT_LEDGER.jsonl")
 # the laptop and the other laptop write arrivals here; the Mac's online_memory_pull.py writes the same {"name": ...} lines to the
 # second path, and reading only the first listed the Mac's imports as its own results
@@ -341,7 +341,7 @@ def results_page(computer, now=None):
     lines = ["# Results found on %s, last %d hours" % (computer, RESULT_H), "",
              "Written by `board_pages.py` (run by `fleet_board.py sync-tasks`) at %s. The memories filed on this "
              "computer (newest first, memories that came in from other computers left out) and the rows its agents "
-             "wrote to brain_improvement/IMPROVEMENT_LEDGER.jsonl. Full text of a memory: ai-memories-and-functionality "
+             "wrote to brain_improvement/IMPROVEMENT_LEDGER.jsonl. Full text of a memory: brain-repo "
              "01_ai_consciousness/claude/memory/<name>.md on GitHub; it reaches local recall on the other computers "
              "through their hourly pull. A provisional result is a lead, not a verdict: check it before you build on "
              "it. Generated; do not edit by hand." % time.strftime("%Y-%m-%d %H:%M %z"), "",

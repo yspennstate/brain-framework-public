@@ -18,7 +18,7 @@ import sys
 import time
 
 H = os.path.expanduser("~")
-REPO_DIR = os.path.join(H, "brain", "ai-memories-and-functionality")
+REPO_DIR = os.path.join(H, "brain", "brain-repo")
 MEM = os.path.join(H, ".claude", "projects", "{{BRAIN_SLUG}}", "memory")
 BASE = "12_cognitive_architecture/brain_improvement"
 OUT = os.path.join(H, "brain", "online", "BRAIN_TESTS_INDEX.md")
@@ -250,7 +250,7 @@ QUICK, PARTIAL = True, False   # first pass of a run may be quick (see main); PA
 
 def is_clone(p):
     """A git clone, or a folder holding only clones: its content is already on GitHub (pub_recall is an ai-memories
-    clone, openprob holds math-open-problems), so it is not a run missing online."""
+    clone, openprob holds the open-problems repo), so it is not a run missing online."""
     if os.path.exists(os.path.join(p, ".git")):
         return True
     subs = [e for e in os.scandir(p) if e.name not in ("__pycache__", ".DS_Store")]
@@ -405,7 +405,7 @@ def main():
                                                                                    "fleet_board.py"))
         fb = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(fb)
-        repo, dst = "yspennstate/ai-memories-and-functionality", BASE + "/TESTS_INDEX.md"
+        repo, dst = "yspennstate/brain-repo", BASE + "/TESTS_INDEX.md"
         ok = fb.put_file(repo, dst, lambda old: page, "brain tests index (auto) [skip ci]")
         remote, _ = fb.get_file(repo, dst)
         print("published %s, remote matches %s" % (ok, remote == page))

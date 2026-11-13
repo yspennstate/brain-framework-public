@@ -41,7 +41,7 @@ STORE = os.path.join(HOME, "store")
 LIVE = os.path.join(HOME, "live")
 SIDECAR = os.path.join(LIVE, "sidecar.sqlite")
 MEM = os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "memory")
-E1_LINKS = os.path.join(os.path.expanduser("~"), "ai-memories-and-functionality", "12_cognitive_architecture",
+E1_LINKS = os.path.join(os.path.expanduser("~"), "brain-repo", "12_cognitive_architecture",
                         "brain_improvement", "cloud_credit_2026-09-26", "results", "memory_links_e1_partial.jsonl")
 VERSION = 1
 

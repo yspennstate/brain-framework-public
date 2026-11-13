@@ -34,7 +34,7 @@ sys.path.insert(0, HERE)
 import extract_touch_events as X  # noqa: E402
 
 HOME = os.path.join(os.path.expanduser("~"), ".claude", "brain_graph")
-MIRROR = os.path.join(os.path.expanduser("~"), "ai-memories-and-functionality", "11_raw_session_transcripts")
+MIRROR = os.path.join(os.path.expanduser("~"), "brain-repo", "11_raw_session_transcripts")
 OUT_CLAUDE = os.path.join(HOME, "events_history_claude.jsonl")
 OUT_CODEX = os.path.join(HOME, "events_codex_all.jsonl")
 STATE_CLAUDE = os.path.join(HOME, "history_claude_state.json")

@@ -2,7 +2,7 @@
 
 The owner, 2 Nov 2026 16:58 EST: "The Mac mini should have its own brain mechanism where we download the full brain".
 The main computer publishes the full graph as GitHub releases named brain-graph-full-<date> on
-yspennstate/ai-memories-and-functionality (nodes, uses, first_touch as .gz, edges.npz, manifest.json with a sha256
+yspennstate/brain-repo (nodes, uses, first_touch as .gz, edges.npz, manifest.json with a sha256
 per file). This script finds the newest one and, if it is newer than the store recall reads, downloads it to a
 staging folder beside the store, checks every file against the manifest, and swaps it in with two renames. The old
 store is kept as graph_lane_store.prev_<tag> (brain data is never deleted).
@@ -21,7 +21,7 @@ if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:
 
 import gzip, hashlib, json, os, shutil, subprocess, sys, time
 
-REPO = "yspennstate/ai-memories-and-functionality"
+REPO = "yspennstate/brain-repo"
 PREFIX = "brain-graph-full-"
 DREAM = os.path.expanduser("~/.claude/dreaming")
 STORE = os.path.join(DREAM, "graph_lane_store")

@@ -34,7 +34,7 @@ STOP = set("a an the of to in on for and or is are was be by at as it its not no
 
 
 def words(slug):
-    # plain words only: session ids (bb437fd8), tickers and row codes (at15, acct3) made unreadable labels
+    # plain words only: session ids (bb437fd8), tickers and row codes (at15, row3) made unreadable labels
     return {w for w in DATE_TAIL.sub("", slug).lower().split("_")
             if len(w) > 3 and w.isalpha() and w not in STOP and not HEX.match(w)}
 

@@ -63,7 +63,7 @@ TAIL = [
     # the builder lives in a framework checkout and reads the brain repo; both default to the Mac's layout
     ("navigation views", [os.path.join(os.environ.get("BRAIN_FRAMEWORK_DIR") or os.path.join(HOME, "brain", "brain-framework"),
                                        "manifests", "build_tools", "build_brain_architecture.py"),
-                          os.environ.get("BRAIN_REPO_DIR") or os.path.join(HOME, "brain", "ai-memories-and-functionality"),
+                          os.environ.get("BRAIN_REPO_DIR") or os.path.join(HOME, "brain", "brain-repo"),
                           MEM], 7200),
     ("instincts selftest", ["instincts.py", "--selftest"]),
     ("instincts compile", ["instincts.py", MEM]),

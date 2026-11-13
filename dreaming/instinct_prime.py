@@ -381,7 +381,7 @@ WINDOWS_ONLY = frozenset(("heavy_compute_remote",))
 # Code files whose code also runs on Windows; off Windows, bare_open_reads_cp1252 fires only on a call that names one.
 # A bare repo name was not enough (30 Oct 12:5x): of 8 Mac fires it let through, 6 only read data there (the checklist
 # state.json, a gh api call, the ~/.brain-framework state folder) and none wrote code that runs on Windows.
-_SHIPS_TO_WINDOWS = re.compile(r"(?:brain-framework|ai-memories-and-functionality|brain-repo|vanilla-brain)/[^\s'\"]*"
+_SHIPS_TO_WINDOWS = re.compile(r"(?:brain-framework|brain-repo|brain-repo|vanilla-brain)/[^\s'\"]*"
                                r"\.(?:py|ps1|psm1|vbs)\b")
 _SHIP_GATED = ("bare_open_reads_cp1252", "python_rewrite_of_a_text_file_without_newline")
 # Naming a shipped code file is not writing one (31 Oct, 1000-ways D5 #79): `python3 ~/brain/brain-framework/mesh/

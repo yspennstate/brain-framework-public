@@ -35,7 +35,7 @@ BANKS = [("named", os.path.join(HERE, "state", "bank_named_proofs_v1.json")),
          # them was read (named_proofs_v2) - the out-of-sample check on the reviewed-name rules
          ("heldout", os.path.join(HERE, "state", "bank_named_proofs_v2.json"))]
 TITLE_RE = re.compile(r"^- (.+?) \[[^\]]{1,60}\]:", re.M)
-_PV = os.path.join(os.path.expanduser("~/ai-memories-and-functionality"), "12_cognitive_architecture", "brain_improvement",
+_PV = os.path.join(os.path.expanduser("~/brain-repo"), "12_cognitive_architecture", "brain_improvement",
                    "campaign_2026-09-12_opus_1k", "tools", "eval_pivot_reach.py")
 
 

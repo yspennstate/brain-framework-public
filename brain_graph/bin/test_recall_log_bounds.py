@@ -46,7 +46,7 @@ def main():
     old_learn_fuse = None
     try:
         import subprocess
-        repo = os.path.join(HOME, "ai-memories-and-functionality")
+        repo = os.path.join(HOME, "brain-repo")
         blob = subprocess.run(["git", "-C", repo, "show", "65c5995973:12_cognitive_architecture/brain_graph/live/graph_learn.py"],
                               capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
         p = os.path.join(tempfile.mkdtemp(prefix="gl_old_"), "graph_learn_old.py")

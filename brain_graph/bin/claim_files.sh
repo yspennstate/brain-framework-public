@@ -16,7 +16,7 @@ set -u
 A="${MESH_AGENT:?set MESH_AGENT to your agent mesh id}"
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*)
-    M="python -X utf8 ~/ai-memories-and-functionality/12_cognitive_architecture/agent_mesh/agent_mesh.py"
+    M="python -X utf8 ~/brain-repo/12_cognitive_architecture/agent_mesh/agent_mesh.py"
     winpath() { printf '%s' "$1" | sed -e 's#^/\([a-zA-Z]\)/#\1:/#' -e 's#/#\\#g'; };;
   *)  # 29 Oct (Mac): the mesh every agent here uses, and POSIX paths unchanged (the sed made /Users/x into \Users\x)
     M="python3 -X utf8 $HOME/brain/brain-framework/mesh/agent_mesh.py"

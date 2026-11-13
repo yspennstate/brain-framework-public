@@ -30,7 +30,7 @@ import time
 
 BIN = os.path.join(os.path.expanduser("~"), ".claude", "brain_graph", "bin")
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO_RESULTS = os.path.join(os.path.expanduser("~"), "ai-memories-and-functionality", "12_cognitive_architecture",
+REPO_RESULTS = os.path.join(os.path.expanduser("~"), "brain-repo", "12_cognitive_architecture",
                             "brain_graph", "results")
 BARS = (20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0)
 G = {}

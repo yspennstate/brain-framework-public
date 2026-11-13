@@ -82,7 +82,7 @@ def local_ts(s):
 def main():
     since = time.mktime(time.strptime(arg("--since", "2026-09-27 18:56"), "%Y-%m-%d %H:%M"))
     bar = float(arg("--bar", "30"))
-    out_path = arg("--out", os.path.join(H, "ai-memories-and-functionality", "12_cognitive_architecture", "brain_graph",
+    out_path = arg("--out", os.path.join(H, "brain-repo", "12_cognitive_architecture", "brain_graph",
                                          "results", "ORDERS_PROSPECTIVE_%s.json" % time.strftime("%Y-%m-%d")))
     import live_membrane as LM
     import extract_touch_events as X

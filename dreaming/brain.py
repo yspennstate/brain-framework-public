@@ -4639,7 +4639,7 @@ def _recall_body(query, n=8):
             # typo silently dropped its term. 2026-07-28 (owner: ship prevention fixes): default ON -
             # the owner's own queries carry typos and BM25 scored them raw. BRAIN_RECALL_SPELLFIX=0 opts out.
             _q = QueryNormalizer(_bm.df).normalize(query) if os.environ.get("BRAIN_RECALL_SPELLFIX", "1") != "0" else query
-            # SPACED NUMBERS (2026-10-29, W06). Slugs join a short word and its number (acct5, box3, b04) but questions
+            # SPACED NUMBERS (2026-10-29, W06). Slugs join a short word and its number (row5, box3, b04) but questions
             # space them ("acct 5", "box 3"), so the specific memories lost to generic ones (memory
             # recall_misses_spaced_numbers_box_3_vs_box3_2026_10_29). Add the joined token when the index knows it;
             # an unknown join adds nothing. BRAIN_RECALL_JOIN_NUMBERS=0 turns it off.
@@ -5551,7 +5551,7 @@ def _recall_body(query, n=8):
             _disp = list(_display_rows(scored, n))
             _byslug = {r[4]: r for r in scored}
             _pl_done = set()
-            # q67 (4 Nov): examine a lifted successor too (chains 3c-D -> 3c-F -> generation 9); rows already examined skip.
+            # q67 (4 Nov): examine a lifted successor too (a chain of rules, each lifted into the next); rows already examined skip.
             _pl_seen = set()
             _pl_hops = int(os.environ.get("BRAIN_RECALL_PART_LIFT_HOPS", "6") or 6)
             _i = 0

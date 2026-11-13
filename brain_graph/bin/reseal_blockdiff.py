@@ -19,7 +19,7 @@ import re
 import sys
 import uuid
 
-TOOLS = os.path.expanduser("~/ai-memories-and-functionality/12_cognitive_architecture/brain_improvement/campaign_2026-09-24_mathbrain_10d/tools")
+TOOLS = os.path.expanduser("~/brain-repo/12_cognitive_architecture/brain_improvement/campaign_2026-09-24_mathbrain_10d/tools")
 sys.path.insert(0, TOOLS)
 sys.path.insert(0, os.path.expanduser("~/.claude/dreaming"))
 import run_cand77_blockdiff as RB  # noqa: E402

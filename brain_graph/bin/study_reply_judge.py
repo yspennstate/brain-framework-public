@@ -32,7 +32,7 @@ import bm25  # noqa: E402
 import study_reply_orders as R  # noqa: E402
 import study_standing_orders as SO  # noqa: E402
 
-LABELS = os.path.join(os.path.expanduser("~"), "ai-memories-and-functionality", "12_cognitive_architecture", "brain_graph",
+LABELS = os.path.join(os.path.expanduser("~"), "brain-repo", "12_cognitive_architecture", "brain_graph",
                       "results", "STANDING_ORDERS_LABELS_2026-09-27.json")
 STUDY = os.path.join(os.path.expanduser("~"), ".claude", "brain_graph", "study")
 MEM = SO.MEM

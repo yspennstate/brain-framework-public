@@ -21,10 +21,10 @@ DENY = [
     r"Get-ChildItem ~\.claude\projects -Filter *.jsonl | Remove-Item",
     r"""python -c "import os; os.remove(os.path.expanduser(r'~/.claude/brain_graph/live/fires.jsonl'))" """,
     r"del ~\.claude\dreaming\instinct_fires.2026-07.tsv",
-    r"git -C ~/ai-memories-and-functionality rm -r 11_raw_session_transcripts/claude_projects",
+    r"git -C ~/brain-repo rm -r 11_raw_session_transcripts/claude_projects",
     r"find ~/.claude/projects -name '*.jsonl' -mtime +30 -delete",
     r"find {{USERPROFILE}}/.claude/dreaming/.math_sense_sessions -type f -exec rm {} +",
-    r"sudo rm ~/ai-memories-and-functionality/12_cognitive_architecture/brain_graph/results/LIVE_MEMBRANE_STUDY_x.json",
+    r"sudo rm ~/brain-repo/12_cognitive_architecture/brain_graph/results/LIVE_MEMBRANE_STUDY_x.json",
     r"rm ~/bank_recall_keys_quarantine/recall_keys.jsonl",
 ]
 ALLOW = [
@@ -37,17 +37,17 @@ ALLOW = [
     r"""echo "never rm the transcripts in ~/.claude/projects" """,
     r"""grep -rn "rm -rf" ~/.claude/dreaming/brain.py""",
     r"rm -rf ~/movie_projects/x/renders",
-    r"git -C ~/ai-memories-and-functionality status --short",
+    r"git -C ~/brain-repo status --short",
     r"""python -c "print(open(os.path.expanduser(r'~/.claude/brain_graph/STATUS.json')).read())" """,
     r"mv ~/.claude/brain_graph/logs/old.log ~/.claude/brain_graph/logs/archive/old.log",
     r"rm -rf ~/.claude/brain_graph/study/store_wfB_hist",
     r"""python -c "import os; d=open(os.path.expanduser(r'~/.claude/projects/x.jsonl')).read(); os.remove('/tmp/y')" """,
-    r"git -C ~/ai-memories-and-functionality rm --cached 05_other/file.txt",
+    r"git -C ~/brain-repo rm --cached 05_other/file.txt",
     r"rm -f {{USERPROFILE}}/.claude/brain_graph/repo_roots_cache.json",
 ]
 DENY_IN_REPO = [r"git rm -r 11_raw_session_transcripts/codex_sessions", r"rm -rf 12_cognitive_architecture/brain_graph/results"]
 ALLOW_IN_REPO = [r"git rm --cached 05_other/file.txt", r"rm -f 12_cognitive_architecture/brain_graph/x.tmp"]
-REPO = os.path.expanduser("~/ai-memories-and-functionality")
+REPO = os.path.expanduser("~/brain-repo")
 
 
 def hook(cmd, tool="Bash"):

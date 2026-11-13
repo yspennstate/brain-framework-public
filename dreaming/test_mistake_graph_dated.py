@@ -59,7 +59,7 @@ def check(name, ok, detail=""):
 def old_parser_path(tmp):
     if len(sys.argv) > 1:
         return sys.argv[1]
-    repo = os.path.join(os.path.expanduser("~"), "ai-memories-and-functionality")
+    repo = os.path.join(os.path.expanduser("~"), "brain-repo")
     blob = subprocess.run(["git", "-C", repo, "show", "91e123ea40:12_cognitive_architecture/dreaming/mistake_graph.py"],
                           capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
     p = os.path.join(tmp, "mistake_graph_old.py")

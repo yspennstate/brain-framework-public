@@ -34,7 +34,7 @@ import live_membrane as LM  # noqa: E402
 HOME = os.path.join(os.path.expanduser("~"), ".claude", "brain_graph")
 EVENTS = os.path.join(HOME, "events_touch.jsonl")
 STUDY = os.path.join(HOME, "study")
-REPO_RESULTS = os.path.join(os.path.expanduser("~"), "ai-memories-and-functionality", "12_cognitive_architecture",
+REPO_RESULTS = os.path.join(os.path.expanduser("~"), "brain-repo", "12_cognitive_architecture",
                             "brain_graph", "results")
 HORIZON = 1800.0
 

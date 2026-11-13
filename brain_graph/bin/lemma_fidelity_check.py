@@ -24,7 +24,7 @@ import sqlite3
 import sys
 import unicodedata
 
-CAMP = os.path.expanduser("~/ai-memories-and-functionality/06_math_research/probability_open_problem_campaign_2026_08_09")
+CAMP = os.path.expanduser("~/brain-repo/06_math_research/probability_open_problem_campaign_2026_08_09")
 SOURCES = {  # lemma id prefix -> [(file, first line, last line)], as the source lookup found them (LEMMA_SOURCES_LOOKUP.md)
     "claim_32cba36e9ea9": [("LOG.md", 1076, 1076), ("LOG.md", 1091, 1091)],
     "claim_8a7b59a80537": [("LOG.md", 1070, 1070)],

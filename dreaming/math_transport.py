@@ -24,7 +24,7 @@ WHAT IT DOES. Every run it reads every memory's description, sorts each into thr
     SKIP   everything else. Trading vocabulary is a HARD deny that wins over every result word: the owner's
            boundary is that options pricing and the trading book stay out of the math brain (memory
            vanilla_brain_public_readiness_audit_2026_09_21), and the book's own "theorems"
-           (thm_grid_harvest_counting_law, thm_letf_compounding_and_drag) are the exact things a loose rule
+           (thm_ladder_counting_law, thm_letf_compounding_and_drag) are the exact things a loose rule
            would carry across.
 
 IDEMPOTENT by the claim_provenance.source_ref = "memory:<slug>" row the 09-20 session already used, plus
@@ -216,7 +216,7 @@ HARD_DENY = re.compile(
     r"put\b|puts\b(?! (?:the|a|an|it|its|this|that|them|one|all|most|every|each|mass|weight|half)\b)|"
     r"call\b|calls\b(?! (?:the|a|an|it|its|this|that|them|one|all|most|every|each|mass|weight|half)\b)|strikes?|tenors?|plateau|engines?|rebalanc\w*|top-?offs?|borrow\w*|fills|p&l|pnl|cagr|etfs?|"
     r"trading|trades?|untraded|traded|overnight block|legs?|accounts?|con a|3c-[a-f]|fbl_\w*|deck|pitchdeck|tape|"
-    r"nbbo|thetadata|box-?0?[1-5]|research box|"
+    r"nbbo|tick data vendor|box-?0?[1-5]|research box|"
     r"moneyness|expir\w*|hedg\w*|delta[- ]neutral|beta 0\.\d+|target beta|gamma\$|grid trad\w*|stock-?grid|"
     # dd before an arXiv number is a citation's author initials ("DD 2604.09909 gives k^-3/4", the T366 card, 21 Oct)
     r"broker|portfolio|equity curve|max dd|dd(?! \d{4}\.\d{4,5}))\b"
@@ -294,7 +294,7 @@ AMBIGUOUS_DENY = re.compile(r"^(lanes?|engines?|anneal\w*|sims?|simulations?|pla
 # (itm10_t500_) still needs the folder, and the guard only ever QUEUEs.
 FRONTIER_ROW_ID = re.compile(r"(?:^|_)t(\d{3})_")
 FRONTIER_ROWS = os.environ.get("MATH_TRANSPORT_FRONTIER_ROWS") or os.path.join(
-    os.path.expanduser("~"), "ai-memories-and-functionality", "06_math_research", "frontier", "rows")
+    os.path.expanduser("~"), "brain-repo", "06_math_research", "frontier", "rows")
 # A clone whose sparse checkout leaves out 06_math_research (the Mac, 30 Oct: 150 MB and 9,485 files against 11 GB free)
 # has no rows folder, and every verified frontier-row memory filed there stayed SKIP (with the list, 22 move to QUEUE,
 # among them T250, T267, T282, T355 and T410 of 30 Oct). One row id a line in this file stands in for the
@@ -382,7 +382,7 @@ verify_the_problem_is_open_before_you_verify_the_proof_2026_09_07
 an_accented_name_retrieved_the_wrong_theorem_2026_09_12
 math_store_stale_again_fei_missing_2026_09_22
 the_brain_is_worth_65_points_of_accuracy_2026_09_22
-thm_grid_harvest_counting_law_2026_08_16
+thm_ladder_counting_law_2026_08_16
 thm_letf_compounding_and_drag_2026_08_16
 delta_neutral_leveraged_baskets_harvest_no_decay_2026_09_01
 the_amplification_identity_every_dial_is_a_drawdown_dial_2026_08_20
@@ -1350,7 +1350,7 @@ def selftest():
         print("  second ingest of the same slug -> %s: %s" % (ok_again, str(why_again)[:60]))
         fails += (ok_again is True)
         # the trading boundary: a book theorem must be refused even when forced
-        ok2, why = ingest("thm_grid_harvest_counting_law_2026_08_16", store=tmp, force=True, rebuild=False)
+        ok2, why = ingest("thm_ladder_counting_law_2026_08_16", store=tmp, force=True, rebuild=False)
         print("  forced ingest of a book theorem -> %s: %s" % (ok2, str(why)[:80]))
         fails += (ok2 is True)
         ok3, why3 = ingest("the_brain_is_worth_65_points_of_accuracy_2026_09_22", store=tmp, rebuild=False)
@@ -1636,7 +1636,7 @@ def main(argv):
         return 0
     if cmd == "rowlist":    # one gh call: the row folders of the repo's frontier/rows tree, written to FRONTIER_ROW_LIST
         import subprocess
-        out = subprocess.run(["gh", "api", "repos/yspennstate/ai-memories-and-functionality/contents/06_math_research/frontier/rows",
+        out = subprocess.run(["gh", "api", "repos/yspennstate/brain-repo/contents/06_math_research/frontier/rows",
                               "--jq", '.[] | select(.type == "dir") | .name'], capture_output=True, text=True)
         ids = sorted({ln.strip() for ln in out.stdout.splitlines() if re.match(r"^T\d{3}$", ln.strip())})
         if out.returncode != 0 or not ids:

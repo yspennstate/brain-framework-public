@@ -27,7 +27,7 @@ import sys
 from datetime import datetime, timezone
 
 HOME = os.path.expanduser("~")
-MESH_DIR = os.path.expanduser("~/ai-memories-and-functionality/12_cognitive_architecture/agent_mesh")
+MESH_DIR = os.path.expanduser("~/brain-repo/12_cognitive_architecture/agent_mesh")
 MESH_DB = os.path.join(HOME, ".agents", "coordination", "agent_mesh.sqlite3")
 TRANSCRIPTS = os.path.join(HOME, ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")))
 sys.path.insert(0, MESH_DIR)
@@ -36,7 +36,7 @@ import agent_mesh  # noqa: E402
 import session_kinds  # noqa: E402
 
 ROOTS = {
-    "brain repo": os.path.expanduser("~/ai-memories-and-functionality"),
+    "brain repo": os.path.expanduser("~/brain-repo"),
     "dreaming": os.path.join(HOME, ".claude", "dreaming"),
     "brain_graph": os.path.join(HOME, ".claude", "brain_graph"),
     "memory": os.path.join(HOME, ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "memory"),

@@ -45,7 +45,7 @@ import live_membrane as LM  # noqa: E402
 import study_live_membrane as SLM  # noqa: E402
 
 MEM = os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "memory")
-REPO_MEM = os.path.join(os.path.expanduser("~"), "ai-memories-and-functionality", "01_ai_consciousness", "claude", "memory")
+REPO_MEM = os.path.join(os.path.expanduser("~"), "brain-repo", "01_ai_consciousness", "claude", "memory")
 FIELD = re.compile(r"^\s*(created_at|created|status|superseded_by)\s*:\s*(.+)$", re.M)
 SLUG_DAY = re.compile(r"_(20\d\d)_(\d\d)_(\d\d)")
 TOKEN = re.compile(r"[a-z][a-z0-9]{2,}")

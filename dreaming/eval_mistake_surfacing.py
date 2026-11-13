@@ -80,7 +80,7 @@ def harvest(n_files=25, lo=25, hi=600):
     return out
 
 
-ARCHIVE = os.path.join(HOME, "brain", "ai-memories-and-functionality", "01_ai_consciousness", "claude", "memory",
+ARCHIVE = os.path.join(HOME, "brain", "brain-repo", "01_ai_consciousness", "claude", "memory",
                        "prompts", "archive")
 
 

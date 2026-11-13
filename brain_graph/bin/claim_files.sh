@@ -2,7 +2,7 @@
 # Claim (or assert) each file named on the command line on the agent mesh, one resource per file, the Windows path built
 # with sed so no backslash passes through a command string. Inline loops of the form ...\\$n.py claimed the literal
 # resource '...$n.py' (the Bash tool collapses a double backslash before the shell runs, and bash then reads \$ as an
-# escaped dollar) - 27 Sep 2026, claude-825b1305; memory the_bash_tool_collapses_double_backslashes_2026_09_14.
+# escaped dollar).
 #   MESH_AGENT=<your mesh id> bash claim_files.sh claim|assert PURPOSE FILE...     (FILE as /c/Users/... or C:/Users/...)
 #   MESH_AGENT=<your mesh id> bash claim_files.sh run PURPOSE FILE... -- COMMAND [ARG...]
 #   MESH_AGENT=<your mesh id> bash claim_files.sh release FILE...     (no purpose; exit 3 unless every one was released)
@@ -16,9 +16,9 @@ set -u
 A="${MESH_AGENT:?set MESH_AGENT to your agent mesh id}"
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*)
-    M="python -X utf8 ~/brain-repo/12_cognitive_architecture/agent_mesh/agent_mesh.py"
+    M="python -X utf8 $HOME/brain-repo/12_cognitive_architecture/agent_mesh/agent_mesh.py"
     winpath() { printf '%s' "$1" | sed -e 's#^/\([a-zA-Z]\)/#\1:/#' -e 's#/#\\#g'; };;
-  *)  # 29 Oct (Mac): the mesh every agent here uses, and POSIX paths unchanged (the sed made /Users/x into \Users\x)
+  *)  # macOS and Linux: keep POSIX paths as they are (the sed above would turn /Users/x into \Users\x)
     M="python3 -X utf8 $HOME/brain/brain-framework/mesh/agent_mesh.py"
     winpath() { printf '%s' "$1"; };;
 esac
@@ -70,7 +70,7 @@ if [ "$ACT" = "claim" ] || [ "$ACT" = "run" ]; then
   for f in "${FILES[@]}"; do
     win=$(winpath "$f")
     # a refusal names its reason: a bare "REFUSED" once read as another agent's claim when it was this agent's own
-    # lapsed registration (29 Sep, claude-825b1305)
+    # lapsed registration
     out=$($M claim --agent "$A" --resource "file:$win" --mode write --ttl "$TTL" --purpose "$PURPOSE" 2>&1) \
       || { echo "REFUSED $win: $(printf '%s' "$out" | tr '\r\n' '  ' | tr -s ' ' | cut -c1-240)"; rc=3; }
   done

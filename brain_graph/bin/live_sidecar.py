@@ -1,4 +1,4 @@
-"""live_sidecar.py - the brain graph made fast enough to read on every prompt and tool call (26 Sep, claude-825b1305).
+"""live_sidecar.py - the brain graph made fast enough to read on every prompt and tool call (26 Sep).
 
 His voice note of 26 Sep 00:26: "The brain is a network in the background, which is subconscious. It's not context. It's a
 subconscious graph that is feeding in information to the conscious, to the context window." The graph store
@@ -41,8 +41,7 @@ STORE = os.path.join(HOME, "store")
 LIVE = os.path.join(HOME, "live")
 SIDECAR = os.path.join(LIVE, "sidecar.sqlite")
 MEM = os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "memory")
-E1_LINKS = os.path.join(os.path.expanduser("~"), "brain-repo", "12_cognitive_architecture",
-                        "brain_improvement", "cloud_credit_2026-09-26", "results", "memory_links_e1_partial.jsonl")
+E1_LINKS = os.environ.get("BRAIN_E1_LINKS", "")
 VERSION = 1
 
 # targets kept per context item and kind: memories most, because memories are what reach the context
@@ -214,7 +213,7 @@ def _parse_file(text):
     """Everything memory_pass takes from one memory file that does not depend on the store or on the other memories:
     the frontmatter fields, the slugs it names, and its content candidates before they are matched against the store's
     nodes, dials and file basenames. Cached by (mtime, size) so a full build reads only the files that changed
-    (1 Nov, claude-1e0a23c2: the full pass re-read ~40k files every build, 154 s quiet and 11,029 s on 31 Oct)."""
+    (1 Nov: the full pass re-read ~40k files every build, 154 s quiet and 11,029 s on 31 Oct)."""
     import extract_touch_events as X
     head = text[:3000]
     m = DESC_RX.search(head)

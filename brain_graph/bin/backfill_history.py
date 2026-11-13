@@ -1,4 +1,4 @@
-"""backfill_history.py - six months of agent work into the brain graph (26 Sep, claude-825b1305).
+"""backfill_history.py - six months of agent work into the brain graph (26 Sep).
 
 His order of 26 Sep 15:5x: "if you can find data which will allow you to build the connection in this brain going back
 over the past 6 months, because we were supposed to be saving that data for months, then implement it." The live
@@ -34,7 +34,7 @@ sys.path.insert(0, HERE)
 import extract_touch_events as X  # noqa: E402
 
 HOME = os.path.join(os.path.expanduser("~"), ".claude", "brain_graph")
-MIRROR = os.path.join(os.path.expanduser("~"), "brain-repo", "11_raw_session_transcripts")
+MIRROR = os.environ.get("BRAIN_TRANSCRIPT_MIRROR") or os.path.join(os.path.expanduser("~"), ".claude", "transcript_mirror")  # an archive of older transcripts (claude_projects/, codex_sessions/); absent is fine
 OUT_CLAUDE = os.path.join(HOME, "events_history_claude.jsonl")
 OUT_CODEX = os.path.join(HOME, "events_codex_all.jsonl")
 STATE_CLAUDE = os.path.join(HOME, "history_claude_state.json")
@@ -309,7 +309,7 @@ def gap():
                 writes = "old_string" in inp or "content" in inp or "new_source" in inp
                 if isinstance(cmd, str):
                     emit(ts, s, "tool", "Bash:" + X.bash_cmd0(cmd))
-                    paths = [os.path.expanduser("~") + m.group(1) for m in X.PATH_RX.finditer(cmd)]
+                    paths = [os.path.expanduser("~").replace(chr(92), "/") + m.group(1) for m in X.PATH_RX.finditer(cmd)]
                     got = set()
                     for pth in paths:
                         for kind, nid in X.path_nodes(pth, None):

@@ -1,5 +1,5 @@
 """study_unclaimed_writes.py - how often does a session edit a shared brain file with no live mesh claim of its own
-covering it? (registered 28 Sep 09:5x in study/THREE_DAY_RUN_2026-09-27.md before any code; claude-825b1305)
+covering it?
 
 Population: Claude transcripts touched since SINCE; their Edit, Write, MultiEdit and NotebookEdit calls whose path lies
 under a shared root (below). A call is covered when one of the session's agent ids held a claim whose canonical path
@@ -10,12 +10,9 @@ keeps no session key). Kinds by session_kinds.py.
 
     python study_unclaimed_writes.py SINCE_ISO_DATE OUT_JSON
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import glob
 import io
@@ -27,20 +24,20 @@ import sys
 from datetime import datetime, timezone
 
 HOME = os.path.expanduser("~")
-MESH_DIR = os.path.expanduser("~/brain-repo/12_cognitive_architecture/agent_mesh")
+MESH_DIR = os.path.join(os.path.expanduser("~"), r"brain-repo\12_cognitive_architecture\agent_mesh")
 MESH_DB = os.path.join(HOME, ".agents", "coordination", "agent_mesh.sqlite3")
-TRANSCRIPTS = os.path.join(HOME, ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")))
+TRANSCRIPTS = os.path.join(HOME, ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace("\\", "-").replace("/", "-")))
 sys.path.insert(0, MESH_DIR)
 sys.path.insert(0, os.path.join(HOME, ".claude", "brain_graph", "bin"))
 import agent_mesh  # noqa: E402
 import session_kinds  # noqa: E402
 
 ROOTS = {
-    "brain repo": os.path.expanduser("~/brain-repo"),
+    "brain repo": os.path.join(os.path.expanduser("~"), r"brain-repo"),
     "dreaming": os.path.join(HOME, ".claude", "dreaming"),
     "brain_graph": os.path.join(HOME, ".claude", "brain_graph"),
-    "memory": os.path.join(HOME, ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "memory"),
-    "math-brain-build": os.path.expanduser("~/math-brain-build"),
+    "memory": os.path.join(HOME, ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace("\\", "-").replace("/", "-")), "memory"),
+    "math-brain-build": os.path.join(os.path.expanduser("~"), r"math-brain-build"),
 }
 TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 AGENT_ARG = re.compile(r"(?:--agent[ =]+|MESH_AGENT=)[\"']?([A-Za-z0-9][A-Za-z0-9._:-]{2,80})")

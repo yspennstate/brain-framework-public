@@ -1,5 +1,4 @@
-"""reseal_blockdiff.py - what the math hook serves on the live store against the same store re-sealed (registered 28 Sep
-11:0x in THREE_DAY_RUN_2026-09-27.md; claude-825b1305).
+"""reseal_blockdiff.py - what the math hook serves on the live store against the same store re-sealed.
 
 Every prompt of cand80's 898 (plain v1-v3, the 40 unanswerable probes, the absent bank, his gate-passing prompts) goes
 through the livepost80 hook, as its own process, once with MATHBRAIN_STORE on a byte copy of the live store and once on
@@ -19,16 +18,16 @@ import re
 import sys
 import uuid
 
-TOOLS = os.path.expanduser("~/brain-repo/12_cognitive_architecture/brain_improvement/campaign_2026-09-24_mathbrain_10d/tools")
+TOOLS = os.path.join(os.path.expanduser("~"), r"brain-repo\12_cognitive_architecture\brain_improvement\campaign_2026-09-24_mathbrain_10d\tools")
 sys.path.insert(0, TOOLS)
-sys.path.insert(0, os.path.expanduser("~/.claude/dreaming"))
+sys.path.insert(0, os.path.join(os.path.expanduser("~"), r".claude\dreaming"))
 import run_cand77_blockdiff as RB  # noqa: E402
 from hookcall import cap_for, run_hook  # noqa: E402
 
-ARM = os.path.expanduser("~/math-brain-build/local/mb10d/arms/livepost80/dreaming/math_sense.py")
+ARM = os.path.join(os.path.expanduser("~"), r"math-brain-build\local\mb10d\arms\livepost80\dreaming\math_sense.py")
 ENV = {"MATHBRAIN_TIME_BUDGET_S": "300", "MATHBRAIN_INTEGRITY_GRACE_S": "60", "PYTHONIOENCODING": "utf-8",
        "MATHBRAIN_USE_LOG": "0",
-       "MATH_BRAIN_CLAIM_VECS": os.path.expanduser("~/math-brain-build/local/mb10d/vectors/claim_embeddings_ext_20260926.npz")}
+       "MATH_BRAIN_CLAIM_VECS": os.path.join(os.path.expanduser("~"), r"math-brain-build\local\mb10d\vectors\claim_embeddings_ext_20260926.npz")}
 CARD = re.compile(r"claim_[0-9a-f]{64}")
 BATCH = set(n["id"] for n in json.load(io.open(os.path.expanduser(
     r"~\.claude\brain_graph\study\source_check_0810\rows_0810.json"), encoding="utf-8"))["nodes"])

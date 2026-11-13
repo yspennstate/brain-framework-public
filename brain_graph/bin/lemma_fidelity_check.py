@@ -1,5 +1,4 @@
-"""lemma_fidelity_check.py - does each 10 Aug campaign lemma say what its cited source line says? (account01/B07,
-B07-R60-R40-SOURCE-CHECK-CONFLATES-CORRECTNESS-AND-FIDELITY; 28 Sep, claude-825b1305)
+"""lemma_fidelity_check.py - does each 10 Aug campaign lemma say what its cited source line says?
 
 Source fidelity and mathematical truth are separate questions; this answers only the first, by machine, where it can.
 For every lemma of the batch, each equation or inequality in its statement (a window of 14 characters either side of each
@@ -10,12 +9,9 @@ to a log line that carries the same error.
 
     python lemma_fidelity_check.py STORE OUT_JSON
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import io
 import json
 import os
@@ -24,7 +20,7 @@ import sqlite3
 import sys
 import unicodedata
 
-CAMP = os.path.expanduser("~/brain-repo/06_math_research/probability_open_problem_campaign_2026_08_09")
+CAMP = os.path.join(os.path.expanduser("~"), r"brain-repo\06_math_research\probability_open_problem_campaign_2026_08_09")
 SOURCES = {  # lemma id prefix -> [(file, first line, last line)], as the source lookup found them (LEMMA_SOURCES_LOOKUP.md)
     "claim_32cba36e9ea9": [("LOG.md", 1076, 1076), ("LOG.md", 1091, 1091)],
     "claim_8a7b59a80537": [("LOG.md", 1070, 1070)],

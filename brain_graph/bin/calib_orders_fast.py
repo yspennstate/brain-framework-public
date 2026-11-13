@@ -1,5 +1,4 @@
-"""calib_orders_fast.py - calibrate the membrane's standing-orders channel on his real sessions (27 Sep 18:4x,
-claude-825b1305). The replay of calib_orders.py - every prompt and every fourth tool call of his interactive sessions
+"""calib_orders_fast.py - calibrate the membrane's standing-orders channel on his real sessions. The replay of calib_orders.py - every prompt and every fourth tool call of his interactive sessions
 from SINCE, his last ask kept, the leader counted across evaluations, each order served once per session in two hours -
 with three changes:
   - sessions run in parallel worker processes (BelowNormal, off cores 0 and 1), and a query already scored in a worker
@@ -13,12 +12,9 @@ his ask and his correction.
 
     python calib_orders_fast.py SINCE_YYYY-MM-DD OUT_JSON [--membrane PATH] [--workers N] [--labels PATH]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import importlib.util
 import json
@@ -30,8 +26,7 @@ import time
 
 BIN = os.path.join(os.path.expanduser("~"), ".claude", "brain_graph", "bin")
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO_RESULTS = os.path.join(os.path.expanduser("~"), "brain-repo", "12_cognitive_architecture",
-                            "brain_graph", "results")
+REPO_RESULTS = os.environ.get("BRAIN_RESULTS_DIR") or os.path.join(HERE, "..", "results")
 BARS = (20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0)
 G = {}
 
@@ -44,7 +39,7 @@ def _polite():
     try:
         import psutil
         p = psutil.Process()
-        # his 09-09 order (owner_order_relax_the_crash_guards_belownormal_was_the_starvation_2026_09_09): BelowNormal
+        # BelowNormal
         # under the Normal-priority load gets nothing - measured again 27 Sep 19:2x, 0 MB/s and 0 pct CPU for minutes
         p.nice(psutil.NORMAL_PRIORITY_CLASS if os.environ.get("CALIB_PRIORITY") == "normal"
                else psutil.BELOW_NORMAL_PRIORITY_CLASS)

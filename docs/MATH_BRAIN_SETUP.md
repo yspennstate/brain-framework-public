@@ -58,7 +58,7 @@ The framework's `dreaming/math_transport.py` carries a result from a memory into
 
 ## 6. The dream
 
-Run a dream once a few days of work exist. On Windows the scheduled task runs `dreaming/run_dream.ps1` through a hidden VBS launcher. On a Mac run `run_dream.py --type nap` by hand (see `docs/MACOS_INSTALL.md`). The Mac runner is mechanical only: it files, links and consolidates, but it does not start the unattended language-model REM session that the Windows script runs. A `STOP` file beside the runner blocks the next cycle.
+Run a dream once a few days of work exist. On Windows the scheduled task runs `dreaming/run_dream.ps1` through a hidden VBS launcher. On a Mac run `run_dream.py --type nap` by hand (see `docs/MACOS_INSTALL.md`). The macOS runner is mechanical only: it files, links and consolidates, but it does not start the unattended language-model REM session that the Windows script runs. A `STOP` file beside the runner blocks the next cycle.
 
 A smaller dream, built for a brain in a new field, is in the math repository under `examples/field_brain_starter/dream/`.
 

@@ -1,4 +1,4 @@
-"""study_scar_fire_posthoc.py - the post-hoc reading of the scar-fire study (28 Sep 09:xx, claude-825b1305).
+"""study_scar_fire_posthoc.py - the post-hoc reading of the scar-fire study.
 
 The registered study (study_scar_fire_before_repeat.py) links a restated order to a reflex only when the reflex's source
 names the order's memory slug. Read case by case, that link is too narrow in one direction and too loose in another, so
@@ -6,7 +6,7 @@ this script re-reads the same 22 corrections by CONTENT and records the evidence
 registered and are reported beside the registered ones, never instead of them.
 
   content map     the reflex whose wording carries the order, whatever slug it cites: the GPU orders ->
-                  heavy_compute_remote, the pictures orders -> the_picture_is_the_beat, public writing -> voice_human;
+                  heavy_compute_offbox, the pictures orders -> the_picture_is_the_beat, public writing -> voice_human;
                   the narration-voice orders, the retired film and the Codex-pictures share have none.
   existence       a reflex with no "added" stamp exists from its first fire or suppression row (an upper bound; the
                   reflex-file backups give the lower bound, written into the result by hand where it matters).
@@ -31,12 +31,9 @@ Version 2, 28 Sep 12:3x, after two scheduled audits of version 1:
       tested (last_wording_carries); a row carries the case number, not the session key, and the ask to the hour. The
       classes never read the wording; with V1_JSON given, each class is checked equal to version 1's.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import glob
 import hashlib
@@ -48,8 +45,8 @@ import sys
 from datetime import datetime
 
 DR = os.path.join(os.path.expanduser("~"), ".claude", "dreaming")
-TRANSCRIPTS = os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")))
-CONTENT = {"gpu": "heavy_compute_remote", "pictures": "the_picture_is_the_beat", "public writing": "voice_human"}
+TRANSCRIPTS = os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace("\\", "-").replace("/", "-")))
+CONTENT = {"gpu": "heavy_compute_offbox", "pictures": "the_picture_is_the_beat", "public writing": "voice_human"}
 GPU_OPENINGS = ("Heavy or GPU compute", "Owner policy")      # every 'Owner policy' bullet must also name the GPU early
 GPU_WORDS = ("RESEARCH BOX", "80 percent", "70 percent", "UNCAPPED", "stopped for movie")
 FILMISH = re.compile(r"movie|film|manim|render|ffmpeg|blender|storyboard|lecture", re.I)
@@ -218,7 +215,7 @@ def main():
                     cls = "matched earlier in the session, held back each time"
                 else:
                     cls = "reflex existed but never matched in the session"
-            if rid == "heavy_compute_remote":
+            if rid == "heavy_compute_offbox":
                 ev["wording_received"] = gpu_wording(sid, ask, t)
             if rid == "the_picture_is_the_beat":
                 ev["trigger_reach"] = trigger_reach(sid, t, trig)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Link strengths in the math store that grow from use (claude-6bb7036b-s03, 12 Oct 2026; his 06:17 order: "edges should get
+"""Link strengths in the math store that grow from use (12 Oct 2026; his 06:17 order: "edges should get
 stronger as nodes that are similar are used at similar times, that strength should become automatic and agents should be
 able to see the strength between nodes and use that to find information").
 

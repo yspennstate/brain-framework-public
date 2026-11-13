@@ -1,4 +1,4 @@
-"""Query-side synonyms for the BM25 body of brain.py recall (claude-68ceaf54, 31 Oct 2026, RECALL-10X).
+"""Query-side synonyms for the BM25 body of brain.py recall (31 Oct 2026, RECALL-10X).
 
 The memories name a failure by its cause ("stale", "shows nothing"); a question names it by what was seen ("too old",
 "expired", "nothing in it", "no visual"). BM25 matches exact words, so those questions miss. This appends the memory's

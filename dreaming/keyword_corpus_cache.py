@@ -1,6 +1,6 @@
 """keyword_corpus_cache.py - incremental inputs for build_keyword_nodes.py.
 
-Why (2026-11-03, claude-99aebc7f): the dream's keyword step re-read and re-tokenized all ~49k memory files
+Why (2026-11-03): the dream's keyword step re-read and re-tokenized all ~49k memory files
 (first 4,000 chars each) and re-parsed the whole 200 MB PROMPTS.jsonl every run. Warm and unstarved that is
 ~15 s of CPU (11-02 12:02 run), but the dream runs BelowNormal while the owner is present and a BelowNormal
 job on a full box gets almost no CPU: the step hit its 2700 s cap on 10-31 and 11-03 and was killed, leaving

@@ -422,7 +422,7 @@ def _harness_parser(cmd):
     """Claude Code's PowerShell tool keeps one long-lived helper per session that parses each command before it runs:
     `powershell.exe -NoProfile -NonInteractive -NoLogo -EncodedCommand <b64>`, whose decoded script reads base64 from
     stdin and calls Language.Parser]::ParseInput. Its command line names no snapshot file, so until 31 Oct this hook
-    listed it on every prompt as the session's oldest idle worker (pid 59772, 1168 min, claude-99aebc7f). Plumbing,
+    listed it on every prompt as the session's oldest idle worker (pid 59772, 1168 min). Plumbing,
     not work: recognised by decoding the command, cached per command line."""
     if not cmd or "-EncodedCommand" not in cmd:
         return False
@@ -584,7 +584,7 @@ def render(event, desc, totals, orphans=()):
 
 def _once(session, block):
     """The standing paragraphs (about 1,500 of the 1,926 chars a fire) go to a context once - again after a
-    compaction or three hours; the census lines go every time (4 Nov 2026, claude-fb4584c3; 95 pct of this
+    compaction or three hours; the census lines go every time (4 Nov 2026; 95 pct of this
     hook's 24 h text was a repeat to the same session). Any failure sends the block whole."""
     try:
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

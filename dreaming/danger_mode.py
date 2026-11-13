@@ -275,7 +275,7 @@ SECRET_VALUE = re.compile(
 # character device (NUL), Python 3.14 takes it for a console and opens pyrepl, which loops on WinError 123 writing
 # tracebacks and hangs the whole command (memory python_dash_with_dev_null_opens_a_looping_repl_on_windows_2026_10_19:
 # six recurrences across four sessions on 19-20 Oct, each after the memory was in the index). So it is refused, not
-# warned. claude-5693aca3, 20 Oct 2026. PYDASH_GUARD=0 turns it off.
+# warned. 20 Oct 2026. PYDASH_GUARD=0 turns it off.
 _PY = re.compile(r"^(?:py|python[0-9.]*)(?:\.exe)?$", re.I)
 
 
@@ -283,7 +283,7 @@ def _python_dash(cmd):
     """The first command segment that runs python with '-' as the script, or ''."""
     import shlex
     # PY=.../python.exe; $PY - : the interpreter behind a variable set in the same command (shell state does not
-    # persist between calls). It walked past this guard on 1 Nov 17:57 and spun for 90 s. claude-ebf5f521.
+    # persist between calls). It walked past this guard on 1 Nov 17:57 and spun for 90 s.
     py_vars = {n for n, v in re.findall(r"(?:^|[\s;&|])([A-Za-z_][A-Za-z0-9_]*)=[\"']?([^\s\"';|&]+)", cmd or "")
                if _PY.match(os.path.basename(v.replace("\\", "/")))}
     for seg in re.split(r"\n|;|&&|\|\||\|", cmd or ""):
@@ -316,7 +316,7 @@ def _python_dash(cmd):
 # pushes when the scan fails or never ran. Four scar cards (10 Sep, 3 Oct, 1 Nov, 3 Nov) and it recurred on 5 Nov 17:05
 # with the scanner path wrong: the push went out unscanned. Refused, not warned, like the python dash.
 # A pipeline that ends in grep is a gate by design (grep's own exit is the test); `set -o pipefail` lifts the refusal.
-# claude-42778e9b, 5 Nov 2026. PIPEGATE_GUARD=0 turns it off.
+# 5 Nov 2026. PIPEGATE_GUARD=0 turns it off.
 _GATE = re.compile(r"\b(?:scan_secrets|check_no_private_labels|export_public|prepush_secret_gate|check_gate"
                    r"|brain_regression_gate|pytest)\b")
 _MUTATE = re.compile(r"\bgit\s+(?:-[cC]\s+\S+\s+)*(?:push|commit)\b|\bsafe_push\b|\bgh\s+(?:release|pr\s+merge)\b")

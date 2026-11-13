@@ -399,7 +399,7 @@ def main():
             st["last_reg"] = now - REG_EVERY_S + 60       # try again in a minute
             _log(f"{agent} {event} register failed: {type(e).__name__}: {str(e)[:160]}")
     ids = [agent, f"{runtime}:{sid[:16]}"]
-    # A launcher that names its worker (series_keeper sets AGENT_MESH_ID=codex-d4e5f6a7-s1c) gets mail sent to that name
+    # A launcher that names its worker (series_keeper sets AGENT_MESH_ID=<id>-s1c) gets mail sent to that name
     # too. Before 15 Oct mail to the name waited forever: the hook read only codex-<first 8 of the thread>, and Codex
     # thread ids are time-ordered, so threads started within about a minute share those 8 (s3 and s4 both 01a13b70).
     named = (os.environ.get("AGENT_MESH_ID") or "").strip()

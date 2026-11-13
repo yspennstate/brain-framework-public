@@ -1289,7 +1289,7 @@ def _refill_arm(session, rid):
     return "held" if hashlib.sha256(("%s:%s" % (session, rid)).encode("utf-8")).digest()[-1] & 1 else "shown"
 
 
-# THE RECEIVER, NOT THE SESSION (30 Sep 2026, claude-825b1305; the 1000-page report's D12-T01). A subagent's tool step
+# THE RECEIVER, NOT THE SESSION (30 Sep 2026; the 1000-page report's D12-T01). A subagent's tool step
 # carries its PARENT's session_id and its own agent_id (owner_context_delivery.py measured it on 25 Sep; a subagent
 # transcript records the parent's sessionId beside its agentId). The backoff was kept per session id, so a reflex the
 # parent had just seen was held back from its child, a child's warning silenced the parent, and a second child got
@@ -1333,7 +1333,7 @@ def _in_backoff(session, rid, rev=""):
 
 
 def _refill_after_backoff(session, fired, drop_act=False):
-    """Fill the slots the session backoff emptied (28 Sep, claude-825b1305). The cap takes the top MAX_FIRE ranked
+    """Fill the slots the session backoff emptied (28 Sep). The cap takes the top MAX_FIRE ranked
     hits BEFORE _dedup runs, so a reflex the session's backoff then silences still held a slot, and the next ranked
     hits stayed marked 'cap'. Measured over the 7 days to 28 Sep: 14,573 calls had a reflex held by the cap while fewer
     than MAX_FIRE were shown (10,848 showed none). At 02:26:54 on 28 Sep secrets_in_git held slot two and was backed

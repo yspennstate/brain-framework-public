@@ -208,7 +208,7 @@ def fresh():
         # Look back LOOKBACK seconds before the nightly file's mtime: the build reads the memory dir minutes before it
         # writes OUT, so a memory written inside that window was in neither file (3 Nov 02:33: 11 term_ nodes written,
         # build file stamped 02:35:15, all 11 isolated). Pairs OUT already holds are skipped below, so re-reading the
-        # window never counts a link twice. claude-5693aca3, 3 Nov 2026.
+        # window never counts a link twice. 3 Nov 2026.
         cut = os.path.getmtime(OUT) - LOOKBACK
     except OSError:
         return

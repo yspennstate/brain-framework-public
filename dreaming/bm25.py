@@ -139,7 +139,7 @@ _DECIMAL = re.compile(r"^[0-9]+_[0-9]+$")                             # 0_45, 0_
 # added terms appear in exactly one memory. A partner's rules are full of numbers they type back at the brain
 # (k=0.45, ratio 0.25, STEP 0.0035), so the lane is not obviously waste - it is measured, not assumed, below.
 _V3_DECIMALS = os.environ.get("BRAIN_TOKENS_V3_DECIMAL", "1") != "0"
-# DATES (2026-09-27, claude-825b1305; staged OFF behind BRAIN_TOKENS_DATES=1 for a shadow end-to-end measurement): a
+# DATES (2026-09-27; staged OFF behind BRAIN_TOKENS_DATES=1 for a shadow end-to-end measurement): a
 # month and day however written - "september 2", "2 Sep", "2026-09-02", a slug's 2026_09_02 - gains one shared token
 # md0902 on both sides; nothing is removed, so an exact match keeps its weight. A memory's head gets the tokens of the
 # dates in its first 12,000 characters (the slug's creation date among them), after the head budget, so they never
@@ -307,7 +307,7 @@ class QueryNormalizer:
         return " ".join(out)
 
 
-# THE OWNER TYPO MAP, where the edit-1 fix gives up (1 Nov 2026). claude-a9b28e2d's map of his recurring typos
+# THE OWNER TYPO MAP, where the edit-1 fix gives up (1 Nov 2026). an agent's map of his recurring typos
 # (~/brain/porting/owner_typo_map.json, built from his prompts) reaches what one edit cannot: two-edit typos and
 # misspelt words (brian -> brain, platue -> plateau). It is read from the guarded copy that
 # codex_fleet/recall_warm/tools/typo_map_guard.py writes (dictionary-word keys such as noam, todd and howard stay as
@@ -339,7 +339,7 @@ def _typo_map():
     return _TYPO_MAP["map"]
 
 
-# DOC EXPANSION (2026-09-26, claude-825b1305). The index sees a memory in its own words, and he asks in his: measured on
+# DOC EXPANSION (2026-09-26). The index sees a memory in its own words, and he asks in his: measured on
 # 968 reworded questions, the answer memory is in a plain search's top five a third of the time. Each memory now also
 # carries three questions a person might ask whose answer is in it, written once in ordinary words by Haiku 4.5 from the
 # memory's own description and opening (doc_expand.py; it never sees a test question). They are appended after the
@@ -399,7 +399,7 @@ def _indexable(fn):
 
 ATTACHMENT_FAILURES = []     # (slug, error type) of every bundle read_doc could not verify in this process
 
-# read_doc's tokeniser output kept by the text's own hash (3 Nov 2026, RECALL-10X lever 11, claude-fb4584c3). In the
+# read_doc's tokeniser output kept by the text's own hash (3 Nov 2026, RECALL-10X lever 11). In the
 # resident recall server every call merges the memories newer than the published index (refresh_in_memory), and each
 # call re-read and re-tokenised the same twenty or thirty files: about 1 s of a 4 s warm recall went to _tokens_v3.
 # The key is the exact text, so a changed file gives a new key; the tokens are the tokeniser's own. BRAIN_BM25_TOKMEMO=0
@@ -473,7 +473,7 @@ def _read_threads():
 
 def read_many(mem_dir, slugs):
     """[read_doc(mem_dir, s) for s in slugs], in the same order, on a small thread pool.
-    Why (4 Nov 2026, TOP10 rank 3, claude-738954b6): a refresh's merge is file reads, not arithmetic - on a shadow
+    Why (4 Nov 2026, TOP10 rank 3): a refresh's merge is file reads, not arithmetic - on a shadow
     copy the merge loop for 1,000 notes took 0.4 s and their read_doc 4-31 s. Interleaved A/B on 4,000 older notes
     (100-note chunks, ABAB): serial 7.3 ms/note median, 8 threads 2.8, tokens identical. The open and read release
     the GIL; tokenising does not, so more threads buy little. BRAIN_BM25_READ_THREADS=1 restores the serial loop."""
@@ -1174,7 +1174,7 @@ def fresh_memories(mem_dir=MEM, index_path=INDEX, entries=None):
         # A caller's listing (the recall server's resident one) keeps an unchanged file's entry object and replaces it
         # when the folder watcher reports that name, so an entry object we have seen has the stat we already read:
         # name -> (entry, slug, fresh), reset when the index's scan reference moves. Same answer as the loop below on
-        # 22 of 22 forced folder drops, 0.3 s off the median served call (4 Nov 2026, claude-738954b6, TOP10 rank 3,
+        # 22 of 22 forced folder drops, 0.3 s off the median served call (4 Nov 2026, TOP10 rank 3,
         # recall_10x_2026_10_29/folder_drop_2026_11_04/incr_parity.py). BM25_FM_IDCACHE=0 turns it off.
         if _FM_IDC["since"] != since:
             _FM_IDC["since"], _FM_IDC["c"] = since, {}
@@ -2371,7 +2371,7 @@ def score_postings(query, topk=20, index_path=INDEX, conn=None):
             return []
         # heapq.nsmallest is documented equal to sorted(...)[:topk]; the key is unique (pos), so no tie can reorder.
         # A full sort of ~18,000 candidates cost about half of a seed-arm score call (28 of 53 ms median; the heap
-        # 4.9 ms - claude-738954b6, 4 Nov 2026). BRAIN_BM25_HEAPTOP=0 restores the full sort.
+        # 4.9 ms - 4 Nov 2026). BRAIN_BM25_HEAPTOP=0 restores the full sort.
         cand = ((p, s) for p, s in scores.items() if s > 0)
         if _HEAPTOP:
             import heapq

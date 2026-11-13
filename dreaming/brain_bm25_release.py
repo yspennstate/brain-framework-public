@@ -10,7 +10,7 @@ those exits. release() closes and drops every _FC_DF entry for another file and 
 regular file of 1 MB or more this process still holds open with no name left on disk. The caller exits as before
 when that list is not empty, so the disk always comes back.
 
-6 Nov 2026, claude-95df24fa, Mac mini."""
+6 Nov 2026, Mac mini."""
 import os
 import stat
 import sys

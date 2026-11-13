@@ -791,7 +791,7 @@ _CTAIL_FS = re.compile(r"^\s*full_summary:\s*(\S.*?)\s*$", re.M)
 
 # A resident process (the recall server) re-read the 9 MB tail cache on every new compaction, the file it had itself
 # written at the last one: marshal.load took 247 ms of a change call, and the 2.7 MB long-memory tail cache another
-# 73 ms (6 Nov 2026, claude-95df24fa). _marshal_memo keeps the last value loaded from or dumped to each cache file under
+# 73 ms (6 Nov 2026). _marshal_memo keeps the last value loaded from or dumped to each cache file under
 # that file's identity (size, mtime_ns, inode, ctime_ns, taken from the open handle); a file replaced or rewritten
 # gets a new identity and is read again. BRAIN_MARSHAL_MEMO=0 turns it off.
 _MARSHAL_MEMO = {}
@@ -2278,7 +2278,7 @@ def _sup_rows(ss):
         # The call's listing is the recall server's resident one, which keeps an unchanged file's entry object and
         # replaces it when the folder watcher reports that name; so an entry object seen before has the stat already
         # read: name -> (entry, row or None). Same answer as the list below on 22 of 22 forced folder drops, row build
-        # 112 -> 19 ms on the 51k-entry folder (4 Nov 2026, claude-738954b6, TOP10 rank 3,
+        # 112 -> 19 ms on the 51k-entry folder (4 Nov 2026, TOP10 rank 3,
         # recall_10x_2026_10_29/folder_drop_2026_11_04/incr_bench.py, incr_parity.py). BRAIN_SUP_ROWC=0 turns it off.
         try:
             ents, now_ns = got[0], got[1]
@@ -2395,7 +2395,7 @@ def _fc_superseded_wrap(real):
     the call, with the pointer facts read back from supersession's own cache for that same listing.
     (29 Oct 2026: the old key was the digest alone, so any write to the folder between two recalls cost the next one
     the real reader, about 2.7 s on the loaded laptop; a file under 6 s old disabled the cache outright.)"""
-    # In-process memo (3 Nov 2026, claude-738954b6): the resident server served every recall through the delta path,
+    # In-process memo (3 Nov 2026): the resident server served every recall through the delta path,
     # because CONSCIENCE.md is rewritten between almost any two calls; each call re-made repr() of the 50k-row listing
     # (0.28 s) and re-read and re-dicted the stored listing (0.16 s). The digest is now joined from per-row repr
     # strings kept across calls (the same string, so the same digest), and the last stored listing is kept as a dict.
@@ -2407,7 +2407,7 @@ def _fc_superseded_wrap(real):
             return hashlib.sha256(repr(rows).encode("utf-8", "surrogateescape")).hexdigest()
         # An unchanged folder gives back the same row tuples (_sup_rows' entry cache), so comparing with the last rows
         # is a pointer walk; the digest is the one the last call made. 74 -> 0.5 ms a call on 52k rows (4 Nov 2026,
-        # claude-738954b6, recall_10x_2026_10_29/served_profile_20261104/sigbench.py).
+        # recall_10x_2026_10_29/served_profile_20261104/sigbench.py).
         last = memo.get("last")
         if last is not None and last[0] == rows:
             return last[1]
@@ -2678,7 +2678,7 @@ def _fc_layer():
         except Exception:
             pass
         # the seed arm's filename match reads this call's listing instead of a second os.listdir (3 Nov 2026,
-        # claude-738954b6; 2.2 s a warm served call). BRAIN_SEED_ONESCAN=0 turns it off.
+        # 2.2 s a warm served call). BRAIN_SEED_ONESCAN=0 turns it off.
         if opened and os.environ.get("BRAIN_SEED_ONESCAN", "1") != "0" and getattr(sr, "MEM_NAMES", 0) is None:
             def _seed_names():
                 got = _memlist()
@@ -2878,7 +2878,7 @@ def _query_semantic_scores(query, k=None, floor=None):
     is what a hook and the CLI both are, so each pays the cold model and embedding-matrix load - the 20 ms warm
     figure above is a within-process number and does not describe the path anyone actually uses. That is nine
     times the 0.43 s the postings sidecar saved the same morning, bought with a net of zero answers.
-    R11 TURNED IT ON (13 Oct 2026, claude-1789621d), changed three ways (the block comment above _BGE_QUERY_PREFIX),
+    R11 TURNED IT ON (13 Oct 2026), changed three ways (the block comment above _BGE_QUERY_PREFIX),
     and measured it end to end on the production path, arms back to back: owner-voice 56 hit@1 35 -> 39, hit@5 49 ->
     48, MRR .729 -> .774 (@1 +4/-0, @5 +0/-1); the 22 Sep bank's dev half, first 100 items, reworded hit@10 31 -> 34,
     MRR .205 -> .211, verbatim .782 -> .786 (a churn, @1 +3/-2); the BRAINDEV check half, all 644 items, hit@1/5/10
@@ -2945,7 +2945,7 @@ def _query_semantic_scores(query, k=None, floor=None):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# R11 query-meaning lane (13 Oct 2026, claude-1789621d, T-20261012-066): the lane above, on by default, with three
+# R11 query-meaning lane (13 Oct 2026, T-20261012-066): the lane above, on by default, with three
 # changes measured on the 22 Sep 999-item recall bank (dev half = even sha1(id); the held half scored once) and on
 # BRAINDEV. (1) The query is encoded with bge's own retrieval instruction ("Represent this sentence for searching
 # relevant passages: ") - the sidecar's model was trained to read a query that way, and query_embed.py never added it.
@@ -3087,7 +3087,7 @@ def _inthread_encoder_ok():
 
 def _qemb_proc_send(text):
     """Start query_embed_proc.py with the query text on its stdin (no window; stdin, stdout and stderr all named) and
-    return the process, or None. OFF BY DEFAULT since 2 Nov 2026 (claude-1e0a23c2): on a loaded box the helper's process
+    return the process, or None. OFF BY DEFAULT since 2 Nov 2026: on a loaded box the helper's process
     start made recall wait a median 6-7 s for the vector; in-thread the recall body ran 6.4 s against 14.1 s median,
     7 of 9 pairs faster, same answers (brain_math_loop_1e0a/op/recall10x/ab_proc_out.txt). BRAIN_QEMB_PROC=1 brings it back.
     None also when: BRAIN_QEMB_PROC unset or 0, the helper file missing, the start or the write failing, or this
@@ -4327,7 +4327,7 @@ def _print_segment_row(seg):
 
 
 def _recall_body(query, n=8):
-    # q61c (4 Nov 2026, claude-68ceaf54): ACRONYM JOIN FROM A FROZEN TABLE. A question that spells out a term
+    # q61c (4 Nov 2026): ACRONYM JOIN FROM A FROZEN TABLE. A question that spells out a term
     # ("in the money") joins the acronym ("itm") only for rows where the notes use the acronym at least as often as
     # the phrase (q61d_scan document counts; pnl/tts/fps/wer/oom dropped). BRAIN_RECALL_ACRONYMS=0 turns it off.
     if os.environ.get("BRAIN_RECALL_ACRONYMS", "1") != "0" and query:
@@ -4348,7 +4348,7 @@ def _recall_body(query, n=8):
     idx.update(sr._index_lines())     # live entries override archived twins
     words = sr._words(query)
     seeds, lex = sr._seeds_from_prompt(words, idx)
-    # TASK-ID SEEDS (2 Nov 2026, claude-5693aca3). sr._words keeps letter-led words only, so a query that is a bare
+    # TASK-ID SEEDS (2 Nov 2026). sr._words keeps letter-led words only, so a query that is a bare
     # checklist id ('T-20261101-017') gave no seeds and recall stopped at "no lexical foothold" before the bm25 block,
     # although bm25.tokens keeps the id as t_20261101_017. When the query holds an id, BM25's hits on the raw query
     # join the seeds at the same strength the seeder's own BM25 arm uses. Measured on 10 checklist ids
@@ -4702,7 +4702,7 @@ def _recall_body(query, n=8):
                                 _mem_payload, _added, _gone = _bm25mod.refresh_in_memory(out=_bm25mod.INDEX, found=_found)
                             except TypeError:
                                 _mem_payload, _added, _gone = _bm25mod.refresh_in_memory(out=_bm25mod.INDEX)
-                        # 1 Nov 2026 (claude-68ceaf54, RECALL-10X): a recall spawns the publish only when the index is
+                        # 1 Nov 2026 (RECALL-10X): a recall spawns the publish only when the index is
                         # at least BRAIN_RECALL_SPAWN_AGE s old (600). remember() kicks its own refresh and the 15-min
                         # task publishes, so a young index needs no extra 13-17 s CPU refresh per recall (26 ran in
                         # one hour on 1 Nov); this recall is scored on the merged payload either way.
@@ -4780,7 +4780,7 @@ def _recall_body(query, n=8):
                         _q = _q + " " + " ".join(_joins)
                 except Exception:
                     pass
-            # KEEP THE WORD THE NORMALISER CHANGED (2026-11-02 laptop, RECALL-10X probe 22, claude-68ceaf54; on the Mac 4 Nov
+            # KEEP THE WORD THE NORMALISER CHANGED (2026-11-02 laptop, RECALL-10X probe 22; on the Mac 4 Nov
             # 2026): the snap replaces a rare word with a common neighbour, but a memory that quotes him holds his typo and many
             # rare words are real. Each changed word is scored again and added (BM25 sums over terms, so this is exact).
             # Laptop, 496 stored questions with a changed word: top-1 280 -> 411, top-8 384 -> 487.
@@ -4795,7 +4795,7 @@ def _recall_body(query, n=8):
                             _keep.append(_t)
                 except Exception:
                     _keep = []
-            # QUERY SYNONYMS (2026-10-31, RECALL-10X, claude-68ceaf54): a memory names a failure by its cause ("stale",
+            # QUERY SYNONYMS (2026-10-31, RECALL-10X): a memory names a failure by its cause ("stale",
             # "shows nothing"), a question by what was seen ("too old", "nothing in it"). brain_syn appends the memory's word;
             # it matches on the RAW query because the normaliser above drops short words ('too old' -> 'old'). Live recall,
             # 12 questions incl. 7 fresh: top-8 7 -> 10, no loss (brain_improvement/recall_10x_2026_10_29/content_gap_68ce/
@@ -4827,7 +4827,7 @@ def _recall_body(query, n=8):
             # one rank moved); 60 landed as the margin - neutral on the bank, and the gold that lived at rank 40
             # no longer sits on the edge.
             bm_hits = _bm.score(_q, int(os.environ.get("BRAIN_LEX_TOPK", "60") or 60))
-            # BRITISH/US SPELLING (2026-11-01, RECALL-10X probe 15, claude-68ceaf54): the memories split common words
+            # BRITISH/US SPELLING (2026-11-01, RECALL-10X probe 15): the memories split common words
             # (neighbours 390 files / neighbors 64, catalogue 427 / catalog 1050) and the normaliser only snaps a word seen
             # in at most 8 memories, so "no neighbors" never reached a memory that says neighbours (BM25 rank 28). The other
             # spelling is scored at weight 0.3 and added: BM25 sums over terms, so s(q) + 0.3 s(other) is the weighted query
@@ -4868,7 +4868,7 @@ def _recall_body(query, n=8):
                                            int(os.environ.get("BRAIN_LEX_TOPK", "60") or 60))
                 except Exception:
                     pass
-            # COMPACTION-STACK LIFT (2026-11-02, RECALL-10X probe 24b, claude-68ceaf54; ON by default, BRAIN_RECALL_LIFT=0 turns it off).
+            # COMPACTION-STACK LIFT (2026-11-02, RECALL-10X probe 24b; ON by default, BRAIN_RECALL_LIFT=0 turns it off).
             # A compaction summary repeats his order word for word, so on his own quotes a stack of compaction anchors
             # can bury the memory that records the order. Damping the anchors as a class (probe 23) or by place in the
             # stack (probe 24) loses the sessions. This moves ONE row: if the best non-compaction row sits below rank R
@@ -4902,7 +4902,7 @@ def _recall_body(query, n=8):
                   % (type(_bm_exc).__name__, _bm_exc))
             bm_hits = []
             _lex_path = "failed"
-        # PERMISSION RESCUE, part 1 (2026-11-03, RECALL-10X q19, claude-68ceaf54): on a permission question ("can I ...",
+        # PERMISSION RESCUE, part 1 (2026-11-03, RECALL-10X q19): on a permission question ("can I ...",
         # "is it ok to ..."), score the owner family alone (owner_* slugs, OWNER-tagged and owner-stated memories) by BM25
         # on the question minus its permission words; part 2 shows the best of them at rank 3. BRAIN_RECALL_PERMIT=0 off.
         _permit_picks = []
@@ -5115,7 +5115,7 @@ def _recall_body(query, n=8):
                 _st = _slug_name_tokens(slug)
                 if _st:
                     _hit = 0
-                    # A five-character prefix is a word stem, not a number (2 Nov 2026, claude-5693aca3): on a bare task id
+                    # A five-character prefix is a word stem, not a number (2 Nov 2026): on a bare task id
                     # the query token 20261028 matched every compaction name's 20261030T180042 on "20261", so each
                     # compaction got x1.33 and the task's own node (name digits dropped) fell from bm25 rank 1 to last.
                     # BRAIN_RECALL_QCOVER_DIGIT_PREFIX=1 restores the old match.
@@ -5298,7 +5298,7 @@ def _recall_body(query, n=8):
                 seen_rank.update(_qcos)
         # USE-GROWN GRAPH LANE (2026-09-26, his 04:28 order: build the edge and diffusion part now "and then put a
         # paramter that will tune this vs the simple work thing that is working now"). graph_lane.py walks the graph grown
-        # from every touch agents make (claude-9209cf81's capture and store: words, tools, files, folders, memories read
+        # from every touch agents make (an agent's capture and store: words, tools, files, folders, memories read
         # and written, notes served, reflexes, errors) by personalised PageRank (diffusion.py) from the query's words and
         # bm25's top memories, and blends its ranking into the bm25 body the way the query-semantic lane is blended: a
         # convex mix of min-max scores, rescaled onto the body's range. The policy/attachment head keeps its place.
@@ -5307,7 +5307,7 @@ def _recall_body(query, n=8):
         # written in other words; 46 pct of the answers are graph nodes): bm25 alone hit@5 412, MRR 0.352; the graph
         # alone MRR 0.01 from the words, 0.19 with bm25's top five as seeds; over restart 0.3/0.6, lift 0/0.5/1, both
         # seedings and both fusions no blend beat lambda 0 (best, convex 0.1: MRR 0.352, hit@5 +2, 16 answers up and 73
-        # down), and claude-825b1305's held-out 968-question bank agreed (bm25 hit@5 0.344, best lambda 0). So the
+        # down), and an agent's held-out 968-question bank agreed (bm25 hit@5 0.344, best lambda 0). So the
         # default is 0 until a measurement earns it a weight: brain_improvement/campaign_2026-09-26_graph_lane.
         # The walk is prebuilt (python graph_lane.py --build); recall never builds it. Any failure leaves the order
         # as it was.
@@ -5524,7 +5524,7 @@ def _recall_body(query, n=8):
         except Exception as _gate_exc:
             print("  [warn] gated lane merge skipped (%s: %s)" % (type(_gate_exc).__name__, _gate_exc))
 
-    # Semantic rescue (claude-68ceaf54, 30 Oct 2026, RECALL-10X): the query-meaning lane's own top two memories
+    # Semantic rescue (30 Oct 2026, RECALL-10X): the query-meaning lane's own top two memories
     # (current slugs) are shown at ranks 4 and 5 unless the fused order already has them at that rank or better.
     # The misses it targets are fusion losses: on heldout16 the lane alone had the gold at rank 1-5 for four
     # questions the fused top 8 lost. MEASURED end to end (semr_ab.py, 83 questions, one run, hit@1/2/3/8):
@@ -5589,7 +5589,7 @@ def _recall_body(query, n=8):
     # its compactions in the top 5) but not the moment (5 of 40 at row 1): every ask about one session got the same
     # three nodes whatever the hour. The one nearest the time (the first written at or after it, which summarises that
     # moment; an earlier one counts twice as far away) takes row 1 when row 1 is already a compaction, else row 2: an
-    # incidental mention ("claude-04570302 sent a message at 15:53 about per-term weights") keeps its lesson at row 1
+    # incidental mention ("an agent sent a message at 15:53 about per-term weights") keeps its lesson at row 1
     # (putting three compactions first dropped it to row 4). 40 asks: exact node at row 1 5 -> 40.
     # BRAIN_RECALL_SESSION_CLOCK=0 disables.
     if scored and os.environ.get("BRAIN_RECALL_SESSION_CLOCK", "1") != "0":
@@ -5794,7 +5794,7 @@ def _recall_body(query, n=8):
                 print("  [low-separation] nothing in this list stands out (top-fifth %.2f, lowest %.2f) - the"
                       " words of your question may not be the corpus's words; rephrase in the vocabulary a"
                       " memory about this would use and ask again." % (_top - _fifth, _low))
-                # 26 Sep (claude-825b1305): the rephrasing, done by a small model and measured - three Haiku rewrites
+                # 26 Sep: the rephrasing, done by a small model and measured - three Haiku rewrites
                 # plus the question put the source in a top five for 132 of 300 reworded questions against 104
                 # (memory a_cheap_rewrite_before_recall_finds_the_note_far_more_often_2026_09_25).
                 print("  [rewrite] python %s %s  (three rewrites and the question, interleaved; about 20 s)" % (
@@ -7057,7 +7057,7 @@ def main():
         return 0
     cmd = args[0]
     if cmd == "recall":
-        # RECALL-10X (2026-11-02, claude-1e0a23c2): the CLI recall loads the vector sidecar lazily - every user of it in
+        # RECALL-10X (2026-11-02): the CLI recall loads the vector sidecar lazily - every user of it in
         # this file already checks each row it uses (row_current / embedding_row_current), so the eager stat scan was
         # duplicate work (load median 4.3 -> 1.2 s, top-8 unchanged; recall10x/ab_walk_out.txt). Only the CLI, never the
         # importable recall(): hooks import this module in the dispatcher. BRAIN_EMB_LAZY=0 turns it off.

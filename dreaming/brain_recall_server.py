@@ -1,6 +1,6 @@
 """brain_recall_server.py - a resident process that answers `brain.py recall` with its built state kept warm.
 
-RECALL-10X lead 1 for brain.py (claude-fb4584c3, 3 Nov 2026). A cold `brain.py recall` spends most of its CPU
+RECALL-10X lead 1 for brain.py (3 Nov 2026). A cold `brain.py recall` spends most of its CPU
 reloading state from disk (file caches, the superseded map, listings, tiers, archived index lines, query
 expansions, node documents, the fresh-memory scan). This process loads brain.py once, memoizes those reload
 functions, and serves recall calls from brain_recall_client.py over localhost.
@@ -37,11 +37,11 @@ LOCK_WAIT = float(os.environ.get("BRS_LOCK_WAIT", "20"))
 # and every caller behind it is declined busy. 0 turns the exit off.
 ORPHAN_S = float(os.environ.get("BRS_ORPHAN_S", "200"))
 RSS_CAP = int(float(os.environ.get("BRS_RSS_CAP_GB", "2.5")) * 1024 ** 3)
-# Mac, 5 Nov 2026 (claude-1ca628ae): every BM25 rebuild unlinks the old postings sidecar (~157 MB), but a reader this
+# Mac, 5 Nov 2026: every BM25 rebuild unlinks the old postings sidecar (~157 MB), but a reader this
 # process opened keeps it on disk until we exit; after 19 h one server held 11 of them (2.3 GiB with other deleted
 # files) while the owner's film ran short of disk. Exit after answering once the index has been replaced this many
 # times; the next client call starts a fresh server (0.1 s load). 0 turns it off.
-# 5 Nov 03:44 (claude-7df69752): cap 3 -> 1. Rebuilds come about every 35 min (3 in 1 h 44 min on 5 Nov) and a fresh
+# 5 Nov 03:44: cap 3 -> 1. Rebuilds come about every 35 min (3 in 1 h 44 min on 5 Nov) and a fresh
 # server loads in 0.1 s, so exiting on the first one costs little and holds at most one dead generation (~157 MB).
 BM25_GEN_CAP = int(os.environ.get("BRS_BM25_GEN_CAP", "1"))
 BM25_STAY = int(os.environ.get("BRS_BM25_STAY", "12"))
@@ -88,9 +88,9 @@ def log(msg):
 # BRAIN_ variables brain.py reads on each call (never at import), so the server applies the caller's value for the call
 # instead of declining. 3 Nov 2026: 91 of 98 recall calls were declined "brain env differs", all from compact_nodes.py's
 # linker, which sets BRAIN_RECALL_REFRESH=0. BRS_PER_CALL_ENV=0 restores the old decline.
-# 5 Nov 2026 (claude-7df69752, Mac): BRAIN_RECALL_LOG too. graph_lane.log_recall reads it on each call, and every test
+# 5 Nov 2026 (Mac): BRAIN_RECALL_LOG too. graph_lane.log_recall reads it on each call, and every test
 # bank sets BRAIN_RECALL_LOG=0, so all of them were declined and ran cold.
-# 5 Nov 2026 (claude-83c711d4, the research box): BRAIN_HEADLESS_DIET too. Only hook_dispatch reads it, never recall, and it
+# 5 Nov 2026 (the research box): BRAIN_HEADLESS_DIET too. Only hook_dispatch reads it, never recall, and it
 # was the laptop's one remaining env decline (55 calls in 24 h).
 PER_CALL_ENV = () if os.environ.get("BRS_PER_CALL_ENV", "1") == "0" else (
     "BRAIN_RECALL_REFRESH", "BRAIN_RECALL_LOG", "BRAIN_HEADLESS_DIET")
@@ -627,7 +627,7 @@ def main():
                         if g != last["bm25"]:
                             last["bm25"], last["gens"] = g, last["gens"] + 1
                         if BM25_GEN_CAP and last["gens"] >= BM25_GEN_CAP:
-                            # 6 Nov 2026 (claude-95df24fa, Mac): stay up through a rebuild when nothing deleted is
+                            # 6 Nov 2026 (Mac): stay up through a rebuild when nothing deleted is
                             # still held. The exits below were 92 of 117 server starts in 24 h, and a fresh server's
                             # first live call was p50 1.33 s. brain_bm25_release closes the old postings connections,
                             # clears the once-per-process df/usage caches and lists any regular file of 1 MB+ still
@@ -696,7 +696,7 @@ def main():
     log("serving pid %d port %d after %.1f s load" % (os.getpid(), port, time.time() - t0))
     th = threading.Thread(target=srv.serve_forever, daemon=True)
     th.start()
-    # 6 Nov 2026 (claude-95df24fa, Mac): a successor warms itself before its first caller. 98 of 115 server starts in
+    # 6 Nov 2026 (Mac): a successor warms itself before its first caller. 98 of 115 server starts in
     # 24 h were bm25 replacements, and the first call a fresh server answered cost p50 1484 ms (70 calls, 117 of the
     # 170 s of live recall time). In-process, two warm-up recalls (1.4-2.3 s, log and refresh off) took the first real
     # call to 136-228 ms against 680-1090 ms cold; one warm-up left it at 577-826. A caller arriving mid warm-up waits on
@@ -784,7 +784,7 @@ def main():
         time.sleep(1)
         srv.shutdown()
         log("stopped pid %d after %d calls" % (os.getpid(), brain.calls))
-        # 5 Nov 2026 (claude-7df69752): index rebuilds came every few minutes on 5 Nov, and after each cap exit the Codex
+        # 5 Nov 2026: index rebuilds came every few minutes on 5 Nov, and after each cap exit the Codex
         # test arm (sandboxed, cannot spawn) and BRAIN_-carrying loops ran cold until another session started a server
         # (none from 04:35 to 04:4x). The exiting server starts its successor; it waits on server.lock until we are gone.
         if last.get("respawn") and os.environ.get("BRS_RESPAWN", "1") != "0":

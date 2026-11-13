@@ -62,7 +62,7 @@ REPEAT_NOTE = ("[owner-board] unchanged since it reached this context (his messa
 
 def _once(sess, full):
     """The control line goes every hour; the header and his message only once per context, again when they change,
-    after a compaction or after three hours (4 Nov 2026, claude-fb4584c3: 2,845 chars a fire, 91 pct a repeat to the
+    after a compaction or after three hours (4 Nov 2026: 2,845 chars a fire, 91 pct a repeat to the
     same session). No session id, or any failure, sends the whole text as before."""
     if not sess:
         return full

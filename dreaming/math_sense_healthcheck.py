@@ -168,7 +168,7 @@ def _call(prompt: str) -> Reply:
 
 
 def ask(prompt: str) -> Reply:
-    # 2026-10-03 (claude-4a88bc43): one timed-out call is asked once more in a fresh process before the row is
+    # 2026-10-03: one timed-out call is asked once more in a fresh process before the row is
     # given up. The nightly gate read "BREACH: math_sense_healthcheck rc=1" on 09-26, 09-29, 10-02 and 10-03, each
     # time one row past the 60 s cap at the 05:10 run and every later row then "not asked"; the same 17 rows took
     # 0.4-2.1 s each at 22:58 that evening. A row that times out twice is still not judged, and the check then

@@ -32,7 +32,7 @@ DUR_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h)\b", re.I)
 LENGTH_AFTER = re.compile(r"[\s-]*(?:and\s+(?:a\s+)?(?:half|\d+\s*min\w*)\s+)?(?:long|lon\b|lnog|movie|moive|mvoie|"
                           r"film|flim|video|vidoe|vieo|version|versoin|verion|lecture|cut|episode|documentary|"
                           r"audiobook|series|poem|of (?:narration|speech|voice|video|footage|audio|film|movie))", re.I)
-# 2026-10-11 17:2x (claude-4a88bc43): "give me a report in chrome of all the work that you did in the last 10 hours"
+# 2026-10-11 17:2x: "give me a report in chrome of all the work that you did in the last 10 hours"
 # started a 10 h clock - "work" sat 40 characters off. A duration right after last/past/previous/prior names a
 # window already gone, not an order to work that long.
 PAST_BEFORE = re.compile(r"\b(?:last|past|previous|prior|preceding)\s+$", re.I)
@@ -232,7 +232,7 @@ def main():
             # not anywhere in a long prompt.
             if re.search(r"Hook failed|hook timed out after|ctrl \+ t to view transcript|\n\s*[•◦└↳]", prompt):
                 return
-            # 2026-10-18 15:4x (claude-5aab5938): a cron loop re-fires its own text every 10 minutes, and that text quotes
+            # 2026-10-18 15:4x: a cron loop re-fires its own text every 10 minutes, and that text quotes
             # the order ("keep working for the next 20 hours ... until 15:37"). Each tick restarted a fresh 20 h clock, so
             # five sessions were Stop-blocked into the next morning, hours past the deadline the tick itself names. The
             # order started the clock when he gave it; a loop tick never starts or restarts one.
@@ -255,7 +255,7 @@ def main():
             if m and 0 < float(m.group(1)) <= 24:
                 hours = float(m.group(1))
                 s = _prune(_load())
-                # 2026-10-31 (claude-a52370f8, 1000-ways D5 #84): a cron made by /loop fires the owner's own words, and
+                # 2026-10-31 (1000-ways D5 #84): a cron made by /loop fires the owner's own words, and
                 # "fire this every 5 minutes for the next 10 hours" given once at 23:03 UTC restarted this session's
                 # clock from its scheduled re-fires at 09:03 and 19:00, so the session was Stop-blocked until 08:59
                 # local, about 20 h past the order. The same order text seen again within REPEAT_S of its last

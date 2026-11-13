@@ -57,7 +57,7 @@ def _proven(name, f):
 
 
 # ---- 1. bm25 ------------------------------------------------------------------------------------------------------
-# Per-term cache (5 Nov 2026, claude-95df24fa): a term's (positions, contributions) arrays depend only on the postings
+# Per-term cache (5 Nov 2026): a term's (positions, contributions) arrays depend only on the postings
 # file, the term, its query weight and K1/B, so they are kept per postings file (path, inode, size, mtime_ns; reset when
 # it changes) and reused, LRU-capped at BRS_NP_BM25_CACHE_MB (default 48; 0 = off, the plain body below). Same arrays,
 # same np.add.at order, same top-k: 154 of 154 real prompts equal with the cache filling and warm, and a changed term

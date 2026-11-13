@@ -63,7 +63,7 @@ def main():
         # caller). 4 Nov, 88 pct CPU, same query: a BelowNormal test process 393 s / 397 s against 7.0 / 1.0 s at Normal;
         # the live server, BelowNormal (the keeper's creation flag) and unthrottled, 73 s a call. Set through psutil:
         # kernel32.SetPriorityClass(GetCurrentProcess(), ...) without a pointer restype passes an invalid handle on
-        # 64-bit and fails silently (returns 0) - policy()'s own BelowNormal call never took effect either. claude-99aebc7f.
+        # 64-bit and fails silently (returns 0) - policy()'s own BelowNormal call never took effect either.
         try:
             import psutil
             psutil.Process().nice(psutil.NORMAL_PRIORITY_CLASS)
@@ -107,7 +107,7 @@ def main():
         prepared = fr.open_prepared(args.store,ranking,tool.derive_tool,tool.__file__)
         # 4 Nov 09:23: a peer's code edit restarted the server while MathRecallPrebuild5m was building the new
         # prepared state; the server exited rc 6 with no reason and the keeper backed off 300 s (outage 09:15-09:32).
-        # Wait for another builder (up to 10 min) instead of exiting, and log why when it still fails. claude-99aebc7f.
+        # Wait for another builder (up to 10 min) instead of exiting, and log why when it still fails.
         waited = 0
         while prepared is None and 'has been building' in str(fr.STATUS.get('why','')) and waited < 600 \
                 and not stop.exists():
@@ -262,7 +262,7 @@ def main():
                         return
                     # One timing line per served call, never the query (4 Nov: the keeper's probes timed out at 50 s
                     # while a test copy of the same set-up answered in 2-8 s; this says whether the server is slow
-                    # or busy - 'idle' is the gap since the previous call ended). claude-99aebc7f.
+                    # or busy - 'idle' is the gap since the previous call ended).
                     try:
                         now = time.monotonic()
                         with open(HERE/'recall_server_timing.log','a',encoding='utf-8') as fh:

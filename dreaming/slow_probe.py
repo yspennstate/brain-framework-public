@@ -36,7 +36,7 @@ CREATE_NO_WINDOW = (0x08000000 if os.name == "nt" else 0)
 # power-throttles (EcoQoS) by default, so it was measuring its own throttle as much as the laptop. Same process, same
 # minute, condition order rotated over six rounds: cold opens read 2.82 ms (scanned) and 0.23 ms (excluded) at the
 # median throttled, with single rounds of 156.5 and 91.2 ms, against 0.04 and 0.04 ms opted out and 0.10 and 0.07 ms at
-# Normal (claude-9209cf81, scratchpad probe_ab_rot.py). His own programs run unthrottled, so the probe opts itself out
+# Normal (scratchpad probe_ab_rot.py). His own programs run unthrottled, so the probe opts itself out
 # (priority unchanged) and the PowerShell it starts; history rows from here on carry "unthrottled": true, and a reading
 # on either side of that line is not comparable with the other.
 def _no_power_throttle(handle=None):

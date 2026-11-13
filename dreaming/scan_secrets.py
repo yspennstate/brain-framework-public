@@ -64,7 +64,7 @@ PATTERNS = [
     # bundles of the open-problem push were held (2026-10-10). Excluded NARROWLY and only on this rule: the digits must
     # follow a hyphen or colon AND be exactly an 8-digit calendar date 20YYMMDD (URN locators "urn:owner-own-work:p0110:w381:
     # 20261010:<slug>" too); a token after a quote, space, =, or / is untouched, a 9-10 digit id after : is untouched, and so
-    # is a hyphen followed by digits that are not a date. Controlled both ways before landing (claude-4a88bc43).
+    # is a hyphen followed by digits that are not a date. Controlled both ways before landing.
     ("Telegram bot token", r"\b(?!(?<=[-:])20\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\b)\d{8,10}:[A-Za-z0-9_-]{30,60}\b"),
     ("Slack token", r"xox[baprs]-[A-Za-z0-9-]{10,}"),
     ("Google API key", r"AIza[0-9A-Za-z_\-]{35}"),

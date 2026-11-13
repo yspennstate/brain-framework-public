@@ -29,7 +29,7 @@ timings only, one line per invocation).
 """
 import time
 _T_IMPORT = time.perf_counter()      # module start, before the imports below: the sampled profile's clock
-# THE IMPORT LINE IS PAID ON EVERY TOOL CALL (14 Oct 2026, claude-1789621d-r, front R31). Each PreToolUse and
+# THE IMPORT LINE IS PAID ON EVERY TOOL CALL (14 Oct 2026-r, front R31). Each PreToolUse and
 # PostToolUse starts this file in a new process, and this line used to import traceback, subprocess and shlex too.
 # Under Python 3.14 traceback alone brings in _colorize, dataclasses, inspect, dis, ast, annotationlib, tokenize, copy
 # and textwrap: 25 ms of every dispatch, measured in fresh processes over 15 alternated rounds (34 ms with subprocess
@@ -133,7 +133,7 @@ HARNESS_INLINE_MAX = 10000
 # "python -S -B <file>"; run in-process (with site loaded and a different sys.path) the hot hook exits 1 and says
 # nothing where its own process returns context, and the prompt hook returns context where its own process is silent.
 # Never in-process without a fresh passing control: a hook that changes what it says is a changed brain, not a speedup.
-# 13 Oct 2026 (claude-1789621d, front R25): the hot hook's exit 1 was its first line, sys.stdin.buffer.read(), meeting
+# 13 Oct 2026 (front R25): the hot hook's exit 1 was its first line, sys.stdin.buffer.read(), meeting
 # the io.StringIO below, which has no .buffer - the AttributeError is raised outside its try. Given the bytes its own
 # process would have read (STDIN_BYTES_OK) it says exactly what its own process says: 331 payloads (320 real tool
 # calls from 30 sessions, 11 edge cases) gave the same rc and stdout and left the same state files, where this
@@ -152,7 +152,7 @@ FORCE_SUBPROCESS = {# project_memory_hook.py left on 3 Nov for STDIN_BYTES_OK (b
 # other hook keeps the io.StringIO it has always had, byte for byte; hook_dispatch_extend.py's stdin probe relies on
 # that. A name joins this set only with its own control.
 STDIN_BYTES_OK = frozenset({"project_memory_hot_hook.py",
-                            # 3 Nov 2026, claude-baabdcd6: the prompt hook's 15 Sep difference was the same stdin. On APFS
+                            # 3 Nov 2026: the prompt hook's 15 Sep difference was the same stdin. On APFS
                             # clones of its store, 8 of 8 prompts gave the same rc, stdout and rows (only time-derived
                             # ids differ); with the StringIO it printed a failed-closed note and wrote no row at all.
                             # In its own process it logged 962 s of slow prompts on 3 Nov, 70 runs at 5 s or more, for
@@ -181,7 +181,7 @@ ALLOW = os.path.expanduser("~/.claude/dreaming/hook_dispatch_allow.json")
 _ALLOW_STALE = [False]          # set by _allowlist(), read once per dispatch so the log says it ONCE
 
 
-# THE HOOK CODE CACHE (13 Oct 2026, claude-1789621d, front R24). runpy.run_path keeps no bytecode: for every in-process
+# THE HOOK CODE CACHE (13 Oct 2026, front R24). runpy.run_path keeps no bytecode: for every in-process
 # hook on every call it asked each sys.path hook for an importer (the zip importer opens the file and reads its tail),
 # read the file twice and compiled the whole source. Measured 13 Oct 20:15 under a dream's load: 166 ms of a Bash
 # PreToolUse across its 205 in-process hooks (191 of them film hooks) and 372 ms of a UserPromptSubmit, against 10 and
@@ -470,7 +470,7 @@ def as_python_argv(cmd, args, allow_all=False, memo=None):
     `memo` is the dict dispatch() hands every entry of one dispatch: the list is read at the first entry that asks, as
     before, and that answer serves the rest of the dispatch, as the hook list itself is read once per dispatch. Until
     13 Oct every entry re-read the 13 KB json and stat'ed two files: 64 ms of every PreToolUse over its ~205 entries,
-    113-125 ms under a dream's load (claude-1789621d, primary_directive/improve_1012/fronts/R24/runs/
+    113-125 ms under a dream's load (primary_directive/improve_1012/fronts/R24/runs/
     measure_overhead_1.txt and probe_rest_1.txt). Without a memo every call reads the files, exactly as it did."""
     try:
         path, tail = script_argv(cmd, args)
@@ -541,7 +541,7 @@ def run_in_process(path, payload, argv_tail=()):
         sys.stdin, sys.stdout, sys.stderr = real_in, real_out, real_err
         sys.argv = saved_argv
         sys.path[:] = saved_path
-        # 7 Oct 2026 (claude-9bb7da02): restore only when the hook changed it. A full restore is one Windows call per
+        # 7 Oct 2026: restore only when the hook changed it. A full restore is one Windows call per
         # variable, 0.76 ms a hook, and with his 150 film hooks in-process that was 0.11 s of every tool call.
         if os.environ != saved_env:
             os.environ.clear(); os.environ.update(saved_env)
@@ -1195,7 +1195,7 @@ def _flag_file_absent(args):
     return False
 
 
-# A SAMPLED PER-HOOK PROFILE, OFF UNLESS ITS FLAG FILE IS THERE (14 Oct 2026, claude-1789621d, front R30). The log
+# A SAMPLED PER-HOOK PROFILE, OFF UNLESS ITS FLAG FILE IS THERE (14 Oct 2026, front R30). The log
 # names a hook only when it fails or takes SLOW_HOOK_S, so what a whole event costs was never split by hook: PreToolUse
 # runs ~222 hooks in 0.34 s (median, R26 harness) to 0.65-0.72 s (this log, 14 Oct 06:45), and nobody could say whether
 # a few hooks carry that or a long tail does. Running the real hooks on made-up payloads to find out would write fires,

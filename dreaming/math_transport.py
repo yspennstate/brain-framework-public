@@ -211,7 +211,7 @@ HARD_DENY = re.compile(
     r"\b(lanes?|premium|drawdown|sharpe|sortino|"
     r"backtests?|sims?|simulations?|harvest\w*|rungs?|letf|leveraged|baskets?|notional|vrp|itm|otm|options?|"
     # puts/calls as a verb before a determiner are words, not contracts ("a shared factor puts the tail in one
-    # direction", the T251 card, 21 Oct claude-15b752e6): corpus diff over 30,948 memories moved one card SKIP -> QUEUE
+    # direction", the T251 card, 21 Oct): corpus diff over 30,948 memories moved one card SKIP -> QUEUE
     # (bc23's octave) and no trading note out of SKIP; "puts at/on/are", "the puts", "a put" still deny
     r"put\b|puts\b(?! (?:the|a|an|it|its|this|that|them|one|all|most|every|each|mass|weight|half)\b)|"
     r"call\b|calls\b(?! (?:the|a|an|it|its|this|that|them|one|all|most|every|each|mass|weight|half)\b)|strikes?|tenors?|plateau|engines?|rebalanc\w*|top-?offs?|borrow\w*|fills|p&l|pnl|cagr|etfs?|"
@@ -222,7 +222,7 @@ HARD_DENY = re.compile(
     r"broker|portfolio|equity curve|max dd|dd(?! \d{4}\.\d{4,5}))\b"
     # a return multiple ("81.3x", "23.9x") - but never a time stamp ("05:0x", "02:4x-04:2x"), hence the lookbehind,
     # and never a polynomial term ("root of 3x^2-3x-1", "2x+1", "3x_1"): x followed by ^ _ or an operator glued to a
-    # term is algebra (21 Oct, claude-15b752e6: the T366 card was refused on the "3x" of its quadratic)
+    # term is algebra (21 Oct: the T366 card was refused on the "3x" of its quadratic)
     # ("4.69x/maxDD", "13.00x/16.93pct", "3x-quad", "8.3x-OVERSHOOT" and the range "6.05x-9.21x" stay multiples: the
     # term after the operator must be a number that is no multiple, or a one-letter variable)
     r"|(?<![:\-\d.])\b\d{1,4}(\.\d+)?x\b(?![\^_]|[+\-*=](?:\d(?!\d*(?:\.\d+)?x\b)|[a-z](?![a-z])))", re.I)
@@ -256,7 +256,7 @@ SKIP_PREFIX = ("job_", "audit_", "gist_", "scar_", "method_", "mistake", "the_dr
 SKIP_HEAD = re.compile(r"^\s*(\[?(FIRE WHEN|MECHANISM|SCAR|NAP GIST|GIST|METHOD|OWNER|RECURRENCE|GRADED BLIND|"
                        r"CORRECTED|CONSOLIDATION|TOOL BUILT|BUILT|FOUND, FIXED|LANDED|DEPLOYED))", re.I)
 
-# PROGRAM GUARD (MATH_TRANSPORT_PROGRAM_GUARD, campaign mb10d, found 2026-09-24 23:3x, claude-46849b92). A verified
+# PROGRAM GUARD (MATH_TRANSPORT_PROGRAM_GUARD, campaign mb10d, found 2026-09-24 23:3x). A verified
 # memory of one of our named research programs read SKIP whenever its head lacked the result words above ("[MEASURED
 # EXACTLY] ...", "[DERIVED + CHECKED] ...", "Does FEI hold for the k-clique property? Yes at ..." read as a no-marker
 # head when the yes/no sits past the question), or when its slug and first 400 characters used a campaign word the
@@ -280,13 +280,13 @@ PROGRAM_VERIFIED_HEAD = re.compile(r"^\s*\[?\s*VERIFIED\b", re.I)
 # referee lanes (5 memories), the FPP block-chaos engine (3), the annealed defect identity (1), a 24-state simulation
 # in the MMPP refutation (1), frac(1.5 x) (1). "box-04", "agent" and "harvested" were tried and dropped: each moved
 # only a process note (a campaign's supervision page, a compute measurement, a lecture's render log).
-# "plateau" is the loss plateau of the deep-learning rows (T232 saddle-to-saddle: "plateau Theta(1/alpha)"); added 21 Oct
-# (claude-15b752e6): over the corpus it moves nothing today, a verified T232 note now reaches the QUEUE, and the trading
+# "plateau" is the loss plateau of the deep-learning rows (T232 saddle-to-saddle: "plateau Theta(1/alpha)"); added 21 Oct.
+# Over the corpus it moves nothing today, a verified T232 note now reaches the QUEUE, and the trading
 # plateau notes (no program prefix) stay SKIP.
 AMBIGUOUS_DENY = re.compile(r"^(lanes?|engines?|anneal\w*|sims?|simulations?|plateaus?|\d{1,4}(\.\d+)?x)$", re.I)
 
 
-# the frontier campaign's rows (t250_, t084_; added 2026-10-18, claude-5693aca3): 17 of 18 verified row memories read
+# the frontier campaign's rows (t250_, t084_; added 2026-10-18): 17 of 18 verified row memories read
 # SKIP for a head like "T109 hard-core Z^2: coexistence for lambda > 4.93828" with no result word in its first 70
 # characters. A bare t\d{3}_ would also take tenor tags (t500_, t915_ name simulation lanes), so the row counts only
 # when its folder rows/T### exists. The id may also sit inside the slug (label_noise_..._t355_2026_10_18, 18 Oct: a
@@ -653,7 +653,7 @@ def done_slugs(store=STORE):
 def provisional_rows_uncarried(done=None):
     """Provisional frontier-row memories (t###_ with rows/T### on disk) that are neither in the store nor dismissed and
     still stand. The program guard admits verified rows only, so these never reach the queue; '0 queued' says nothing
-    about them (21 Oct, claude-15b752e6: 18 such memories found, four force-ingested that morning had sat there)."""
+    about them (21 Oct: 18 such memories found, four force-ingested that morning had sat there)."""
     done = done_slugs() if done is None else done
     out = []
     try:
@@ -793,7 +793,7 @@ def ingest(slug, store=STORE, force=False, dry=False, rebuild=True):
     """Write one memory into the store. Returns (ok, claim_id_or_reason)."""
     text = _read(slug)
     if not text:
-        # 4 Nov (claude-99aebc7f): a slug list written on Windows and read by bash kept its \r, every slug missed its
+        # 4 Nov: a slug list written on Windows and read by bash kept its \r, every slug missed its
         # file, and 66 verified results were refused as "no description". Name the real cause.
         return False, "refused: no memory file %s.md" % slug
     desc, st, mod, body = _front(text)
@@ -804,8 +804,8 @@ def ingest(slug, store=STORE, force=False, dry=False, rebuild=True):
     if tier == "SKIP" and not force:
         return False, "refused: %s" % reason
     # a provisional frontier row (provrows says: ingest --force) whose only deny words are the ambiguous ones ("plateau"
-    # as a loss plateau, T232 depth 3) passes when forced; a hard word ("account", "premium") still refuses. 22 Oct,
-    # claude-4af6ff1a: before this, AMBIGUOUS_DENY reached verified rows only, so provrows could never clear one.
+    # as a loss plateau, T232 depth 3) passes when forced; a hard word ("account", "premium") still refuses. 22 Oct.
+    # Before this, AMBIGUOUS_DENY reached verified rows only, so provrows could never clear one.
     if tier == "SKIP" and force and reason.startswith("trading vocabulary") and not _forced_row_ambiguous_only(slug, desc):
         return False, "refused even when forced: %s (the trading boundary is not overridable here)" % reason
     if slug in done_slugs(store):
@@ -1533,7 +1533,7 @@ def main(argv):
             _extend_vecs()
         return 0 if ok else 1
     if cmd == "ingest-many" and len(argv) >= 2:
-        # 4 Nov (claude-99aebc7f): `ingest` rebuilds the whole prefilter per slug, past five minutes each on the laptop,
+        # 4 Nov: `ingest` rebuilds the whole prefilter per slug, past five minutes each on the laptop,
         # so 66 queued verdicts in a shell loop ran for hours and a timeout could kill one between its store write and
         # its ledger row. One lock, every slug written with the rebuild deferred, then one rebuild and one vector pass,
         # as `run` does. The file holds one slug a line; blank lines and '#' lines are skipped.

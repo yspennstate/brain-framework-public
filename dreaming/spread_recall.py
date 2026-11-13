@@ -23,7 +23,7 @@ Fail-safe silent on any error. Reads stdin (hook JSON), writes injection JSON to
 """
 import sys, os, io, json, re, time, bisect, threading
 
-# 5 Nov 2026 (claude-95df24fa): a resident spread_server.py keeps this hook's loaded state warm (median 415 -> 50 ms
+# 5 Nov 2026: a resident spread_server.py keeps this hook's loaded state warm (median 415 -> 50 ms
 # in the memo harness, output byte-identical 8/8). Ask it first, before the heavy imports below; on None (no server,
 # busy, declined, any error) the hook runs cold exactly as before. SPREAD_SERVER=0 turns it off.
 if __name__ == "__main__" and os.environ.get("SPREAD_SERVER", "1") != "0" and not os.environ.get("SPREAD_SERVER_CHILD"):
@@ -752,7 +752,7 @@ def _topic_expand(hit, members, sal):
     return out
 
 
-# _load_salience is kept per (mtime, size) of salience.tsv (3 Nov 2026, claude-738954b6, RECALL-10X rank 3): the
+# _load_salience is kept per (mtime, size) of salience.tsv (3 Nov 2026, RECALL-10X rank 3): the
 # resident recall server called it twice a warm recall and parsed the 3.8 MB file each time, 0.49 s a call in the
 # profile. The file is rewritten about once a day; a changed stat re-reads it. Each caller gets its own copy.
 # BRAIN_SAL_CACHE=0 turns the cache off.
@@ -807,7 +807,7 @@ def _index_lines():
     return out
 
 
-# The filename arm's folder names (3 Nov 2026, claude-738954b6, RECALL-10X rank 3): brain.py's recall sets MEM_NAMES
+# The filename arm's folder names (3 Nov 2026, RECALL-10X rank 3): brain.py's recall sets MEM_NAMES
 # for the length of a call to a reader of the call's own listing (_memlist, which the recall server answers from its
 # resident listing), so the arm no longer lists the 50k-entry folder a second time - 2.2 s of a 6-8 s warm recall in
 # the server profile. Same names in the same order; None (the hook, any other caller, a failed listing) lists as before.
@@ -842,7 +842,7 @@ def _mem_names():
     return os.listdir(MEM)
 
 
-# --- RunIndex: the seed arms' overlap counts without the per-line scan (3 Nov 2026, claude-738954b6, RECALL-10X rank 3) ---
+# --- RunIndex: the seed arms' overlap counts without the per-line scan (3 Nov 2026, RECALL-10X rank 3) ---
 # The two lexical arms of _seeds_from_prompt count, for each index line (and each memory file name), how many query
 # words occur in it as substrings: 0.6-0.8 s of a warm served recall on 50k lines plus 50k names. Every query word is
 # [a-z_]+ (_words lowers the prompt and keeps [a-zA-Z][a-zA-Z_]{2,}), so `w in text.lower()` holds exactly when w sits

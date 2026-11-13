@@ -1,6 +1,6 @@
 """Cards added to the math store since a prepared recall state was built, indexed into that state in memory.
 
-RECALL-10X lead 2 (claude-68ceaf54, 29 Oct 2026). fastrecall.open_prepared serves a state up to STALE_S seconds
+RECALL-10X lead 2 (29 Oct 2026). fastrecall.open_prepared serves a state up to STALE_S seconds
 behind the store, so a card ingested a minute ago is not findable until the next prebuild (hours on a starved disk);
 asking for it with STALE_S=0 costs a live read of the whole store (30-97 s a call on 29 Oct, one over 900 s).
 

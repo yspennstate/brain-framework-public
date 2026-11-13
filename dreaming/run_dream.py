@@ -40,7 +40,7 @@ T_START = time.time()
 # went 2.6 -> 6.2 GB and the film's guard killed the clip (7 min lost). These steps now wait for the Mac's shared
 # heavy_job.lock (the film releases it between clips) and hold it while they run. HEAVY_RUN="" turns this off.
 HEAVY_RUN = os.environ.get("HEAVY_RUN", os.path.join(HOME, "brain", "porting", "heavy_lock_run.sh"))
-# bm25 too (claude-52d17aea's read of the same log): its full build ran 20:03:27-20:09:46 beside that clip, swap
+# bm25 too (an agent's read of the same log): its full build ran 20:03:27-20:09:46 beside that clip, swap
 # 2.9 -> 3.7 GB at io 1710/s, before the embedding step took it to 6.2. Under the lock it delays a clip ~6 min at worst.
 HEAVY_STEPS = {"embedding refresh", "embedding refresh (retry)", "embedding publish", "bm25"}
 EMB_REFRESH = ("embedding refresh", ["build_memory_embeddings.py", "--incremental-from",

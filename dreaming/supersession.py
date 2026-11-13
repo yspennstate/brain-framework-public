@@ -601,7 +601,7 @@ def resolve(slug, routes, known_slugs=None, max_hops=32):
     return original
 
 
-# 3 Nov 2026, claude-baabdcd6: fok_probe and spread_recall both call active_supersessions on every prompt, in the one
+# 3 Nov 2026: fok_probe and spread_recall both call active_supersessions on every prompt, in the one
 # dispatcher process since the hooks went in-process, and each listed the whole memory folder: 0.45 s of a 0.72 s call
 # with 45k files (S/fokprof). The slug set is kept per process and reused while the folder's inode, mtime and ctime are
 # unchanged. Creating, removing or renaming an entry moves the folder's mtime and ctime, so the set is right by

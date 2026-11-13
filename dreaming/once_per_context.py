@@ -1,4 +1,4 @@
-"""Send a hook's standing text once per context, then only what changed (claude-fb4584c3, 4 Nov 2026).
+"""Send a hook's standing text once per context, then only what changed (4 Nov 2026).
 
 Measured on 24 h of the hook dispatcher's overflow files on the first deployment: most hook
 text is the same paragraph re-sent on every prompt to a session that already has it - waste_sense 1,926 chars a

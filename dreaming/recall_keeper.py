@@ -298,7 +298,7 @@ def main():
                         if 'not a recall server' in str(e):
                             # endpoint.json outlived its server and Windows gave the pid to another program: mark
                             # this endpoint stale so the next pass starts a server instead of waiting on that
-                            # program forever (4 Nov 06:10, pid 55060 after the 05:34 stand-down). claude-99aebc7f.
+                            # program forever (4 Nov 06:10, pid 55060 after the 05:34 stand-down).
                             STALE.add((ep['pid'], ep.get('port')))
                             continue
                 if child is not None and child.pid == ep['pid'] and ep.get('stamp') != stamp_now(ep):

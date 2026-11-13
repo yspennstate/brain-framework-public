@@ -475,7 +475,7 @@ def load_documents(mem: str | os.PathLike[str] | Path, slug: str,
             # the race test met this 2-3 times a run). A bundle still absent re-raises as before.
             if not os.path.lexists(bundle_dir(mem_path, safe_slug)):
                 raise
-    # A reader takes the verified snapshot first and the lock only when that fails (29 Oct 2026, claude-1e0a23c2,
+    # A reader takes the verified snapshot first and the lock only when that fails (29 Oct 2026,
     # RECALL-10X lead 6). Every reader in every process used to take the one memory-root write lock per bundle, and
     # each acquisition opens and stats the lock file; on the loaded laptop one recall spent 262 s in 256 loads and
     # lost bundles to the lock's 10 s timeout (an AttachmentError the recall reports as a failed bundle). The snapshot
@@ -491,7 +491,7 @@ def load_documents(mem: str | os.PathLike[str] | Path, slug: str,
         return _load_documents_unlocked(mem_path, safe_slug, missing_ok=missing_ok)
 
 
-# 10 Oct 2026 (claude-9bb7da02): a Codex worker's sandbox lets it read the memory directory but not open the lock
+# 10 Oct 2026: a Codex worker's sandbox lets it read the memory directory but not open the lock
 # sidecar for writing. The lock loop retried that refusal for its 10 s bootstrap deadline on each of the 41 bundles,
 # so every recall from a sandboxed solver timed out at its 60 s limit with no attachment read at all (w356, w370).
 _LOCK_WRITABLE: dict = {}
@@ -728,7 +728,7 @@ _BUNDLE_TOKENS: dict = {}
 
 def _bundle_tokens(slug: str, docs) -> tuple[int, dict]:
     """One bundle's search-token count and per-token counts, kept per bundle while its documents' names and sha256s
-    match (4 Nov 2026, claude-738954b6, RECALL-10X rank 3). load_documents checks every document's bytes against its
+    match (4 Nov 2026, RECALL-10X rank 3). load_documents checks every document's bytes against its
     sha256, so the same hashes mean the same text and the same tokens. Under the recall server every call re-joined
     and re-tokenised the text of all 41 bundles: 168 ms of a 1.8 s warm call. BRAIN_NODE_TOKCACHE=0 turns it off."""
     key = tuple((doc.name, doc.sha256) for doc in docs)

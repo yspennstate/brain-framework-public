@@ -2,7 +2,7 @@
 """graph_lane.py - the use-grown graph as a lane of brain.py recall, behind one dial.
 
 His order, 26 Sep 2026 04:28: build the edge and diffusion part now, with a parameter that tunes it against the simple
-recall that works today. The edges are claude-9209cf81's store (graph_store.py over the capture of every touch agents
+recall that works today. The edges are an agent's store (graph_store.py over the capture of every touch agents
 make: words, tools, files, folders, memories read and written, notes served, reflexes, errors); the diffusion is
 diffusion.py's personalised PageRank over them, seeded by the query's words and, with prf > 0, by lexical search's
 top memories (what agents read together with what bm25 already found).
@@ -133,7 +133,7 @@ def ranked(query, allowed=None, lex_top=(), depth=200, d=None):
     if S.sum() <= 0:
         return []
     # 16 walk steps, not the cache's 20 (residual 0.7^16 = 3e-3): the served recall answers were the same, word for
-    # word, on all 22 seed questions at 16 and at 14 (4 Nov 2026, claude-738954b6), the 200-deep graph list the same on
+    # word, on all 22 seed questions at 16 and at 14 (4 Nov 2026), the 200-deep graph list the same on
     # 10 of 13 walks with the same memories on all 13; ppr median 175 -> 154 ms. Set here, never in the dial: the
     # iteration count is part of the walk cache's name. BRAIN_PPR_ITERS=20 restores the old walk.
     try:
@@ -243,7 +243,7 @@ class _LazyLinks:
         self.db.close()
 
 
-# Lever 9 (3 Nov 2026, claude-fb4584c3): a long-lived process (brain_recall_server sets this on) keeps the neighbour
+# Lever 9 (3 Nov 2026): a long-lived process (brain_recall_server sets this on) keeps the neighbour
 # lists the lazy walk has read, keyed by the sidecar's generation (file id, size, write time, SQLite change counter).
 # The key is taken AFTER this call's read transaction holds its shared lock, so no writer can commit between the key
 # and the reads (the sidecar runs in rollback-journal mode); lists read under one key come from one version of the

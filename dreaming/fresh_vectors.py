@@ -1,4 +1,4 @@
-"""Meaning vectors for the memories the sidecar does not cover yet (R13, claude-1789621d, 13 Oct 2026).
+"""Meaning vectors for the memories the sidecar does not cover yet (R13, 13 Oct 2026).
 
 The sidecar (memory_embeddings.npz) is rebuilt every three hours by BrainEmbeddingRefresh. A memory written in
 between has no current row, so brain.py's query-meaning lane scores it on its words alone, and its own session's
@@ -97,7 +97,7 @@ def _check_key(reb, sr):
 def checked_encoder(emb, mem, builder, reb, sr):
     """The refresh's ONNX encoder, after it reproduces three of the sidecar's own rows; else None.
 
-    The check runs once per model file and sidecar file (claude-68ceaf54, 31 Oct 2026): on a starved box the encoder's
+    The check runs once per model file and sidecar file (31 Oct 2026): on a starved box the encoder's
     load and check took 170-233 s of the 480 s budget, and the same encoder on the same sidecar gives the same answer,
     so a passed check is kept in fresh_vectors_check.json and a run whose key matches skips it. A new sidecar (every
     three hours), a new export or a new onnxruntime changes the key and the check runs again.
@@ -193,7 +193,7 @@ def main():
                 todo.append((e.stat().st_mtime_ns, e.name[:-3]))
             except OSError:
                 continue
-    # Ordinary memories first, newest first within each class (claude-68ceaf54, 31 Oct 2026). On a loaded box a run
+    # Ordinary memories first, newest first within each class (31 Oct 2026). On a loaded box a run
     # encodes 4 to 12 rows while about 20 arrive, most of them compaction anchors, so newest-first left the older
     # ordinary memories dark until the three-hourly sidecar caught up: at 20:1x, 45 of 59 waiting memories had no
     # current vector. Agents recall memories far more than compaction anchors, so those go first.

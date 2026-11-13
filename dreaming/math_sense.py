@@ -125,7 +125,7 @@ MAX_STATEMENT_CHARS = int(os.environ.get("MATHBRAIN_MAX_STATEMENT_CHARS", "480")
 TIME_BUDGET_S = float(os.environ.get("MATHBRAIN_TIME_BUDGET_S", "30"))   # was 2.5 until 2026-09-07: under load the
                           # store load alone passed it and the lane abstained silently; the owner's order is that
                           # the brain always goes in, so the lane now waits (the hook's own timeout is the ceiling)
-# A HEADLESS WORKER WAITS LONGER (mb10d campaign, 2026-09-24, from claude-e93602d2's ab30 measurement). Research sessions
+# A HEADLESS WORKER WAITS LONGER (mb10d campaign, 2026-09-24, from an agent's ab30 measurement). Research sessions
 # the Task Scheduler launches run BelowNormal; with 13 of 16 cores rendering film the 0.15 s prefilter-and-load stage
 # took 42 s, past the 30 s budget, the 2 s top-card integrity grace could not finish either, and the hook served NOTHING
 # in both brain arms of two items - mute exactly for the background research agents it is meant to serve. Their probe
@@ -875,7 +875,7 @@ def _verdict_text(prompt, data):
         return False
 
 
-# A PROHIBITION IS NOT THE SUBJECT (30 Sep 2026, claude-825b1305, the owner's 14:09 order on getting knowledge to agents).
+# A PROHIBITION IS NOT THE SUBJECT (30 Sep 2026, the owner's 14:09 order on getting knowledge to agents).
 # Research-subagent tasks carry safety lines such as "never start any <book word> or bot process", and the word inside the
 # prohibition silenced four quadratic-form research tasks at this gate while the one task without the line got three good
 # cards. A match is skipped when the text before it in the same clause ends in a prohibition (never, don't, do not, must
@@ -1449,7 +1449,7 @@ def _trust_tag(meta, read=None):
         return "unverified"
 
 
-# ORIGIN IN THE HINT (2026-09-24, campaign mb10d). T16 (claude-34f0942b, 24 Sep) handed research agents the store's
+# ORIGIN IN THE HINT (2026-09-24, campaign mb10d). T16 (24 Sep) handed research agents the store's
 # program frontier: a house claim later found false was printed "[theorem]" in the same format as a published theorem,
 # and the plans built on it - a list of our own results carries their errors with the list's authority. So a card that
 # is this project's own record says so in its hint: "ours, unrefereed". Read from provenance, never from the subject:
@@ -1461,7 +1461,7 @@ ORIGIN_HINT = os.environ.get("MATHBRAIN_ORIGIN_HINT", "1").strip() not in ("0", 
 # "owner result; ..." is how the campaign ledger marks his own settled problems (Aldous-Fill 4.48, Bradley Q5, the
 # maximal Kemeny constant); "T6 correction ..." and "round-5 correction of claim_..." are our corrections of our own
 # cards. An agent session named in a provenance is NOT the test: 96 Wikipedia cards carry "formula repair 2026-09-23
-# (claude-96cda5f6)" and are literature an agent tidied. Audited over every current card of the store on 24 Sep 20:4x
+# (<session id>)" and are literature an agent tidied. Audited over every current card of the store on 24 Sep 20:4x
 # (live0924Q): every harvest, Wikipedia, ProofWiki and literature card untagged, the textbook "growth-b1" cards
 # untagged, the open problem statements "as read from the source" untagged.
 # MATHBRAIN_HOUSE_PROVENANCE adds a deployment's own provenance prefixes (a regular expression, matched at the start).
@@ -1624,7 +1624,7 @@ def _carries_precision(node, places):
     return False
 
 
-# USE-GROWN LAYER (26 Sep 2026, claude-825b1305; his 15:5x order: the brain live, "the edges growing and learning,
+# USE-GROWN LAYER (26 Sep 2026; his 15:5x order: the brain live, "the edges growing and learning,
 # including for math brain"). ~/.claude/brain_graph/bin/math_use.py keeps each claim's use history (every serve, every
 # explicit fetch) and which claims were served into the same session; _rank_score tilts a candidate by
 # (1 + MATHBRAIN_USE_WEIGHT x its use score in 0..1), half its node size (ACT-R level of its uses), half its strongest
@@ -1684,7 +1684,7 @@ def _rank_score(hit, precision=None, boost=0.0):
     return base
 
 
-# WHERE THE USE LAYER ACTS (26 Sep 19:32, claude-825b1305). Until then the tilt above sat inside _rank_score, so it
+# WHERE THE USE LAYER ACTS (26 Sep 19:32). Until then the tilt above sat inside _rank_score, so it
 # decided which cards entered the block. Measured with MATHBRAIN_USE_LOG=0 on the three locate banks (130 questions,
 # eval_value_in_block.py): value in block 97 with the weight off, 96 at 0.15 - one question (l1_c99e1a03e8b5) lost all
 # three of its cards, the right one among them, to three other cards - and on the 40 reworded L2 questions
@@ -1984,7 +1984,7 @@ def _block_cov_floor_for(chosen, floor):
 
 
 def _cov_agree_wide(chosen, st):
-    """COV_AGREE's test (claude-5693aca3, 19 Oct; default 2). MATHBRAIN_COV_AGREE_WIDE 0 = the old rule (the semantic
+    """COV_AGREE's test (19 Oct; default 2). MATHBRAIN_COV_AGREE_WIDE 0 = the old rule (the semantic
     top is the lead). 1 = also when the semantic top is a same-title copy of the lead (titles equal after case and
     punctuation folding). 2 = also when the semantic top is any card of the block; it is moved to the front.
     Bank 19 Oct (math_probe_fresh_20260903, hook path): 0 -> 70/57/8 served/rank1/silent, 2 -> 72/59/6, the two rows
@@ -2194,7 +2194,7 @@ def _select(hits, apply_gates=True, cap=3, title_query=None, prompt=None, anchor
     )
     if not ranked:
         return []
-    # SANDBOX (claude-5693aca3, 19 Oct): coverage tie-break among near-tied leaders, MATHBRAIN_COVER_EPS (0 = off).
+    # SANDBOX (19 Oct): coverage tie-break among near-tied leaders, MATHBRAIN_COVER_EPS (0 = off).
     try:
         _ceps = float(os.environ.get("MATHBRAIN_COVER_EPS", "0") or 0)
     except ValueError:
@@ -2291,7 +2291,7 @@ def _select(hits, apply_gates=True, cap=3, title_query=None, prompt=None, anchor
                 _named = _name_tokens(prompt) & set(re.findall(r"[a-z0-9]+", _nf_fold(ranked[0].node.title)))
             except Exception:
                 _named = set()
-        # 2026-10-19 (claude-5693aca3): two more kinds of sibling, each behind its own switch, ON since 10:4x 19 Oct.
+        # 2026-10-19: two more kinds of sibling, each behind its own switch, ON since 10:4x 19 Oct.
         # Measured on the 218-item bank (state/hookpath_rival_{base,poss,vocab,both}_20261019.jsonl): each switch
         # answers exactly its own item and changes nothing else, unanswerable ids identical; both together q_content
         # served 68 -> 70, rank-1 55 -> 57, silent 10 -> 8, false fire 28/40 and strict 19/31 unchanged. Set "0" to turn off.
@@ -2576,7 +2576,7 @@ def _already_injected(session_id, node_ids, *, record=True):
             rec = {}
         if not isinstance(rec, dict) or now - float(rec.get("ts", 0) or 0) >= SESSION_STATE_TTL_S:
             rec = {}
-        # ONE CONTEXT, NOT 48 HOURS (5 Nov 2026, claude-1e0a23c2, MATHBRAIN_DEDUP_PER_CONTEXT, default on). A compaction
+        # ONE CONTEXT, NOT 48 HOURS (5 Nov 2026, MATHBRAIN_DEDUP_PER_CONTEXT, default on). A compaction
         # drops every block the session was shown, so an id recorded before the session's newest compaction is not a
         # duplicate after it. Measured 5 Nov: 409 of 416 all_dedup_suppressed silences in 24 h came a median 16 min
         # after a compaction, in loop sessions that compact about every 40 min. The shard records the compaction it
@@ -3437,7 +3437,7 @@ _ALIASES = (
     (r"\bFPP\b", "first passage percolation", r"\bfirst[- ]passage percolation\b", "FPP"),
     (r"\bSAWs?\b", "self avoiding walk", r"\bself[- ]avoiding walks?\b", "SAW"),
     (r"\bLYM\b", "Lubell Yamamoto Meshalkin", r"\bLubell[- ]Yamamoto[- ]Meshalkin\b", "LYM"),
-    # 5 Nov (claude-1e0a23c2): "MP law" asks for Marchenko-Pastur; bare "MP" stays unexpanded (MP polynomials in the store),
+    # 5 Nov: "MP law" asks for Marchenko-Pastur; bare "MP" stays unexpanded (MP polynomials in the store),
     # and the reverse never fires (the store's titles already spell the name out).
     (r"\bMP[- ](?:law|distribution|density|limit)\b", "Marchenko-Pastur law; Marchenko Pastur law", r"(?!x)x", ""),
 )
@@ -3720,7 +3720,7 @@ def _attach_answers(chosen, pool_hits, edges, cap_extra=2):
         _after = os.environ.get("MATHBRAIN_ANSWER_AFTER_RESULT", "1").strip() not in ("0", "off", "false", "")
         _reft = {e.target_id for e in edges if e.kind is EdgeKind.REFUTES}
         for h in chosen:
-            # SANDBOX sb25 (claude-1e0a23c2, 5 Nov 01:5x): the answer leads unless the card is a PROVED stated result (no refutes edge in, no question word in the title). A served
+            # SANDBOX sb25 (5 Nov 01:5x): the answer leads unless the card is a PROVED stated result (no refutes edge in, no question word in the title). A served
             # card that is itself a stated result keeps the lead and its proof ingredient follows it.
             _q = True
             if _after:
@@ -4005,7 +4005,7 @@ def _tuple_exact_first(query, hits):
 # are the picture maker for a cinematic history documentary" and "You are a picture maker for three history documentaries
 # (the history of mathematics, ...)" slipped past the exact wording and got algebra cards on 09-23 at 16:51, 18:33 and
 # 20:38 (surfaced.tsv), the history-of-mathematics batches looking most like mathematics of all.
-# 2026-11-05 (claude-1e0a23c2): the picture REVIEW head too. The film line's headless reviewers start 'You are checking
+# 2026-11-05: the picture REVIEW head too. The film line's headless reviewers start 'You are checking
 # pictures drawn for the documentary ...'; in the 24 h to 5 Nov 08:4x all 59 hard_deadline silences in the real-session log
 # were those sessions, each holding the hook 60-69 s before it gave up and served nothing.
 _RELAY_OR_PICTURE_HEAD = _lazy_re(
@@ -4013,13 +4013,13 @@ _RELAY_OR_PICTURE_HEAD = _lazy_re(
     r"|<task-notification\b|<agent-notification\b|<hook_prompt\b|<system-reminder\b|<local-command-stdout\b"
     r"|<recommended_plugins\b|You are (?:a|the) picture maker\b|You are checking (?:the )?pictures drawn for\b"
     r"|Next stage \(\d{4}-\d\d-\d\d \d\d:\d\d(?::\d\d)? UTC\)\. Read\b)", re.I)
-# 2026-11-05 (claude-1e0a23c2): the dated stage prompt of a board-driven worker loop too ('Next stage (2026-11-05 07:09
+# 2026-11-05: the dated stage prompt of a board-driven worker loop too ('Next stage (2026-11-05 07:09
 # UTC). Read ...BOARD.md'). It is fixed procedure and its maths lives in the board files the worker reads; in 24 h it
 # drew 30 hard_deadline and 11 integrity_budget silences against 9 serves, all 9 the same off-topic draft. Anchored on
 # the dated stamp, so a question that merely begins 'Next stage' still reaches the gate.
 RELAY_SKIP = os.environ.get("MATHBRAIN_RELAY_SKIP", "1").strip() not in ("0", "off", "false")
 
-# A REPEATED PROMPT WITH A KNOWN ANSWER (5 Nov 2026, claude-1e0a23c2, MATHBRAIN_REPEAT_SKIP, default on). Loop sessions
+# A REPEATED PROMPT WITH A KNOWN ANSWER (5 Nov 2026, MATHBRAIN_REPEAT_SKIP, default on). Loop sessions
 # send the same tick prompt every 5-10 minutes. Measured 5 Nov on a day of mathbrain_silence.tsv: 682 of 1,259 silences
 # were a prompt identical (same session, same fingerprint) to one that had already ended in a post-ranking silence -
 # 264 incoherent_weak_block, 418 all_dedup_suppressed - each after a full store load and ranking. Inside one context
@@ -4246,14 +4246,14 @@ COV_AGREE = os.environ.get("MATHBRAIN_COV_AGREE", "1").strip() not in ("0", "off
 # reorder) could still put another card first. When a yield was used, the use reorder is skipped and the block is
 # emitted only if its first card is still the meaning channel's first claim.
 COV_SEAL = os.environ.get("MATHBRAIN_COV_SEAL", "1").strip() not in ("0", "off", "false", "")
-# A WEAK LEAD IN A SCATTERED BLOCK IS SILENCED (MATHBRAIN_COH_CUT, default on since 19 Oct 14:4x; 19 Oct, claude-5693aca3, study
+# A WEAK LEAD IN A SCATTERED BLOCK IS SILENCED (MATHBRAIN_COH_CUT, default on since 19 Oct 14:4x; 19 Oct, study
 # brain_graph/studies/math_hook_cov_agree_wide_20261019/NOTES_precision_screen.md). When the store lacks the theorem a
 # prompt asks about, the hook still tends to serve a block: its first card sits further from the prompt than a right
 # lead does, and its cards have little to do with one another. A block of two or more cards is withheld when the lead
 # card's claim vector is below COH_CUT_LEAD in cosine to the prompt AND the cards' mean pairwise cosine is below
 # COH_CUT_PAIR. Both readings exist at serve time. Measured at 0.70 / 0.70: fresh bank 2 of 19 strict false fires
 # removed, 0 of 143 rank-1 hits lost; held-out probes 19 of 145 unanswerable fires removed, 0 of 92 gold hits lost.
-# LEAD RAISED TO 0.80 on 2 Nov 22:1x (claude-1e0a23c2, op/cohname in brain_math_loop_1e0a: coh_held.py, coh_held2.py,
+# LEAD RAISED TO 0.80 on 2 Nov 22:1x (op/cohname in brain_math_loop_1e0a: coh_held.py, coh_held2.py,
 # coh_lead_fresh.py, coh_paironly.py). The pair line is the fragile one: every right serve on both banks has pair >= 0.697
 # and pair 0.71-0.72 already loses 3 held-out gold hits. No right serve on either bank has pair < 0.70 and no name
 # exemption, so the lead line can rise with the pair line kept: at 0.80 / 0.70, held-out 39 more unanswerable fires and
@@ -4292,7 +4292,7 @@ def _closing_paragraph(prompt):
 
 
 # THE CUT SPARES A BLOCK WHOSE LEAD CARD IS THE THING THE PROMPT NAMES (MATHBRAIN_COH_NAME_EXEMPT, default on; 2 Nov
-# 2026, claude-1e0a23c2). The healthcheck row "Sylow theorems." was silenced at lead 0.583 / pair 0.666 although the lead
+# 2026). The healthcheck row "Sylow theorems." was silenced at lead 0.583 / pair 0.666 although the lead
 # card is titled "Sylow Theorems": a two-word prompt sits far from any card in cosine. Exempt only when the prompt has
 # name tokens (_name_tokens) and every one of them is a word of the lead card's title (prefix match for plurals).
 # Screened on the cut's own 19 Oct A/B rows: 0 of 3 fresh and 0 of 22 held-out silenced rows would come back.
@@ -4322,7 +4322,7 @@ _RESULT_WORDS = frozenset(("theorem", "theorems", "inequality", "inequalities", 
                            "formula", "law", "identity", "criterion", "bound", "hypothesis", "estimate", "estimates"))
 
 
-# A quoted name needs one SPECIFIC word (sb26, claude-1e0a23c2, 5 Nov): "main theorem", "key lemma", "limit theorem",
+# A quoted name needs one SPECIFIC word (sb26, 5 Nov): "main theorem", "key lemma", "limit theorem",
 # "uniqueness theorem" name a kind of result, not one result, and passed off-topic lead cards (gen26 probe).
 _QUOTE_GENERIC = frozenset(os.environ.get("MATHBRAIN_QUOTE_GENERIC_EXTRA", "").lower().split()) | frozenset((
     "main", "key", "first", "second", "third", "fourth", "fifth", "basic", "general", "fundamental", "principal",
@@ -4342,7 +4342,7 @@ def _lead_title_names_prompt(prompt, title):
         t = unicodedata.normalize("NFKD", title)
         t = "".join(c for c in t if not unicodedata.combining(c))
         tw = set(w for w in re.findall(r"[a-z0-9]+", t.lower()) if len(w) > 2)
-        # A RESULT, NOT A CONCEPT (3 Nov, claude-1e0a23c2, op/exres): the exemption kept an unanswerable Kac-Rice block
+        # A RESULT, NOT A CONCEPT (3 Nov, op/exres): the exemption kept an unanswerable Kac-Rice block
         # because its lead card was the concept "Gaussian process", named in the prompt. The exemption is for a prompt
         # that names the theorem the lead card states, so the title must carry a result word. Fresh bank: the three
         # exempt hits (Sylow, isoperimetric, implicit function) keep it, the Kac-Rice fire loses it.
@@ -4350,7 +4350,7 @@ def _lead_title_names_prompt(prompt, title):
             return False
         if nt and all(any(w == x or w.startswith(x) or x.startswith(w) for x in tw) for w in nt):
             return True
-        # SANDBOX sb25 (claude-1e0a23c2, 5 Nov): a quote whose content words (two or more) all sit in the title.
+        # SANDBOX sb25 (5 Nov): a quote whose content words (two or more) all sit in the title.
         if os.environ.get("MATHBRAIN_QUOTE_NAME_EXEMPT", "1").strip() in ("0", "off", "false", ""):
             return False
         tw2 = set(re.findall(r"[a-z0-9]+", t.lower()))
@@ -4373,7 +4373,7 @@ def _incoherent_weak_block(prompt, ids):
         from math_brain import semantic as _S
         import numpy as _np
         _S._load_artifact()
-        # Pair first (2 Nov, claude-1e0a23c2): a block is cut only when pair < COH_CUT_PAIR, so a coherent block skips
+        # Pair first (2 Nov): a block is cut only when pair < COH_CUT_PAIR, so a coherent block skips
         # the prompt embed (355 of 446 held served blocks). Same verdicts, 24 of 24 held blocks; the id->row map is
         # cached per vector artifact instead of rebuilt each call.
         global _COH_POS
@@ -4402,7 +4402,7 @@ def _incoherent_weak_block(prompt, ids):
 
 
 # A BLOCK FAR FROM THE PROMPT ON THE STORE'S OWN SCALE IS SILENCED (MATHBRAIN_MEANQ_Z, default 1.25 since 19 Oct 15:5x;
-# 19 Oct, claude-5693aca3, study math_hook_cov_agree_wide_20261019/calibrated_screen.py, z_sweep.py, NOTES). The served
+# 19 Oct, study math_hook_cov_agree_wide_20261019/calibrated_screen.py, z_sweep.py, NOTES). The served
 # cards' mean cosine to the prompt moves with prompt length, so it is read against the prompt's mean cosine to a fixed
 # random sample of 4000 store cards: z = (meanq - base) / sd. Held-out long prompts: 192 of 427 served blocks withheld
 # (146 gold misses, 46 unanswerable), 0 of 92 gold hits lost; fresh bank: 2 of 160 hits lost. 0/off disables.
@@ -4438,7 +4438,7 @@ def _far_block_z(prompt, ids):
 # A SHORT PROMPT THAT QUOTES A NAME NO SERVED CARD CARRIES IS SILENCED (MATHBRAIN_QUOTE_COV, sandbox sb20, 3 Nov).
 # A prompt of at most QUOTE_MAX_WORDS words outside its quotes is asking about the quoted thing; a block whose
 # every card carries less than QUOTE_COV of each quote's IDF weight answers some other question.
-# Default 0.75 (landed 3 Nov 22:4x, claude-1e0a23c2, sandbox sb20). enum_ctrl, 80 valid rows: absent_13's lone
+# Default 0.75 (landed 3 Nov 22:4x, sandbox sb20). enum_ctrl, 80 valid rows: absent_13's lone
 # Erdos-Sos card (coverage 0.658, 7 words outside quotes) silenced, the rule fired on nothing else, present items
 # served and right 15/15 = sb19. Held enum_subset: 0 of 104 quoted items have <= 20 words outside quotes, so untouched;
 # his 11 short quoted prompts of the last 3000 all stop at math_gate_rejected before this. 0/off disables.
@@ -5376,7 +5376,7 @@ def _main_body(data, out):
         # every one of which the brain answers), and no proof-audit item, no saw_* item, and nothing in either
         # half of the fresh bank does. A question with even ONE of its quoted titles in the pool still serves.
         # THE QUOTES MUST BE WHAT THE PROMPT IS ABOUT (MATHBRAIN_ENUM_MIN_SHARE, default 0.15; 0 = the old rule;
-        # 2026-11-03, claude-1e0a23c2). The held bank wraps every one of its 788 long prompts in the same three
+        # 2026-11-03). The held bank wraps every one of its 788 long prompts in the same three
         # quoted instruction phrases, and this rule read them as three absent titles: 104 of the 121 held_1 items
         # that went silent with their gold card in the store died here. An enumeration question is mostly its
         # quoted names (share well above 0.3); in those prompts the quotes are at most 5.8 pct of the words.
@@ -5583,7 +5583,7 @@ def _main_body(data, out):
                     # reach a sum a 2,000-character proof reaches by length alone
                     qself = float(getattr(math_prefilter, "LAST_QSELF", 0.0) or 0.0)
                     floor = min(GATE_FLOOR, GATE_FRAC * qself) if (GATE_FRAC > 0 and qself > 0) else GATE_FLOOR
-                    # THE QUESTION PART (MATHBRAIN_GATE_QPART, 19 Oct, claude-5693aca3): a question asked
+                    # THE QUESTION PART (MATHBRAIN_GATE_QPART, 19 Oct): a question asked
                     # after a long lead-in carries a self-score the lead-in inflates, so the floor sits at its cap
                     # (25) while the cards the ranker chose score 12-25 on the whole prompt (embedded v2 trace: 15
                     # of 16 silent rows lost every chosen card here). A card that fails the whole-prompt floor is
@@ -5637,7 +5637,7 @@ def _main_body(data, out):
                                 continue
                             n_ml += 1
                         keep.append(h)
-                    # A LONE RESCUE (MATHBRAIN_QPART_SOLO, 19 Oct, claude-5693aca3): a block whose only card is one the
+                    # A LONE RESCUE (MATHBRAIN_QPART_SOLO, 19 Oct): a block whose only card is one the
                     # question part rescued has nothing beside it to corroborate it; it stays only when its closing-
                     # paragraph score clears that part's floor by the factor SOLO (0 = off). Real bank, rows under 25 s in
                     # every arm: question part alone 74 hits / 13 wrong, with SOLO 1.5 73 / 9 (SOLO 2: 71 / 9). The 1.5 is

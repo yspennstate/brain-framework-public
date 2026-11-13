@@ -210,4 +210,7 @@ if __name__ == "__main__":
     if "-h" in sys.argv[1:] or "--help" in sys.argv[1:]:
         print(__doc__ or os.path.basename(__file__))
         raise SystemExit(0)
-    sys.exit(main())
+    # An optional path scans that tree instead of this repo. Without it the argument was silently
+    # ignored, and a scan of another tree reported this repo's result as its own.
+    args = [a for a in sys.argv[1:] if not a.startswith("-")]
+    sys.exit(main(os.path.abspath(args[0]) if args else None))

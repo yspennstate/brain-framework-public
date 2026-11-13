@@ -1,4 +1,4 @@
-"""eval_expansion_agent_recalls.py - doc expansion on the searches agents actually ran (26 Sep, claude-825b1305).
+"""eval_expansion_agent_recalls.py - doc expansion on the searches agents actually ran.
 
 Every `brain.py recall` since the live log began (live/recall_log.jsonl), judged by the live learner's own rule,
 graph_learn.judge_searches: the session the record names (the shown-slug overlap within 90 s only for records logged
@@ -10,8 +10,7 @@ question words it lacks). The result records the sha256 of the judge's source an
 search was joined or dropped.
 
 Before 27 Sep 07:1x the command line took its own path: the shown-slug join for every record, an uncut ten-minute window
-and the best-ranked of any opened memory per arm, while judged_recalls() below already used the shared judge (audit
-account03/B12, R6). Results built before then (results/DOC_EXPANSION_AGENT_RECALLS_2026-09-27.json, and the separate
+and the best-ranked of any opened memory per arm, while judged_recalls() below already used the shared judge. Results built before then (results/DOC_EXPANSION_AGENT_RECALLS_2026-09-27.json, and the separate
 eval_agent_recalls_fixed.py's) are from those rules.
 
     python eval_expansion_agent_recalls.py OUT_JSON [--kinds his,script]
@@ -104,7 +103,7 @@ def judged_recalls(until=None, kinds=None, stats=None):
         by_s[s].append((ts, kd, nid))
     # the live learner's own rule (graph_learn.judge_searches, 27 Sep): the session the record names, a window that ends
     # at the same session's next search, and the opens in order - opened[0] is the fixed target; the whole list is for
-    # descriptive any-open counts only (audits account03/B01 R1, account04/B18 R6)
+    # descriptive any-open counts only
     import graph_learn
     judged = []
     trio = graph_learn.judge_searches(recs, by_s)

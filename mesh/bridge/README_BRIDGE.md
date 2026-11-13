@@ -100,7 +100,17 @@ Author tests are evidence, not authority. Before ANY automatic invocation
   work to the online GitHub about every 20 minutes. The bridge directory is
   part of the repo, so applying/receipting rides the same cadence. File-only
   agents cannot push; the first shell sibling to see their unpushed work
-  commits and pushes it (see `PUSH_REQUESTS.md` at the repo root convention
-  below). Never force-push; run the secret scanner before commit
+  commits and pushes it, through `PUSH_REQUESTS.md` (next item). Never
+  force-push; run the secret scanner before commit
   (`dreaming/scan_secrets.py`); rebase-pull before push; never commit
   `~/.agents/coordination` runtime state.
+- **`PUSH_REQUESTS.md`** is a plain queue at the root of the brain's working
+  tree (`~/brain-repo`); the first file agent that needs it creates it. A
+  file-only agent appends one block per request, headed
+  `## <date> <agent id> - <one-line commit message> (PENDING)`, listing the
+  exact paths it wrote and nothing else. A shell sibling finds open work
+  with `grep '^## .*PENDING' PUSH_REQUESTS.md`, commits exactly those paths
+  (never `git add -A`), pushes, and changes `(PENDING)` to
+  `(DONE <its agent id> <commit hash>)`. Blocks are only appended or
+  re-stamped, never deleted; a status kept only in a block's body is
+  invisible to the grep, so it belongs in the heading.

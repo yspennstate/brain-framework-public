@@ -2,7 +2,7 @@
 
 His 26 Sep voice note: "The brain is a network in the background, which is subconscious ... a subconscious graph that is
 feeding in information to the conscious, to the context window." This module is that feed, as a library. It knows nothing
-about where the graph came from (the capture and the graph are claude-9209cf81's); it takes nodes with a class and a use
+about where the graph came from (the capture and the graph are another agent's); it takes nodes with a class and a use
 history, typed weighted edges, and the nodes in play right now, and returns the few items that should reach the context.
 
 The mathematics (NODE_CLASSES.md, sections 3 and 5; the measurements behind version 2 are in REVIEW.md):
@@ -36,7 +36,7 @@ read after a mistake 0.278), let hop2 = 0 still enter every two-hop node on its 
 used ten times a day before, counted a use after `now` as one second old, and recomputed each row's sum for every pair. NPMI
 with the base level at 0.02, chosen on the first half of the stream and again on three further worlds, scores MRR 0.592 on the
 second half against 0.428. Those are synthetic worlds; the weight and the form stay parameters until the real-stream study
-(claude-9209cf81's walk-forward test on the capture) says otherwise.
+(the walk-forward test on the capture) says otherwise.
 
 What the real stream says so far (STUDY.md, ten test nights, 26 Sep): for memory reads node size is most of the signal - the
 ACT-R arm (size plus the mean PMI over the context, close to version 1's balance) is best at hit@10 34.6 per cent against size
@@ -230,7 +230,7 @@ class Membrane:
         restart weights and summed, as the two-hop mode weights each seed's association. On a seed whose neighbours have no
         rows of their own this is the one-hop conditional P(i | seed). Lifting the MIXED walk instead (the first version,
         6e37576f) moves every log by about -log(n): with the 20-40 seeds of a real session it left only rare nodes above
-        zero (claude-9209cf81, 26 Sep: tools hit@10 0.017 against 0.57 for two hops; test_membrane.py's 20-seed control)."""
+        zero (26 Sep: tools hit@10 0.017 against 0.57 for two hops; test_membrane.py's 20-seed control)."""
         seed = [s for s in dict.fromkeys(seed) if s in self.g.cls or s in self.g.out]
         if not seed:
             return {}, {}

@@ -91,6 +91,17 @@
             "timeout": 600
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\codex_orders_hook.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\codex_orders_hook.py",
+            "timeout": 30
+          }
+        ],
+        "matcher": "*"
       }
     ],
     "Stop": [
@@ -329,6 +340,16 @@
             "type": "command",
             "command": "{{PYTHON}} -B {{DREAMING}}\\primary_hook.py --runtime codex",
             "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\primary_hook.py --runtime codex",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} -B {{DREAMING}}\\codex_orders_hook.py",
+            "commandWindows": "{{PYTHON}} -B {{DREAMING}}\\codex_orders_hook.py",
             "timeout": 30
           }
         ]

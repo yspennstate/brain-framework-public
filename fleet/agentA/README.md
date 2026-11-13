@@ -61,6 +61,6 @@ its files from `removed/`.
 
 ## Ground rules baked into every prompt
 No local GPU for anyone (two crashes today were GPU-load-correlated); local
-compute light; heavy compute on the Azure box aiwork area per
-/srv/aiwork/AI_BOX_RULES.md; never create visible terminal windows; don't
+compute light; heavy compute on a separate research machine, under the rules
+written down for that machine; never create visible terminal windows; don't
 touch other sessions' files.

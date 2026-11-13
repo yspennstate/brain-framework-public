@@ -248,7 +248,7 @@ independent adversarial review (checklist in `bridge/README_BRIDGE.md`;
 `INTEGRATION_READY` marker absent = dark), apply it manually only. File-only
 siblings compensate for claimlessness with additive writes plus exact
 disclosure of every touched path, and queue their commits in the repo-root
-`PUSH_REQUESTS.md`.
+`PUSH_REQUESTS.md` (its format is in `bridge/README_BRIDGE.md`).
 
 ## Push cadence (owner rule, 2026-07-10)
 

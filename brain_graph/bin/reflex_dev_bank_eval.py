@@ -1,4 +1,4 @@
-"""Score reflex triggers on a development bank the way the hook matches them (28 Sep, claude-825b1305).
+"""Score reflex triggers on a development bank the way the hook matches them.
 
 Each bank sentence is wrapped in four inputs the priming hook really sees - an Edit (new_string), a Write (content
 mid-file), a Bash heredoc and a raw prompt - serialized with json.dumps(tool_input, ensure_ascii=False) for the tool

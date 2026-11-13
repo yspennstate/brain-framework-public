@@ -68,7 +68,10 @@ def main() -> int:
         if event == "SessionStart":
             mesh.hello(agent, args.runtime, "session started; task not published yet", cwd,
                        duration_seconds("45m"), "active", session=session_key)
-            emit(event, mesh.digest(agent, mark_delivered=True))
+            # emit first, stamp after: a crash between fetch and emit leaves the message queued
+            _text, _ids = mesh.digest_with_ids(agent)
+            emit(event, _text)
+            mesh.mark_delivered(agent, _ids)
         elif event == "UserPromptSubmit":
             # Never copy the raw user prompt into the plaintext coordination DB:
             # it can contain private data or credentials.  Agents publish a safe
@@ -77,7 +80,10 @@ def main() -> int:
             mesh.hello(agent, args.runtime, "interactive session active; task summary not auto-copied",
                        cwd, duration_seconds("45m"), "working",
                        session=session_key)
-            emit(event, mesh.digest(agent, mark_delivered=True))
+            # emit first, stamp after: a crash between fetch and emit leaves the message queued
+            _text, _ids = mesh.digest_with_ids(agent)
+            emit(event, _text)
+            mesh.mark_delivered(agent, _ids)
         elif event == "Stop":
             try:
                 mesh.pulse(agent, status="waiting")
@@ -89,7 +95,10 @@ def main() -> int:
             parent = session_agent(args.runtime, data)
             mesh.hello(child, args.runtime, f"subagent {data.get('agent_type') or ''}".strip(), cwd,
                        duration_seconds("45m"), "working", parent=parent)
-            emit(event, mesh.digest(child, mark_delivered=True))
+            # emit first, stamp after: a crash between fetch and emit leaves the message queued
+            _text, _ids = mesh.digest_with_ids(child)
+            emit(event, _text)
+            mesh.mark_delivered(child, _ids)
         elif event == "SubagentStop":
             child_key = str(data.get("agent_id") or data.get("agent_type") or "subagent")
             child = f"{args.runtime}:sub:{child_key[:40]}"

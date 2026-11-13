@@ -1,5 +1,5 @@
 """test_search_session_identity.py - a logged search that names its session is judged in that session or not at all
-(28 Sep 2026, claude-825b1305; interactive audit IA-20260928-01).
+.
 
     python test_search_session_identity.py [--module GRAPH_LEARN.py] [--old OLD_GRAPH_LEARN.py]
 

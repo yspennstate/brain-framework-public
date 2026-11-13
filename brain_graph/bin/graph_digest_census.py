@@ -1,4 +1,4 @@
-"""Census for B07-R13-MATH-GRAPH-ROW-DIGEST-BYPASS-019: rebuild every node and edge of a math-brain store the way
+"""Census: rebuild every node and edge of a math-brain store the way
 ResearchStore.get_nodes / _edge_from_row do, recompute GraphNode.digest() / GraphEdge.digest(), and count rows whose
 stored digest column differs. Read-only on the database named (open it on a copy).
     python graph_digest_census.py STORE.sqlite3 SRC_DIR OUT.json

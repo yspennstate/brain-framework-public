@@ -89,6 +89,11 @@ become instincts.
 | `route.py` / `routing_policy.json` / `ROUTING.md` | learned task→agent routing |
 | `dream_delegation_review.py` | the nightly learning + mistake-harvest step |
 
+A fresh install has the scripts only. `delegation_ledger.jsonl` appears with the first
+worker `ledger.py` records, and `routing_policy.json` and `ROUTING.md` with the first
+`python route.py --rebuild` (the dream runs it nightly). Until the ledger has outcomes,
+`route.py --recommend <task type>` answers from its priors.
+
 ## Orchestrator preamble (paste into a parent launch prompt)
 
 > You are an orchestrator. Do the expensive thinking through lean, disposable workers, and

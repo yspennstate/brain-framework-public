@@ -1,5 +1,5 @@
 """score_corrections_per_session.py - the membrane's correction line scored per session, so one session cannot carry
-the result (27 Sep, claude-825b1305; pre-registered 13:1x in study/TWO_DAY_RUN_2026-09-26.md).
+the result.
 
 Reads a replay's rows file (study_live_membrane.py writes study/rows_<stamp>.jsonl; a row per moment with sid,
 verdict_score and verdict_got = a correction or repeat of his followed within 30 min). The bar is the top FRAC of all

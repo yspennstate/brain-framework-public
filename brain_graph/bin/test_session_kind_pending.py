@@ -1,6 +1,5 @@
 """test_session_kind_pending.py - a headless session is not settled before its first prompt, and the learner's session
-kinds are the shared resolver's (29 Sep 2026, claude-825b1305; interactive audit S01, scheduled audits account02/B18 r77
-B18-R9-SESSION-KIND-PREMATURE-SCRIPT-CACHE-001 and account03/B01 auto73 B01-R9-GRAPH-LEARN-PREFIX-KIND-ORDER-DEPENDENT).
+kinds are the shared resolver's.
 
     python test_session_kind_pending.py [--old-kinds OLD_SESSION_KINDS.py] [--old-learn OLD_GRAPH_LEARN.py]
 

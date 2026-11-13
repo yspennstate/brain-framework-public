@@ -1,8 +1,8 @@
-"""eval_rewrite_fused.py - the rewrite tool against plain recall at the same number of lines shown (27 Sep, claude-825b1305).
+"""eval_rewrite_fused.py - the rewrite tool against plain recall at the same number of lines shown.
 
 The rewrite measurement (memory a_cheap_rewrite_before_recall_finds_the_note_far_more_often_2026_09_25) counted the
 source memory in ANY of four top-5 lists, up to 20 notes, against the question's own top 5: candidate coverage, not what
-an agent reads (audit account01/B19, R5). recall_rewrite.py shows one interleaved list. This runs, on today's index, the
+an agent reads. recall_rewrite.py shows one interleaved list. This runs, on today's index, the
 question (top 20) and the three rewrites the replication saved (top 10 each, as the tool asks), interleaves them with the
 tool's own function, and compares plain@k with fused@k at k = 1, 5, 10, 20 lines. No model call: the rewrites are the
 saved ones. Every recall runs with BRAIN_RECALL_LOG=0, at below-normal priority, without a console.
@@ -74,7 +74,7 @@ def main():
     workers = int(a[a.index("--workers") + 1]) if "--workers" in a else 3
     limit = int(a[a.index("--limit") + 1]) if "--limit" in a else None
     os.environ["BRAIN_RECALL_LOG"] = "0"                  # the children inherit it: evaluations stay out of the log
-    # ONE retrieval state for the whole run (scheduled audit account02/B08 auto11, 27 Sep): the 27 Sep equal-lines run
+    # ONE retrieval state for the whole run: the 27 Sep equal-lines run
     # took 40 minutes on whatever index and sidecar were live, so its rewrite lists could come from different generations.
     # Every recall now reads a pinned copy of the word index and of the link sidecar; the graph store (rebuilt from the
     # capture) is hashed at the start and the end, so a rebuild during the run is on the record.

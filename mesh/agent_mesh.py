@@ -122,6 +122,36 @@ def parse_iso(value: str) -> dt.datetime:
     return dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+IDLE_LAPSE_FILE = "idle_lapse.json"
+
+
+def load_idle_lapse(home: Path) -> dict[str, float]:
+    """{canonical resource: minutes} from <mesh home>/idle_lapse.json; {} when the file is absent or unreadable.
+
+    A pulse renews every live claim, so a claim taken for a one-minute write outlives the write for as long as its
+    agent keeps working. Over the week to 2026-09-23 the brain index (memory:brain/index) refused 364 claims; in 254
+    of them the holder had not taken or asserted the index for 15 minutes or more (160 for over an hour), and 26
+    agents were turned away. A resource named in this file is not renewed by a pulse once its holder has gone that
+    many minutes without taking or asserting it: the pulse ends the claim, and the holder claims again when it next
+    needs it. Claim, assert and release are unchanged, and with no file nothing changes."""
+    try:
+        raw = json.loads((Path(home) / IDLE_LAPSE_FILE).read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    out: dict[str, float] = {}
+    if not isinstance(raw, dict):
+        return out
+    for resource, minutes in raw.items():
+        try:
+            key = canonical_resource(str(resource))[0]
+            value = float(minutes)
+        except Exception:
+            continue
+        if value > 0:
+            out[key] = value
+    return out
+
+
 def duration_seconds(value: str | int | float) -> int:
     if isinstance(value, (int, float)):
         seconds = int(value)
@@ -295,6 +325,18 @@ def canonical_resource(raw: str) -> tuple[str, str, str]:
     if not is_logical:
         # Anything without an explicit logical namespace is a path.  This prevents
         # src/file.py and C:\repo\src\file.py from becoming unrelated claims.
+        # A path that is not absolute ("src/x.py", a bare "file.txt", drive-relative "C:file.txt") resolves
+        # against this shell's cwd, so the same string claimed from two directories names two resources and the
+        # claim protects nothing: both agents get their lease and neither sees the other. Such claims are
+        # refused; pass an absolute path or a logical namespace.
+        _absolute = bool(os.path.isabs(expanded) and re.match(r"^([A-Za-z]:[\\/]|\\\\|[\\/])", expanded)) or \
+            bool(re.match(r"^([A-Za-z]:[\\/]|\\\\|~[\\/])", expanded))
+        if not _absolute:
+            raise MeshError(
+                "non-absolute path resource %r would resolve against this shell's cwd and cover nothing another "
+                "agent could collide with - pass an ABSOLUTE path, or use a logical namespace (topic:, memory:, "
+                "git:, ...) for non-file resources" % display
+            )
         # Recognize foreign Windows paths before the POSIX host can prefix cwd.
         # On Windows retain realpath resolution (including junctions).
         windows_path = bool(re.match(r"^[A-Za-z]:[\\/]", expanded)) or expanded.startswith("\\\\")
@@ -480,13 +522,43 @@ class Mesh:
             CREATE INDEX IF NOT EXISTS idx_events_time ON events(happened_at);
             """
         )
+        # Every CLI call opens the mesh, and every open used to take the write lock three times (the two repairs below
+        # and this upsert) - in DELETE journal mode a write lock with a FULL-sync commit blocks every reader, and the
+        # claims repair held it through a scan of every claim row. When the schema is already current, a read-only
+        # check now skips the transaction.
         self._repair_claims_schema()
         self._repair_messages_schema()
-        self.conn.execute(
-            "INSERT INTO meta(key,value) VALUES('protocol_version',?) "
-            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-            (PROTOCOL_VERSION,),
-        )
+        row = self.conn.execute("SELECT value FROM meta WHERE key='protocol_version'").fetchone()
+        if row is None or row["value"] != PROTOCOL_VERSION:
+            self.conn.execute(
+                "INSERT INTO meta(key,value) VALUES('protocol_version',?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (PROTOCOL_VERSION,),
+            )
+
+    def _schema_names(self, table: str) -> set:
+        return {
+            r["name"]
+            for r in self.conn.execute(
+                "SELECT name FROM sqlite_master WHERE tbl_name=? AND type IN ('index','trigger')", (table,)
+            )
+        }
+
+    def _claims_schema_current(self) -> bool:
+        """True when _repair_claims_schema would change nothing. Read-only: no write lock. With the partial unique
+        index present the database itself forbids two live rows for one agent and resource, so the duplicate sweep
+        has nothing to close."""
+        row = self.conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='claims'"
+        ).fetchone()
+        table_sql = (row["sql"] if row else "") or ""
+        if not table_sql or re.search(
+            r"UNIQUE\s*\(\s*agent_id\s*,\s*canonical_resource\s*,\s*released_at\s*\)", table_sql, re.I
+        ):
+            return False
+        if not {"idx_claims_one_live", "idx_claims_active"} <= self._schema_names("claims"):
+            return False
+        return self.conn.execute("SELECT 1 FROM messages WHERE recipient='all' LIMIT 1").fetchone() is None
 
     def _repair_claims_schema(self) -> None:
         """Migrate the v1 claims constraint and enforce exactly one live lease.
@@ -496,6 +568,8 @@ class Mesh:
         duplicate live rows nor allowed two releases in the same second.  A
         partial unique index expresses the intended invariant directly.
         """
+        if self._claims_schema_current():
+            return
         self.conn.execute("BEGIN IMMEDIATE")
         try:
             row = self.conn.execute(
@@ -578,6 +652,11 @@ class Mesh:
         distinction from the existing kind exactly once during migration.
         Idempotency keys are opt-in, so every legacy row keeps a NULL key.
         """
+        columns = {row["name"] for row in self.conn.execute("PRAGMA table_info(messages)")}
+        if {"requires_ack", "idempotency_key"} <= columns and {
+            "idx_messages_idempotency", "idx_messages_pending", "idx_messages_open_handoffs", "messages_identity_fixed"
+        } <= self._schema_names("messages"):
+            return
         self.conn.execute("BEGIN IMMEDIATE")
         try:
             columns = {
@@ -606,6 +685,24 @@ class Mesh:
                 "CREATE INDEX IF NOT EXISTS idx_messages_pending "
                 "ON messages(recipient,requires_ack,acked_at,delivered_at,created_at)"
             )
+            # A sender's open handoffs are found through this partial index instead of a scan of every message.
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_messages_open_handoffs "
+                "ON messages(sender_agent, recipient) WHERE kind='handoff' AND acked_at IS NULL"
+            )
+            # ack(), handoff responses and receipts name a message by message_id alone,
+            # so the payload they speak for must not change under them. Nothing in this file rewrites a message's
+            # identity or body after insert; the database now enforces that too. Only lifecycle columns
+            # (delivered_at, acked_at, requires_ack) may change, and an UPDATE that leaves a fixed column as it was
+            # passes, so no current statement is affected.
+            self.conn.execute(
+                "CREATE TRIGGER IF NOT EXISTS messages_identity_fixed "
+                "BEFORE UPDATE OF message_id,sender_agent,recipient,topic,kind,body,created_at ON messages "
+                "WHEN NEW.message_id IS NOT OLD.message_id OR NEW.sender_agent IS NOT OLD.sender_agent "
+                "OR NEW.recipient IS NOT OLD.recipient OR NEW.topic IS NOT OLD.topic OR NEW.kind IS NOT OLD.kind "
+                "OR NEW.body IS NOT OLD.body OR NEW.created_at IS NOT OLD.created_at "
+                "BEGIN SELECT RAISE(ABORT, 'agent mesh: a message''s identity and body are fixed once it is sent'); END"
+            )
             self.conn.execute("COMMIT")
         except Exception:
             self.conn.execute("ROLLBACK")
@@ -616,11 +713,13 @@ class Mesh:
         self.conn.execute("BEGIN IMMEDIATE")
         try:
             yield
-        except Exception:
-            self.conn.execute("ROLLBACK")
-            raise
-        else:
             self.conn.execute("COMMIT")
+        except BaseException:
+            # COMMIT can fail with SQLITE_BUSY while retaining the transaction.
+            # Roll back that transaction before a long-lived client retries.
+            if self.conn.in_transaction:
+                self.conn.execute("ROLLBACK")
+            raise
 
     def event(self, event_type: str, agent: str | None, subject: str = "", **detail) -> None:
         self.conn.execute(
@@ -800,11 +899,24 @@ class Mesh:
                 (task, task, status, iso(now), until, agent_id),
             )
             live_claims = self.conn.execute(
-                "SELECT claim_id,ttl_seconds FROM claims "
+                "SELECT claim_id,ttl_seconds,resource,canonical_resource,acquired_at FROM claims "
                 "WHERE agent_id=? AND released_at IS NULL AND expires_at>?",
                 (agent_id, iso(now)),
             ).fetchall()
+            lapse = load_idle_lapse(self.db_path.parent)
+            lapsed: list[str] = []
             for claim in live_claims:
+                cap = lapse.get(claim["canonical_resource"])
+                if cap:
+                    idle = now - self._last_claim_use(agent_id, claim)
+                    if idle >= dt.timedelta(minutes=cap):
+                        # the holder stopped using it: end the claim here instead of renewing it (load_idle_lapse)
+                        self.conn.execute("UPDATE claims SET expires_at=? WHERE claim_id=?",
+                                          (iso(now), claim["claim_id"]))
+                        self.event("claim_idle_lapse", agent_id, claim["resource"],
+                                   idle_minutes=round(idle.total_seconds() / 60.0, 1), cap_minutes=cap)
+                        lapsed.append(claim["resource"])
+                        continue
                 claim_deadline = min(
                     now + dt.timedelta(seconds=int(claim["ttl_seconds"])),
                     parse_iso(until),
@@ -815,7 +927,34 @@ class Mesh:
                     (iso(now), claim_until, claim["claim_id"]),
                 )
             self.event("pulse", agent_id, task, status=status)
-        return {"agent": agent_id, "status": status, "lease_until": until}
+        out = {"agent": agent_id, "status": status, "lease_until": until}
+        if lapsed:
+            out["lapsed_idle_claims"] = lapsed
+        return out
+
+    def _last_claim_use(self, agent_id: str, claim) -> dt.datetime:
+        """When the holder last took or asserted this claim's resource: its acquisition, or the newest claim /
+        claim_assert event of the agent naming the resource since then. A pulse does not count as a use."""
+        last = parse_iso(claim["acquired_at"])
+        rows = self.conn.execute(
+            "SELECT happened_at,detail_json FROM events WHERE happened_at>=? AND agent_id=? "
+            "AND event_type IN ('claim','claim_assert') ORDER BY happened_at DESC LIMIT 500",
+            (claim["acquired_at"], agent_id),
+        ).fetchall()
+        for row in rows:
+            try:
+                resources = json.loads(row["detail_json"] or "{}").get("resources") or []
+            except Exception:
+                continue
+            for resource in resources:
+                try:
+                    same = (resource == claim["resource"]
+                            or canonical_resource(str(resource))[0] == claim["canonical_resource"])
+                except Exception:
+                    same = False
+                if same:
+                    return max(last, parse_iso(row["happened_at"]))
+        return last
 
     def claim(
         self,
@@ -993,20 +1132,22 @@ class Mesh:
     def _pending_handoffs(
         self, agent_id: str, *, outgoing: bool = False, incoming: bool = False
     ) -> list[sqlite3.Row]:
-        directions: list[str] = []
+        # One rowid subquery per direction, so each side is answered from an index. A single query that OR-ed
+        # sender_agent and recipient was a full scan of messages, and release() and bye() run it inside BEGIN
+        # IMMEDIATE: on a large table out of the file cache that scan can hold the write lock for many minutes.
+        # Same rows, same order.
+        parts: list[str] = []
         args: list[str] = []
         if outgoing:
-            directions.append("sender_agent=?")
+            parts.append("SELECT rowid FROM messages WHERE kind='handoff' AND acked_at IS NULL AND sender_agent=?")
             args.append(agent_id)
         if incoming:
-            directions.append("recipient=?")
+            parts.append("SELECT rowid FROM messages WHERE kind='handoff' AND acked_at IS NULL AND recipient=?")
             args.append(agent_id)
-        if not directions:
+        if not parts:
             return []
         return self.conn.execute(
-            "SELECT * FROM messages WHERE kind='handoff' AND acked_at IS NULL AND ("
-            + " OR ".join(directions)
-            + ") ORDER BY rowid",
+            "SELECT * FROM messages WHERE rowid IN (" + " UNION ".join(parts) + ") ORDER BY rowid",
             args,
         ).fetchall()
 
@@ -1637,6 +1778,31 @@ class Mesh:
                 "unacked_messages": unacked, "message_summary": message_summary,
                 "message_backlog": backlog}
 
+    def mark_delivered(self, agent_id: str, message_ids: Sequence[str]) -> int:
+        """Stamp delivered_at for messages the caller has already emitted.
+
+        A message is delivered when its text reached the recipient, not when it was fetched. Callers fetch
+        without stamping, print, then call this, so a crash between fetch and print leaves the message queued
+        and the next tick retries. Idempotent: COALESCE keeps the first stamp."""
+        ids = [m for m in dict.fromkeys(message_ids) if m]
+        if not ids:
+            return 0
+        marks = ",".join("?" for _ in ids)
+        with self.write_tx():
+            cur = self.conn.execute(
+                f"UPDATE messages SET delivered_at=COALESCE(delivered_at,?) "
+                f"WHERE message_id IN ({marks}) AND recipient=?",
+                (iso(), *ids, agent_id),
+            )
+        return cur.rowcount
+
+    def digest_with_ids(self, agent_id: str) -> tuple[str, list[str]]:
+        """The digest text and the pending message ids it rendered, without stamping delivery.
+        The caller prints the text first, then stamps with mark_delivered(ids)."""
+        text = self.digest(agent_id, mark_delivered=False)
+        pend = self.inbox(agent_id, mark_delivered=False, limit=8, pending_only=True)
+        return text, [m["message_id"] for m in pend]
+
     def digest(self, agent_id: str, mark_delivered: bool = True) -> str:
         me = self.require_agent(agent_id)
         board = self.board()
@@ -1759,10 +1925,18 @@ def markdown_board(data: dict) -> str:
 
 
 def print_human(value) -> None:
-    if isinstance(value, str):
-        print(value)
-    else:
-        print(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True))
+    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True)
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        # A console or pipe in a narrow code page cannot take every character; one such character in a message
+        # would otherwise turn the whole inbox into a traceback. JSON goes out escaped, which any JSON reader turns
+        # back into the same text; plain text gets backslash escapes.
+        if isinstance(value, str):
+            enc = getattr(sys.stdout, "encoding", None) or "ascii"
+            print(value.encode(enc, "backslashreplace").decode(enc))
+        else:
+            print(json.dumps(value, ensure_ascii=True, indent=2, sort_keys=True))
 
 
 def add_agent_arg(parser: argparse.ArgumentParser, required: bool = False) -> None:
@@ -1968,14 +2142,21 @@ def dispatch(mesh: Mesh, args: argparse.Namespace):
     if command == "handoff-cancel":
         return mesh.handoff_cancel(args.agent, args.message_id, args.reason)
     if command == "inbox":
-        return mesh.inbox(args.agent, args.mark_delivered, args.include_acked,
-                          pending_only=args.pending)
+        # Fetch without stamping; main() stamps after the print succeeds, so a crash in the middle of the output
+        # leaves the message queued and the next read shows it again.
+        rows = mesh.inbox(args.agent, False, args.include_acked, pending_only=args.pending)
+        if args.mark_delivered and rows:
+            mesh._deliver_after_print = (args.agent, [r["message_id"] for r in rows])
+        return rows
     if command == "ack":
         return mesh.ack(args.agent, args.message_id)
     if command == "receipts":
         return mesh.receipts(args.agent, args.message_id, args.pending, args.limit)
     if command == "digest":
-        return mesh.digest(args.agent, not args.no_mark_delivered)
+        text, ids = mesh.digest_with_ids(args.agent)
+        if not args.no_mark_delivered and ids:
+            mesh._deliver_after_print = (args.agent, ids)
+        return text
     if command == "campaign-start":
         return mesh.campaign_start(args.name, args.objective, args.agent, args.hours)
     if command == "campaign-join":
@@ -2028,6 +2209,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         else:
             print_human(result)
+        # Stamp delivery only after the output above went out. A failed stamp leaves the messages queued, to be
+        # shown again on the next read: better twice than never.
+        try:
+            pend = getattr(mesh, "_deliver_after_print", None)
+            if pend:
+                sys.stdout.flush()
+                mesh.mark_delivered(*pend)
+        except Exception:
+            pass
         return 0
     except MeshError as exc:
         # Conflict payloads are often already structured JSON; preserve them.
@@ -2049,5 +2239,29 @@ def main(argv: Sequence[str] | None = None) -> int:
             mesh.close()
 
 
+def _raise_own_priority() -> None:
+    """A CLI call started from a scheduled task can inherit below-normal CPU and low I/O priority; on a contended
+    disk it then waits minutes on its reads while it holds the SQLite write lock every other agent needs (a priority
+    inversion). The CLI is short-lived, so on Windows it raises itself to normal CPU and I/O priority. Script runs
+    only: code that imports Mesh keeps its own priority. Never raises."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        from ctypes import wintypes
+        k32 = ctypes.WinDLL("kernel32")
+        ntdll = ctypes.WinDLL("ntdll")
+        k32.GetCurrentProcess.restype = wintypes.HANDLE
+        k32.SetPriorityClass.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+        ntdll.NtSetInformationProcess.argtypes = [wintypes.HANDLE, wintypes.ULONG, ctypes.c_void_p, wintypes.ULONG]
+        h = k32.GetCurrentProcess()
+        k32.SetPriorityClass(h, 0x20)                    # NORMAL_PRIORITY_CLASS
+        prio = wintypes.ULONG(2)                         # IoPriorityNormal
+        ntdll.NtSetInformationProcess(h, 33, ctypes.byref(prio), ctypes.sizeof(prio))   # ProcessIoPriority
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
+    _raise_own_priority()
     raise SystemExit(main())

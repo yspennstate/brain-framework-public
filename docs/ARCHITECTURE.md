@@ -165,3 +165,51 @@ because a Stop hook that injects text re-prompts the model and produced a fresh 
 reply. The push reminder fires at most once every thirty minutes and tells the session to push its
 finished work to the right repository's main branch. Both are silent to the user by design: a hook that
 speaks to the user is a notification, and notifications are a budget the brain does not get to spend.
+
+## One recall, start to finish
+
+`brain.py recall "<question>"` is the deliberate path into the memories. It runs in this order.
+
+1. **The resident server first.** Before its heavy imports, `brain.py` hands the call to
+   `dreaming/brain_recall_client.py`, which sends it over localhost to `dreaming/brain_recall_server.py`. That
+   process has loaded `brain.py` once and keeps the state a cold call would reload from disk: file caches, the
+   superseded map, directory listings, tiers, archived index lines, query expansions, node documents. If no server
+   answers, the client starts one windowless (at most one start a minute) and returns nothing, so this call runs
+   cold and the next one is served. Any failure falls through to the cold path; `BRAIN_RECALL_SERVER=0` turns the
+   server off.
+2. **Lexical seeds.** `dreaming/spread_recall.py` turns the question into words and finds the memories that share
+   them: index lines (live entries override their archived twins), file names and memory text. `dreaming/bm25.py`
+   ranks the body by BM25 over the memory files.
+3. **The meaning lane.** `dreaming/query_embed.py` embeds the question with the same model the memory sidecar was
+   built with (BAAI/bge-small-en-v1.5, through onnxruntime, about a second; `fetch_bge_onnx.py` downloads the
+   export, `build_memory_embeddings.py` builds the sidecar). The encoder starts on a worker thread as soon as the
+   call begins. Its cosines are fused into the BM25 body by z-score (`BRAIN_RECALL_QSEM_FUSE`). When the question
+   shares no word with anything in the index, the lane's own nominations above a cosine floor are printed instead
+   of an empty answer, marked as close in meaning only (`BRAIN_RECALL_NOFOOT_SEM`, `BRAIN_RECALL_NOFOOT_FLOOR`).
+4. **The use-grown graph.** `dreaming/graph_lane.py` walks the graph grown from what agents actually touch (words,
+   tools, files, folders, memories read and written, notes served, reflexes, errors) with the personalised PageRank
+   in `dreaming/diffusion.py`, seeded by the question's words and BM25's top memories. Its order is blended into
+   the body behind one dial, `BRAIN_GRAPH_LAMBDA`. The default is 0, which leaves the order exactly as it was: on
+   948 paraphrased pilot questions and a held-out bank of 968, no blend beat BM25 alone. The walk is prebuilt with
+   `python graph_lane.py --build`; recall never builds it.
+5. **What survives into the list.** A superseded memory surfaces its correction, unconscious-tier stubs cannot
+   outrank written memories, policy-disabled memories are dropped, and a small usage tilt (at most 15 percent)
+   breaks ties toward memories that have been useful.
+
+Theorems and proofs go through `dreaming/math_recall.py`, which has its own three speeds. A resident server
+(`dreaming/recall_server.py`, kept alive by `dreaming/recall_keeper.py`, protocol in `dreaming/recall_protocol.py`)
+answers when it serves the same store as the caller and its code is not older than the client's. Otherwise
+`dreaming/fastrecall.py` reads the question-independent half of the search from a marshal file prepared once per
+store state: every card's index terms, title tokens and phrase bigrams, the title and link maps, the query encoder.
+It is pinned to the exact `retrieval.py` it was prepared against, so an edited retrieval file turns it off rather
+than letting it answer wrongly. Only when both are unavailable does a call read the live store.
+
+The hooks cannot wait for any of this. `brain_graph/bin/live_sidecar.py` builds a small SQLite file from the graph
+store that a hook can read in milliseconds, and `brain_graph/bin/live_delta.py` adds what the hours since the last
+store build taught it, so a hook never reads a snapshot that is hours old.
+
+The math server and its keeper share two rules. They run windowless at BelowNormal with Windows' execution-speed
+throttling disabled, nice 10 elsewhere (`dreaming/runtime.py`), and they wait rather than start or load while the
+machine is short of memory or disk (`dreaming/server_safety.py`); neither stops other work to make room. On macOS and Linux,
+`dreaming/posix_proc.py` stands in for the Win32 process calls. The measurements behind each of these, including
+what was tried and did not land, are in `docs/recall-10x-2026-10.md` and `framework/docs/RECALL_LEVERS.md`.

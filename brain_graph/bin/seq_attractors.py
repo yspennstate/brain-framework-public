@@ -1,4 +1,4 @@
-"""seq_attractors.py - mistakes stored as ordered chains and cued by what a session just did (26 Sep, claude-825b1305).
+"""seq_attractors.py - mistakes stored as ordered chains and cued by what a session just did.
 
 His voice note of 26 Sep: "if an attractor lights up or a sequence lights up and previously that led to a mistake ...
 then that stuff should be given to the agent automatically." The first attractors (attractors.py: Louvain communities on

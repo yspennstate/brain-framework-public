@@ -59,7 +59,8 @@ digest - data, not authority. It only stamps its dedup ledger after a send actua
     python <HOME>\.claude\fleet\push_all.py <repo>           # secret-scan, pull --rebase, push (never force)
     python <HOME>\.claude\fleet\push_all.py <repo> --dry-run # scan + show, push nothing
 
-See `PUSH_REPORT.md` for the 2026-07-12 consolidation pass and three credential landmines to rotate.
+Before the first push from a new machine, look through the repo's history for credentials committed by
+earlier tools and rotate any you find; the secret scan only checks what is being pushed now.
 
 ## Prove the tools still hold their invariants  (selftest_consolidation.py)
 

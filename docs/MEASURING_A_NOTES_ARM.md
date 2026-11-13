@@ -17,7 +17,7 @@ proven sterile.
 ## 2. Measure what the notes can speak to, before serving
 
 For each item the key carries retrieval targets: the named results a helpful note would carry.
-`b12_notes_relevance.py` reports the share of sampled items whose served notes name at least one
+Report the share of sampled items whose served notes name at least one
 target, by family. A notes arm with 36 percent coverage is a 36 percent treatment, and a null on it
 measures the store, not help. Grow the store in the bank's areas first, then serve.
 

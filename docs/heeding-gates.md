@@ -61,11 +61,14 @@ newlines in the command; an unreadable ledger cannot stop work. The fourteen
 tests behind these claims belong to the packaged edition and are not shipped
 here; read them as the module's contract and check them against `ack_gate.py`.
 
-**Partial.** Enforcement is opt-in per call. The default is advisory: the same
-situation is recorded and allowed, so a deployment can measure its own
-intervention rate before holding a single call. This mirrors the reflex layer,
-which stays shadow-mode pending a precision eval. Whether the default should
-change is an operator decision, not a library default.
+**Partial.** Both gates hold calls by default. They stop holding only when a
+file named `OWNER_DISABLE_ENFORCEMENT` in the same folder carries the exact
+authorization sentence set in `enforcement.py`; a missing, unreadable or
+unsigned file leaves them on, and an unsigned one is logged to
+`enforcement_audit.tsv`. With enforcement off the acknowledgment gate logs
+`would_deny` instead of holding, so a deployment can measure its intervention
+rate before turning it on. The default was set this way because a marker file
+that switched the gates off when deleted was deleted twice in one day.
 
 **Open.** Whether signed rationales stay substantive or decay into boilerplate
 is unmeasured here. The ledger exists precisely so that a later review can

@@ -1,4 +1,4 @@
-"""Controls for codex_verdicts.py (28 Sep, claude-825b1305), on a temporary ledger, prompt history and rollout folder:
+"""Controls for codex_verdicts.py, on a temporary ledger, prompt history and rollout folder:
 
   1. a correction typed by him in a Codex session becomes a correction row keyed like the capture keys that session
   2. the same words in a Claude row (source "hook") are left to the Claude builder
@@ -17,8 +17,8 @@
      text, and a prompt in neither is left unkeyed
  14. a prefix with only one known id is not proof: a prompt whose text is under no id stays unkeyed ("unconfirmed")
 Controls 1, 8, 10 and 11 fail on the file of 28 Sep 03:3x, which keyed a row by the first 8 hex of the ledger's prefix
-(scheduled audit account02/B15, B15-R25-VERDICT-KEY-COLLAPSE-20260928); controls 12, 13 and 14 fail on the file of
-04:3x, which took a prefix's only known id without its text (B15-R25-TEXT-RESOLVER-FALSE-UNIQUE-20260928).
+; controls 12, 13 and 14 fail on the file of
+04:3x, which took a prefix's only known id without its text.
 
     python test_codex_verdicts.py [PATH_TO_codex_verdicts.py]
 """
@@ -112,7 +112,7 @@ class CodexVerdicts(unittest.TestCase):
     def test_1_to_6(self):
         self.ledger([
             self.row("2026-09-20T13:55:11", "01a0be54-107"),
-            self.row("2026-09-20T14:00:00", "825b1305-b79", source="hook"),
+            self.row("2026-09-20T14:00:00", "5e550001-b79", source="hook"),
             self.row("2026-09-20T14:05:00", "01a0be55-107", origin="automation"),
             self.row("2026-09-20T14:10:00", "01a0be56-107", text=WRONG + " " + ("x" * 4000), source="backfill-codex"),
             self.row("2026-09-20T14:15:00", "01a0be57-107", text="open the report for me in chrome please"),

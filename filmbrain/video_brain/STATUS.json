@@ -96,7 +96,7 @@
     "stability": "UNVERIFIED",
     "broadcast_live_recipients": 5,
     "additional_live_recipients": 2,
-    "current_relu_identity": "950f2eda-1e2b-4b98-b1d2-3d6422535002",
+    "current_relu_identity": "5e550012-1e2b-4b98-b1d2-3d6422535002",
     "receipt_file": "evidence/gpu_80_percent_20260905/policy_readback.json",
     "notification": "Current concurrent-use update sent to five producing/coordination identities; insertion is not acknowledgement or measured output.",
     "source": "provenance/OWNER_GPU_80_PERCENT_20260905.json",

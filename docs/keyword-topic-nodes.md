@@ -10,8 +10,8 @@ the memories whose text happens to overlap it. This layer makes the subject itse
 
 ```
 keyword	kind	weight	members
-leverage	member	0.137	slug-a,slug-b,...
-levrage	alias	0.137	leverage
+receive	member	0.137	slug-a,slug-b,...
+recieve	alias	0.137	receive
 ```
 
 Candidate vocabulary comes from the user's own prompts — a word they never type is not their
@@ -20,7 +20,7 @@ keyword, however common it is in the corpus. Membership comes from the memory fi
 one.
 
 Membership was originally a substring test. On a ~2,700 memory corpus that put 57% of
-memberships on memories that never used the word: `aws` matched "laws" and "flaws", `grid`
+memberships on memories that never used the word: `law` matched "laws" and "flaws", `grid`
 matched "gridlock", and three-letter subjects like `eat` and `pos` each reached several hundred
 unrelated memories. Every test passed, because the tests checked that membership existed rather
 than that it was right. A subject pointing at the whole corpus carries no information, and this
@@ -66,10 +66,12 @@ Result on 200 real prompts: fires 165 → 171, mistake-class 124 → 129, **zero
 
 ## Misspellings
 
-The user's spelling and the corpus's spelling are often different — they type `levrage`, the
-memories say `leverage`. Alias rows bridge that.
+The user's spelling and the corpus's spelling are often different — they type `recieve`, the
+memories say `receive`. Alias rows bridge that.
 
-Aliases are limited to spellings the user has explicitly supplied. This is deliberate and it
+Aliases come only from `keyword_aliases.tsv` beside the script: one `misspelling<TAB>word` per
+line, `#` comments allowed. A new brain has no such file and therefore no aliases; add a line
+when you see the user type a spelling the corpus does not use. This is deliberate and it
 replaced two earlier attempts:
 
 - Requiring the alias to be a word the corpus never uses admitted `apple→apply`,
@@ -87,4 +89,21 @@ author's imagination. Adding an alias now requires an observed spelling plus a r
 token-exact when recomputed from the memory files (not from the artifact's own rows), aliases are
 legal, recall still fires, and the keyword arm silences nothing. It reports PASS, FAIL, or
 INCOMPLETE — a check that cannot say "I could not inspect this" reports its blind spots as
-success.
+success. On a brand-new brain, before any keyword generation exists, the properties that need
+one report NEW (nothing to measure yet) and the gate still passes.
+
+## Rebuilding without re-reading everything
+
+`build_keyword_nodes.py --incremental` takes its inputs from `keyword_corpus_cache.py` instead of
+re-reading every memory file and the whole prompt log. The cache keeps one row per memory file
+(its modification time, size, search text and token counts) and the prompt log's byte offset with
+a hash of the 64 KB before it. A run reads only the files that are new or changed, subtracts what
+an edited or vanished file used to contribute, and reads only the prompt lines appended since the
+last run; if the hashed tail no longer matches, the whole log is read again. A lost or unreadable
+cache starts over from a full read.
+
+The incremental path is opt-in. Run `build_keyword_nodes.py --verify` once on your own brain: it
+builds both ways and compares the digests that go into the generation's source manifest.
+`test_keyword_corpus_cache.py` checks the same equality on a small synthetic brain through new,
+edited and deleted memories, a half-written prompt line, a rewritten prompt log, and a corrupt or
+missing cache.

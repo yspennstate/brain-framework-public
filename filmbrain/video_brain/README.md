@@ -54,8 +54,10 @@ replace them with your own.
 
 The tests, the scripts that regenerate the handbook and templates, the importer
 that adds these cards to a live filmbrain store, the deploy script and the
-prompt-review ledger stayed in the private source tree. Nothing in this folder
-calls them. If you want the cards in the filmbrain graph, write a short loader
+prompt-review ledger stayed in the private source tree, and so did the two
+pipeline scripts the cards mention by name, `background_video.py` (the
+windowless low-priority render launcher) and `narrate_edge.py` (narration
+through edge-tts). Nothing in this folder calls them. If you want the cards in the filmbrain graph, write a short loader
 that adds each card in `knowledge.json` as a node through `fb_store.Store`, the
 way `filmbrain/ingest/load_craft.py` adds the craft modules, and keep the cards'
 `owner.video.` id prefix so a reload touches only them.

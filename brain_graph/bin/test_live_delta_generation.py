@@ -1,5 +1,4 @@
-"""test_live_delta_generation.py - the fast layer is merged only onto the base generation it was counted on (28 Sep 2026,
-claude-825b1305; interactive audit IA-20260928-02).
+"""test_live_delta_generation.py - the fast layer is merged only onto the base generation it was counted on.
 
     python test_live_delta_generation.py [--module LIVE_DELTA.py] [--old OLD_LIVE_DELTA.py]
 
@@ -10,14 +9,14 @@ sidecar's meta is passed as the membrane passes it. Base 100 is the delta's; the
  D3 the pointer and the sidecar agree, but the file the pointer names was counted on another store build: refused
  D4 the last event 2 s apart: refused
  D5 a pointer from before the sidecar's build time was added to it, the file recording it and matching: accepted
-Sub-second generations (29 Sep, account02/B12 r90 and account01/B19; the base identity is exact since then):
+Sub-second generations:
  D6 the sidecar rebuilt 0.5 s later, all else equal: refused
  D7 the sidecar's last event 0.5 s later: refused
  D8 the store rebuilt 0.5 s later: refused
  D9 all three 0.5 s later: refused
  D10 the live system's own full-precision values (29 Sep 08:29) through JSON in the pointer, the file and the sidecar:
      accepted
-The dual legacy omission (29 Sep, account04/B12 r67, T-R67-DUAL-LEGACY-BASE-CLOSURE E, F and D):
+The dual legacy omission:
  D11 the pointer and the file both omit the sidecar build: refused
  D12 both omit the store build: refused
  D13 both omit the last event: refused

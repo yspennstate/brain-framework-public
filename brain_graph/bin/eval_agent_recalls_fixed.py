@@ -1,9 +1,9 @@
-"""eval_agent_recalls_fixed.py - the agents'-searches comparison with the target fixed (27 Sep, claude-825b1305).
+"""eval_agent_recalls_fixed.py - the agents'-searches comparison with the target fixed.
 
-A scheduled audit (account01/B05, run 20260926T232909Z, job R6) showed two faults in eval_expansion_agent_recalls.py:
+A scheduled audit showed two faults in eval_expansion_agent_recalls.py:
 the search was joined to a session by the overlap of shown slugs within 90 s, and each index arm scored the best rank of
 ANY memory the session opened in the next ten minutes, so the target could differ between arms. This file first fixed the
-target to the first memory opened, but kept a join and an uncut ten-minute window of its own (audit account03/B12, R6);
+target to the first memory opened, but kept a join and an uncut ten-minute window of its own;
 its result, results/DOC_EXPANSION_AGENT_RECALLS_FIXED_2026-09-27.json, is from that rule.
 
 Since 27 Sep 07:1x it is a second name for eval_expansion_agent_recalls.py, whose command line now judges every search

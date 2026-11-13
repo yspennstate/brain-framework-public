@@ -1,7 +1,6 @@
-"""test_codex_orders_errors.py - the Codex orders hook logs every failure it swallows (27 Sep, claude-825b1305; the
-scheduled audit B14 r6 found that main() caught every exception and returned success with no trace, so a broken hook
-read as "no relevant order"), and it keeps a session's receiver kind only once the rollout says it (28 Sep, account01/B05
-r70, B05-R17-CODEX-INTERACTIVE-FALSE-STICKY-26). Log, state, error file and transcripts in a temp dir.
+"""test_codex_orders_errors.py - the Codex orders hook logs every failure it swallows (an audit
+found that main() caught every exception and returned success with no trace, so a broken hook
+read as "no relevant order"), and it keeps a session's receiver kind only once the rollout says it. Log, state, error file and transcripts in a temp dir.
 
     python test_codex_orders_errors.py [PATH_TO_codex_orders_hook.py] [--old OLD_HOOK.py]
 
@@ -19,7 +18,7 @@ Controls:
  9. a state file from before this change holding a bare "interactive": false, with a cli rollout: asked again, True
 10. serving on inside the test (policy stubbed, one order that clears the bar): a session first evaluated before its
     rollout existed is served exactly once over three prompts
-Reading the rollout the way Codex does (29 Sep, account02/B05 r72, B05-R55-FIRST8-META-CUTOFF-39):
+Reading the rollout the way Codex does:
 11. eight event rows, then a cli session_meta on line 9: True at the first evaluation, found on line 9
 12. every kind Codex allows before the header, a blank line, an unreadable line and an unknown kind, then the header: True
 13. a response before the header: None, "response_before_meta", and kept without reading the file again after more
@@ -84,6 +83,9 @@ def call_main(payload):
 # 1. the membrane raises
 sys.path.insert(0, Hk.BIN)
 import live_membrane as LM
+if not os.path.exists(LM.SIDECAR):
+    print("SKIP - no graph sidecar yet (a fresh install builds it on the first graph build)")
+    sys.exit(0)
 real_policy = LM.policy
 
 

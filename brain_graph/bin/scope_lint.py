@@ -1,4 +1,4 @@
-"""scope_lint.py - find stored rules that are wider than the words he gave them in (27 Sep, claude-825b1305).
+"""scope_lint.py - find stored rules that are wider than the words he gave them in.
 
 On 19 Sep he asked for one film to be ninety percent found footage; the movie hook stored it as a law for every film, and the
 histories of 25-26 Sep followed it (Food 9 percent Codex pictures) until he corrected it in anger on 26 Sep. The agents obeyed

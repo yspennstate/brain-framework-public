@@ -1,5 +1,5 @@
 """test_membrane_session_lock.py - the membrane's per-session lock holds for as long as its holder lives, is released when
-the holder dies, and cannot be released by anyone else (28 Sep 2026, claude-825b1305; interactive audit IA-20260928-03).
+the holder dies, and cannot be released by anyone else.
 
     python test_membrane_session_lock.py [--module LIVE_MEMBRANE.py] [--old OLD_LIVE_MEMBRANE.py]
 

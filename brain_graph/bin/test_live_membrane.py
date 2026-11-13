@@ -1,4 +1,4 @@
-"""test_live_membrane.py - controls for the live membrane before it reaches a hook, and after (26 Sep, claude-825b1305).
+"""test_live_membrane.py - controls for the live membrane before it reaches a hook, and after.
 
   negative   no sidecar -> nothing; STOP -> nothing; a malformed or empty payload -> nothing and no exception; a session
              whose words the graph has never seen -> nothing served
@@ -100,6 +100,7 @@ def negatives(tmp):
     if os.path.exists(LM_STATE):
         os.remove(LM_STATE)
     # STOP silences it
+    os.makedirs(os.path.dirname(LM.STOP), exist_ok=True)   # a fresh install has no live directory yet
     open(LM.STOP, "w").close()
     try:
         r = LM.run({"session_id": "neg-control-session", "transcript_path": fake, "hook_event_name": "UserPromptSubmit"},
@@ -177,7 +178,11 @@ def main():
         negatives(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    res = positives(a.sessions, a.moments)
+    if os.path.exists(LM.SIDECAR):
+        res = positives(a.sessions, a.moments)
+    else:                                   # a fresh install: no graph built, no sessions to replay yet
+        print("SKIP positives - no graph sidecar yet (a fresh install builds it on the first graph build)")
+        res = {}
     bad = [w for ok, w in RESULTS if not ok]
     print("%d checks, %d failed" % (len(RESULTS), len(bad)))
     print(json.dumps(res))

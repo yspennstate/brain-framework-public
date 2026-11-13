@@ -1,5 +1,5 @@
 """Replay a widened reflex trigger over the real tool inputs of recent sessions and list every fire it ADDS to the live
-trigger, so each can be read by hand (28 Sep, claude-825b1305; generalizes replay_register_reflex.py).
+trigger, so each can be read by hand.
 
 Inputs are what the priming hook matched: json.dumps(tool_input, ensure_ascii=False) of each Bash, PowerShell, Write and
 Edit call in the Claude transcripts, and of each function call in the Codex rollouts (its arguments object). The live

@@ -130,7 +130,7 @@ def test_github_token_near_misses_do_not_fire(near_miss) -> None:
     assert "secret" not in {finding.code for finding in findings}
 
 
-# B15-R79-AWS-STS-CREDENTIAL-TRIPLE-UNSCANNED-20260929-01: temporary (ASIA) key ids and the
+# Temporary (ASIA) key ids and the
 # conventional credential field names were not refused. Every value below is synthetic.
 
 

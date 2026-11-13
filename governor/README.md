@@ -3,7 +3,7 @@
 Built 2026-07-10 from the owner's directive: compute a lot, but his PC must never slow down
 and the protected production stack must never be affected. `COMPUTE_DOCTRINE.md` is the canonical
 statement of the laws; this README is the operator's manual. Memories:
-`compute_doctrine_owner_first_2026_07_10`, `compute_governor_apparatus_2026_07_10`.
+the compute doctrine and the governor apparatus.
 
 ## Pieces
 

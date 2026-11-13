@@ -1,5 +1,4 @@
-"""served_vs_delivered.py - did the membrane's served lines reach the session whole? (27 Sep, claude-825b1305; scheduled
-audit account02/B08 auto11, R12: 'served' is logged before the dispatcher fits every hook's text into its shared budget).
+"""served_vs_delivered.py - did the membrane's served lines reach the session whole?.
 
 For every line in live/served.jsonl, the session's transcript records stamped from 5 s before to WINDOW s after the serve
 are searched for the line's rendered fragment: "this reminds me of `<slug>`" (memory and word lines) or "usually go next
@@ -89,7 +88,7 @@ def transcript(sid):
 rows = [json.loads(l) for l in open(os.path.join(LIVE, "served.jsonl"), encoding="utf-8") if l.strip()]
 rows = [r for r in rows if float(r["t"]) >= SINCE]
 # a line held back by design was never meant to reach the transcript: its own state, outside the delivery counts
-# (28 Sep, account03/B08 R12, B08-R12-HOLD-MEASUREMENT-011; until then it read as ABSENT)
+#
 out = {"WHOLE": 0, "CUT": 0, "ABSENT": 0, "NO_TRANSCRIPT": 0, "HELD_BY_DESIGN": 0}
 by_kind = {}
 notes = []

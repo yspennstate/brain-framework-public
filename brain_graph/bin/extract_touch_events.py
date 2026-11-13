@@ -25,7 +25,7 @@ Classes follow brain_graph/NODE_CLASSES.md where the transcripts carry them:
   reflex    a_scar_slug                                          a reflex that fired (its scar memory)
   hook      unconscious, slow-sense, math-brain ...              a hook that spoke (its tag)
   state     commit_high, renders_not_pooled ...                  a machine state the slow-sense probe named
-  ask       T-20260926-005                                       one of his checklist asks, named in a command or hook
+  ask       T-YYYYMMDD-NNN                                       one of the partner's checklist asks, named in a command or hook
   err       Bash:git:exit128, Edit:not_found ...                 a tool call that failed, by class
   verdict   correction, praise, repeat                           his reaction, read from his prompt's words
   kw        word                                                 a word of his prompt
@@ -624,7 +624,7 @@ COMMITTED = "_committed_bytes"      # state key: {output path: its length when t
 
 def uncommitted_tail(path, committed):
     """The lines a run appended to `path` after the length the last state replace recorded, as a multiset, and what was
-    found (28 Sep, fleet03/B12 R12). A run is committed when its state is replaced; a run killed after writing some
+    found (28 Sep). A run is committed when its state is replaced; a run killed after writing some
     transcripts' events and before that leaves them at the end of the log, and the next run scans those transcripts
     again from the old offsets. Nothing is removed: a torn last line is ended with a newline (the readers skip a line
     that does not parse) and a complete line already in the tail is not written a second time. Lines compare without

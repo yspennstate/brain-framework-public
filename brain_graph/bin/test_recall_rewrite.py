@@ -38,10 +38,14 @@ def check(name, ok, detail=""):
 q0 = "why did the live brain graph stop showing lines in his sessions"
 plain = [m.group(3) for m in map(ROW.match, run([BRAIN, "recall", q0, "-n", "10"]).splitlines()) if m]
 fused = [m.group(3) for m in map(FUSED.match, run([RR, q0, "-n", "10", "--no-model"]).splitlines()) if m]
-check("no-model equals plain recall (top 10)", plain[:10] == fused[:10] and len(fused) == 10,
+check("no-model equals plain recall (top 10)", plain[:10] == fused[:10] and len(fused) == min(10, len(plain)) > 0,
       "%d vs %d rows" % (len(plain), len(fused)))
 
 # 2. stored rewrites from the probe: questions only a rewrite found
+if not os.path.exists(os.path.join(Q, "bank100.jsonl")):     # the probe's bank stays on the machine that ran it
+    print("SKIP stored rewrites - no probe bank on this machine")
+    print("RESULT %d/%d" % (sum(results), len(results)))
+    sys.exit(0 if all(results) else 1)
 bank = {json.loads(l)["id"]: json.loads(l) for l in open(os.path.join(Q, "bank100.jsonl"), encoding="utf-8") if l.strip()}
 rows = [json.loads(l) for l in open(os.path.join(Q, "r1w_rows.jsonl"), encoding="utf-8") if l.strip()]
 picked = [r for r in rows if (r.get("base_rank") is None or r["base_rank"] > 5) and r.get("best_rank") and
@@ -56,3 +60,4 @@ for r in picked:
     check("stored rewrites find a source the question missed (%s)" % r["id"], rank is not None,
           "question alone rank %s, fused rank %s" % (r.get("base_rank"), rank))
 print("RESULT %d/%d" % (sum(results), len(results)))
+sys.exit(0 if all(results) else 1)

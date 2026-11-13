@@ -1,4 +1,4 @@
-"""His corrections, repeats and praise in Codex sessions (28 Sep 2026, claude-825b1305).
+"""His corrections, repeats and praise in Codex sessions.
 
 events_verdicts.jsonl, the file the brain's correction studies and graph_store.build read, is built by
 backfill_history.verdicts() from Claude transcripts alone, so none of the 112 corrections and repeats it held for
@@ -19,10 +19,10 @@ Row: {"ts": epoch, "session": the capture's key for the session, "kind": "verdic
 The session key is the one extract_codex_events gives the same session's touches: "x" plus the last seven hex of the
 full id. The ledger keeps only the id's first 12 characters, and a Codex id is time-ordered, so its first 8 hex are the
 same for every session started within about 65 s; until 28 Sep this file keyed by them, which merged 8 such groups of
-his sessions and could never meet a touch (scheduled audit account02/B15, B15-R25-VERDICT-KEY-COLLAPSE-20260928). The
+his sessions and could never meet a touch. The
 full id is taken only where the prompt's own text is found under it: in Codex's prompt history (~/.codex/history.jsonl,
 full ids, written until 23 Sep) or inside that session's rollout. Otherwise the row is left unkeyed; a prefix is never
-given to the first or the only id known for it (B15-R25-TEXT-RESOLVER-FALSE-UNIQUE-20260928).
+given to the first or the only id known for it.
 The ledger's ts is local wall-clock time (checked 28 Sep against rollouts: 13:55:11 in the ledger = 10:55:11Z in the
 rollout, and the same for the live hook's rows), so it is converted with the machine's zone (time.mktime).
 
@@ -93,8 +93,7 @@ def _typed_texts(o):
 def _in_rollout(path, text):
     """the prompt's opening opens a message sent to that session. Until 28 Sep any line counted: the prompts hook puts
     his earlier prompts into every session's developer context, and a worker's instruction can quote one, so a prompt
-    typed in one session was also found in others (scheduled audit account02/B15,
-    B15-R30-ORIGIN-TEXTKEY-COLLISION-20260928)"""
+    typed in one session was also found in others"""
     key = _rollout_key(text)
     if not key:
         return False
@@ -118,7 +117,7 @@ class Resolver:
     """Full Codex session ids for the ledger's 12-character prefixes. A session is accepted only on exact provenance:
     the prompt's own text in Codex's prompt history under that id, or inside that id's rollout. A prefix with one known
     id is not proof: the prompt's real session can be missing from both sources, and then the one known id is someone
-    else's (scheduled audit account02/B15, B15-R25-TEXT-RESOLVER-FALSE-UNIQUE-20260928). Anything else is left unkeyed:
+    else's. Anything else is left unkeyed:
     "unconfirmed", "ambiguous" (two ids match) or "unknown" (no id has the prefix)."""
 
     def __init__(self, history=None, rollouts=None):

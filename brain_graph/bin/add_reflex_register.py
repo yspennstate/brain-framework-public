@@ -1,4 +1,4 @@
-"""Test, then add, the reflex recall_before_you_register (28 Sep, claude-825b1305).
+"""Test, then add, the reflex recall_before_you_register.
 
 It fires when a study is being registered: an entry line that opens with REGISTERED or PRE-REGISTERED (uppercase, as the
 run logs write registrations), or a lowercase "pre-registered (" that opens a parenthesis of its own (the one lived
@@ -33,12 +33,12 @@ ENTRY = {
              "and run as new; it was the same log's 00:3x reply-orders study, run by the same agent six hours earlier and "
              "left out of the summary written at a context reset. About forty minutes and a duplicate memory; the result "
              "reproduced within one case. brain.py recall on the question returns the 00:3x study's memory third.",
-    "source": "MISTAKES 2026-09-28 07:1x (claude-825b1305); memory a_reply_check_catches_only_the_mistakes_the_reply_admits_2026_09_28",
-    "added": "2026-09-28 07:4x (claude-825b1305)",
+    "source": "MISTAKES 2026-09-28 07:1x; memory a_reply_check_catches_only_the_mistakes_the_reply_admits_2026_09_28",
+    "added": "2026-09-28 07:4x",
     "controls": "",
 }
 J = lambda d: json.dumps(d, ensure_ascii=False)
-LOG = os.path.expanduser("~/.claude/brain_graph/study/THREE_DAY_RUN_2026-09-27.md")
+LOG = os.path.expanduser
 POS = [  # the lived registration forms of the run logs, each as the tool input that writes it
     J({"file_path": "C:\\tmp\\entry.md", "content": "REGISTERED 28 Sep 07:1x, before any code: the answer arm (his 27 Sep idea)\n"}),
     J({"file_path": LOG, "old_string": "x", "new_string": "x\n- 00:3x PRE-REGISTERED, before any number (his orders at the reply)"}),
@@ -46,16 +46,15 @@ POS = [  # the lived registration forms of the run logs, each as the tool input 
     J({"file_path": "C:\\tmp\\e.md", "content": "- 09:42  PRE-REGISTERED before any result: the rewrite tool at equal lines\n"}),
     J({"file_path": "C:\\tmp\\e.md", "content": "prior text\n  PRE-REGISTERED placebo run (their proposal): arm placebo\n"}),
     J({"file_path": "C:\\tmp\\e.md", "content": "- 22:3x cand75 pre-registered (arm_patches/patch_cand75.py: six conditions)"}),
-    J({"command": "cat >> THREE_DAY_RUN.md <<'EOF'\nREGISTERED 28 Sep 05:3x, before any code or number: GRA-05\nEOF",
-       "description": "Append the registration"}),
+    J,
     J({"file_path": "C:\\tmp\\e.md", "content": "- 11:5x-12:0x PRE-REGISTERED (the lag rule): on the split\n"}),
 ]
 NEG = [
     J({"file_path": LOG, "old_string": "x", "new_string": "- 13:1x  CORRECTIONS RERUN RESULT (pre-registered 13:0x): 2,272 moments"}),
     J({"file_path": LOG, "old_string": "x", "new_string": "- 11:5x-12:0x  Error channel scored (pre-registered 11:4x): 4,968"}),
-    J({"file_path": "C:\\m\\x.md", "content": "evidence: \"brain_graph/results/X.json; registered 05:3x in THREE_DAY_RUN\"\n"}),
+    J,
     J({"file_path": "C:\\m\\x.md", "content": "Registered before code in THREE_DAY_RUN_2026-09-27.md (07:1x); failed both.\n"}),
-    J({"command": "grep -n \"REGISTERED\" THREE_DAY_RUN_2026-09-27.md | tail -5", "description": "Find registrations"}),
+    J,
     J({"command": "grep -rhoE \".{0,30}\\bREGISTERED\\b.{0,90}\" study/*.md", "description": "Collect registrations"}),
     J({"file_path": LOG}),
     J({"file_path": "C:\\x\\hook.py", "old_string": "a", "new_string": "the hook registers his ask under your agent id"}),

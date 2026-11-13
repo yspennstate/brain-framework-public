@@ -1,5 +1,5 @@
 ---
-description: Mark task-checklist entries as seen by the partner - /seen all, /seen today, or /seen T-20260918-001,T-20260918-002.
+description: Mark task-checklist entries as seen by the partner - /seen all, /seen today, or /seen T-YYYYMMDD-NNN,T-YYYYMMDD-NNN.
 ---
 
 The partner has looked at entries on the task checklist and wants them marked seen. This checkmark is

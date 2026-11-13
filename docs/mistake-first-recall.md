@@ -12,9 +12,11 @@ and the two structural failures it is built to avoid.
 > edition (`brain/mistake_weights.py`, `brain/recall.py`, `tests/test_mistake_weights.py`),
 > which is not shipped here. In this repository the builder is
 > `dreaming/build_mistake_weights.py` and its consumer is the spreading walk in
-> `dreaming/spread_recall.py`, which reads `mistake_weights.tsv` to raise a scar's inflow,
-> relax its margin when severity is 0.8 or more, and floor its habituation, rather than
-> multiplying a blended score. The severity rules differ slightly (an `audit_` node is
+> `dreaming/spread_recall.py`, which runs when a prompt arrives and surfaces its top
+> pooled node only when it stands out. It reads `mistake_weights.tsv` to raise a scar's
+> inflow (`MW_BOOST`, 0.40), relax its margin when severity is 0.8 or more, floor its
+> habituation, and multiply its score by `1 + 0.10 * severity` (`MW_SCORE_TILT`). The
+> no-eviction floor described below belongs to the packaged edition. The severity rules differ slightly (an `audit_` node is
 > `0.35 + 0.65 * charge`); the builder's docstring is the current contract. Both
 > versions fail open: no artifact means no change to recall.
 

@@ -1,12 +1,12 @@
 # Mathematical Research Brain
 
-This repository is a privacy-isolated memory, verification, and evaluation
-system for mathematical research. It is intentionally **math only**. It must
+This folder holds the code of a privacy-isolated memory, verification, and
+evaluation system for mathematical research. It is intentionally **math only**. It must
 not ingest trading material, financial or options theory, company information,
 credentials, personal archives, client work, or unrelated projects.
 
-The project is private while it is being hardened for eventual public release.
-No local source is publishable merely because a scanner can read it.
+The code is published here; the sources it audits are not. No local source is
+publishable merely because a scanner can read it.
 
 ## What it is for
 
@@ -56,7 +56,8 @@ Results are promoted only when the evidence covers the scope of the claim.
 - `config/` — public-safe policy and trigger definitions.
 - `docs/` — architecture, threat model, audit protocol, and corrected design brief.
 - `tests/` — deterministic unit, property-style, adversarial, and regression tests.
-- `data/public/` — reviewed redistributable benchmark artifacts only.
+- `data/public/` — reviewed redistributable benchmark artifacts only (created
+  when the first one is promoted; this folder ships none).
 - `local/` — gitignored local audits and transcripts.
 
 ## Quick start
@@ -70,6 +71,9 @@ math-brain policy check $SOURCE_FILE --manifest $AUDIT_MANIFEST `
   --source-id source-001 --repository-root .
 ```
 
+A plain `python -m pytest -q` skips ten test files marked `slow` (the evaluation and pilot
+banks, two to more than ten minutes each); `MATHBRAIN_SLOW=1 python -m pytest -q` runs them as well.
+
 The command above checks one file against one source grant; it does not discover,
 upload, copy, or publish anything. See `docs/local-audit-protocol.md` and
 `docs/privacy-boundary.md` before auditing any local source.
@@ -79,9 +83,10 @@ See `docs/retrieval-and-consolidation.md` for the trusted interfaces.
 
 ## Release status
 
-Private research preview. The source and generated public benchmark will need a
-final privacy, provenance, license, citation, and reproducibility audit before
-the repository can be made public.
+Research preview. The code is public; the store it builds and the results of the
+studies live elsewhere in this repository (`export/`, `results/`, and `TESTS.md`
+at the top level). A generated benchmark is published only after its own privacy,
+provenance, license, citation, and reproducibility review.
 
 Hard challenge v2 is retained only as a falsified development artifact. Two
 solver-view-only decoders recover its fault labels—and one recovers the complete

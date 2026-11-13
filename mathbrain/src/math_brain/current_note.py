@@ -1420,7 +1420,7 @@ def read_current_note(database, node_id, *, artifact_root=None):
                                                    ensure_ascii=False).encode('utf8')),
                 'artifact': artifact,
                 'trust': {'truth_status': metadata.get('truth_status', claim.status.value if claim else 'unknown'),
-                          # what the revision itself declared, when that differs from its authenticated status (B11-R79)
+                          # what the revision itself declared, when that differs from its authenticated status
                           **({'declared_status': metadata['declared_status']}
                              if isinstance(metadata.get('declared_status'), str) else {}),
                           'trust_class': metadata.get('trust_class', 'unknown'),

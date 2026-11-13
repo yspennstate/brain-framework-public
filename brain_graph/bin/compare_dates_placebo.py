@@ -1,4 +1,4 @@
-"""compare_dates_placebo.py - per-question check of the date placebo (27 Sep, claude-825b1305). Pre-registered in TWO_DAY_RUN_2026-09-26.md:
+"""compare_dates_placebo.py - per-question check of the date placebo:
 every question WITHOUT a date ranks exactly as in the dates arm (same document lengths, no date token in the query), so
 any undated difference between placebo and dates falsifies the reading "the undated gain is length normalization".
 Reads the rows file the study wrote (quarantine; ids, flags and counts only are printed)."""

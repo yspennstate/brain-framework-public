@@ -1,5 +1,5 @@
 """test_live_delta_lookback.py - the fast layer's context read covers what each new event's count depends on, however much
-of the log lies between (29 Sep 2026, claude-825b1305; interactive audit IA-20260928-05).
+of the log lies between.
 
     python test_live_delta_lookback.py [--module LIVE_DELTA.py] [--old OLD_LIVE_DELTA.py]
 

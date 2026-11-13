@@ -58,7 +58,7 @@ immediate `0x116` device-loss (TdrDelay irrelevant). Corroborating evidence:
   or unparseable JSON → falls back to file mtime). JSON errors stopped after the fix.
 
 ## Backlog (next iterations)
-1. **Fix the PCIe-AER reaction** (`pcie-watch.ps1`): today a *corrected* (already-recovered)
+1. **Fix the PCIe-AER reaction** (`bin/crashguard-pcie-watch.ps1`): today a *corrected* (already-recovered)
    AER triggers a destructive RED mitigation (kill ollama, throttle all codex/observers, drop
    GPU clocks) — useless against idle device-loss and disruptive (~11×/day). Replace with:
    ensure keepalive alive + rate-based alerting; stop nuking the user's work on benign errors.
@@ -81,7 +81,7 @@ immediate `0x116` device-loss (TdrDelay irrelevant). Corroborating evidence:
   conflated `watchdog`/`watchdog2`. Correct count = exact `.ps1` name, excluding own PID.)
 - **09:19 (~1 h in):** `aer_last_60min` 31 -> **0** (boot burst aged out, no new link errors while
   the GPU is pinned). **No bugcheck since 08:00.** Clean confirmation the fix is holding. A
-  `keepalive-health.ps1` snapshot tool now logs this time-series to `logs/keepalive-health.jsonl`
+  `bin/crashguard-keepalive-health.ps1` snapshot tool now logs this time-series to `logs/keepalive-health.jsonl`
   and doubles as a fast keepalive supervisor (relaunches it if missing).
 - **09:22:** keepalive hardened with a dependency-free **fallback engine**. Primary stays `torch`;
   if torch/python is ever broken it falls back to `cuDevicePrimaryCtxRetain` via `nvcuda.dll`

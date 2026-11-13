@@ -59,7 +59,7 @@ repository, and an exact clean revision with no tracked or untracked changes:
 ```powershell
 $env:PYTHONPATH = 'src'
 python examples/run_challenge_study.py `
-  --repository-root C:/path/to/math-research-brain `
+  --repository-root C:/path/to/your-math-brain `
   --challenge-config config/challenge_bank.json `
   --evaluation-config config/challenge_evaluation.toml `
   --holdout-payload C:/private/challenge_bank_holdout.json `

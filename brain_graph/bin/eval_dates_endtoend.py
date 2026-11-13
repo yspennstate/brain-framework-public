@@ -37,7 +37,7 @@ sys.path.insert(0, DR)
 sys.path.insert(0, BIN)
 from quarantine_rows import keep_old  # noqa: E402  # a rerun keeps the previous run's rows (R13 trap 1, 27 Sep): brain data is never deleted, and an overwrite deletes
 SHADOW = os.environ.get("DATES_SHADOW_DIR") or os.path.join(
-    HOME, "AppData", "Local", "Temp", "claude", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "825b1305-b798-4b86-9592-6dee5d977809",
+    HOME, "AppData", "Local", "Temp", "claude", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "5e550001-b798-4b86-9592-6dee5d977809",
     "scratchpad", "shadow_dates")
 ARMS = {"base": os.path.join(SHADOW, "bm25_base.json.gz"), "dates": os.path.join(SHADOW, "bm25_dates.json.gz")}
 RECEIPT = os.path.join(SHADOW, "BUILD_RECEIPT.json")

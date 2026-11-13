@@ -34,6 +34,58 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import extract_touch_events as ct  # noqa: E402
 
 ROOT = os.path.join(os.path.expanduser("~"), ".codex", "sessions")
+DEFAULT_ROOT = ROOT
+# Codex sessions may run under more than one CODEX_HOME: CODEX_EXTRA_ROOTS lists their sessions folders (separated by
+# os.pathsep); they are read with the default root only (a test that points ROOT elsewhere reads just that). Rollouts are .jsonl.zst once finished (every ~/.codex rollout on 3 Nov):
+# a .zst is read under its plain path's state key, so a rollout scanned before it was compressed continues at the
+# same decompressed byte and nothing is written twice; a plain file and its .zst both present -> the plain one.
+EXTRA_ROOTS = [r for r in os.environ.get("CODEX_EXTRA_ROOTS", "").split(os.pathsep) if r]
+try:
+    import zstandard as _zstd
+except Exception:                       # python -s has no zstandard: the .zst rollouts are counted, not read
+    _zstd = None
+BUDGET_S = float(os.environ.get("CODEX_CAPTURE_BUDGET_S", "240"))   # a run stops taking new rollouts after this
+
+
+class _Zst:
+    """A finished .jsonl.zst rollout as a readable binary file with seek(start) forward and readline."""
+    def __init__(self, path):
+        import io
+        self._raw = open(path, "rb")
+        self._fh = io.BufferedReader(_zstd.ZstdDecompressor().stream_reader(self._raw), 1 << 20)
+
+    def seek(self, n):
+        while n > 0:
+            k = len(self._fh.read(min(n, 8 << 20)))
+            if not k:
+                raise OSError("zst_shorter_than_offset")
+            n -= k
+
+    def readline(self, *a):
+        return self._fh.readline(*a)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        self._fh.close()
+        self._raw.close()
+
+
+def rollout_files(roots, cutoff):
+    """(path to read, state key) for every rollout under roots changed since cutoff: plain .jsonl, or a .jsonl.zst
+    read under its plain path's key when no plain copy exists."""
+    out = []
+    for r in roots:
+        plain = set(glob.glob(os.path.join(r, "*", "*", "*", "*.jsonl")))
+        for f in plain:
+            if os.path.getmtime(f) >= cutoff:
+                out.append((f, f))
+        for z in glob.glob(os.path.join(r, "*", "*", "*", "*.jsonl.zst")):
+            if z[:-4] not in plain and os.path.getmtime(z) >= cutoff:
+                out.append((z, z[:-4]))
+    out.sort(key=lambda x: os.path.getmtime(x[0]))
+    return out
 WANT = (b'"item_completed"', b'"session_meta"', b'"turn_context"', b'"function_call"', b'"developer"')
 COLLAB = {"spawn_agent", "send_message", "wait_agent", "update_plan", "list_agents", "get_goal", "update_goal",
           "followup_task", "interrupt_agent", "request_user_input_async", "js", "run", "tool_search"}
@@ -69,7 +121,7 @@ def scan(path, start, st, emit, stats, end=None):
     A live writer may append while this runs. Its new records belong to the
     next capture, so scanning and the durable cursor name exactly the same bytes.
     """
-    with open(path, "rb") as fh:
+    with (_Zst(path) if path.endswith(".zst") else open(path, "rb")) as fh:
         fh.seek(start)
         pos = start
         while end is None or pos < end:
@@ -242,6 +294,7 @@ def scan(path, start, st, emit, stats, end=None):
                             seen.add(kn)
                             emit(ts, s, *kn)
                     stats["commands_fallback"] += 1
+    return pos
 
 
 def main():
@@ -269,8 +322,7 @@ def main():
         ct._save_state(a.state, state)
     pending, rec = ct.uncommitted_tail(a.out, committed.get(key))
     cutoff = time.time() - a.days * 86400
-    files = [f for f in glob.glob(os.path.join(ROOT, "*", "*", "*", "*.jsonl")) if os.path.getmtime(f) >= cutoff]
-    files.sort(key=os.path.getmtime)
+    files = rollout_files([ROOT] + (EXTRA_ROOTS if ROOT == DEFAULT_ROOT else []), cutoff)
     if a.max_files:
         files = files[-a.max_files:]
     stats, kinds = collections.Counter(), collections.Counter()
@@ -287,21 +339,32 @@ def main():
         kinds[kind] += 1
 
     with open(a.out, "a", encoding="utf-8") as out:
-        for i, f in enumerate(files):
+        for i, (f, fkey) in enumerate(files):
             size = os.path.getsize(f)
-            st = json.loads(json.dumps(state.get(f) or {"offset": 0}))
+            st = json.loads(json.dumps(state.get(fkey) or {"offset": 0}))
+            zsig = None
+            if f.endswith(".zst"):
+                zsig = [size, round(os.path.getmtime(f), 3)]
+                if st.get("zst") == zsig:
+                    continue
+                if _zstd is None:
+                    stats["zst_unread_no_module"] += 1
+                    continue
+            if BUDGET_S and time.time() - t0 > BUDGET_S and (zsig or st.get("offset", 0) < size):
+                stats["left_for_next_run"] += 1         # the oldest go first; the rest wait for the next run
+                continue
             start = int(st.get("offset", 0))
-            if start > size:
+            if start > size and zsig is None:
                 st, start = {"offset": 0}, 0
             # The last record may still be in flight. Never advance past it,
             # even if its current bytes already happen to parse as valid JSON.
-            end = ct.complete_end(f, start)
+            end = None if zsig else ct.complete_end(f, start)   # a .zst is a finished rollout: read to its end
             if start == end:
                 continue
             buf.clear()
             took.clear()
             try:
-                scan(f, start, st, emit, stats, end=end)
+                pos = scan(f, start, st, emit, stats, end=end)
             except Exception as e:
                 for line in took:
                     pending[line] += 1
@@ -311,8 +374,11 @@ def main():
             if buf:
                 out.write("".join(buf))
             stats["tail_matched"] += len(took)
+            if zsig:
+                end = pos
+                st["zst"] = zsig
             st["offset"] = end
-            state[f] = st
+            state[fkey] = st
             stats["files"] += 1
             stats["bytes"] += end - start
             if (i + 1) % 200 == 0:
@@ -328,7 +394,10 @@ def main():
     print("scanned %d rollouts (%.0f MB) in %.0f s; events by kind %s; commands %d (+%d from old-format calls); "
           "prompts %d; bad json %d; file errors %d%s" % (
               stats["files"], stats["bytes"] / 2**20, time.time() - t0, dict(kinds), stats["commands"],
-              stats["commands_fallback"], stats["prompts"], stats["bad_json"], stats["file_errors"], tail_note))
+              stats["commands_fallback"], stats["prompts"], stats["bad_json"], stats["file_errors"], tail_note +
+              ("; %d rollouts left for the next run (budget %.0f s)" % (stats["left_for_next_run"], BUDGET_S)
+               if stats["left_for_next_run"] else "") +
+              ("; %d .zst unread (no zstandard)" % stats["zst_unread_no_module"] if stats["zst_unread_no_module"] else "")))
 
 
 if __name__ == "__main__":

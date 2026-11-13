@@ -1,4 +1,4 @@
-"""check_lag_train_equals_train.py - the positive control for study_lag_edges.py (27-28 Sep, claude-825b1305): its
+"""check_lag_train_equals_train.py - the positive control for study_lag_edges.py: its
 equal-credit counts must be study_sequence_model.train's, exactly, on the same input.
 
 The committed sequence run cannot be reproduced from today's event logs: the 27 Sep backfill added events stamped before

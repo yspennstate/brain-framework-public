@@ -1,6 +1,5 @@
 """eval_head_struct.py - recall's protected head by promotion against the old score line, measured on his 56 and the
-held-out reworded bank (28 Sep 2026, claude-825b1305; scheduled audit account03/B01 auto63,
-B01-R1-BOOSTED-BM25-CROSSES-PROTECTED-HEAD-BOUNDARY-20260928).
+held-out reworded bank.
 
     python eval_head_struct.py OUT_JSON CANDIDATE_BRAIN.py [--workers 4] [--limit N]
 

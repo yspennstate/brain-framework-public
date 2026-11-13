@@ -1,11 +1,11 @@
 """study_support_gate.py - GRA-03 from his 27 Sep audit, replayed offline: does a support-aware graph weight do better than
-the min-max blend recall uses? (27 Sep, claude-825b1305.)
+the min-max blend recall uses?
 
 The finding: graph_lane.fuse min-max scales the graph list before the convex mix, so a graph preference built on almost
 nothing moves the ranking as much as a strong one. The rows of the R7C run (every question recalled once with the lane's
 body and graph list logged whole) let any fusion be replayed exactly as recall would show it: head + fuse(body, graph, w).
 
-Registered before computing (brain_graph/study/THREE_DAY_RUN_2026-09-27.md, 21:5x):
+Registered before computing:
   S0  today's blend at weight w
   S1  peak: w x (1 - g5), g5 the graph list's fifth score after min-max (a list with one clear leader gets the weight)
   S3  ambiguity: w where the body's top two scores are within 5 percent (the words cannot decide), 0.2 w elsewhere

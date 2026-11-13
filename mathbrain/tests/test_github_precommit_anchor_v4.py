@@ -55,14 +55,14 @@ def _response(
             "body": body,
             "created_at": created,
             "html_url": (
-                "https://github.com/yspennstate/math-research-brain/issues/17#issuecomment-456"
+                "https://github.com/yspennstate/example-brain/issues/17#issuecomment-456"
             ),
             "id": 456,
-            "issue_url": ("https://api.github.com/repos/yspennstate/math-research-brain/issues/17"),
+            "issue_url": ("https://api.github.com/repos/yspennstate/example-brain/issues/17"),
             "node_id": "IC_kwDOAnchorV4",
             "updated_at": created,
             "url": (
-                "https://api.github.com/repos/yspennstate/math-research-brain/issues/comments/456"
+                "https://api.github.com/repos/yspennstate/example-brain/issues/comments/456"
             ),
             "user": {
                 "id": 42,
@@ -82,7 +82,7 @@ def _parse(
         precommitment.canonical_record(),
         expected_precommitment_record_sha256=precommitment.record_sha256,
         repository_owner="yspennstate",
-        repository_name="math-research-brain",
+        repository_name="example-brain",
         issue_number=17,
         comment_id=456,
         expected_actor_login="yspennstate",
@@ -168,7 +168,7 @@ def test_comment_must_precede_the_future_round_by_the_frozen_margin(
         ),
         (
             "html_url",
-            "https://example.invalid/yspennstate/math-research-brain/issues/17#issuecomment-456",
+            "https://example.invalid/yspennstate/example-brain/issues/17#issuecomment-456",
             "HTML URL",
         ),
     ],
@@ -195,7 +195,7 @@ def test_wrong_precommitment_record_digest_fails_before_comment_parsing() -> Non
             precommitment.canonical_record(),
             expected_precommitment_record_sha256=_digest("substituted-record"),
             repository_owner="yspennstate",
-            repository_name="math-research-brain",
+            repository_name="example-brain",
             issue_number=17,
             comment_id=456,
             expected_actor_login="yspennstate",
@@ -221,7 +221,7 @@ def test_authority_consumer_refetches_live_and_compares_external_digest(
         calls["count"] += 1
         assert (repository_owner, repository_name, comment_id) == (
             "yspennstate",
-            "math-research-brain",
+            "example-brain",
             456,
         )
         assert timeout_seconds == 20
@@ -233,7 +233,7 @@ def test_authority_consumer_refetches_live_and_compares_external_digest(
         expected_precommitment_record_sha256=precommitment.record_sha256,
         expected_anchor_evidence_digest=expected.content_digest,
         repository_owner="yspennstate",
-        repository_name="math-research-brain",
+        repository_name="example-brain",
         issue_number=17,
         comment_id=456,
         expected_actor_login="yspennstate",
@@ -249,7 +249,7 @@ def test_authority_consumer_refetches_live_and_compares_external_digest(
             expected_precommitment_record_sha256=precommitment.record_sha256,
             expected_anchor_evidence_digest=_digest("substituted-anchor-evidence"),
             repository_owner="yspennstate",
-            repository_name="math-research-brain",
+            repository_name="example-brain",
             issue_number=17,
             comment_id=456,
             expected_actor_login="yspennstate",

@@ -1,7 +1,7 @@
 # Compute doctrine — how this fleet uses CPUs without hurting anyone
 
 *2026-07-10, from the owner's directive. This is the canonical statement; the memories
-`compute_doctrine_owner_first_2026_07_10` and `compute_governor_apparatus_2026_07_10` point here.*
+that describe the doctrine and the governor point here.*
 
 ## The three laws
 
@@ -39,7 +39,7 @@
 
 ## The Azure box (<box-host>)
 
-- Sequestered AI work on the box is governed by `/srv/aiwork/AI_BOX_RULES.md` (work only under
+- Sequestered AI work on the box is governed by a rules file kept on the box itself (work only under
   `/srv/aiwork/<session>/`, capped worker slices, no sudo, no production-stack contact, no low
   ports). Read it before working there; this doctrine adds the cross-machine priority and
   alerting layer on top, it does not replace those rules.

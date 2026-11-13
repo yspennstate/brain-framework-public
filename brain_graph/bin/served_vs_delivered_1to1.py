@@ -1,5 +1,5 @@
-"""served_vs_delivered_1to1.py - served_vs_delivered.py with a one-to-one join (27 Sep, claude-825b1305), after
-account01/B08 R12 (DELIVERY-JOIN-011): the first matcher let one transcript occurrence of a line confirm every served
+"""served_vs_delivered_1to1.py - served_vs_delivered.py with a one-to-one join, after
+a review found that the first matcher let one transcript occurrence of a line confirm every served
 row of that line within 180 s, so a retry could make an earlier lost serve read as delivered.
 
 Here each [subconscious] occurrence of a fragment in a session's transcript confirms at most one served line: served

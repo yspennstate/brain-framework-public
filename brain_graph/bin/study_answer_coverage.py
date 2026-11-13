@@ -1,8 +1,7 @@
 """study_answer_coverage.py - does a report that leaves part of his ask unaddressed predict that he restates that part next?
-(27 Sep, claude-825b1305.)
 
-Why: his corrections follow the agent's answer by a median 39 s and nothing in the trace before it predicts them
-(his_corrections_follow_quick_on_task_answers_not_drift_or_struggle_2026_09_27), so a mistake of his kind can only be
+
+Why: his corrections follow the agent's answer by a median 39 s and nothing in the trace before it predicts them, so a mistake of his kind can only be
 caught at the answer. The cheapest answer-time check is coverage: split his ask into clauses and see which the agent's
 reply never mentions. If uncovered clauses are the ones he restates in his next prompt, a check at the moment of the
 report would have caught those repeats; if restating is no more likely for an uncovered clause than a covered one, the

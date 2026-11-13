@@ -1,7 +1,7 @@
 #!/bin/zsh
 # NOT RUNNING. Starting it detached was refused on 3 Nov 06:5x as persistence, like launchd before it; it waits on
 # the owner's word. Until then the session cron, or an agent running bin/live_sidecar.py memories by hand, does this.
-# Hourly refresh of the live link sidecar's memory rows, as a detached loop. It replaces claude-35617489's session
+# Hourly refresh of the live link sidecar's memory rows, as a detached loop. It replaces claude-00000002's session
 # cron b5b65158, which fires only while that session sits idle and so went 01:52 -> 06:53 on 3 Nov without a run
 # (456 memories changed, 1,010 links missing from the walk). launchd stays refused, so this dies with a reboot.
 # Each pass takes an exclusive claim on memory:brain_graph/live and skips the hour if another agent holds it.

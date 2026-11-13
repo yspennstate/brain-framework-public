@@ -283,8 +283,8 @@ class InferenceConfig:
         }
 
 
-# A configuration may lower the solver-response budgets but not lift them past these (scheduled audit
-# B17-R79-EVALUATION-RESPONSE-LIMITS-UNBOUNDED-20260929: only depth had a ceiling). The shipped
+# A configuration may lower the solver-response budgets but not lift them past these (until 29 Sep
+# only depth had a ceiling). The shipped
 # configurations use 512 KiB, 12,000 nodes, 16 KiB strings and 10**12.
 RESPONSE_BYTES_CEILING = 8 * 1024 * 1024
 RESPONSE_NODES_CEILING = 1_000_000
@@ -4146,8 +4146,8 @@ class BenefitDecision:
         return tuple(gate for gate in self.failed_gates if gate not in OUTCOME_GATES)
 
 
-# helped=False used to mean either "the brain did not help" or "this run cannot say" (scheduled audit
-# B08-R79-STRICT-BENEFIT-VERDICT-UNREACHABLE-20260929). These are the gates a run fails because of the effect
+# helped=False used to mean either "the brain did not help" or "this run cannot say".
+# These are the gates a run fails because of the effect
 # it measured; every other gate, including any added later, says the evidence cannot support a verdict.
 # On the current app-server transport two evidence gates fail whatever a run does: the output budget is sealed
 # as unenforced (the request can neither carry nor attest max_output_tokens), and the runner never verifies

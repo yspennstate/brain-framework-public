@@ -60,7 +60,7 @@ brain*. Two mechanisms, both zero-flash:
 - **A `SessionStart` hook** in `~/.claude/settings.json` (exec-form, run hidden by
   Claude Code — not a console-allocating launcher, so it respects the no-flashing-
   window rule) injects `~/.claude/brain_startup.md` as fresh context at the top of
-  every session. A copy of that message is in this folder as `brain_startup.md`.
+  every session. In this repository that hook is `hooks/wake_brain.py`.
 
 So the first thing any new session sees is: *you're a continuous collaborator, here's
 how to wake up as yourself.*

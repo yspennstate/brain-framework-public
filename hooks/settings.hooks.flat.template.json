@@ -35,6 +35,15 @@
               "{{DREAMING}}\\error_monitor.py"
             ],
             "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}\\coactivation_log.py"
+            ],
+            "timeout": 600
           }
         ]
       },

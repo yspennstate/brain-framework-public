@@ -62,8 +62,36 @@ def _is_git_top_level() -> bool:
 # hidden or "fixed" by re-baking the constant.
 BYTE_EXACT_BOUND = ("test_relational_leakage_v3.py",)
 
+# Files that take two to more than ten minutes each on a laptop (measured one file at a time): the
+# evaluation and pilot banks rebuild their fixtures from scratch. They are marked `slow` and skipped
+# unless MATHBRAIN_SLOW=1, so a plain `python -m pytest -q` finishes in minutes; run the full suite
+# with MATHBRAIN_SLOW=1 python -m pytest -q, or only these with MATHBRAIN_SLOW=1 python -m pytest -q -m slow.
+SLOW = (
+    "test_benchmark.py",
+    "test_evaluation_v2.py",
+    "test_external_blind_gold_audit_v4.py",
+    "test_hard_blind_pilot_v1.py",
+    "test_hard_calibration_v3.py",
+    "test_hard_challenge_v2.py",
+    "test_internal_pilot_selection_v3.py",
+    "test_mathnet_bank_v3.py",
+    "test_mathnet_body_card_review_collect_v3.py",
+    "test_mathnet_body_card_review_v3.py",
+)
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: takes minutes; runs only with MATHBRAIN_SLOW=1")
+
 
 def pytest_collection_modifyitems(config, items):
+    run_slow = os.environ.get("MATHBRAIN_SLOW") == "1"
+    slow_skip = pytest.mark.skip(reason="slow; set MATHBRAIN_SLOW=1 to run it")
+    for item in items:
+        if os.path.basename(str(item.fspath)) in SLOW:
+            item.add_marker(pytest.mark.slow)
+            if not run_slow:
+                item.add_marker(slow_skip)
     if _is_git_top_level():
         return
     corpus_skip = pytest.mark.skip(

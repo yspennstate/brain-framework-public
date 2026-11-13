@@ -1,6 +1,5 @@
 """test_fusion_shared.py - recall and the learner's replay fuse with one function; a one-item or flat list keeps its weight;
-a replay the logged lists cannot settle is not learned from (29 Sep 2026, claude-825b1305; interactive audit G02 and
-G03, scheduled audit account01/B03 B03-R7-BODY-SINGLETON-LAMBDA-COLLAPSE-026).
+a replay the logged lists cannot settle is not learned from.
 
     python test_fusion_shared.py [--lane GRAPH_LANE.py] [--learn GRAPH_LEARN.py]
                                  [--old-lane OLD_GRAPH_LANE.py] [--old-learn OLD_GRAPH_LEARN.py]

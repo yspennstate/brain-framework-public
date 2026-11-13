@@ -26,5 +26,5 @@ it. Repeat across multiple agents and problem strata, record failures as well as
 successes, and keep improving the system based on measured error detection rather
 than intuition alone.
 
-The repository is private during development and is intended for eventual public
-release after privacy, provenance, licensing, and reproducibility gates pass.
+The code is published. A store or benchmark it generates is released only after
+its own privacy, provenance, licensing, and reproducibility gates pass.

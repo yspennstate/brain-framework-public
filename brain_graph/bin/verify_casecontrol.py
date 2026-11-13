@@ -1,6 +1,5 @@
 """verify_casecontrol.py - recompute a correction case-control result from its per-moment rows, and refuse a rows file
-that is missing or is not the one the result was built from (28 Sep 2026, claude-825b1305; scheduled audit account01/B01
-r66, B01-R13-CORRECTION-CASECONTROL-EVIDENCE-GENERATION-UNBOUND-20260928).
+that is missing or is not the one the result was built from.
 
     python verify_casecontrol.py RESULT.json [--rows ROWS.jsonl] [--binding BINDING.json]
 

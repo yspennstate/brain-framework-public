@@ -35,10 +35,11 @@ import io
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 
-HOME = os.path.expanduser("~")
+HOME =os.path.expanduser("~")
 _BRAIN_TREE = os.path.join(HOME, "brain-repo", "12_cognitive_architecture", "task_checklist")
 STORE = (os.environ.get("TASK_CHECKLIST_HOME")
          or (_BRAIN_TREE if os.path.isdir(os.path.dirname(_BRAIN_TREE)) else os.path.join(HOME, ".claude", "task_checklist")))
@@ -47,7 +48,7 @@ STATE = os.path.join(STORE, "state.json")
 VIEW = os.path.join(STORE, "CHECKLIST.md")
 LOCK = os.path.join(STORE, ".lock")
 LOG = os.path.join(STORE, "hook.log")
-# 1 Nov: asked words past ASKED_CAP chars live whole in ASKED_FULL (append-only), not in state.json. Loop ticks stored
+# 1 Nov: the owner's words past ASKED_CAP chars live whole in ASKED_FULL (append-only), not in state.json. Loop ticks stored
 # their whole prompt on every entry: asked_words was 23.7 of 31.7 MB, and every hook rewrites state.json under the lock.
 ASKED_FULL = os.path.join(STORE, "asked_full.jsonl")
 ASKED_CAP = 1500
@@ -57,7 +58,7 @@ MESH_DB = os.path.join(HOME, ".agents", "coordination", "agent_mesh.sqlite3")
 CLI = "python %s" % os.path.abspath(__file__).replace("\\", "/")
 MIN_ASK_CHARS = 25
 MAX_QUESTION_CHARS = 160      # longer than this and it is an ask that mentions the list, not a question about it
-                              # (questions run 20-90 characters; asks 200-900)
+                              # (the owner's questions run 20-90 characters; the owner's asks 200-900)
 DIGEST_MAX_OTHERS = 8
 # Claude Code hands the model at most 10,000 chars of one hook command's output inline; above that it persists the
 # text to a file and shows a 2 KB preview (measured 2026-09-20). The whole list is 290 KB, so the hook prints the
@@ -66,16 +67,19 @@ DIGEST_MAX_OTHERS = 8
 CONTEXT_CAP = 7000
 # an automated delivery probe of a hook (this fleet's own test prompt) is never one of the owner's asks
 PROBE_RX = re.compile(r"^\s*(\[probe\]|Automated delivery probe of a hook\b"
-                      # a headless worker's batch prompt is the fleet's, not the owner's (one entry per picture batch)
-                      # (any picture-maker brief: a worker's image brief once put seven entries on the owner's list)
+                      # a headless worker's batch prompt is the fleet's, not the owner's (2026-09-23: one entry per picture batch)
+                      # (2026-09-24: any picture-maker brief - "for YouTube thumbnails" named no documentary and put
+                      # seven Codex briefs on the owner's list as the owner's asks, T-20260924-080..083 and 090..092)
                       r"|\[headless-worker\]|You are (?:a|the) picture maker\b"
-                      # the harness's continuation turn after a usage-limit reset (one entry per session)
+                      # the harness's continuation turn after a usage-limit reset (2026-09-23: one entry per session)
                       r"|Your claude\.ai usage limit has reset\b"
-                      # a Codex liveness ping (one open entry per ping session buried the real asks)
+                      # a Codex liveness ping (2026-11-03: 440 open entries, one per codex-01a1... ping session,
+                      # 2,787 open in all - they buried the owner's real asks on the board's OPEN_TASKS export)
                       r"|Reply with the single word OK\.?\s*$"
-                      # a coordinator's round prompt to its Codex workers
+                      # the directive coordinator's round prompt to its Codex workers (313 open entries, 15-25 Oct)
                       r"|=== OPEN CALLS \(read this first\) ==="
-                      # Codex worker stage and relaunch prompts written by runners (stage, relaunch, roster, resume)
+                      # Codex worker stage and relaunch prompts written by runners (3 Nov: 628 FEI "Next stage", 357 series
+                      # keeper "It is HH:MM local. Your last run ended", 25 "You are A033, one of 100 Codex agents", 13 resume)
                       r"|Next stage \(\d{4}-\d\d-\d\d \d\d:\d\d UTC\)\. Read "
                       r"|It is \d\d:\d\d local\. Your last run (?:ended|stopped)\b"
                       r"|You are A\d+, one of \d+ Codex agents\b"
@@ -98,8 +102,8 @@ _CMD_NAME = re.compile(r"<command-name>(.*?)</command-name>", re.S)
 _CMD_ARGS = re.compile(r"<command-args>(.*?)</command-args>", re.S)
 _CMD_STDOUT = re.compile(r"<local-command-stdout>.*?</local-command-stdout>", re.S)
 _NOISE = ("<task-notification>", "[SYSTEM NOTIFICATION - NOT USER INPUT]", "<local-command-caveat>")
-# <cross-session-message> is the form a peer's relay takes (six entries were once filed from one as the owner's
-# asks under the receiving agents)
+# <cross-session-message> is the form a peer's relay takes since the 2026-09-24 restart (T-20260924-042 and five more
+# were filed from one as "the owner's" asks under the receiving agents)
 _MACHINE_TURN_RX = re.compile(r"^\s*(<agent-message\b|Another Claude session sent a message\b|<hook_prompt\b|<agent-notification\b"
                               r"|<cross-session-message\b)", re.I)
 
@@ -156,6 +160,61 @@ def _lock_holder_alive():
         return True
 
 
+# HOLD THE LOCK AT FULL SPEED (11 Nov 2026). After the orjson save (00:17) every caller held the lock
+# under 3 s except one: poem_carry_on.py's `note`, launched from a scheduled task, held it 41 s at 00:22 and 101.8 s at
+# 00:47, and every hook that wanted the list in those minutes failed. Its entry was stamped 63 s after it took the lock:
+# loading the 15 MB state, 0.3 s elsewhere, took a minute. A scheduled task starts at BelowNormal with low I/O and memory
+# priority, and Windows power-throttles a hidden low-priority process on a busy box, so the holder barely ran while
+# thirty sessions waited on it. While this process holds the lock it runs at Normal CPU, I/O and memory priority and is
+# not throttled; on release it gets back exactly what it had. Nothing here needs a privilege; any failure is ignored.
+_BOOST_SAVED = {}
+
+
+def _boost_while_locked(on):
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        k, nt = ctypes.windll.kernel32, ctypes.windll.ntdll
+        h = ctypes.c_void_p(k.GetCurrentProcess())
+
+        class _Throttle(ctypes.Structure):
+            _fields_ = [("Version", ctypes.c_ulong), ("ControlMask", ctypes.c_ulong), ("StateMask", ctypes.c_ulong)]
+
+        if on:
+            _BOOST_SAVED.clear()
+            cls = k.GetPriorityClass(h)
+            if cls in (0x40, 0x4000) and k.SetPriorityClass(h, 0x20):          # IDLE / BELOW_NORMAL -> NORMAL
+                _BOOST_SAVED["cls"] = cls
+            io_p = ctypes.c_ulong(0)
+            if nt.NtQueryInformationProcess(h, 33, ctypes.byref(io_p), 4, None) == 0 and io_p.value < 2:
+                if nt.NtSetInformationProcess(h, 33, ctypes.byref(ctypes.c_ulong(2)), 4) == 0:   # ProcessIoPriority
+                    _BOOST_SAVED["io"] = io_p.value
+            mem = ctypes.c_ulong(0)
+            if k.GetProcessInformation(h, 0, ctypes.byref(mem), 4) and mem.value < 5:
+                if k.SetProcessInformation(h, 0, ctypes.byref(ctypes.c_ulong(5)), 4):         # ProcessMemoryPriority
+                    _BOOST_SAVED["mem"] = mem.value
+            old = _Throttle(1, 0, 0)
+            if k.GetProcessInformation(h, 4, ctypes.byref(old), ctypes.sizeof(old)):         # ProcessPowerThrottling
+                new = _Throttle(1, 1, 0)                                                     # execution speed: not throttled
+                if k.SetProcessInformation(h, 4, ctypes.byref(new), ctypes.sizeof(new)):
+                    _BOOST_SAVED["throttle"] = (old.Version, old.ControlMask, old.StateMask)
+        else:
+            saved = dict(_BOOST_SAVED)
+            _BOOST_SAVED.clear()
+            if "throttle" in saved:
+                old = _Throttle(*saved["throttle"])
+                k.SetProcessInformation(h, 4, ctypes.byref(old), ctypes.sizeof(old))
+            if "mem" in saved:
+                k.SetProcessInformation(h, 0, ctypes.byref(ctypes.c_ulong(saved["mem"])), 4)
+            if "io" in saved:
+                nt.NtSetInformationProcess(h, 33, ctypes.byref(ctypes.c_ulong(saved["io"])), 4)
+            if "cls" in saved:
+                k.SetPriorityClass(h, saved["cls"])
+    except Exception:
+        pass
+
+
 class _Lock(object):
     """A lock file with a short wait; a lock older than 60 s is treated as abandoned. A hook waits WAIT seconds; the
     CLI waits 30 (set in main): with state.json at 31 MB a save holds the lock for seconds on a loaded box, and the
@@ -173,6 +232,7 @@ class _Lock(object):
                 _LOCK_DEPTH[0] += 1
                 if _LOCK_DEPTH[0] == 1:
                     _LOCK_T0[0] = time.time()
+                    _boost_while_locked(True)
                 return self
             except FileExistsError:
                 try:
@@ -196,11 +256,13 @@ class _Lock(object):
         except OSError:
             pass
         _LOCK_DEPTH[0] = max(0, _LOCK_DEPTH[0] - 1)
+        if _LOCK_DEPTH[0] == 0 and _BOOST_SAVED:
+            _boost_while_locked(False)
         if _LOCK_DEPTH[0] == 0 and _LOCK_T0[0]:
             held = time.time() - _LOCK_T0[0]
             _LOCK_T0[0] = 0.0
             if held > 3.0:
-                # name the long holders: refusals went on after the reader fix
+                # 2 Nov 22:3x: refusals continued at ~1/4 min after the reader fix; name the long holders
                 try:
                     log("lock held %.1f s by pid %d: %s" % (held, os.getpid(), " ".join(sys.argv[1:3])[:80]))
                 except Exception:
@@ -211,13 +273,440 @@ class _Lock(object):
             # 1 Nov: rendering CHECKLIST.md (5.7 MB) under the lock was a third of every hold. It is written after the
             # lock is released, and only if no later save has landed: the last writer of a burst always writes it.
             if _state_mtime() == mt:
-                _write_view_now(st)
+                if not (_ASYNC_VIEW[0] and _spawn_view_render()):
+                    _write_view_now(st)
 
 
 # write_view() inside a held lock leaves its state here for _Lock.__exit__ to render once the lock is released
 _LOCK_DEPTH = [0]
 _LOCK_T0 = [0.0]
 _PENDING_VIEW = {}
+
+# 10 Nov: rendering and writing CHECKLIST.md (6.7 MB, 7,345 entries) cost 0.2-0.5 s of every saving prompt and every
+# Stop, inside the hook the prompt waits on. A hook on the live store hands it to one hidden child instead
+# (--render-view); the child renders from state.json, then renders again if a save landed meanwhile, so the last
+# writer of a burst is always shown, seconds later. The CLI and the selftest still render in their own process.
+# TASK_CHECKLIST_VIEW_SYNC=1 restores the old way.
+_ASYNC_VIEW = [False]
+VIEW_RENDER_LOCK = os.path.join(STORE, ".render.lock")
+
+
+def _render_child_alive():
+    try:
+        if time.time() - os.path.getmtime(VIEW_RENDER_LOCK) > 300:
+            return False
+        with io.open(VIEW_RENDER_LOCK, "rb") as fh:
+            return _pid_alive(int(fh.read(32).strip() or b"0"))
+    except (OSError, ValueError):
+        return False
+
+
+def _spawn_view_render():
+    """True if a render child is running or was started (hidden, own group, out of the hook's job when allowed)."""
+    if _render_child_alive():
+        return True
+    cmd = [sys.executable, "-s", os.path.abspath(__file__), "--render-view"]
+    env = dict(os.environ, TASK_CHECKLIST_HOME=STORE)
+    kw = dict(stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True, env=env)
+    if os.name == "nt":
+        base = 0x08000000 | 0x00000200      # CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP
+        for flags in (base | 0x01000000, base):     # + CREATE_BREAKAWAY_FROM_JOB when the job allows it
+            try:
+                subprocess.Popen(cmd, creationflags=flags, **kw)
+                return True
+            except Exception:
+                continue
+        return False
+    try:
+        subprocess.Popen(cmd, start_new_session=True, **kw)
+        return True
+    except Exception:
+        return False
+
+
+def _render_view_main():
+    for _ in range(6):
+        try:
+            fd = os.open(VIEW_RENDER_LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode("ascii"))
+            os.close(fd)
+        except FileExistsError:
+            if _render_child_alive():
+                return 0
+            try:
+                os.remove(VIEW_RENDER_LOCK)
+            except OSError:
+                pass
+            continue
+        except OSError as exc:
+            log("render child: no lock (%r)" % (exc,))
+            return 0
+        try:
+            mt = _state_mtime()
+            _write_view_now(load_state())
+        except Exception as exc:
+            log("render child failed: %r" % (exc,))
+            mt = _state_mtime()
+        finally:
+            try:
+                os.remove(VIEW_RENDER_LOCK)
+            except OSError:
+                pass
+        # the lock is gone before this check: a save that saw the lock held is seen here, a later one starts a child
+        if _state_mtime() == mt:
+            return 0
+    return 0
+
+
+# BURSTS OF STOPS ARE WRITTEN ONCE (11 Nov 2026). A Stop on an open entry loaded and saved the whole
+# state (16 MB: about 85 + 55 ms, and seconds while another holder had the lock) to change one entry's last words. In
+# the ledger of 8-11 Nov, 44 pct of the Stops on an entry came under 30 s after the one before (a Stop hook sends the
+# agent back to work) and 49 pct under 60 s. On the live store such a Stop now leaves its words in a small file of its
+# own and returns; one hidden child applies every session's pending Stops in a single locked load and save once the
+# window has passed. No Stop's words are lost; the list shows them up to about a minute later. A closing line, a named
+# ask, a session with no full Stop in the window, or a prompt since that Stop still takes the full path.
+# TASK_CHECKLIST_STOP_COALESCE=0 turns it off; another number is the window in seconds (default 60 on the live store,
+# 0 elsewhere, so the selftest still sees every Stop whole).
+def _stop_window():
+    v = os.environ.get("TASK_CHECKLIST_STOP_COALESCE")
+    if v is None:
+        return 60.0 if _ASYNC_VIEW[0] else 0.0
+    try:
+        return max(0.0, float(v))
+    except ValueError:
+        return 0.0
+
+
+def _stop_dir():
+    return os.path.join(os.path.dirname(STATE), ".stop_pending")      # follows STATE, like the session sidecar
+
+
+def _stop_flush_lock():
+    return os.path.join(_stop_dir(), ".flush.lock")
+
+
+def _stop_mark(session, tid):
+    """After a full Stop, inside the lock: the entry this session's Stops touch and when they were last written whole.
+    Pending words of this session are older than the ones just written, so they go."""
+    if not session or _stop_window() <= 0:
+        return
+    try:
+        d = _stop_dir()
+        os.makedirs(d, exist_ok=True)
+        p = os.path.join(d, session[:12] + ".mark")
+        if tid:
+            tmp = "%s.%d.tmp" % (p, os.getpid())
+            with io.open(tmp, "w", encoding="utf-8") as fh:
+                json.dump({"ns": time.time_ns(), "id": tid}, fh)
+            _replace_retrying(tmp, p, tries=20)
+        else:
+            _stop_unmark(session)
+        for f in os.listdir(d):
+            if f.startswith(session[:12] + ".") and f.endswith(".pend"):
+                try:
+                    os.remove(os.path.join(d, f))
+                except OSError:
+                    pass
+    except Exception as exc:
+        log("stop mark not written: %r" % (exc,))
+
+
+def _stop_unmark(session):
+    """A prompt may open a new entry, so the session's next Stop takes the full path."""
+    if session:
+        try:
+            os.remove(os.path.join(_stop_dir(), session[:12] + ".mark"))
+        except OSError:
+            pass
+
+
+def _stop_coalesce(session, agent, said_full, said):
+    """True when this Stop's words were left for the flush child instead of a whole-state save."""
+    w = _stop_window()
+    if w <= 0 or not session or not said or closes_task(said_full) or _NAMED_ASK_RX.search(said_full or ""):
+        return False
+    try:
+        d = _stop_dir()
+        with _open_shared(os.path.join(d, session[:12] + ".mark"), binary=True) as fh:
+            mark = json.loads(fh.read())
+        ns = time.time_ns()
+        if not mark.get("id") or (ns - int(mark["ns"])) / 1e9 >= w:
+            return False
+        p = os.path.join(d, "%s.%d.pend" % (session[:12], ns))
+        with io.open(p + ".tmp", "w", encoding="utf-8") as fh:
+            json.dump({"ns": ns, "session": session[:12], "id": mark["id"], "by": agent, "at": now_min(), "said": said},
+                      fh, ensure_ascii=False)
+        os.replace(p + ".tmp", p)
+    except Exception:
+        return False
+    _spawn_stop_flush()
+    return True
+
+
+def _stop_flush_alive():
+    lk = _stop_flush_lock()
+    try:
+        if time.time() - os.path.getmtime(lk) > 300:
+            return False
+        with io.open(lk, "rb") as fh:
+            return _pid_alive(int(fh.read(32).strip() or b"0"))
+    except (OSError, ValueError):
+        return False
+
+
+def _spawn_stop_flush():
+    if _stop_flush_alive():
+        return True
+    cmd = [sys.executable, "-s", os.path.abspath(__file__), "--flush-stops"]
+    env = dict(os.environ, TASK_CHECKLIST_HOME=STORE, TASK_CHECKLIST_STOP_COALESCE=str(_stop_window()))
+    kw = dict(stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True, env=env)
+    if os.name == "nt":
+        base = 0x08000000 | 0x00000200      # CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP
+        for flags in (base | 0x01000000, base):     # + CREATE_BREAKAWAY_FROM_JOB when the job allows it
+            try:
+                subprocess.Popen(cmd, creationflags=flags, **kw)
+                return True
+            except Exception:
+                continue
+        return False
+    try:
+        subprocess.Popen(cmd, start_new_session=True, **kw)
+        return True
+    except Exception:
+        return False
+
+
+def _pending_stops():
+    d = _stop_dir()
+    try:
+        return sorted(f for f in os.listdir(d) if f.endswith(".pend"))
+    except OSError:
+        return []
+
+
+# A LOOP TICK'S REOPEN IS WRITTEN WITH THE NEXT SAVE (11 Nov 2026). A loop session closes its entry
+# every round, and the next tick of the same words reopened it with a whole-state load and save under the lock (15 MB:
+# 73 such reopens in 47 minutes on 11 Nov; the checklist hook's median prompt was 35 ms, its mean 277 ms). When the
+# sidecar shows the session has no open entry and its newest entry is this ask, the prompt now leaves the reopen in a
+# small file of its own and returns. The same holds when the session alternates between two loop asks and this tick
+# names its other open entry (only a note and the session's 'latest' change; 11 Nov 18:0x, 600-3,100 ms a tick). Every locked load_state folds pending reopens in before it changes anything, so an
+# agent's `done`, a closing-line Stop or the flush child writes the reopen first and then its own change, in order;
+# state.json keeps the newest reopen applied per session, so a load that is never saved cannot apply one twice. The
+# list shows the reopen up to about a minute later. Off where Stop coalescing is off (TASK_CHECKLIST_STOP_COALESCE=0,
+# the selftest's store), and with TASK_CHECKLIST_NO_FAST=1.
+def _pending_reopens(session=None):
+    try:
+        fs = sorted(f for f in os.listdir(_stop_dir()) if f.endswith(".reopen"))
+    except OSError:
+        return []
+    return [f for f in fs if f.startswith(session[:12] + ".")] if session else fs
+
+
+_FOLDED = {"files": [], "events": []}      # what the last locked load folded in; save_state removes and records them
+
+
+def _fold_reopens(st):
+    _FOLDED["files"], _FOLDED["events"] = [], []
+    files = _pending_reopens()
+    if not files:
+        return
+    d = _stop_dir()
+    recs = []
+    for f in files:
+        p = os.path.join(d, f)
+        try:
+            with _open_shared(p, binary=True) as fh:
+                recs.append(json.loads(fh.read()))
+            _FOLDED["files"].append(f)
+        except Exception:
+            try:
+                if time.time() - os.path.getmtime(p) > 60:
+                    _FOLDED["files"].append(f)        # unreadable for a minute: damaged, not being written
+            except OSError:
+                pass
+    recs.sort(key=lambda r: int(r.get("ns") or 0))
+    applied = st.setdefault("reopens_applied", {})
+    for r in recs:
+        s, ns = r.get("session") or "", int(r.get("ns") or 0)
+        if not s or ns <= int(applied.get(s) or 0):
+            continue
+        applied[s] = ns
+        e = st["entries"].get(r.get("id") or "")
+        if not e:
+            continue
+        by, at, iso = r.get("by") or "", r.get("at") or now_min(), r.get("iso") or now_iso()
+        if e.get("status") != "open":
+            e["status"], e["done_at"], e["seen"], e["seen_at"] = "open", None, False, None
+            _FOLDED["events"].append({"at": iso, "kind": "open", "id": e["id"], "by": by, "note": ""})
+        txt = "asked again (time %d)" % int(r.get("n") or 2)
+        e["updates"].append({"at": at, "by": by, "note": txt})
+        e["updates"] = e["updates"][-40:]
+        e["last_activity"] = at
+        _FOLDED["events"].append({"at": iso, "kind": "note", "id": e["id"], "by": by, "note": txt})
+        st["sessions"].setdefault(s, {})["latest"] = e["id"]
+    cut = time.time_ns() - 3 * 86400 * 10 ** 9
+    for s in [k for k, v in applied.items() if int(v or 0) < cut]:
+        del applied[s]
+
+
+def _saved_folded():
+    """After a save has replaced state.json: the ledger rows of what it folded in, and its reopen files go."""
+    files, events = _FOLDED["files"], _FOLDED["events"]
+    _FOLDED["files"], _FOLDED["events"] = [], []
+    for ev in events:
+        try:
+            append_ledger(ev)
+        except Exception as exc:
+            log("reopen ledger row not written: %r" % (exc,))
+    for f in files:
+        try:
+            os.remove(os.path.join(_stop_dir(), f))
+        except OSError:
+            pass
+
+
+def _defer_reopen(session, text, agent):
+    """True when this prompt's reopen of the session's done entry was left for the next save (and printed)."""
+    if _stop_window() <= 0 or not session or os.environ.get("TASK_CHECKLIST_NO_FAST") == "1":
+        return False
+    try:
+        with _open_shared(_side_path(), binary=True) as fh:
+            side = json.loads(fh.read())
+        if side.get("stamp") != _state_stamp():
+            return False
+        s = session[:12]
+        per = side.get("k", {}).get(s)
+        if not per:
+            return False
+        words = " ".join(text.split())
+        cands = [per[k] for k in {_ask_key(words), _ask_key(redact(words))} if k in per]
+        if not cands:
+            return False
+        hit = max(cands, key=lambda c: c[0])          # repeated_ask: the newest entry with these words
+        d = _stop_dir()
+        mine = []
+        for f in _pending_reopens(session):
+            try:
+                with _open_shared(os.path.join(d, f), binary=True) as fh:
+                    mine.append(json.loads(fh.read()).get("id"))
+            except Exception:
+                return False
+        if side.get("stamp") != _state_stamp():
+            return False                 # a save folded the pending files meanwhile: the full path counts right
+        latest = mine[-1] if mine else (side.get("s", {}).get(s) or [None])[0]
+        if latest == hit[0]:
+            return True                  # the session's open entry (pending or saved) is this ask: nothing to write
+        n = int(hit[1]) + 2 + mine.count(hit[0])
+        os.makedirs(d, exist_ok=True)
+        ns = time.time_ns()
+        p = os.path.join(d, "%s.%d.reopen" % (s, ns))
+        with io.open(p + ".tmp", "w", encoding="utf-8") as fh:
+            json.dump({"ns": ns, "session": s, "id": hit[0], "by": agent, "at": now_min(), "iso": now_iso(), "n": n}, fh)
+        os.replace(p + ".tmp", p)
+    except Exception:
+        return False
+    _spawn_stop_flush()
+    print("[checklist] The owner's repeated ask is %s (time %d), reopened: \"%s\"" % (hit[0], n, short(text, 120)))
+    print("  Close each round with: %s done %s \"<result>\" - the rounds stay as dated updates on the one entry." % (CLI, hit[0]))
+    return True
+
+
+def _apply_pending_stops():
+    """Inside the lock: every pending Stop as its ledger event, and each session's newest words on its entry, in one
+    load and save. Words older than the session's last full Stop are dropped (that Stop wrote newer ones)."""
+    d = _stop_dir()
+    files = _pending_stops()
+    if not files and not _pending_reopens():
+        return 0
+    recs = []
+    for f in files:
+        try:
+            with io.open(os.path.join(d, f), encoding="utf-8") as fh:
+                recs.append(json.load(fh))
+        except Exception:
+            pass
+    recs.sort(key=lambda r: r.get("ns", 0))
+    st = load_state()
+    applied, marks = 0, {}
+    for r in recs:
+        s = r.get("session") or ""
+        if s not in marks:
+            try:
+                with _open_shared(os.path.join(d, s + ".mark"), binary=True) as fh:
+                    marks[s] = json.loads(fh.read())
+            except Exception:
+                marks[s] = None
+        m = marks[s]
+        if m and int(m.get("ns", 0)) > int(r.get("ns", 0)):
+            continue
+        e = st["entries"].get(r.get("id") or "")
+        if not e or e.get("status") != "open":
+            continue
+        e["last_said"] = {"at": r.get("at") or now_min(), "text": r.get("said") or ""}
+        touch(st, e["id"], r.get("by") or "")
+        _event(st, "stop", e["id"], r.get("by") or "", (r.get("said") or "")[:200])
+        applied += 1
+    folded = len(_FOLDED["files"])
+    if applied or folded:
+        save_state(st)
+        write_view(st)
+    applied += folded
+    for f in files:
+        try:
+            os.remove(os.path.join(d, f))
+        except OSError:
+            pass
+    return applied
+
+
+def _flush_stops_main():
+    """The hidden child: wait out the window, apply what is pending, again while more arrives, then go."""
+    _ASYNC_VIEW[0] = (os.path.normcase(os.path.abspath(STORE)) in _LIVE_STORES
+                      and os.environ.get("TASK_CHECKLIST_VIEW_SYNC") != "1")
+    _Lock.WAIT = 30.0
+    w = _stop_window() or 60.0
+    lk = _stop_flush_lock()
+    for _ in range(240):
+        try:
+            os.makedirs(_stop_dir(), exist_ok=True)
+            fd = os.open(lk, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode("ascii"))
+            os.close(fd)
+        except FileExistsError:
+            if _stop_flush_alive():
+                return 0
+            try:
+                os.remove(lk)
+            except OSError:
+                pass
+            continue
+        except OSError as exc:
+            log("stop flush: no lock (%r)" % (exc,))
+            return 0
+        try:
+            time.sleep(w)
+            with _Lock():
+                n = _apply_pending_stops()
+            log("stop flush: %d pending Stop(s) applied" % n) if n else None
+        except Exception as exc:
+            log("stop flush failed: %r" % (exc,))
+        finally:
+            try:
+                os.remove(lk)
+            except OSError:
+                pass
+        # the lock is gone before this check: a Stop that saw it held is seen here, a later one starts a child
+        if not _pending_stops() and not _pending_reopens():
+            break
+    try:                                       # marks of sessions quiet for a day
+        d = _stop_dir()
+        for f in os.listdir(d):
+            p = os.path.join(d, f)
+            if f.endswith(".mark") and time.time() - os.path.getmtime(p) > 86400:
+                os.remove(p)
+    except OSError:
+        pass
+    return 0
 
 
 def _state_mtime():
@@ -308,27 +797,43 @@ def _posix_replace(src, dst):
     return False
 
 
+try:
+    import orjson as _orjson
+except Exception:
+    try:
+        import _usersite  # noqa: F401 - hooks run `python -s`; orjson lives in the Roaming user-site
+        import orjson as _orjson
+    except Exception:
+        _orjson = None
+
+
+def _jloads(raw):
+    """11 Nov: state.json is 15 MB; the stdlib parse took 0.22-0.36 s and the indented dump 0.29-0.36 s on every
+    registering prompt and Stop, inside the lock. orjson does both in 0.09 s and 0.04 s and gives equal objects on the
+    live state. Anything orjson refuses (a BOM, NaN) goes through the stdlib as before."""
+    if _orjson is not None:
+        try:
+            return _orjson.loads(raw)
+        except Exception:
+            pass
+    return json.loads(raw.decode("utf-8-sig") if isinstance(raw, bytes) else raw)
+
+
+def _jdump_bytes(st, indent):
+    if _orjson is not None:
+        try:
+            return _orjson.dumps(st, option=_orjson.OPT_SORT_KEYS | _orjson.OPT_NON_STR_KEYS
+                                 | (_orjson.OPT_INDENT_2 if indent else 0))
+        except Exception:
+            pass
+    return json.dumps(st, ensure_ascii=False, indent=1 if indent else None, sort_keys=True).encode("utf-8")
+
+
 def _read_json(path):
-    with _open_shared(path) as fh:
-        return json.load(fh)
-
-
-def _file_key(st):
-    return (st.st_ino, st.st_size, st.st_mtime_ns)
-
-
-# 5 Nov 2026 (claude-95df24fa, Mac): a prompt parsed the 1.6 MB state.json twice, once to look up the session's mesh
-# agent and again under the lock (~7 ms each). hook_main now hands its first parse over: _PRIMED holds (file key,
-# state) and the next load_state takes it, once, when state.json still has that inode, size and mtime. save_state
-# always writes a temp file and replaces, so an unchanged key is an unchanged file.
-_PRIMED = []
-_LAST_KEY = []          # the file key of the newest parse load_state made
-
-
-def _read_state_keyed():
-    with _open_shared(STATE) as fh:
-        key = _file_key(os.fstat(fh.fileno()))
-        return json.load(fh), key
+    # read the bytes and close before parsing: the file is open for the read only, not the parse
+    with _open_shared(path, binary=True) as fh:
+        raw = fh.read()
+    return _jloads(raw)
 
 
 def _fallback_state():
@@ -368,14 +873,7 @@ def load_state():
     # 1 Nov: 'state.json unreadable' was logged 8 times in 4 hours with the file intact. Each time the hourly copy (or a
     # leftover temp a day old) was loaded and then SAVED over the list, dropping every change since that copy (19
     # entries at 03:01). A failed read of a whole file is retried, then refused; only a damaged file falls back.
-    st, last, key = None, None, None
-    if _PRIMED:
-        key, primed = _PRIMED.pop()
-        try:
-            if _file_key(os.stat(STATE)) == key:
-                return primed
-        except OSError:
-            pass
+    st, last = None, None
     for k in range(10):
         try:
             if not os.path.exists(STATE):
@@ -384,7 +882,7 @@ def load_state():
             if os.path.getsize(STATE) == 0:
                 st = {}
                 break
-            st, key = _read_state_keyed()
+            st = _read_json(STATE)
             break
         except Exception as exc:
             last = exc
@@ -399,7 +897,12 @@ def load_state():
     st.setdefault("entries", {})
     st.setdefault("sessions", {})
     st.setdefault("seq", {})
-    _LAST_KEY[:] = [key] if key is not None else []
+    if _LOCK_DEPTH[0] > 0:
+        try:
+            _fold_reopens(st)
+        except Exception as exc:
+            _FOLDED["files"], _FOLDED["events"] = [], []
+            log("pending reopens not folded: %r" % (exc,))
     return st
 
 
@@ -426,10 +929,13 @@ def _replace_retrying(tmp, dest, tries=60):
 def _sweep_stale_tmps(keep=2, age=3600):
     """A writer killed mid-dump (a hook timeout on a busy disk) leaves its 17 MB state.json.<pid>.tmp behind: 33 in one
     hour on 24 Oct, about half a gigabyte an hour. After a good save, remove those older than an hour, keeping the newest
-    `keep` for _fallback_state."""
+    `keep` for _fallback_state.
+    11 Nov 2026: the view's CHECKLIST.md.<pid>.tmp is left the same way (66 at 16:21 that day, 70 in
+    all, 6.8 MB each, about 470 MB); nothing reads them, so those older than an hour go too, none kept."""
     import glob
     try:
         olds = sorted(glob.glob(STATE + ".*.tmp"), key=os.path.getmtime, reverse=True)[keep:]
+        olds += glob.glob(VIEW + ".*.tmp")
         now = time.time()
         for p in olds:
             try:
@@ -444,11 +950,9 @@ def _sweep_stale_tmps(keep=2, age=3600):
 def save_state(st):
     tmp = "%s.%d.tmp" % (STATE, os.getpid())     # one temp file per writer: two writers never share a temp
     try:
-        # 5 Nov: one dumps string, one write. json.dump to a file streams ~85k chunks through the pure-Python encoder
-        # (14 ms on a 1.6 MB state); dumps builds the same bytes in C (5 ms, sha equal).
-        text = json.dumps(st, ensure_ascii=False, indent=1, sort_keys=True)
-        with io.open(tmp, "w", encoding="utf-8") as fh:
-            fh.write(text)
+        data = _jdump_bytes(st, indent=True)
+        with io.open(tmp, "wb") as fh:
+            fh.write(data)
         _replace_retrying(tmp, STATE)
     except BaseException:
         try:
@@ -456,6 +960,8 @@ def save_state(st):
         except OSError:
             pass
         raise
+    _saved_folded()
+    _write_session_side(st)
     _sweep_stale_tmps()
     # Once an hour, a copy forced to disk: a power cut can leave state.json as zeros (23 Oct 11:46), and an fsync of
     # 15 MB on every prompt would hold the lock past other hooks' 4 s wait, so the hourly copy carries durability.
@@ -469,13 +975,90 @@ def save_state(st):
                     % (os.path.getsize(STATE), old_n))
                 return
             btmp = bak + ".%d.tmp" % os.getpid()
-            with io.open(btmp, "w", encoding="utf-8") as fh:
-                fh.write(json.dumps(st, ensure_ascii=False, sort_keys=True))
+            with io.open(btmp, "wb") as fh:
+                fh.write(_jdump_bytes(st, indent=False))
                 fh.flush()
                 os.fsync(fh.fileno())
             _replace_retrying(btmp, bak)
     except Exception as exc:
         log("hourly backup failed: %r" % (exc,))
+
+
+# THE SAME-ASK FAST PATH (11 Nov 2026). About 60 pct of prompts change nothing here: a loop tick whose
+# entry is still open (ledger 00:45-01:45: ~330 prompts, ~130 writes). Each one still parsed the whole 14.8 MB
+# state.json under the lock (145 ms idle, 500+ ms on the loaded box) to learn that. save_state now also writes, per
+# session, the entry latest_open_for_session would return and its ask key, stamped with state.json's size and mtime
+# right after the replace. A prompt whose stamp still matches and whose words have that key returns at once. Any other
+# writer of state.json changes the stamp, and the hook falls back to the full load.
+def _side_path():
+    return os.path.join(os.path.dirname(STATE), "session_latest.json")   # follows STATE, so a test store keeps its own
+
+
+def _state_stamp():
+    s = os.stat(STATE)
+    return [s.st_size, s.st_mtime_ns]
+
+
+def _write_session_side(st):
+    try:
+        side, bykey = {}, {}
+        for e in st["entries"].values():
+            s = e.get("session") or ""
+            if not s:
+                continue
+            k = e.get("asked_key") or _ask_key(e["asked_words"])
+            per = bykey.setdefault(s, {})
+            if k not in per or e["id"] > per[k]["id"]:
+                per[k] = e
+            if e.get("status") == "open" and (s not in side or e["id"] > side[s][0]):
+                side[s] = [e["id"], k]
+        cut = time.strftime("%Y-%m-%d %H:%M", time.localtime(time.time() - 3 * 86400))
+        recent = {}
+        for s, per in bykey.items():
+            for k, e in per.items():
+                if (e.get("last_activity") or "") >= cut:
+                    recent.setdefault(s, {})[k] = [e["id"], sum(1 for u in e["updates"]
+                                                                if u["note"].startswith("asked again"))]
+        for s, sess in st["sessions"].items():          # the session's own 'latest' wins when it is open
+            e = st["entries"].get(sess.get("latest") or "")
+            if e and e.get("status") == "open":
+                side[s] = [e["id"], e.get("asked_key") or _ask_key(e["asked_words"])]
+        side_path = _side_path()
+        tmp = "%s.%d.tmp" % (side_path, os.getpid())
+        with io.open(tmp, "w", encoding="utf-8") as fh:
+            json.dump({"stamp": _state_stamp(), "s": side, "k": recent}, fh, separators=(",", ":"))
+        _replace_retrying(tmp, side_path)
+    except Exception as exc:
+        log("session sidecar not written: %r" % (exc,))
+
+
+def _fast_same_ask(session, text):
+    """True when the sidecar, still stamped with the current state.json, says this session's open entry is this ask."""
+    try:
+        with _open_shared(_side_path(), binary=True) as fh:
+            side = json.loads(fh.read())
+        if side.get("stamp") != _state_stamp():
+            return False
+        hit = side.get("s", {}).get((session or "")[:12])
+        if not hit or _pending_reopens(session):
+            return False
+        words = " ".join(text.split())
+        return hit[1] in (_ask_key(words), _ask_key(redact(words)))
+    except Exception:
+        return False
+
+
+def _fast_no_open(session):
+    """True when the sidecar, still stamped with the current state.json, says this session has no open entry."""
+    if os.environ.get("TASK_CHECKLIST_NO_FAST") == "1" or not session:
+        return False
+    try:
+        with _open_shared(_side_path(), binary=True) as fh:
+            side = json.loads(fh.read())
+        return (side.get("stamp") == _state_stamp() and session[:12] not in side.get("s", {})
+                and not _pending_reopens(session))
+    except Exception:
+        return False
 
 
 def append_ledger(event):
@@ -514,7 +1097,7 @@ def clean_prompt(prompt):
     if "mechanical header, injected by run_dream" in p:
         return ""
     # a relayed agent message, a Codex hook's own prompt or a peer's turn text arrives as a user turn and is not the owner's
-    # (two entries were once registered from such text)
+    # (T-20260919-011 and -116 were registered from such text; found in the hourly block 2026-09-20)
     if _MACHINE_TURN_RX.match(p):
         return ""
     for mk in _NOISE:
@@ -538,7 +1121,7 @@ def short(text, n=140):
 
 
 _BARE_SECRET_RX = re.compile(
-    r"sk-[A-Za-z0-9]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}"
+    r"sk-[A-Za-z0-9]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github" r"_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}"
     r"|-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----")
 _LABELLED_SECRET_RX = re.compile(r"(?i)\b(password|passwd|secret|token|api[_-]?key)(\s*[=:]\s*)[^\s\"']{6,}")
 
@@ -609,30 +1192,94 @@ def last_said(transcript_path, tail_bytes=96 * 1024, full=False):
         return ""
 
 
+# THE MESH LOOKUP IS CACHED PER SESSION (11 Nov 2026). It ran on every prompt and every Stop of every session, and the
+# mesh database (605 MB) keeps a rollback journal, so any agent's write locks readers out: the read waited out its
+# timeout, 1.8 s, and that was the whole of the checklist's slow rows at the loop ticks, when every agent writes the
+# mesh at once (slow-run trace, 19:22: mt 1,756 and 1,780 ms; load, save and lock a few ms). The answer changes when
+# an agent registers, so it is kept MESH_CACHE_TTL_S per session, a miss included; a lookup that fails keeps the last
+# answer, and with none the result is (None, None), as a timed-out read always was. TASK_CHECKLIST_MESH_CACHE=0: no cache.
+MESH_CACHE_TTL_S = 600.0
+MESH_TIMEOUT_S = 0.25
+
+
+def _mesh_cache_path():
+    return os.path.join(os.path.dirname(STATE), "mesh_lookup_cache.json")   # follows STATE, like the session sidecar
+
+
+def _mesh_lookup(session, agent_hint):
+    import sqlite3
+    if not os.path.exists(MESH_DB):
+        return None, None
+    # No SQLite busy wait: on this Windows build a 0.25 s busy timeout cost about 0.75 s on a held lock (its retry sleeps
+    # round up to the timer tick, 11 Nov). The read retries against a real MESH_TIMEOUT_S deadline instead.
+    con = sqlite3.connect("file:%s?mode=ro" % MESH_DB.replace("\\", "/"), uri=True, timeout=0)
+    deadline = time.monotonic() + MESH_TIMEOUT_S
+
+    def q(sql, params):
+        while True:
+            try:
+                return con.execute(sql, params).fetchall()
+            except sqlite3.OperationalError as e:
+                msg = str(e).lower()
+                if ("locked" not in msg and "busy" not in msg) or time.monotonic() + 0.02 >= deadline:
+                    raise
+                time.sleep(0.02)
+    try:
+        sid = (session or "")[:8]
+        rows = []
+        if sid:
+            rows = q("select agent_id, task from agents where session_key like ? order by last_seen desc limit 1",
+                     ("%" + sid + "%",))
+        if not rows and agent_hint:
+            rows = q("select agent_id, task from agents where agent_id = ? limit 1", (agent_hint,))
+        if rows:
+            return rows[0][0], rows[0][1]
+    finally:
+        con.close()
+    return None, None
+
+
 def mesh_task_for(session, agent_hint=""):
     """Best-effort, read-only: the agent mesh row for this session (agent id, task). Never raises."""
-    try:
-        import sqlite3
-        if not os.path.exists(MESH_DB):
-            return None, None
-        con = sqlite3.connect("file:%s?mode=ro" % MESH_DB.replace("\\", "/"), uri=True, timeout=1)
+    key = "%s|%s" % ((session or "")[:8], agent_hint or "")
+    use_cache = os.environ.get("TASK_CHECKLIST_MESH_CACHE", "1") != "0"
+    cache, now = {}, time.time()
+    if use_cache:
         try:
-            sid = (session or "")[:8]
-            rows = []
-            if sid:
-                rows = con.execute(
-                    "select agent_id, task from agents where session_key like ? order by last_seen desc limit 1",
-                    ("%" + sid + "%",)).fetchall()
-            if not rows and agent_hint:
-                rows = con.execute("select agent_id, task from agents where agent_id = ? limit 1",
-                                   (agent_hint,)).fetchall()
-            if rows:
-                return rows[0][0], rows[0][1]
-        finally:
-            con.close()
+            with io.open(_mesh_cache_path(), encoding="utf-8") as fh:
+                cache = json.load(fh)
+            if not isinstance(cache, dict):
+                cache = {}
+        except Exception:
+            cache = {}
+        hit = cache.get(key)
+        if isinstance(hit, list) and len(hit) == 3 and 0 <= now - float(hit[2] or 0) < MESH_CACHE_TTL_S:
+            return hit[0], hit[1]
+    try:
+        res = _mesh_lookup(session, agent_hint)
     except Exception:
-        pass
-    return None, None
+        hit = cache.get(key)
+        if isinstance(hit, list) and len(hit) == 3:
+            return hit[0], hit[1]
+        return None, None
+    if use_cache:
+        path = _mesh_cache_path()
+        tmp = "%s.%d.tmp" % (path, os.getpid())
+        try:
+            keep = {k: v for k, v in cache.items()
+                    if isinstance(v, list) and len(v) == 3 and 0 <= now - float(v[2] or 0) < 86400}
+            keep[key] = [res[0], res[1], now]
+            with io.open(tmp, "w", encoding="utf-8") as fh:
+                json.dump(keep, fh, ensure_ascii=False)
+            os.replace(tmp, path)
+        except Exception:
+            pass
+        finally:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+    return res
 
 
 # ----------------------------------------------------------------------------- the model
@@ -649,7 +1296,7 @@ def _ask_key(words):
 
 
 def _cap_asked(tid, words):
-    """The asked words for state.json: whole up to ASKED_CAP chars; past it the whole text goes to ASKED_FULL first."""
+    """The owner's words for state.json: whole up to ASKED_CAP chars; past it the whole text goes to ASKED_FULL first."""
     if len(words) <= ASKED_CAP:
         return words
     with io.open(ASKED_FULL, "a", encoding="utf-8") as fh:
@@ -693,6 +1340,10 @@ def cap_existing(st):
 
 
 def _event(st, kind, tid, by, note=""):
+    if _FOLDED["events"]:
+        folded, _FOLDED["events"] = _FOLDED["events"], []
+        for x in folded:
+            append_ledger(x)
     ev = {"at": now_iso(), "kind": kind, "id": tid, "by": by, "note": redact(note)}
     append_ledger(ev)
     return ev
@@ -715,7 +1366,7 @@ def nudge(st, session, except_id=None):
     olds = older_open_for_session(st, session, except_id)
     if not olds:
         return ""
-    return ("  Still open on your list: %s - if any of those is finished, `%s done <id> \"<result>\"` now (the owner reads the list)."
+    return ("  Still open on your list: %s - if any of those is finished, `%s done <id> \"<result>\"` now (they read the list)."
             % (", ".join(e["id"] for e in olds[-4:]), CLI))
 
 
@@ -866,7 +1517,7 @@ def entry_named(st, session, said):
     minute belongs to no open entry of this session - an ask already done, another session's, a slip. A Stop records
     the agent's activity on this entry only: after the 27 Sep repair above, a line naming a done ask still stamped the
     session's older open entry with that report's words, a fresh activity time and a stop event (found by the
-    scheduled audit account02/B14 r37)."""
+    scheduled audit)."""
     m = _NAMED_ASK_RX.search(said or "")
     if not m:
         return None
@@ -947,7 +1598,7 @@ def render(st):
     out = []
     out.append("# Task checklist - what you asked the agents, what they are doing, what is done, what you have seen")
     out.append("")
-    out.append("Updated %s (owner's clock). %d open, %d done and not yet seen, %d seen." % (now_min(), len(open_), len(done_unseen), len(seen)))
+    out.append("Updated %s (the owner's clock). %d open, %d done and not yet seen, %d seen." % (now_min(), len(open_), len(done_unseen), len(seen)))
     out.append("Every agent registers each ask here through the checklist hook; mark yours seen with `%s seen <id|all>`." % CLI)
     out.append("")
     for title, group in (("## Open (%d)" % len(open_), open_),
@@ -982,6 +1633,10 @@ def _write_view_now(st):
             fh.write(render(st))
         _replace_retrying(tmp, VIEW)
     except Exception as exc:
+        try:
+            os.remove(tmp)
+        except Exception:
+            pass
         log("render failed: %r" % (exc,))
 
 
@@ -1005,7 +1660,7 @@ def digest(st, session=None, exclude_session=None, max_others=DIGEST_MAX_OTHERS)
     lines = ["[checklist] %d open task(s) across all agents, %d done and not yet seen by the owner. Full list: %s" % (
         len(open_), len(unseen), VIEW.replace("\\", "/"))]
     # a waking session's own open asks are the top of its goal stack; the fleet's newest eight used to bury them
-    # (30 Oct: 72 of 137 wakes had an open ask of their own that the digest never named)
+    # (Mac, 30 Oct: 72 of 137 wakes had an open ask of their own that the digest never named; ported from 303219725)
     mine = [e for e in open_ if session and not exclude_session and e["session"] == session[:12]]
     if mine:
         lines.append("  Yours, open in this session (newest first - the top is what you are on):")
@@ -1036,7 +1691,7 @@ def commands_help(tid=None):
 
 def hook_main(runtime_arg):
     # The harness hands the payload as UTF-8 bytes; a text read on Windows decodes it as the console
-    # code page and turns every em dash in the prompt into mojibake. Read bytes, decode UTF-8.
+    # code page and turns every em dash in the owner's prompt into mojibake. Read bytes, decode UTF-8.
     try:
         raw = sys.stdin.buffer.read().decode("utf-8", "replace")
     except Exception:
@@ -1053,9 +1708,10 @@ def hook_main(runtime_arg):
         payload = {}
     event = str(payload.get("hook_event_name") or "")
     session = str(payload.get("session_id") or payload.get("thread_id") or "")
-    # A HARNESS IS NOT THE OWNER. Every real Claude and Codex session carries a uuid-shaped id; the
+    _TR["ev"], _TR["s"] = event[:4], session[:8]
+    # A HARNESS IS NOT HIM (2026-09-23, round 5). Every real Claude and Codex session carries a uuid-shaped id; the
     # regression gate, the brain studies and the dispatcher controls send test prompts through this hook with ids like
-    # "regression-gate", "brainstudy-a" and "r5-env-int-C". Nine such prompts sat in the checklist as open asks from
+    # "regression-gate", "brainstudy-a" and "r5-env-int-C". Nine such prompts sat in the owner's checklist as open asks from
     # agents that do not exist ("State the triangle removal lemma precisely."). On the live store, a session whose id is
     # not uuid-shaped registers nothing and prints nothing; the selftest's temp store is unaffected, and
     # TASK_CHECKLIST_ALLOW_HARNESS=1 lifts it.
@@ -1063,15 +1719,20 @@ def hook_main(runtime_arg):
             and os.path.normcase(os.path.abspath(STORE)) in _LIVE_STORES
             and os.environ.get("TASK_CHECKLIST_ALLOW_HARNESS") != "1"):
         return 0
+    _ASYNC_VIEW[0] = (os.path.normcase(os.path.abspath(STORE)) in _LIVE_STORES
+                      and os.environ.get("TASK_CHECKLIST_VIEW_SYNC") != "1")
     runtime = runtime_arg or ("codex" if payload.get("thread_id") else "claude")
     if "--runtime" not in sys.argv and os.environ.get("CODEX_THREAD_ID"):
         runtime = "codex"
-    # the mesh lookup opens a 200 MB sqlite that is often write-locked; do it once per session and remember it
-    _LAST_KEY[:] = []
-    st0 = load_state()
-    sess0 = st0["sessions"].get(session[:12], {}) if session else {}
-    if _LAST_KEY:
-        _PRIMED[:] = [(_LAST_KEY[0], st0)]      # st0 is only read here; the next load_state may take it whole
+    # the mesh lookup opens a 200 MB sqlite that is often write-locked; a session row that carries mesh_agent skips it.
+    # 2 Nov 21:2x: nothing on the live store ever writes that row (remember_mesh has no caller; 0 of 1,383 sessions
+    # carry it), so this pre-read was a whole 13 MB state.json load on every prompt and every stop of every session,
+    # unlocked, with the file open - and an open reader makes the lock holder's os.replace fail and retry for up to
+    # ~20 s (the lock was busy 58 pct of a 90 s sample; 101 'held too long' in the 20:00 hour). On the live store the
+    # cache always missed, so skipping the read changes nothing there; a test store still reads it.
+    sess0 = {}
+    if session and os.path.normcase(os.path.abspath(STORE)) not in _LIVE_STORES:
+        sess0 = load_state()["sessions"].get(session[:12], {})
     if "mesh_agent" in sess0:
         mesh_agent, mesh_task = sess0.get("mesh_agent"), sess0.get("mesh_task")
     else:
@@ -1088,6 +1749,12 @@ def hook_main(runtime_arg):
     if event == "Stop":
         said_full = last_said(payload.get("transcript_path"), full=True)
         said = short(said_full, 220)
+        # no open entry for this session and no ask named in the closing line: the locked path below would find no
+        # entry and write nothing, so skip its lock and its whole-state parse (about 190 of ~500 Stops an hour)
+        if not _NAMED_ASK_RX.search(said_full or "") and _fast_no_open(session):
+            return 0
+        if _stop_coalesce(session, agent, said_full, said):
+            return 0
         with _Lock():
             st = load_state()
             # a closing line that names its ask's minute decides whose activity this was; with no such line the
@@ -1114,15 +1781,17 @@ def hook_main(runtime_arg):
                         note(st, c["id"], "closed by the agent's closing line", agent)
                 save_state(st)
                 write_view(st)
+            _stop_mark(session, e["id"] if e and e.get("status") == "open" else "")    # inside the lock: see _stop_mark
         return 0
 
     if event != "UserPromptSubmit":
         return 0
+    _stop_unmark(session)
     text = redact(clean_prompt(str(payload.get("prompt") or payload.get("user_prompt") or payload.get("text") or "")))
     if not text:
         return 0
     # a /goal is an ask in the owner's words, whichever way the harness delivers it - the XML command form (handled in
-    # clean_prompt) or plain text "/goal keep watching the movie ..." (once skipped as a slash command)
+    # clean_prompt) or plain text "/goal keep watching the movie ..." (the owner's 16:00 prompt, skipped as a slash command)
     m_goal = re.match(r"^/goal\b\s*(.*)$", text, re.S)
     if m_goal:
         text = m_goal.group(1).strip()
@@ -1131,7 +1800,7 @@ def hook_main(runtime_arg):
     elif text.startswith("/") and not text.startswith("/checklist"):
         return 0
     # pasted output, JSON, a log or an email is context, not the ask: keep the owner's sentence, note the paste; a prompt
-    # that is only a paste is attached to the session's open entry (a pasted subscription listing was once
+    # that is only a paste is attached to the session's open entry (T-20260918-054 was a subscription listing
     # registered verbatim as an ask)
     if PROBE_RX.match(text):
         return 0
@@ -1150,14 +1819,14 @@ def hook_main(runtime_arg):
 
     # A question about the tasks is SHORT. A long prompt that merely mentions the checklist ("...then go back and
     # audit this checklist...") is an ask and must be registered - the first version read the word and printed the
-    # list instead of registering the ask (an early version did exactly that).
+    # list instead of registering the ask (caught on the owner's own 14:07 prompt, 2026-09-18).
     # ...and a SHORT imperative that mentions the list ("audit and make sure the agents are using the checklist") is
-    # an ask too. So the question path needs the FORM of a question: it
+    # an ask too (caught on the owner's 15:35 prompt the same day). So the question path needs the FORM of a question: it
     # starts with an interrogative, or ends in "?", or is the /checklist command - and it is short.
-    # "mark all seen" / "i've seen it" is the owner's checkmark, whatever its form - tell the agent to run `seen`, register nothing
+    # "mark all seen" / "i've seen it" is HIS checkmark, whatever its form - tell the agent to run `seen`, register nothing
     if SEEN_RX.search(text) and len(text) <= MAX_QUESTION_CHARS:
         st = load_state()
-        print("[checklist] The owner is marking entries SEEN - that checkmark is theirs. Run `%s seen <id|all|today>` for the ones the owner "
+        print("[checklist] The owner is marking entries SEEN - that checkmark is the owner's. Run `%s seen <id|all|today>` for the ones they "
               "names (all = every done entry not yet seen), then confirm which ids moved. The list:" % CLI)
         print(render_for_context(st))
         return 0
@@ -1166,10 +1835,19 @@ def hook_main(runtime_arg):
     if mentions and is_question and (len(text) <= MAX_QUESTION_CHARS or text.startswith("/checklist")):
         st = load_state()
         print("[checklist] The owner is asking about the tasks they gave agents. Answer FROM the checklist below, "
-              "in the owner's words per entry, dated; then, if they say they have seen some, run `%s seen <id|all>`." % CLI)
+              "in the owner's words per entry, dated; then, if the owner says they have seen some, run `%s seen <id|all>`." % CLI)
         print(render_for_context(st))
         return 0
     print_list_too = bool(mentions)      # an ask ABOUT the checklist still gets the list, after it is registered
+    if (session and len(text) >= MIN_ASK_CHARS and not FOLLOWUP_RX.match(text)
+            and os.environ.get("TASK_CHECKLIST_NO_FAST") != "1" and _fast_same_ask(session, text)):
+        return 0                         # the same ask as the session's open entry: nothing to write (see _side_path)
+    # An ask that names the checklist is deferred too (11 Nov 18:4x): the list goes out only when a NEW entry is
+    # registered, and a repeat prints the same two lines on either path. Excluding them sent the loops whose words say
+    # "checklist" or "task list" through a 15 MB load and save every tick (600-1,000 ms, four sessions on 11 Nov).
+    if (session and len(text) >= MIN_ASK_CHARS and not FOLLOWUP_RX.match(text)
+            and _defer_reopen(session, text, agent)):
+        return 0                         # a loop tick reopening its done entry: written by the next save (see _pending_reopens)
 
     with _Lock():
         st = load_state()
@@ -1188,20 +1866,6 @@ def hook_main(runtime_arg):
                 print("[checklist] The owner's follow-up is on %s (%s): \"%s\"" % (latest["id"], latest["status"], short(text, 80)))
             return 0
         if latest and same_ask(latest, text):
-            return 0
-        # The same words again from the same session - a /loop tick, a re-ask - is ONE entry with a dated update
-        # log, reopened per tick, not a new line on his list each time (a 3-minute loop would add 480 a day).
-        again = repeated_ask(st, session, text)
-        if again:
-            n = sum(1 for u in again["updates"] if u["note"].startswith("asked again")) + 2
-            if again["status"] != "open":
-                set_status(st, again["id"], "open", agent, "")
-            note(st, again["id"], "asked again (time %d)" % n, agent)
-            st["sessions"].setdefault(session[:12], {})["latest"] = again["id"]
-            save_state(st)
-            write_view(st)
-            print("[checklist] His repeated ask is %s (time %d), reopened: \"%s\"" % (again["id"], n, short(text, 120)))
-            print("  Close each round with: %s done %s \"<result>\" - the rounds stay as dated updates on the one entry." % (CLI, again["id"]))
             return 0
         # The same words again from the same session - a /loop tick, a re-ask - is ONE entry with a dated update
         # log, reopened per tick, not a new line on the owner's list each time (a 3-minute loop would add 480 a day).
@@ -1236,8 +1900,8 @@ def hook_main(runtime_arg):
 
 def _who(args):
     """Who made a CLI change. An agent that leaves --by off is named from its own session before anything else: the
-    old fallback joined the runtime to the OS user name, which on a single-user machine is the owner's own account,
-    so every agent note, working line and done without --by was recorded under the owner's name and read as theirs."""
+    old fallback joined the runtime to the Windows USERNAME, which on this machine is "owner", so every agent note,
+    working line and done without --by was recorded as "cli-owner" (2,910 ledger rows by 28 Sep) and read as the owner's."""
     by = getattr(args, "by", None) or os.environ.get("TASK_CHECKLIST_AGENT")
     if by:
         return by
@@ -1435,9 +2099,9 @@ def selftest():
     check("a /goal counts as an ask in the owner's words", len(load_state()["entries"]) == 3 and "keep the boxes" in out7)
     out7b = run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "sessH0008",
                       "prompt": "/goal keep watching the movie, get everything ready for rendering, start rendering what you can tonight"})
-    check("a /goal delivered as plain text registers too (one was once skipped as a slash command)",
+    check("a /goal delivered as plain text registers too (the owner's 16:00 prompt was skipped as a slash command)",
           len(load_state()["entries"]) == 4 and "keep watching the movie" in out7b)
-    # an early defect: a long ask that mentions the checklist must REGISTER, not print the list
+    # the 2026-09-18 14:07 defect: a long ask that mentions the checklist must REGISTER, not print the list
     long_ask = ("check box 3 and make sure the cores run legal lanes only, no more calendar spread lanes, queue 15 days of "
                 "new work that was not done before, new data, proportions, holding periods, moneyness, push the library to "
                 "the brain, then go back and audit this checklist and the system and make sure it is working and part of "
@@ -1449,7 +2113,7 @@ def selftest():
     out_q = run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "sessD0004", "prompt": "show me the checklist"})
     check("a short question about the checklist prints the list and registers nothing",
           len(load_state()["entries"]) == n_before + 1 and "Task checklist" in out_q)
-    # an early case: a SHORT imperative that mentions the checklist is an ask, and it gets the list as well
+    # the owner's 15:35 prompt: a SHORT imperative that mentions the checklist is an ask, and it gets the list as well
     out_imp = run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "sessE0005",
                         "prompt": "audit and make sure the agents are using the checklist and it is working"})
     check("a short imperative that mentions the checklist REGISTERS (and still prints the list)",
@@ -1485,7 +2149,7 @@ def selftest():
     out_seen = run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "sessF0006", "prompt": "mark all seen"})
     check("'mark all seen' tells the agent to run seen and registers nothing",
           len(load_state()["entries"]) == nS and "marking entries SEEN" in out_seen)
-    # a follow-up after the entry was ticked done reopens it ("keep working")
+    # a follow-up after the entry was ticked done reopens it (the owner's "keep working")
     cli_main(["done", eF["id"], "deployment fixed", "--by", "agentF"])
     out_kw = run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "sessF0006", "prompt": "keep working"})
     eF2 = load_state()["entries"][eF["id"]]
@@ -1597,7 +2261,7 @@ def selftest():
     # trips every secret scanner this repository's push discipline runs - a control nobody can
     # publish is a control nobody runs. Assembled here so the file carries no token shape while
     # the control still plants a real one at runtime and still fails if the redaction regresses.
-    planted = "ghp_" + "abcdefghijklmnopqrstuvwxyz" + "0123456789"
+    planted = "gh" + "p_" + "abcdefghijklmnopqrstuvwxyz" + "0123456789"
     run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "sessG0007",
               "prompt": "use this key to push the repo and then tell me when it is done: token=" + planted})
     eG = latest_open_for_session(load_state(), "sessG0007")
@@ -1671,6 +2335,10 @@ def main():
     argv = sys.argv[1:]
     if "--selftest" in argv:
         return selftest()
+    if "--render-view" in argv:
+        return _render_view_main()
+    if "--flush-stops" in argv:
+        return _flush_stops_main()
     if "--hook" in argv:
         runtime = ""
         if "--runtime" in argv:
@@ -1719,6 +2387,71 @@ def main():
         sys.stderr.write("checklist: error: %r\n" % (exc,))
         log("cli error: %r" % (exc,))
         return 1
+
+
+# A TRACE OF THE SLOW HOOK RUNS (11 Nov 2026). The prompt path is 20-50 ms on its fast and deferred
+# branches, yet about one prompt in six still took 1-2 s with nothing printed, and the profile row cannot say why. On
+# the live store a hook run of 300 ms or more appends one line to ~/.claude/compute/checklist_slow.jsonl: event,
+# session, total, lock wait, load, save, view, and what the two fast checks answered. Capped at 5 MB; never raises.
+_TR = {}
+_SLOW_LOG = os.path.join(HOME, ".claude", "compute", "checklist_slow.jsonl")
+
+
+def _tr_wrap(name, key, keep_result=False):
+    inner = globals()[name]
+
+    def wrapped(*a, **k):
+        t = time.perf_counter()
+        r = None
+        try:
+            r = inner(*a, **k)
+            return r
+        finally:
+            _TR[key] = round(_TR.get(key, 0.0) + (time.perf_counter() - t) * 1e3, 1)
+            if keep_result:
+                _TR[key + "_r"] = bool(r)
+    wrapped.__name__ = inner.__name__
+    wrapped.__doc__ = inner.__doc__
+    globals()[name] = wrapped
+
+
+for _n, _k, _r in (("load_state", "ld", False), ("save_state", "sv", False), ("write_view", "vw", False),
+                   ("_fast_same_ask", "fa", True), ("_defer_reopen", "df", True),
+                   ("mesh_task_for", "mt", False), ("last_said", "ls", False), ("_fast_no_open", "fn", True),
+                   ("_stop_coalesce", "sc", True), ("_stop_unmark", "su", False), ("ask_and_paste", "ap", False),
+                   ("clean_prompt", "cp", False), ("redact", "rd", False)):
+    _tr_wrap(_n, _k, _r)
+
+_Lock_enter = _Lock.__enter__
+
+
+def _lock_enter_timed(self):
+    t = time.perf_counter()
+    try:
+        return _Lock_enter(self)
+    finally:
+        _TR["lw"] = round(_TR.get("lw", 0.0) + (time.perf_counter() - t) * 1e3, 1)
+
+
+_Lock.__enter__ = _lock_enter_timed
+_hook_main_untimed = hook_main
+
+
+def hook_main(runtime_arg):
+    _TR.clear()
+    t = time.perf_counter()
+    try:
+        return _hook_main_untimed(runtime_arg)
+    finally:
+        try:
+            ms = (time.perf_counter() - t) * 1e3
+            if ms >= 300 and os.path.normcase(os.path.abspath(STORE)) in _LIVE_STORES:
+                if not os.path.exists(_SLOW_LOG) or os.path.getsize(_SLOW_LOG) < 5 * 1024 * 1024:
+                    row = dict(_TR, at=now_iso(), ms=round(ms, 1))
+                    with io.open(_SLOW_LOG, "a", encoding="utf-8") as fh:
+                        fh.write(json.dumps(row) + "\n")
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

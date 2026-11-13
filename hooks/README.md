@@ -26,7 +26,9 @@ waking into the brain.
 The task checklist (`dreaming/task_checklist_hook.py`, wired on UserPromptSubmit, Stop and SessionStart) keeps
 the partner's asks to every agent in one dated list - their words, the agent, what it is doing, a done mark
 and a seen mark - and answers "what did I ask the agents?" from it. Agents run `working`/`done`; only the
-partner marks `seen`. Store: `~/.claude/task_checklist/` unless TASK_CHECKLIST_HOME says otherwise.
+partner marks `seen`. Store: `~/brain-repo/12_cognitive_architecture/task_checklist/` when that tree exists, else
+`~/.claude/task_checklist/`; TASK_CHECKLIST_HOME overrides both. Codex sessions get the same hook from
+`hooks.codex.template.json` (installer flag `--merge-codex`). Full description: `docs/TASK_CHECKLIST.md`.
 
 The prompt hook (`dreaming/owner_prompts_hook.py`) hands every session the partner's recent prompts. It is wired as its
 own UserPromptSubmit command, not through a dispatcher, because Claude Code hands the model at most 10,000 characters of

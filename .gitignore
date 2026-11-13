@@ -9,6 +9,7 @@ __pycache__/
 network_shadow.tsv
 *.buffer.json
 bootstrap/settings.hooks.generated.json
+bootstrap/hooks.codex.generated.json
 
 # build artifacts and runtime state (never commit)
 __pycache__/

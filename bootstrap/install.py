@@ -354,6 +354,9 @@ def main():
     ap.add_argument("--merge-settings", action="store_true",
                     help="also merge the generated hook wiring into <HOME>/.claude/settings.json "
                          "(a dated backup is written first; hooks already there are kept)")
+    ap.add_argument("--merge-codex", action="store_true",
+                    help="also merge the generated Codex hook wiring into <HOME>/.codex/hooks.json "
+                         "(a dated backup is written first; hooks already there are kept)")
     a = ap.parse_args()
 
     home = os.path.abspath(a.home)
@@ -550,6 +553,32 @@ def main():
             print(f"  {n} hook group(s) {'merged' if a.apply else 'would be merged'} into {sp}")
         else:
             print("  merge its 'hooks' object into <HOME>/.claude/settings.json by hand, or re-run with --merge-settings")
+
+    # Codex reads its hooks from <HOME>/.codex/hooks.json. Until Nov 2026 the template sat in hooks/ and nothing
+    # rendered it, so a Codex session on a fresh install ran with no brain hooks at all: no wake, no reflexes and
+    # no task checklist. Render it the same way, and merge it on request.
+    codex_t = os.path.join(REPO, "hooks", "hooks.codex.template.json")
+    if os.path.exists(codex_t):
+        cw = json.loads(expand(io.open(codex_t, encoding="utf-8").read(), tok, as_json=True))
+        n = 0
+        for groups in cw.get("hooks", {}).values():
+            for g in groups:
+                for h in g.get("hooks", []):
+                    if os.name != "nt":
+                        h.pop("commandWindows", None)
+                        if "-c " not in h.get("command", ""):
+                            h["command"] = h.get("command", "").replace(chr(92), "/")
+                    n += 1
+        ct_out = os.path.join(REPO, "bootstrap", "hooks.codex.generated.json")
+        if a.apply:
+            io.open(ct_out, "w", encoding="utf-8", newline="\n").write(json.dumps(cw, indent=2) + "\n")
+        print(f"  codex hook wiring ({n} commands) -> {ct_out}")
+        cp = os.path.join(home, ".codex", "hooks.json")
+        if a.merge_codex:
+            n = merge_hooks(cp, cw, a.apply)
+            print(f"  {n} hook group(s) {'merged' if a.apply else 'would be merged'} into {cp}")
+        else:
+            print("  for Codex, merge it into <HOME>/.codex/hooks.json by hand, or re-run with --merge-codex")
 
     # The wiring above points SessionStart at <HOME>/.claude/wake_brain.ps1, so write it (and the startup note it
     # reads) here rather than leave the tokens for the reader. An existing file is kept and the new one goes beside it.

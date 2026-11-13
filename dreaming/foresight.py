@@ -361,4 +361,8 @@ def main():
 
 
 if __name__ == "__main__":
+    # Discovery is not execution: a help request exits before any work.
+    if "-h" in __import__('sys').argv[1:] or "--help" in __import__('sys').argv[1:]:
+        print(__doc__ or os.path.basename(__file__))
+        raise SystemExit(0)
     main()

@@ -56,6 +56,10 @@ def test_control_switch_off_misses_it():
 
 
 if __name__ == "__main__":
+    # Discovery is not execution: a help request exits before any work.
+    if "-h" in sys.argv[1:] or "--help" in sys.argv[1:]:
+        print(__doc__ or os.path.basename(__file__))
+        raise SystemExit(0)
     test_late_import_edit_is_seen()
     test_control_switch_off_misses_it()
     print("2/2 ok")

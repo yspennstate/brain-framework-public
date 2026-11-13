@@ -6,6 +6,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
+# Discovery is not execution: a help request exits before any work.
+if "-h" in sys.argv[1:] or "--help" in sys.argv[1:]:
+    print(__doc__ or os.path.basename(__file__))
+    raise SystemExit(0)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 res = []

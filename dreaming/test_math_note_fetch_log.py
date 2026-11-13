@@ -60,6 +60,10 @@ def run():
 
 
 if __name__ == '__main__':
+    # Discovery is not execution: a help request exits before any work.
+    if "-h" in sys.argv[1:] or "--help" in sys.argv[1:]:
+        print(__doc__ or os.path.basename(__file__))
+        raise SystemExit(0)
     fails = run()
     for f in fails:
         print('FAIL', f)

@@ -2,6 +2,10 @@
 every other kind of change still goes to the real reader. Whenever the new rule says quiet, the real reader's map must
 be the same before and after. Synthetic folder in a temp dir; the frontmatter cache goes to the temp dir too."""
 import importlib.util, os, sys, tempfile, time
+# Discovery is not execution: a help request exits before any work.
+if "-h" in sys.argv[1:] or "--help" in sys.argv[1:]:
+    print(__doc__ or os.path.basename(__file__))
+    raise SystemExit(0)
 os.environ.update(BRAIN_RECALL_LOG="0", BRAIN_RECALL_REFRESH="0", BRS_SAMPLE="0", BRL_LOG="0")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import supersession as ss

@@ -5,7 +5,7 @@ Design note: an owner who runs many agents at once asks different agents differe
 follow. Agents work on one ask without knowing another agent holds a related one, and the owner forgets what was
 asked of whom. The checklist is the shared answer: every ask the owner gives an agent becomes a dated entry under
 that agent, the agent checks it off when it is done, and a second checkmark records that the owner has seen the
-result. When the owner asks what the agents are doing, an agent answers from the list, not from memory.
+result. When the owner wants to know what the agents are doing, an agent answers from the list, not from memory.
 
 One file, three faces:
 
@@ -48,7 +48,7 @@ STATE = os.path.join(STORE, "state.json")
 VIEW = os.path.join(STORE, "CHECKLIST.md")
 LOCK = os.path.join(STORE, ".lock")
 LOG = os.path.join(STORE, "hook.log")
-# 1 Nov: the owner's words past ASKED_CAP chars live whole in ASKED_FULL (append-only), not in state.json. Loop ticks stored
+# 1 Nov: the asker's words past ASKED_CAP chars live whole in ASKED_FULL (append-only), not in state.json. Loop ticks stored
 # their whole prompt on every entry: asked_words was 23.7 of 31.7 MB, and every hook rewrites state.json under the lock.
 ASKED_FULL = os.path.join(STORE, "asked_full.jsonl")
 ASKED_CAP = 1500
@@ -58,18 +58,18 @@ MESH_DB = os.path.join(HOME, ".agents", "coordination", "agent_mesh.sqlite3")
 CLI = "python %s" % os.path.abspath(__file__).replace("\\", "/")
 MIN_ASK_CHARS = 25
 MAX_QUESTION_CHARS = 160      # longer than this and it is an ask that mentions the list, not a question about it
-                              # (the owner's questions run 20-90 characters; the owner's asks 200-900)
+                              # (the owner's questions run 20-90 characters; real asks 200-900)
 DIGEST_MAX_OTHERS = 8
 # Claude Code hands the model at most 10,000 chars of one hook command's output inline; above that it persists the
 # text to a file and shows a 2 KB preview (measured 2026-09-20). The whole list is 290 KB, so the hook prints the
 # top of it - open entries first - under this cap and names the file for the rest. The dispatcher merges this hook
 # with the sense hooks on the same prompt, hence well under 10,000.
 CONTEXT_CAP = 7000
-# an automated delivery probe of a hook (this fleet's own test prompt) is never one of the owner's asks
+# an automated delivery probe of a hook (this fleet's own test prompt) is never a real ask
 PROBE_RX = re.compile(r"^\s*(\[probe\]|Automated delivery probe of a hook\b"
                       # a headless worker's batch prompt is the fleet's, not the owner's (2026-09-23: one entry per picture batch)
                       # (2026-09-24: any picture-maker brief - "for YouTube thumbnails" named no documentary and put
-                      # seven Codex briefs on the owner's list as the owner's asks, T-20260924-080..083 and 090..092)
+                      # seven Codex briefs on the owner's list as real asks)
                       r"|\[headless-worker\]|You are (?:a|the) picture maker\b"
                       # the harness's continuation turn after a usage-limit reset (2026-09-23: one entry per session)
                       r"|Your claude\.ai usage limit has reset\b"
@@ -1108,7 +1108,7 @@ def clean_prompt(prompt):
         args = _CMD_ARGS.search(p)
         n = (name.group(1).strip() if name else "")
         a = (args.group(1).strip() if args else "")
-        # a /goal IS an ask, in the owner's words; every other slash command is machinery
+        # a /goal IS an ask, in the asker's words; every other slash command is machinery
         p = a if n.strip("/") == "goal" else (n + " " + a).strip()
     p = _SYSREM.sub("", p)
     p = _CMD_STDOUT.sub("", p)
@@ -1137,7 +1137,7 @@ _PASTE_RX = re.compile(r'["{}\[\]]\s*[:,]|^\s*[{\[]|"[A-Za-z_]+":\s')
 
 
 def ask_and_paste(text):
-    """Split a prompt into the owner's words and any pasted material (command output, JSON, a log, an email).
+    """Split a prompt into the asker's words and any pasted material (command output, JSON, a log, an email).
 
     Returns (ask, pasted_chars). A prompt whose first line is prose followed by a paste keeps the prose as the
     ask; a prompt that is ONLY a paste (it starts mid-token or with a brace) has no ask of its own.
@@ -1296,7 +1296,7 @@ def _ask_key(words):
 
 
 def _cap_asked(tid, words):
-    """The owner's words for state.json: whole up to ASKED_CAP chars; past it the whole text goes to ASKED_FULL first."""
+    """The asker's words for state.json: whole up to ASKED_CAP chars; past it the whole text goes to ASKED_FULL first."""
     if len(words) <= ASKED_CAP:
         return words
     with io.open(ASKED_FULL, "a", encoding="utf-8") as fh:
@@ -1790,7 +1790,7 @@ def hook_main(runtime_arg):
     text = redact(clean_prompt(str(payload.get("prompt") or payload.get("user_prompt") or payload.get("text") or "")))
     if not text:
         return 0
-    # a /goal is an ask in the owner's words, whichever way the harness delivers it - the XML command form (handled in
+    # a /goal is an ask in the asker's words, whichever way the harness delivers it - the XML command form (handled in
     # clean_prompt) or plain text "/goal keep watching the movie ..." (the owner's 16:00 prompt, skipped as a slash command)
     m_goal = re.match(r"^/goal\b\s*(.*)$", text, re.S)
     if m_goal:
@@ -1835,7 +1835,7 @@ def hook_main(runtime_arg):
     if mentions and is_question and (len(text) <= MAX_QUESTION_CHARS or text.startswith("/checklist")):
         st = load_state()
         print("[checklist] The owner is asking about the tasks they gave agents. Answer FROM the checklist below, "
-              "in the owner's words per entry, dated; then, if the owner says they have seen some, run `%s seen <id|all>`." % CLI)
+              "in the asker's words per entry, dated; then, if the owner says they have seen some, run `%s seen <id|all>`." % CLI)
         print(render_for_context(st))
         return 0
     print_list_too = bool(mentions)      # an ask ABOUT the checklist still gets the list, after it is registered
@@ -1884,7 +1884,7 @@ def hook_main(runtime_arg):
         e = add(st, text, agent, runtime, session, working=(short(mesh_task, 200) + " (from the agent mesh)") if mesh_task else "")
         save_state(st)
         write_view(st)
-        print("[checklist] Registered the owner's ask as %s under agent %s: \"%s\"" % (e["id"], agent, short(text, 160)))
+        print("[checklist] Registered the ask as %s under agent %s: \"%s\"" % (e["id"], agent, short(text, 160)))
         print("  Before substantive work state what you will do: %s working %s \"<one line>\"; when finished: %s done %s \"<result>\"." % (CLI, e["id"], CLI, e["id"]))
         if print_list_too:
             print(render_for_context(st))
@@ -1918,8 +1918,8 @@ def cli_main(argv):
     import argparse
     ap = argparse.ArgumentParser(prog="task_checklist", description="the owner's checklist of what they asked every agent")
     sub = ap.add_subparsers(dest="cmd")
-    p = sub.add_parser("add", help="register an ask (the owner's words) under an agent")
-    p.add_argument("--asked", required=True, help="the owner's words, verbatim")
+    p = sub.add_parser("add", help="register an ask (the asker's words) under an agent")
+    p.add_argument("--asked", required=True, help="the asker's words, verbatim")
     p.add_argument("--working", default="", help="what the agent will do, one line")
     p.add_argument("--by", default=None, help="agent id (mesh id if you have one)")
     p.add_argument("--runtime", default="", help="claude | codex | headless")
@@ -2053,7 +2053,7 @@ def selftest():
     st = load_state()
     check("an ask registers one entry", len(st["entries"]) == 1 and "Registered" in out)
     tid = list(st["entries"])[0]
-    check("entry carries the owner's words verbatim", st["entries"][tid]["asked_words"] == ask)
+    check("entry carries the asker's words verbatim", st["entries"][tid]["asked_words"] == ask)
     out2 = run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "sessA0001", "prompt": ask})
     check("the same ask again does not duplicate", len(load_state()["entries"]) == 1 and out2 == "")
     run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "sessA0001", "prompt": "ok do it"})
@@ -2085,7 +2085,7 @@ def selftest():
     check("seen ticks the owner's box with the time", e["seen"] is True and bool(e["seen_at"]))
     md = io.open(VIEW, encoding="utf-8").read()
     check("the rendered view has the three sections and both checkmarks", "## Open (1)" in md and "## Seen in the last 7 days (1)" in md and "[x] done" in md and "[x] seen" in md)
-    check("the rendered view quotes the owner's words", ask in md)
+    check("the rendered view quotes the asker's words", ask in md)
     out6 = run_hook({"hook_event_name": "SessionStart", "session_id": "sessC0003"})
     check("SessionStart prints the digest with the other agent's open task", "[checklist] 1 open" in out6 and "sessB" in out6 or "T-" in out6)
     cli_main(["done", "T-%s-002" % time.strftime("%Y%m%d"), "film built", "--by", "agentB"])
@@ -2096,7 +2096,7 @@ def selftest():
           len(st_rep["entries"]) == 2 and "reopened" in out_rep and st_rep["entries"]["T-%s-002" % time.strftime("%Y%m%d")]["status"] == "open")
     out7 = run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "sessC0003",
                      "prompt": "<command-name>/goal</command-name><command-args>keep the boxes running all night and report hourly</command-args>"})
-    check("a /goal counts as an ask in the owner's words", len(load_state()["entries"]) == 3 and "keep the boxes" in out7)
+    check("a /goal counts as an ask in the asker's words", len(load_state()["entries"]) == 3 and "keep the boxes" in out7)
     out7b = run_hook({"hook_event_name": "UserPromptSubmit", "session_id": "sessH0008",
                       "prompt": "/goal keep watching the movie, get everything ready for rendering, start rendering what you can tonight"})
     check("a /goal delivered as plain text registers too (the owner's 16:00 prompt was skipped as a slash command)",

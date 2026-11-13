@@ -34,11 +34,11 @@ run. Without the two flags the installer writes the wiring to `bootstrap/setting
 
 Once wired, an agent needs no instructions for the first half:
 
-- On every prompt the hook registers the owner's request under the session that received it, in the owner's words,
+- On every prompt the hook registers the owner's request under the session that received it, in the asker's words,
   with the time. Short follow-ups ("ok do it", "yes") attach to that session's open entry instead of making new ones.
 - The same hook prints what other agents have open, so a session sees at once that its request is already being
   worked on elsewhere.
-- When the owner asks what the agents are doing, the hook prints the whole list, so the session answers from it.
+- When the owner wants to know what the agents are doing, the hook prints the whole list, so the session answers from it.
 - At each stop (and at session start in Claude Code) the hook reminds the agent of its own open entries.
 
 The rest is the agent's part, by hand:

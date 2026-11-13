@@ -1,5 +1,5 @@
 """test_precision_gate.py - the reflex hook stops steering by a precision table it cannot date or that is a week old
-(29 Sep 2026, claude-825b1305; scheduled audit account04/B04 r7, B04-R43-FRESHNESS-WATCH-NOT-GATE).
+(29 Sep 2026; scheduled audit account04/B04 r7, B04-R43-FRESHNESS-WATCH-NOT-GATE).
 
     python test_precision_gate.py [--module INSTINCT_PRIME.py] [--old OLD_INSTINCT_PRIME.py]
 

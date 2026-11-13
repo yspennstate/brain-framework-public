@@ -1,4 +1,4 @@
-"""Controls for mistake_graph.py reading the dated prose corrections (27 Sep, claude-825b1305).
+"""Controls for mistake_graph.py reading the dated prose corrections (27 Sep).
 
 Parses a small MISTAKES-shaped text with the live parser and with the version before the change (from the brain
 repository's git history, or a path given as the first argument), and checks that every old record keeps its id and
@@ -28,10 +28,10 @@ TEXT = """# Corrections
 - 2026-08-13 (evening, agentx): a dated entry right under a bold one with no blank line between them. Rule: split
   the population before naming it.
 
-- 2026-09-27 05:2x-05:3x his clock (claude-825b1305, math use layer): math_note.py read CLAUDE_SESSION_ID, which is
+- 2026-09-27 05:2x-05:3x his clock (claude-11111111, math use layer): math_note.py read CLAUDE_SESSION_ID, which is
   never set. Every fetch has an empty session. Rule: grep every reader of a wrong name in the same hour.
   - 2026-09-26 an indented dated sub-item that belongs to the entry above
-- 2026-09-27 06:39 his clock (claude-825b1305, co-activation fold): a test wrote into the live table through default
+- 2026-09-27 06:39 his clock (claude-11111111, co-activation fold): a test wrote into the live table through default
   arguments, and nothing states a rule here.
 
 - **2026-07-11 (old two)** -> wrong: something. Lesson: something else.

@@ -1,5 +1,5 @@
 """test_dispatch_decisions.py - the hook dispatcher keeps what its hooks decided, runs the hooks the harness would run,
-and keeps every overflow record (29 Sep 2026, claude-825b1305; interactive audit BRAIN-INTERACTIVE-20260928-CRITICAL-PATH,
+and keeps every overflow record (29 Sep 2026; interactive audit BRAIN-INTERACTIVE-20260928-CRITICAL-PATH,
 findings D01, D03, D04, D05 and D06).
 
     python test_dispatch_decisions.py [HOOK_DISPATCH.py] [--old OLD_HOOK_DISPATCH.py]
@@ -175,7 +175,7 @@ def identity_controls(m):
     r["C1"] = (names == ["project_memory_hook.py", "project_memory_hot_hook.py", "hook.py"], "C1 names: %s" % names)
     # C2 runs on files that exist. as_python_argv tests os.path.exists after FORCE_SUBPROCESS, and the two paths above
     # have been gone since the hooks moved to .brain-framework\runtime, so on them it answered None whether or not a
-    # name was forced (13 Oct 2026, claude-1789621d, front R25).
+    # name was forced (13 Oct 2026, front R25).
     cd = tempfile.mkdtemp(prefix="dispatch_c2_")
     try:
         xpm, xph, xh = (os.path.join(cd, n) for n in ("project_memory_hook.py", "project_memory_hot_hook.py", "hook.py"))
@@ -187,7 +187,7 @@ def identity_controls(m):
         got = [os.path.basename(x) if x else None for x in got]
         # The hot hook leaves the forced set only for a dispatcher that hands it its payload as bytes (STDIN_BYTES_OK):
         # its first line is sys.stdin.buffer.read(). Every other hook keeps the io.StringIO.
-        # On 3 Nov 2026 the prompt hook joined it too (claude-baabdcd6), so each name is read from the list: a listed
+        # On 3 Nov 2026 the prompt hook joined it too, so each name is read from the list: a listed
         # hook runs in-process with bytes, an unlisted one stays forced with a StringIO, and hook.py is never listed.
         listed = getattr(m, "STDIN_BYTES_OK", ())
         hot_ok = "project_memory_hot_hook.py" in listed

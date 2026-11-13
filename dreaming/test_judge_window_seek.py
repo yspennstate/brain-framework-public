@@ -1,5 +1,4 @@
-"""The judge's agenda builder reads per-case windows through a byte seek and builds the same cases (28 Sep 2026,
-claude-825b1305).
+"""The judge's agenda builder reads per-case windows through a byte seek and builds the same cases (28 Sep 2026).
 
 Before: the builder took 178 s against the dream's 120 s budget, so the judge section (J) was skipped every night since
 27 Sep. Each case uses the record within 3 s of its fire and up to 20 min after it; the builders now scan exactly that,

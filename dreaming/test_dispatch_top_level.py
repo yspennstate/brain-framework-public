@@ -1,5 +1,4 @@
-"""test_dispatch_top_level.py - the hook dispatcher keeps a hook's top-level control fields at the top (28 Sep 2026,
-claude-825b1305; interactive audit IA-20260928-07).
+"""test_dispatch_top_level.py - the hook dispatcher keeps a hook's top-level control fields at the top (28 Sep 2026; interactive audit IA-20260928-07).
 
     python test_dispatch_top_level.py [--module HOOK_DISPATCH.py] [--old OLD_HOOK_DISPATCH.py]
 

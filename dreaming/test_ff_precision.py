@@ -1,5 +1,5 @@
 """test_ff_precision.py - a forward-feed fire is selected by its own judged route record, and every fire's hint names
-the route it came through (27 Sep, claude-825b1305; scheduled audit account01/B04 auto11, F158 and F159). The acceptance
+the route it came through (27 Sep; scheduled audit account01/B04 auto11, F158 and F159). The acceptance
 B04 wrote: synthetic low-precision ff evidence changes ff selection and leaves regex selection for the same id alone.
 
     python test_ff_precision.py [PATH_TO_instinct_prime.py]

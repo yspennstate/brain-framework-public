@@ -5,7 +5,7 @@
 
 The dispatcher runs allowlisted hooks inside its own process with text streams (io.StringIO), which have no .buffer.
 The hook read sys.stdin.buffer and wrote sys.stdout.buffer, so in-process it raised, caught it and printed nothing:
-on the Mac, 0 of 30 prompts gave the same output (claude-95df24fa, 5 Nov).
+on the Mac, 0 of 30 prompts gave the same output (5 Nov).
  T1 its own process, with a board present, prints the board (the check is not passed by two empty outputs)
  T2 in-process with text streams it prints the same text
  T3 a non-ASCII board line survives the text path whole

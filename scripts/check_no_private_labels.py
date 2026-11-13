@@ -62,6 +62,11 @@ PRIVATE = [
     (r"\b(?!127\.|10\.|0\.0\.0\.0|255\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\."
      r"|192\.0\.2\.|198\.51\.100\.|203\.0\.113\.)"
      r"\d{1,3}(\.\d{1,3}){3}\b(?!\.\d)", "routable IP address"),
+    # An agent session id names one run on the author's machine; 50 files carried them in comments
+    # until 13 Nov 2026. Fixtures use obviously fake ids (one repeated digit, 1234abcd, 0000000x),
+    # and those stay allowed.
+    (r"\b(?:claude|codex)-(?!(?:([0-9a-f])\1{7}|1234abcd|0{7}[0-9a-f])\b)[0-9a-f]{8}\b",
+     "agent session id"),
 ]
 # Literal names were kept here until 2026-09-28 on the reasoning that a literal catches the
 # instance that exists at no cost. The cost was this file: every clone carries it, and it printed

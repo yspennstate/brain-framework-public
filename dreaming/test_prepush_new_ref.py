@@ -1,5 +1,5 @@
 """test_prepush_new_ref.py - the pre-push secret gate certifies every commit a push makes reachable, new refs included
-(28 Sep 2026, claude-825b1305; scheduled audits account02/B06 r65, R24-B06-PREPUSH-NEW-REF-FALLBACK-CAN-NARROW-20260928;
+(28 Sep 2026; scheduled audits account02/B06 r65, R24-B06-PREPUSH-NEW-REF-FALLBACK-CAN-NARROW-20260928;
 account03/B19 r69, B19-R51-FRESH-BASE-REPLACE-REF-GRAPH-MISMATCH-20260928; account02/B19 auto43,
 B19-R51-NEWREF-TEST-UNPINNED-SCANNER-20260928; account02/B06 r68, R51-B06-NEWREF-WITNESS-DELETE-CUSTOMREF-20260928).
 

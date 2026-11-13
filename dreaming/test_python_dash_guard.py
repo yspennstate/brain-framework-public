@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Controls both ways for danger_mode._python_dash (claude-5693aca3, 20 Oct 2026).
+"""Controls both ways for danger_mode._python_dash (20 Oct 2026).
     python -s test_python_dash_guard.py"""
 
 import sys

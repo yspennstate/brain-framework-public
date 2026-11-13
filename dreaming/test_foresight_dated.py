@@ -1,4 +1,4 @@
-"""Controls for foresight reading the dated prose corrections (27 Sep, claude-825b1305).
+"""Controls for foresight reading the dated prose corrections (27 Sep).
 
 The old version (brain repository a5cb082f7a, or a path given as the first argument) and the live one parse the same
 ledgers. Every old row must survive unchanged; the only new rows are dated entries that state 'reflex:'. A synthetic

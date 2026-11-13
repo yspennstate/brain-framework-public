@@ -1,5 +1,5 @@
 """test_scan_secrets_citekeys.py - the long-key rule passes LaTeX citation keys and SHA checksums, and nothing else
-(3 Nov 2026, claude-76886ed8; the hourly math-store export push was stopped by 235 such hits in public paper text).
+(3 Nov 2026; the hourly math-store export push was stopped by 235 such hits in public paper text).
 
     python test_scan_secrets_citekeys.py [--module SCAN_SECRETS.py] [--old OLD_SCAN_SECRETS.py]
 

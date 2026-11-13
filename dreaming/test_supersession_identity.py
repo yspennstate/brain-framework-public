@@ -1,5 +1,5 @@
 """test_supersession_identity.py - the supersession cache knows a replaced file, a directory is never a memory, and a
-target renamed only in case keeps its route where the file system ignores case (29 Sep 2026, claude-825b1305; scheduled
+target renamed only in case keeps its route where the file system ignores case (29 Sep 2026; scheduled
 audits account03/B19 r75 and account02/B11 auto46).
 
     python test_supersession_identity.py [--module SUPERSESSION.py] [--old OLD_SUPERSESSION.py]

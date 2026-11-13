@@ -1,5 +1,5 @@
 """test_supersession_target_existence.py - a prose supersession pointer routes exactly while its target exists, whatever the
-frontmatter cache holds (28 Sep 2026, claude-825b1305; interactive audit IA-20260928-04).
+frontmatter cache holds (28 Sep 2026; interactive audit IA-20260928-04).
 
     python test_supersession_target_existence.py [--module SUPERSESSION.py] [--old OLD_SUPERSESSION.py]
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Controls both ways for danger_mode._piped_gate (claude-42778e9b, 5 Nov 2026).
+"""Controls both ways for danger_mode._piped_gate (5 Nov 2026).
     python -s test_piped_gate_guard.py"""
 
 import sys

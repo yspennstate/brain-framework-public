@@ -113,7 +113,16 @@ class PrivateLabelGuardTests(unittest.TestCase):
     # The published rule table holds shapes only. Until 2026-09-28 it also held eleven literal
     # names and skipped its own file, so "clean" meant clean everywhere except the list of names.
     SHAPE_LABELS = {"hardcoded project slug", "absolute home directory",
-                    "private profile document", "routable IP address"}
+                    "private profile document", "routable IP address", "agent session id"}
+
+    def test_agent_session_ids_fire_and_fixture_ids_stay_silent(self):
+        rule = [p for p, what in self.guard.PUBLIC_RULES if what == "agent session id"][0]
+        # built from two pieces so this file never holds a whole id and the tree scan stays clean
+        for text in ("(28 Sep, claude-" + "5e7a9c31)", "codex-" + "0a1b2c3d's run", "AGENT_MESH_ID=claude-" + "5e7a9c31-s1c"):
+            self.assertTrue(re.search(rule, text, re.I), text)
+        for text in ("claude-11111111", "codex-aaaaaaaa", "'I am claude-1234abcd.'", "claude-00000002",
+                     "xclaude-825b1305", "claude-825b1305a"):
+            self.assertFalse(re.search(rule, text, re.I), text)
 
     def test_published_rules_are_shapes_only(self):
         extra = sorted({what for _, what in self.guard.PUBLIC_RULES} - self.SHAPE_LABELS)

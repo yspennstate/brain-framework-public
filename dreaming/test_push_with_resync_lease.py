@@ -1,5 +1,5 @@
 """test_push_with_resync_lease.py - the nightly dream's Push-WithResync publishes nothing its certification did not cover,
-even when the remote is rewound between the last check and the push (28 Sep 2026, claude-825b1305; scheduled audit
+even when the remote is rewound between the last check and the push (28 Sep 2026; scheduled audit
 account03/B06 r55, R51-B06-PUSH-WITH-RESYNC-UNLEASED-REWIND-38).
 
     python test_push_with_resync_lease.py [--lib DREAM_GIT_SYNC.ps1] [--old PRE_28_SEP.ps1] [--old-stale PRE_14_OCT.ps1]
@@ -13,7 +13,7 @@ Newly reachable = what the remote's main reaches afterwards and did not before; 
  FORWARD  the remote moved to C (a child of A), two attempts, advertised C: B is replayed onto C, certified, published
 With --old, the function before this change must publish A uncertified in REWIND (the check can fail).
 
-STALE arms (14 Oct 2026, claude-c320faaf-r): the caller certified C..B against a main C that a peer pushed after B was
+STALE arms (14 Oct 2026): the caller certified C..B against a main C that a peer pushed after B was
 built on A, so B does not descend from its certified base. Before the change the function blocked the push and the
 night's commit stayed local (eight October dreams).
  STALE     base C, advertised C, two attempts: B is replayed onto C, C..B' certified, B' published, C kept

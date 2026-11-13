@@ -1140,7 +1140,7 @@ _NUMBER_WORDS = {
 }
 _ORDINAL_RE = re.compile(r"(\d+)(?:st|nd|rd|th)")
 _PHRASE_STOP = frozenset("the a an of for and or in on at to by with from as is are be its this that".split())
-#: NO ARTICLE-LED TITLE PHRASES (MATHBRAIN_PHRASE_NO_ARTICLE; 19 Oct 2026, claude-5693aca3). A long sentence title such as
+#: NO ARTICLE-LED TITLE PHRASES (MATHBRAIN_PHRASE_NO_ARTICLE; 19 Oct 2026). A long sentence title such as
 #: "Aldous-Fill Open Problem 6.13 ... the maximal Kemeny constant of an n-vertex graph is ..." met the healthcheck's Turan
 #: question ("Maximum number of edges in an n-vertex graph with no complete subgraph ...") on "an n-vertex", "n-vertex graph"
 #: and the trigram "an n-vertex graph": three phrase units, +2.36, which lifted it over Turan's Theorem and out of the block.
@@ -1150,7 +1150,7 @@ _PHRASE_STOP = frozenset("the a an of for and or in on at to by with from as is 
 #: strict absent-target fires 17 -> 19 of 32 (ceiling 0.75); healthcheck 11 speak / 6 silent. Set it to 0 to compare.
 PHRASE_NO_ARTICLE: bool = os.environ.get("MATHBRAIN_PHRASE_NO_ARTICLE", "1").strip() not in ("0", "", "off", "false")
 _PHRASE_ARTICLES = frozenset(("a", "an", "the"))
-#: NO TITLE PHRASES THAT END ON A STOP WORD (MATHBRAIN_PHRASE_NO_TRAILING_STOP; 19 Oct 2026, claude-5693aca3). The bank's
+#: NO TITLE PHRASES THAT END ON A STOP WORD (MATHBRAIN_PHRASE_NO_TRAILING_STOP; 19 Oct 2026). The bank's
 #: Gaussian-concentration question ("... a tail bound for ...") met the harvested title "Theorem 3.8
 #: (Master Tail Bound for Independent Sum of Random Tensors)" on "bound for" and the trigram "tail bound for": +2.41, which
 #: put that card 0.095 under Gaussian Concentration for Lipschitz Functions and silenced the hook on the margin test. A
@@ -1776,16 +1776,15 @@ def retrieve(
     # support in the pool: a two-word stub titled like the query outscored the theorem it names.
     # Compared in, it let weak statements through the support floor on its score, forced an
     # abstention by standing close to the one real answer, or hid a real tie between two
-    # statements behind its own margin (account03/B03 r88, B03-R72-DEGENERATE-CONTENDER-BREAKS-
-    # MARGIN-SEMANTICS-001). It counts only when nothing with a statement is left to compare.
+    # statements behind its own margin.
+    # It counts only when nothing with a statement is left to compare.
     def servable(hits_in: Iterable[SearchHit]) -> list[SearchHit]:
         hits_in = list(hits_in)
         return [hit for hit in hits_in if not _is_degenerate(hit.node)] or hits_in
 
     # The support floor, like the ambiguity test below, judges the servable candidates of the whole pool: the pool is
     # ordered by total score, which adds warning mass to support, so a caution card could fill a one-hit output and
-    # abstain for weak support while the same query asked for two hits served (account04/B02 r72,
-    # B02-R72-SUPPORT-FLOOR-REMAINS-LIMIT-DEPENDENT-20260929). The verdict is now the one an unlimited request gets.
+    # abstain for weak support while the same query asked for two hits served. The verdict is now the one an unlimited request gets.
     by_support = sorted(servable(pool), key=lambda hit: (-hit.support_score, hit.node.id))
     if by_support[0].support_score < min_support_score:
         return RetrievalResult(

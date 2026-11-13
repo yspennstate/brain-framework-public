@@ -26,6 +26,15 @@ cascade_shadow.tsv
 compute/waste_census.json
 compute/waste_census_timing.log*
 # a cache of the memory store's frontmatter, written beside supersession.py: private text
+dreaming/supersession_frontmatter_cache.json
+# logs the reflex hook appends beside itself on every run, the tests included
+dreaming/instinct_slow_calls.tsv
+dreaming/instinct_fires.tsv
+dreaming/instinct_emit_errors.tsv
+dreaming/instinct_suppressed.tsv
+dreaming/instinct_refills.tsv
+dreaming/.instinct_fired.json
+dreaming/.instinct_fired/
 dreaming/supersession_frontmatter_cache*.json
 # the route-name slugs supersession.py keeps across processes, and verify_gate's per-turn state: memory slugs
 dreaming/.sup_route_known*.json
@@ -37,14 +46,10 @@ scripts/private_labels.local
 # per-session state the prompts hook writes next to itself when run from a checkout (holds local paths)
 dreaming/owner_prompt_context_state/
 dreaming/.owner_prompts_hook_state/
-
-# the film brain store is built locally from craft/ and ingest/ (filmbrain/README.md); never shipped
-filmbrain/store/
 # resident recall server state
 dreaming/brain_recall_server/
 dreaming/recall_fastcache/
-# instinct_prime appends its slow-call record beside itself, so a test run in a checkout dirtied a tracked file
-dreaming/instinct_slow_calls.tsv
+# caches the hooks rebuild locally
 dreaming/canonical_route_gate_cache.json
 dreaming/proof_sense_silent_cache.json
 dreaming/exact_clauses_render_cache.json

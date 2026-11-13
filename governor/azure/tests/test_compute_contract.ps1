@@ -13,14 +13,14 @@ function Assert-Equal($Actual, $Expected, [string]$Label) {
     }
 }
 
-$legacyTradingOnly = Get-AzureSignals ([pscustomobject]@{
+$legacyProtectedOnly = Get-AzureSignals ([pscustomobject]@{
     status = 'distress'; mode = 'throttle'
     reasons = @('protected_unit_not_active:example-prod-1,example-feed.service')
 })
-Assert-Equal $legacyTradingOnly.PressureDistress $false 'legacy protected-only distress'
-Assert-Equal $legacyTradingOnly.Throttle $false 'legacy protected-only throttle'
-Assert-Equal $legacyTradingOnly.ProtectedHealth 'alert' 'legacy protected health'
-Assert-Equal $legacyTradingOnly.ProtectedAlerts.Count 1 'legacy protected alerts count'
+Assert-Equal $legacyProtectedOnly.PressureDistress $false 'legacy protected-only distress'
+Assert-Equal $legacyProtectedOnly.Throttle $false 'legacy protected-only throttle'
+Assert-Equal $legacyProtectedOnly.ProtectedHealth 'alert' 'legacy protected health'
+Assert-Equal $legacyProtectedOnly.ProtectedAlerts.Count 1 'legacy protected alerts count'
 
 $legacyMeasuredThrottle = Get-AzureSignals ([pscustomobject]@{
     status = 'distress'; mode = 'throttle'; psi_cpu_some_avg60 = 35

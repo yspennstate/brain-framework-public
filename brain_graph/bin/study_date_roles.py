@@ -1,6 +1,6 @@
-"""study_date_roles.py - does a memory's own creation date outweigh the dates it talks about? (27 Sep, claude-825b1305)
+"""study_date_roles.py - does a memory's own creation date outweigh the dates it talks about?
 
-A scheduled audit (account01/B14, job R8) found that the date tokens live since 27 Sep 03:11 count a memory's creation
+A scheduled audit found that the date tokens live since 27 Sep 03:11 count a memory's creation
 date several times: the slug, which carries it, is read three times, and the frontmatter's created lines are read too,
 while a date the memory talks about is usually written once. At average length BM25 then weighs the creation date about
 57 per cent above a once-mentioned event date. Five arms on the word index, built in memory (no index file is written):
@@ -15,12 +15,9 @@ date arm can move directly. Counts only in the result; per-question ranks go to 
 
     python study_date_roles.py OUT_JSON [--skip-keys]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import hashlib
 import io
 import json

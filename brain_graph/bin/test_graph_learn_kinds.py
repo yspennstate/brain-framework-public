@@ -1,4 +1,4 @@
-"""Controls for graph_learn.py's recall weight (27 Sep, claude-825b1305): it learns only from agents at work, with the first
+"""Controls for graph_learn.py's recall weight (27 Sep): it learns only from agents at work, with the first
 memory opened after a search as the target. Runs graph_learn.main() against a temporary live folder and a temporary
 projects folder, so nothing live is read or written. Counts only.
 
@@ -16,12 +16,9 @@ projects folder, so nothing live is read or written. Counts only.
 8. a real sample: the live recall log and the extracted events of the last six hours, run dry against the live projects
    folder, count test workers and leave the weight unchanged (skipped when the extract is missing)
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import importlib.util
 import json
 import os
@@ -148,8 +145,7 @@ def main():
         transcript(proj, "22222222-0000-4000-8000-000000000002", "sdk-cli", "[headless-worker] QUESTION rec_01_02\n\nWhere did ...")
         transcript(proj, "33333333-0000-4000-8000-000000000003", "sdk-cli", "You are the nightly dream.")
         gl.PROJECTS = os.path.join(tmp, "projects")
-        # since 29 Sep the learner asks session_kinds, the resolver the store and the fast layer share (account03/B01
-        # auto73), so the fixture's transcripts are that module's folder; the real sample below points it back
+        # since 29 Sep the learner asks session_kinds, the resolver the store and the fast layer share, so the fixture's transcripts are that module's folder; the real sample below points it back
         sk = gl.session_kinds
         live_sk = (sk.PROJECTS, sk.CODEX, sk.CACHE)
         sk.PROJECTS, sk.CODEX = os.path.join(tmp, "projects"), os.path.join(tmp, "codex")
@@ -223,8 +219,7 @@ def main():
               rows == [("kw:alpha", "mem:m1", 1.0, 0.0)] and tw.get("evaluations") == 1 and tw.get("mem_taken") == 1
               and status["precision"]["mem"]["judged"] == 1, "%s | tests %s" % (rows, tw))
 
-        extract = os.path.join(os.environ.get("TEMP", tmp), "claude", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")),
-                               "825b1305-b798-4b86-9592-6dee5d977809", "scratchpad", "ev", "mem_events.jsonl")
+        extract = os.environ.get("BRAIN_LIVE_EVENTS", "")   # optional: a live mem_events.jsonl to replay; absent skips
         if os.path.exists(extract):
             evs = [json.loads(l) for l in open(extract, encoding="utf-8")]
             last = max(e["ts"] for e in evs)

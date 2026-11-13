@@ -1,4 +1,4 @@
-"""graph_learn.py - the live brain graph learning from what its lines did (26 Sep, claude-825b1305).
+"""graph_learn.py - the live brain graph learning from what its lines did (26 Sep).
 
 Runs after each hourly capture (run_graph.py capture calls it; also by hand). Reads the membrane's evaluations
 (live/fires.jsonl), the capture's newly appended events and brain.py recall's log (live/recall_log.jsonl), and for every
@@ -179,7 +179,7 @@ def obs_id(j):
     """One membrane evaluation's identity: the eid the membrane gives each record since 29 Sep, else (older records) its
     time, session, event and entry point. Those four made two evaluations one when they shared them: the same session
     within a tenth of a second, or two sessions whose ids begin alike (Codex ids begin with the clock), and the second
-    one's lessons were dropped as a replay (account03/B08 auto71, B08-R62-OBS-ID-SAME-SESSION-TENTH-COLLISION-032, -031)."""
+    one's lessons were dropped as a replay."""
     if j.get("eid"):
         return hashlib.sha1(json.dumps(["eid", j["eid"]]).encode("utf-8")).hexdigest()
     return hashlib.sha1(json.dumps([j.get("t"), j.get("sid"), j.get("ev"), j.get("ep", "")]).encode("utf-8")).hexdigest()
@@ -210,9 +210,7 @@ def _sampled_mark(path, offset):
 
 
 def log_mark(path, offset):
-    """What the bytes under a log offset were: the sha256 of the whole prefix [0, offset), with its length (29 Sep,
-    account04/B15 r8, B15-R73-MIDDLE-REWRITE-ESCAPES-CURSOR-BINDING-20260929-01: the first and last 64 KB let a same-size
-    rewrite of the middle through, and the rows it changed were skipped). Hashing the whole 590 MB event log takes about
+    """What the bytes under a log offset were: the sha256 of the whole prefix [0, offset), with its length. Hashing the whole 590 MB event log takes about
     0.45 s (29 Sep 19:0x), and the learner runs once an hour. None when the file is shorter than offset or unreadable."""
     try:
         offset = int(offset)
@@ -231,10 +229,7 @@ def log_mark(path, offset):
 
 
 def read_bound(st, key, path, back=None, parse=json.loads):
-    """read_new from st[key + '_offset'], trusted only while the bytes under it are the ones it was taken on (29 Sep,
-    account01/B07 r77, B07-R77-R62-READ-NEW-OFFSET-NOT-GENERATION-BOUND: a file replaced by one of the same size gave
-    nothing, and a larger one lost its first rows, with no trace; account04/B15 r8: the check sampled the first and last
-    64 KB, so a rewrite of the middle passed). The mark is the digest of the whole consumed prefix. A file whose prefix
+    """read_new from st[key + '_offset'], trusted only while the bytes under it are the ones it was taken on. The mark is the digest of the whole consumed prefix. A file whose prefix
     changed, or that is now shorter than the offset (truncated, replaced, rotated), is read again from the start, or from
     `back` bytes before its end for the event log; the caller drops what it has already seen, and the reason is kept in
     st['reset_reasons'][key]. Returns (rows, reset)."""
@@ -274,7 +269,10 @@ def emitted_eids():
     return out
 
 
-LANE_PATH = os.path.join(os.path.expanduser("~"), ".claude", "dreaming", "graph_lane.py")
+LANE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "dreaming", "graph_lane.py")
+if not os.path.exists(LANE_PATH):          # brain_graph/bin and dreaming are siblings both in a checkout and installed
+    LANE_PATH = os.path.join(os.path.expanduser("~"), ".claude", "dreaming", "graph_lane.py")
+LANE_PATH = os.path.normpath(LANE_PATH)
 _LANE = {}
 CUT = 30                                   # items of each list the recall log keeps (graph_lane.log_recall)
 
@@ -366,10 +364,9 @@ def search_session(r, by_s):
 
 def judge_searches(recs, by_s):
     """[(record, session or None, memories opened in order)] for logged searches: the session by search_session, the
-    window from the search to ten minutes later or the same session's next search, whichever comes first (audit
-    account01/B05: two searches in one session must not share one window), each memory once, the first opened first -
+    window from the search to ten minutes later or the same session's next search, whichever comes first, each memory once, the first opened first -
     the fixed target. The learner and the offline evaluators both call this, so their labels cannot drift apart again
-    (audits account03/B01 R1 and account04/B18 R6, 27 Sep: an evaluator kept the old any-open, shown-overlap rule).
+.
     by_s: {8-character session: [(time, event kind, node id)]}."""
     sess = [search_session(r, by_s) for r in recs]
     next_t = {}
@@ -417,8 +414,7 @@ def session_kind(sid, idx=None, cache=None):
     the recall benches' workers), 'script' for any other headless run, 'unknown' when no record decides it. Before 27
     Sep the recall log was taken for agents' own searches; 198 of the 201 judged ones of 26-27 Sep were test workers.
 
-    session_kinds.kind, the rule the store and the fast layer use (29 Sep, account03/B01 auto73,
-    B01-R9-GRAPH-LEARN-PREFIX-KIND-ORDER-DEPENDENT-20260929). This used to keep its own map of 8-character keys, where the
+    session_kinds.kind, the rule the store and the fast layer use. This used to keep its own map of 8-character keys, where the
     first transcript listed won, and a cache in the learner's state that never looked again: under a key two sessions of
     different kinds share it answered 'his' or 'test' by directory order where the store answers 'unknown'. idx and
     cache are ignored, kept so callers that pass them still work."""
@@ -534,8 +530,7 @@ def main():
         errs = {"err:" + nid for _ts, kd, nid in out if kd == "err"}
         corrected = any(kd == "verdict" and nid in ("correction", "repeat") for _ts, kd, nid in out)
         places = {"%s:%s" % (kd, nid) for _ts, kd, nid in out if kd in ("dir", "proj")}
-        # fired = a line was shown; a line held back by design is its own state (28 Sep, account03/B08 R12,
-        # B08-R12-HOLD-MEASUREMENT-011: until then an evaluation that only held a line counted as fired)
+        # fired = a line was shown; a line held back by design is its own state
         sv_all = f.get("served") or []
         res = {"t": f["t"], "sid": s, "ev": f.get("ev"), "ep": f.get("ep", ""), "eid": f.get("eid"),
                "fired": any(sv[0] != "held" for sv in sv_all), "held": any(sv[0] == "held" for sv in sv_all),
@@ -564,8 +559,7 @@ def main():
             res["word_score"] = f["word"][0][1]
             res["word_got"] = str(f["word"][0][0]).lower() in read
         # The fix memory an error line names (or would have named, when the line was held back) is judged in both arms
-        # and learned from in neither: no learned edge, no tiredness, no memory-bar evidence (28 Sep, account01/B08 R49,
-        # B08-R49-ADAPTIVE-LEARNER-INTERFERENCE-047). Until then a shown one was a memory line - a negative edge on a
+        # and learned from in neither: no learned edge, no tiredness, no memory-bar evidence. Until then a shown one was a memory line - a negative edge on a
         # no-read, a count toward tired, a line for the memory bars - and a held one was nothing, so which arm a line
         # drew changed the learner's state even when the session did the same thing.
         fix = f.get("fix") if isinstance(f.get("fix"), dict) and f["fix"].get("candidate") else None
@@ -624,12 +618,11 @@ def main():
                 n_censored += 1
             res["lines"].append([kind, key, ok, by])
         if fix and res["fix"]["delivered"] and not res["fix"].get("line_found"):
-            # a SHOW record whose carried line is not where the record says (28 Sep, account04/B20 r14,
-            # B20-R37-COARSE-COMPLIANCE-WITHOUT-UPTAKE-20260928): not a delivery of the candidate, whatever else was shown
+            # a SHOW record whose carried line is not where the record says: not a delivery of the candidate, whatever else was shown
             res["fix"]["line_found"] = False
         if res["fired"] and res.get("eid") and res["eid"] not in emitted:
             # no receipt from the hook: whether its lines reached the session is unknown, so they teach nothing, neither
-            # way (29 Sep, account01/B15 r84: a line on record that never printed read as shown and not taken up)
+            # way
             res["emission"] = "unknown"
             n_unemitted += 1
             for ln in res["lines"]:
@@ -703,9 +696,9 @@ def main():
                    "shown_line_missing": sum(1 for x in fx if x["delivered"] and x.get("line_found") is False),
                    "shown_line_found_read": sum(1 for x in fx if x["delivered"] and x.get("line_found") and x["read"]),
                    "note": "the fix memory an error line names, SHOW against HOLD: read within 30 min; judged in both arms, "
-                           "learned from in neither (28 Sep, account01/B08 R49). shown/held are by assignment (intention "
+                           "learned from in neither. shown/held are by assignment (intention "
                            "to treat); shown_line_missing counts SHOW records whose carried line is absent, "
-                           "shown_line_found_read the reads among the rest (account04/B20 r14)"}
+                           "shown_line_found_read the reads among the rest"}
     prec["evaluations"] = {"judged": ev_all, "fired": sum(1 for j in judged if j["fired"]),
                            "held_by_design": sum(1 for j in judged if j.get("held")),
                            "top1_read_30min": round(sum(j["top1_read"] for j in judged) / ev_all, 4) if ev_all else None,

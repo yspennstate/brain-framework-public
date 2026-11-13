@@ -1,4 +1,4 @@
-"""Controls for doc expansion in bm25.py (26 Sep, claude-825b1305). Run after any change to bm25.read_doc, the expansion
+"""Controls for doc expansion in bm25.py. Run after any change to bm25.read_doc, the expansion
 store or the index build. Counts only; no memory text is printed.
 
     python test_doc_expansion.py [--live-index]
@@ -9,12 +9,9 @@ store or the index build. Counts only; no memory text is printed.
 4. fresh_memories: questions written after the last scan make exactly that memory fresh; switch off ignores the store
 5. (--live-index) the published index carries the questions of a sample of expanded memories
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import importlib.util
 import json
 import os
@@ -52,6 +49,9 @@ def main():
     on = load("bm25_on", {"BRAIN_DOC_EXPANSION": "1"})
     store = on.EXPANSION_FILE
     exp = on.expansions()
+    if not exp:
+        print("SKIP - no doc-expansion store yet (a fresh install writes it on the first expansion pass): %s" % store)
+        return 0
     check("the expansion store exists and parses", bool(exp), "%d memories with questions in %s" % (len(exp), store))
     d_off, d_on = off.read_docs(), on.read_docs()
     # date tokens (md0902, bm25 DATES, on since 27 Sep) sit after the head budget by design, so they are not counted

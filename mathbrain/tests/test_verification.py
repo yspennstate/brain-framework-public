@@ -96,7 +96,7 @@ def authenticated_evidence(
 ) -> tuple[Evidence, EvidenceAttestation, EvidenceReceipt]:
     # every record of one fixture shares one formal lineage (source tree, toolchain, scope) unless a test says
     # otherwise; until 30 Sep 2026 the source digest came from the evidence kind, so the kernel and fidelity records
-    # of the positive tests named different source trees and still promoted (account04/B11)
+    # of the positive tests named different source trees and still promoted
     artifact_hash = digest(f"artifact:{kind.value}:{nonce}")
     item = Evidence(
         claim.id,
@@ -180,7 +180,7 @@ def test_lean_requires_statement_fidelity() -> None:
         lineage={lean.id: shared, fidelity.id: shared},
     )
     assert not lean_only.allowed
-    # without the receipts' lineage the Lean route cannot be satisfied (account04/B11)
+    # without the receipts' lineage the Lean route cannot be satisfied
     assert not unjoined.allowed
     assert "lineage" in unjoined.rationale
     assert joined.allowed
@@ -665,7 +665,7 @@ def test_verification_event_foreign_key_tampering_fails_closed(tmp_path: Path) -
             recompute_current_status(store, claim.id, verifier())
 
 
-# T-R79-FORMAL-EVIDENCE-LINEAGE-JOIN (account04/B11, B11-R79-CROSS-GENERATION-FORMAL-EVIDENCE-PROMOTES-20260929-01):
+# Formal evidence lineage join:
 # a Lean kernel record and a fidelity record make one VERIFIED route only when their authenticated receipts name the
 # same source tree and toolchain and their evidence the same declarations.
 

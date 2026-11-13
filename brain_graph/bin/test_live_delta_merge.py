@@ -3,12 +3,9 @@ built from a synthetic log; a fast layer is written by hand with one pair the st
 it does not (file -> dir /dnew). The place scores the installed membrane reports must equal
 ln((cnt / out) / (in / total)) x ln(1 + cnt) over the two layers, each faded to the moment asked; with the fast layer
 off they must equal the store's own score, and the new folder must be absent."""
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import json
 import math
 import os
@@ -16,7 +13,7 @@ import sqlite3
 import sys
 import tempfile
 
-sys.path.insert(0, os.path.expanduser("~/.claude/brain_graph/bin"))
+sys.path.insert(0, os.environ.get("BRAIN_GRAPH_BIN", os.path.dirname(os.path.abspath(__file__))))
 import graph_store as GS
 import live_delta as LD
 import live_membrane as LM

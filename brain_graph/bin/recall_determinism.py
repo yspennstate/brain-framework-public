@@ -1,5 +1,5 @@
 """Run brain.py recall on the same questions under different PYTHONHASHSEED values and count where the printed lists
-differ (27 Sep, claude-825b1305). Pinned index, store and sidecar; the live recall log is left alone. Prints ids and
+differ. Pinned index, store and sidecar; the live recall log is left alone. Prints ids and
 counts only (the bank's gold stays in the quarantine).
     python recall_determinism.py OUT_JSON --store STORE_DIR --sidecar SIDECAR [--n-his 56] [--n-rew 64] [--seeds 1,2,3]
                                  [--workers 4]
@@ -7,12 +7,9 @@ STORE_DIR and SIDECAR are pinned copies (a live store is rebuilt under a running
 cache built first (BRAIN_GRAPH_STORE=STORE_DIR python graph_lane.py --build). 27 Sep result: 0 of 120 questions differed
 across three hash seeds at the live dial (results/RECALL_DETERMINISM_2026-09-27.json).
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import concurrent.futures, json, os, re, shutil, subprocess, sys, tempfile, time
 HOME = os.path.expanduser("~")
 DR = os.path.join(HOME, ".claude", "dreaming")

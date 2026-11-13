@@ -236,8 +236,7 @@ class MathNodeRevision:
         The store admits no other initial status, and only authenticated verification events move a claim. The
         revision's own status is its declared disposition: part of its identity and recorded on its node as
         declared_status, never the claim's authority. Until 30 Sep the declared status was passed through here, so a
-        revision declaring any of the seven other statuses could not be appended at all (account02/B11,
-        B11-R79-OVERLAY-STATUS-CANNOT-APPEND-01)."""
+        revision declaring any of the seven other statuses could not be appended at all."""
         return Claim(
             statement=self.statement,
             kind=self.kind,
@@ -308,7 +307,7 @@ class ContentAddressedTextStore:
 
         mkdir(parents=True) follows a symbolic link or junction already standing on the way, so a
         store whose objects/ was a link to another directory wrote its objects there under names
-        that looked right (account04/B19, B19-R69-OVERLAY-CONTAINMENT-PREMISE-20260929). Every
+        that looked right. Every
         existing component is checked before anything is created, and the directory is resolved
         and checked again after it is created."""
         current = self.root

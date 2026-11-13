@@ -1,7 +1,5 @@
 """test_graph_learn_exactly_once.py - every membrane evaluation is learned from once, and only when its text was printed; a
-log replaced under the learner's offset is read again, not skipped (29 Sep 2026, claude-825b1305; scheduled audits
-account03/B08 auto71 B08-R62-OBS-ID-SAME-SESSION-TENTH-COLLISION-032 and -031, account01/B07 r77
-B07-R77-R62-READ-NEW-OFFSET-NOT-GENERATION-BOUND, account01/B15 r84 B15-R20-MEMBRANE-COMMIT-BEFORE-EMIT-20260929).
+log replaced under the learner's offset is read again, not skipped.
 
     python test_graph_learn_exactly_once.py [--module GRAPH_LEARN.py] [--membrane LIVE_MEMBRANE.py] [--old OLD_GRAPH_LEARN.py]
 

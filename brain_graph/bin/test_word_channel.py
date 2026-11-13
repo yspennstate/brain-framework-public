@@ -1,10 +1,7 @@
 """Controls both ways for the membrane's word channel (26 Sep). Fire log and session state go to scratch, never live."""
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import json
 import os
 import sys
@@ -20,7 +17,7 @@ LM.FIRES = os.path.join(tmp, "fires.jsonl")
 LM.SESS = os.path.join(tmp, "sessions")
 LM.SERVED = os.path.join(tmp, "served.jsonl")
 LAW = "owner_law_brain_data_is_never_deleted_2026_09_26"
-MEMDIR = os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "memory")
+MEMDIR = os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace("\\", "-").replace("/", "-")), "memory")
 
 
 def transcript(name, records):
@@ -62,6 +59,9 @@ strong = ("write a rule, the data relevant to this kind of brain activity and im
 
 # 0. the candidate function on its own
 t0 = time.time()
+if not os.path.exists(LM.SIDECAR):          # a fresh install: no graph built yet, nothing to read
+    print("SKIP - no graph sidecar yet (a fresh install builds it on the first graph build): %s" % LM.SIDECAR)
+    sys.exit(0)
 lv = LM.Live()
 cands = LM.word_candidates(__import__("extract_touch_events").words(strong, cap=40), set(), lv.db)
 ms = (time.time() - t0) * 1000

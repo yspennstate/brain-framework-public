@@ -1,5 +1,5 @@
 [Unit]
-Description=Compute health sentinel (observes trading stack, renices only user.slice research)
+Description=Compute health sentinel (observes the protected production workload, renices only user.slice research)
 Documentation=file:///srv/<prod>/COMPUTE_DOCTRINE.md
 
 [Service]

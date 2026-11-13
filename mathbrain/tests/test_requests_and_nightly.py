@@ -55,10 +55,11 @@ def test_bad_relations_and_follows_are_refused(tmp_path: Path) -> None:
 
 
 def test_redact_removes_email_and_home_paths() -> None:
-    # paths assembled here so the repository's own home-path guard does not flag the fixture
+    # the address and paths are assembled here so the repository's own guards do not flag the fixture
     linux_home, mac_home = "/" + "home/alice", "/" + "Users/bob"
-    text = redact("mail a@b.org about %s/notes.tex and %s/x" % (linux_home, mac_home))
-    assert "a@b.org" not in text and "alice" not in text and "bob" not in text
+    addr = "a" + "@" + "b.org"
+    text = redact("mail %s about %s/notes.tex and %s/x" % (addr, linux_home, mac_home))
+    assert addr not in text and "alice" not in text and "bob" not in text
     assert "<email>" in text and "<home>" in text
 
 

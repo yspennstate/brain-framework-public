@@ -1,4 +1,4 @@
-"""Controls for the recall log's list bounds and graph_learn's replay with them (27 Sep, claude-825b1305).
+"""Controls for the recall log's list bounds and graph_learn's replay with them.
 
     python test_recall_log_bounds.py [DIR_WITH_graph_lane.py_AND_graph_learn.py] [ROWS_JSONL]
 
@@ -6,12 +6,9 @@ The directory defaults to the live files; ROWS_JSONL defaults to the newest grap
 quarantine (whole body and graph lists as recall used them). Nothing live is written: log_recall writes to a
 temporary path.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import glob
 import importlib.util
 import json

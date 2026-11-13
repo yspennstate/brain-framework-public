@@ -1,9 +1,10 @@
-"""test_codex_capture_exactly_once.py - the Codex capture adds no event twice when a run loses its state replace (28 Sep,
-claude-825b1305; account03/B12 R12 applied to extract_codex_events.py, which had the same append-then-state order).
+"""test_codex_capture_exactly_once.py - the Codex capture adds no event twice when a run loses its state replace.
 
     python test_codex_capture_exactly_once.py [DIR_WITH_THE_CAPTURE] [OLD_CAPTURE_DIR]
 
 Three real Codex rollouts are copied into a temp ROOT/yyyy/mm/dd (read only; the live logs and state are not written).
+Finished rollouts compressed to .jsonl.zst are used when too few plain ones exist; they are decompressed into the temp
+folder (needs the zstandard module).
  R  one uninterrupted capture of all three is the reference
  P1 a committed capture of two, the third arrives, the run that reads it loses its state replace, the next run reads it
     again: the events equal the reference
@@ -12,12 +13,9 @@ Three real Codex rollouts are copied into a temp ROOT/yyyy/mm/dd (read only; the
  N1 the capture before this change (OLD_CAPTURE_DIR, which must also hold its extract_touch_events.py) in P1's steps:
     extra events (the check can fail)
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import glob
 import os
@@ -75,20 +73,42 @@ def pick(n=3):
         if 200000 < os.path.getsize(f) < 3000000 and os.path.getmtime(f) < time.time() - 86400:
             out.append(f)
         if len(out) == n:
+            return out
+    try:
+        import zstandard  # noqa: F401
+    except ImportError:
+        return out
+    for f in sorted(glob.glob(os.path.join(H, ".codex", "sessions", "*", "*", "*", "*.jsonl.zst")), key=os.path.getmtime):
+        if 30000 < os.path.getsize(f) < 600000 and os.path.getmtime(f) < time.time() - 86400:
+            out.append(f)
+        if len(out) == n:
             break
     return out
+
+
+def place(f, d):
+    """copy a rollout into d as plain .jsonl (a .zst is decompressed)"""
+    if not f.endswith(".zst"):
+        shutil.copy2(f, d)
+        return
+    import zstandard
+    dst = os.path.join(d, os.path.basename(f)[:-4])
+    with open(f, "rb") as a, open(dst, "wb") as b:
+        zstandard.ZstdDecompressor().copy_stream(a, b)
+    st = os.stat(f)
+    os.utime(dst, (st.st_atime, st.st_mtime))
 
 
 def main():
     src = pick()
     if len(src) < 3:
-        print("FAIL - fewer than three suitable rollouts")
-        sys.exit(1)
+        print("SKIP - fewer than three suitable rollouts (a fresh install has none yet)")
+        sys.exit(0)
     T = tempfile.mkdtemp(prefix="codex_once_")
     full = os.path.join(T, "full", "2026", "09", "01")
     os.makedirs(full)
     for f in src:
-        shutil.copy2(f, full)
+        place(f, full)
     rc, out = run(NEW, os.path.join(T, "full"), os.path.join(T, "ref"))
     ref = lines(os.path.join(T, "ref", "events.jsonl"))
     check(rc == 0 and sum(ref.values()) > 0, "R reference: %d events from 3 rollouts (rc %s)" % (sum(ref.values()), rc))

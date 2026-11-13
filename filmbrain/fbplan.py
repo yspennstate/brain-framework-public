@@ -4,7 +4,7 @@ Turn "I want to make X" into something you can act on: the shape, the craft
 rules that apply, the failures to avoid, the recipes with their commands, and
 what this machine will cost you.
 
-  python fbplan.py "a ten minute explainer about the trading book"
+  python fbplan.py "a ten minute explainer about the brain"
   python fbplan.py "a documentary from old photographs" --minutes 20
   python fbplan.py --list
 

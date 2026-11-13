@@ -2,7 +2,7 @@
 
 Since the recall benches started (24 Sep) most of what the brain logs as use has been tests, and each consumer found it
 separately: the recall learner and the membrane (04:07), the usage record (04:51), the math brain's use layer (05:2x),
-the use-grown graph store (not yet). A scheduled audit (account02/B13, 27 Sep) put it plainly: a rule that repaired one
+the use-grown graph store (not yet). A scheduled audit (27 Sep) put it plainly: a rule that repaired one
 consumer was not made a rule for its neighbours. This module is that rule; the consumers import it.
 
   his      an interactive session: a Claude transcript whose entrypoint is cli, or a Codex thread from cli or vscode
@@ -23,10 +23,10 @@ live/session_kinds.json; 'unknown' never is.
     python session_kinds.py ID [ID ...]      the kind of each
     python session_kinds.py --stats [DAYS]   sessions by kind among the transcripts touched in the last DAYS (default 7)
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+import sys as _sys
+if __name__ == "__main__" and any(_a in ("-h", "--help") for _a in _sys.argv[1:]):
+    # Asking for help must not run the script's real work.
+    print((__doc__ or "").strip() or "usage: python " + _sys.argv[0])
     raise SystemExit(0)
 import collections
 import json
@@ -58,8 +58,7 @@ def kind_from_head(head, settled=True):
     A headless session is test or script by its first prompt, so a head that shows the entrypoint but no prompt yet
     cannot say which. settled=False says the transcript may still be written: such a head is 'unknown', which is never
     cached, and the session is read again once its prompt is there. Until 29 Sep it was 'script' at once and cached for
-    good, so a test worker read in that moment stayed 'script' (interactive audit S01, scheduled audit account02/B18
-    r77, B18-R9-SESSION-KIND-PREMATURE-SCRIPT-CACHE-001; none of the 851 cached 'script' rows was one)."""
+    good, so a test worker read in that moment stayed 'script' (none of the 851 cached 'script' rows was one)."""
     entry, first = _head_parts(head)
     if entry == "cli":
         return "his"
@@ -215,7 +214,7 @@ def known_ids():
 def save():
     """Write the settled kinds back (call once at the end of a run; a failure only costs a re-read next time).
     Several processes settle kinds (run_graph, graph_store, live_delta, math_use), and each used to write its whole
-    in-memory copy over the file, so one lost another's (scheduled audit account02/B15, 27 Sep). Now: a lock file
+    in-memory copy over the file, so one lost another's (27 Sep). Now: a lock file
     serialises writers, the file on disk is re-read and merged (a settled kind never changes, so the merge is a union
     and the disk's value wins a disagreement), and the rename is retried while a reader has the file open."""
     if not _STATE.get("dirty"):

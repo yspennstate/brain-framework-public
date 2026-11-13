@@ -46,8 +46,7 @@ def _env_path(name):
 # The memory directory whose notes the house cards were born from, and the prompt ledger beside it. The caller names
 # them (build's memory_dir, or MATHBRAIN_EXPANSION_MEMORY / MATHBRAIN_EXPANSION_PROMPTS); unnamed, build reports
 # "unconfigured" in LAST_BUILD. Until 30 Sep one machine's absolute user path was the committed default, and an unset or
-# missing directory returned an empty expansion exactly like a store with nothing to expand (account04/B03,
-# B03-R79-EXPANSION-UNCONFIGURED-LOOKS-SUCCESSFUL-20260929-01).
+# missing directory returned an empty expansion exactly like a store with nothing to expand.
 MEMORY_DIR = _env_path("MATHBRAIN_EXPANSION_MEMORY")
 PROMPTS = _env_path("MATHBRAIN_EXPANSION_PROMPTS")
 #: What the last build() found: status unconfigured | source_missing | success_empty | success, the source it read,

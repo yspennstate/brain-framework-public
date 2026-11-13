@@ -115,7 +115,7 @@ try {
         if (-not (Test-Path $p)) { $warn += "$($d -replace '\.md$') MISSING" }
         else { $h = ((Get-Date) - (Get-Item $p).LastWriteTime).TotalHours; if ($h -gt 30) { $warn += "$($d -replace '\.md$') is $([int]$h)h old" } }
     }
-    $salP = Join-Path $home2 '{{VIEWS_DIR}}\SALIENCE.md'
+    $salP = Join-Path '{{VIEWS_DIR}}' 'SALIENCE.md'
     if (Test-Path $salP) { $h = ((Get-Date) - (Get-Item $salP).LastWriteTime).TotalHours; if ($h -gt 30) { $warn += "SALIENCE is $([int]$h)h old" } }
     # identity anchors - change rarely, so presence is the check
     foreach ($d in 'AUTOBIOGRAPHY.md', 'values_what_we_stand_for.md', 'identity_who_you_are.md', 'THE_OTHER_MINDS.md', 'FASCINATIONS.md') {
@@ -354,7 +354,7 @@ if ($Part -eq 0 -or $Part -eq 2) {
 # 5b) what I'm itching to understand (curiosity as appetite, computed by curiosity.py from surprise +
 # incongruity + lonely-salient). OPEN_QUESTIONS is task residue; this is the live hunger - a session
 # with slack should reach for the top of it rather than sit idle.
-$cur = Join-Path $home2 '{{VIEWS_DIR}}\CURIOSITY.md'
+$cur = Join-Path '{{VIEWS_DIR}}' 'CURIOSITY.md'
 if (Test-Path $cur) {
     try {
         $clines = @(Get-Content -Encoding UTF8 $cur | Where-Object { $_ -match '^- \*\*\[' } | Select-Object -First 2)
@@ -395,7 +395,7 @@ if (Test-Path $con) {
 
 if ($Part -eq 0 -or $Part -eq 1) {
 # 6) what's vivid right now (affective salience - reach first for what matters)
-$sal = Join-Path $home2 '{{VIEWS_DIR}}\SALIENCE.md'
+$sal = Join-Path '{{VIEWS_DIR}}' 'SALIENCE.md'
 if (Test-Path $sal) {
     "--- What's vivid: brain\SALIENCE.md (the scars, the wins, the top-40 by salience) ---"
 }
@@ -427,7 +427,7 @@ if (Test-Path $itsv) {
 if ($Part -eq 0 -or $Part -eq 2) {
 # 8) what the brain expects (predictive processing: arrive holding a forecast, so a violation is FELT
 # the moment reality lands, not noticed in hindsight). Reads brain/PREDICTIONS.md, written by predict.py.
-$pred = Join-Path $home2 '{{VIEWS_DIR}}\PREDICTIONS.md'
+$pred = Join-Path '{{VIEWS_DIR}}' 'PREDICTIONS.md'
 if (Test-Path $pred) {
     try {
         $ptxt = Get-Content -Raw -Encoding UTF8 $pred

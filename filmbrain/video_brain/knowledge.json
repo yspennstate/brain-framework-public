@@ -678,7 +678,7 @@
         "owner_update:2026-09-05T09:26:46Z",
         "owner-update:2026-09-05-active-gpu-use",
         "owner-update:1788626329242",
-        "memory:owner_order_use_80_percent_of_the_gpu_everyone_2026_09_05"
+        "memory:gpu_use_target_2026_09_05"
       ],
       "status": "owner-grounded engineering guidance",
       "hint": "Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence."

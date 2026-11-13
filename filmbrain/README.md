@@ -43,7 +43,7 @@ Ask for the detail explicitly with `--kind param`.
 
 ## Ask it to plan something
 
-    python fbplan.py "a ten minute explainer about the trading book with charts" --minutes 10
+    python fbplan.py "a ten minute explainer about the brain with charts" --minutes 10
     python fbplan.py "a documentary from old photographs"
     python fbplan.py --list
 

@@ -1,5 +1,4 @@
-"""test_graph_learn_prefix_binding.py - the learner's log cursor is bound to every byte it consumed (29 Sep 2026, claude-825b1305;
-scheduled audit account04/B15 r8, B15-R73-MIDDLE-REWRITE-ESCAPES-CURSOR-BINDING-20260929-01, test T-R73-FULL-PREFIX-GENERATION-BINDING).
+"""test_graph_learn_prefix_binding.py - the learner's log cursor is bound to every byte it consumed.
 
     python test_graph_learn_prefix_binding.py [--module GRAPH_LEARN.py] [--old OLD_GRAPH_LEARN.py]
 
@@ -17,12 +16,9 @@ finding asks for) is consumed to its end, then changed:
  P10 the learner killed after learning and before its cursor was saved: run again, nothing is learned twice
 With --old, the learner given must miss P1 (no reset, no rows: N1) and not report P6's truncation (N2).
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import importlib.machinery
 import importlib.util
 import json

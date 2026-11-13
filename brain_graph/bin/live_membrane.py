@@ -1,10 +1,9 @@
 """live_membrane.py - the subconscious graph feeding the conscious context, live (26 Sep).
 
-His voice note of 26 Sep 00:26: "If a certain sequence of files are used and then a tool is called and another tool and
-then a keyword is thought of, all of those stuff should be activations in the brain ... if an attractor lights up or a
-sequence lights up and previously that led to a mistake or that required a certain tool or required a certain way of
-thinking, then that stuff should be given to the agent automatically. It should prompt into the agent." And at 15:5x the
-same day: live, with a weight that is not zero, edges growing and learning, so it can be studied.
+The design goal: files read, tools called and keywords thought of are all activations in the graph. When an attractor
+or a sequence lights up that earlier led to a mistake, or needed a certain tool or way of thinking, that is handed to
+the agent automatically. The graph runs live, with a weight that is not zero and edges that grow and learn, so the
+effect can be studied.
 
 What happens on a prompt or (every few) tool calls of a session:
 
@@ -120,11 +119,10 @@ def served_elsewhere(now, hours=6.0, tail=400000):
     """{slug: set of sessions} served in the last `hours`. Read from the served-lines log (26 Sep 19:55: the fire log's
     400 KB tail covered about 40 minutes at 300 evaluations an hour, not six hours, and the over-used qform memory
     reached four more sessions after the two-session rule), plus the fire log's tail for anything the log missed.
-    A test worker's row does not count (27 Sep, account03/B15 R9): the benches drew 39 of the first 46 memory lines,
+    A test worker's row does not count (27 Sep): the benches drew 39 of the first 46 memory lines,
     and two of them holding a memory would keep it from his next session. His sessions, scripts and unknown receivers
     still count, so the rule against one memory going everywhere stands.
-    The fix memory of an error line held back by design counts as served (28 Sep, account01/B08 R49,
-    B08-R49-CROSSSESSION-QUOTA-INTERFERENCE-045): under the focal estimand the two arms may differ only in what was
+    The fix memory of an error line held back by design counts as served (28 Sep): under the focal estimand the two arms may differ only in what was
     printed, and until then a hold left the memory's quota free, so it could reach a later session that the shown line
     would have kept it from."""
     out = {}
@@ -155,7 +153,7 @@ def served_elsewhere(now, hours=6.0, tail=400000):
 
 def served_row(now, sid, ep, kind, served, held_fix=None):
     """The served-lines log row (live/served.jsonl) that served_elsewhere() reads for the two-session quota. A held error
-    line's fix memory rides along as held_fix, so the quota spends it as it would a shown one (account01/B08 R49)."""
+    line's fix memory rides along as held_fix, so the quota spends it as it would a shown one."""
     row = {"t": round(now, 1), "sid": sid[:40], "ep": ep, "kind": kind, "served": [list(x) for x in served]}
     if held_fix:
         row["held_fix"] = list(held_fix)
@@ -828,10 +826,10 @@ def decide(ev, now, state, pol):
     tired = set(pol.get("tired") or [])
     lines, served = [], []
     held_n = [0]           # a line held back by design takes the slot and the hourly budget a shown line would
-                           # (28 Sep, account03/B08 R12, B08-R12-HOLD-PARITY-010: until then a HOLD left room that a
+                           # (28 Sep: until then a HOLD left room that a
                            # SHOW used, so the arm a line drew changed what the next lines could be)
     held_mems = []         # the fix memory of an error line held back (focal): named for the rest of this evaluation as
-                           # the shown line names it (28 Sep, account01/B08 R49: until then a HOLD let the memory channel
+                           # the shown line names it (28 Sep: until then a HOLD let the memory channel
                            # serve a second memory in the same evaluation, which the SHOW arm's named memory stopped)
 
     def room():
@@ -880,14 +878,13 @@ def decide(ev, now, state, pol):
                 held_n[0] += 1
                 if fm:
                     # the fix memory this line would have named, logged in both arms and under both estimands, so a later
-                    # exposure of it can be joined to this evaluation (28 Sep, account01/B08 R49,
-                    # B08-R49-TOTAL-ESTIMAND-FIX-ID-048: under "total" nothing recorded it)
+                    # exposure of it can be joined to this evaluation (28 Sep: under "total" nothing recorded it)
                     state["fix_rec"] = {"candidate": fm[0], "delivered": False, "spent": estimand == "focal",
                                         "estimand": estimand, "unit": unit}
                 if fm and estimand == "focal":
                     # The fix memory a shown line would have named is spent here too (refractory now, seen by the hook
                     # entry), so the two arms differ only in what was printed; until 28 Sep it stayed free in HOLD and a
-                    # later channel could serve it there and not in SHOW (account03/B08 R12, B08-R12-FIXMEM-CARRYOVER-014).
+                    # later channel could serve it there and not in SHOW.
                     # hold_estimand "total" keeps the old behaviour, for a study that labels the later exposure mediated.
                     served_at["mem:" + fm[0]] = now
                     state.setdefault("held_fix", []).append(fm[0])
@@ -1058,7 +1055,7 @@ def save_state(sid, st):
     26-27 Sep, each on an evaluation that served nothing: they lost state updates, not lines). Every other failure -
     making the folder, opening or writing the temporary file on a full disk, any other error at the rename - is caught
     too and returns False: the first repair covered only the rename, and a failure elsewhere could still abort the hook
-    after its line had been recorded as served (account01/B20 R17, 27 Sep). run() withholds a line whose state did not
+    after its line had been recorded as served (27 Sep). run() withholds a line whose state did not
     commit."""
     p = _state_path(sid)
     tmp = p + ".%d.tmp" % os.getpid()
@@ -1106,7 +1103,7 @@ def _os_lock(fd, take):
 def lock_session(sid, wait=0.5, stale=None):
     """Hold one session for one hook call from load_state to save_state: the lock's path, or None. Parallel tool calls
     of a session each loaded the same state, each found a line fresh and each served it, so the refractory and the fire
-    budget held only for calls made in sequence (account01/B15 R17, 27 Sep). A call that cannot take the lock within
+    budget held only for calls made in sequence (27 Sep). A call that cannot take the lock within
     `wait` seconds leaves the moment to the call holding it and serves nothing.
 
     The lock is the operating system's, held on an open file for as long as this process holds it, and released by the
@@ -1169,7 +1166,7 @@ def mark_emitted():
     """The hook wrapper calls this after the text run() returned is written and flushed: one row naming the evaluation.
     The state and the evaluation's row are committed before the text leaves (so a line is never shown twice), which left
     a hook that died between the two with a line on record that never reached the session; the learner now learns from a
-    shown line only when this receipt exists (29 Sep, account01/B15 r84, B15-R20-MEMBRANE-COMMIT-BEFORE-EMIT-20260929).
+    shown line only when this receipt exists (29 Sep).
     Fail-safe: a lost receipt costs that evaluation's lessons, never a wrong one."""
     eid, LAST_EID[0] = LAST_EID[0], None
     if not eid:
@@ -1252,7 +1249,7 @@ def run(payload, now=None, force=False):
         st["seen"] = sorted(seen)[-3000:]
         # A line is served only once the state that keeps it from repeating is on disk: a line shown on a failed save
         # could be shown again on the next call inside its refractory, and before 27 Sep a failure after the served row
-        # was written could leave a row for a line that never printed (account01/B15 and B20, R17). Such a line is withheld,
+        # was written could leave a row for a line that never printed. Such a line is withheld,
         # logged under 'withheld' in the evaluation, and may be served on a later call.
         withheld = []
         if not save_state(sid, st) and served:
@@ -1280,7 +1277,7 @@ def run(payload, now=None, force=False):
             rec = {"t": round(now, 1), "sid": sid[:40], "ev": "prompt" if is_prompt else "post",
                    "rec_error": "%s: %s" % (type(e).__name__, str(e)[:120])}
         rec["served"] = [list(s) for s in served]
-        # the evaluation's own identity (29 Sep, account03/B08 auto71, B08-R62-OBS-ID-SAME-SESSION-TENTH-COLLISION-032):
+        # the evaluation's own identity (29 Sep):
         # the learner keyed an evaluation by its tenth-second, 8-character session, event and entry point, and two of
         # them sharing those were one; a retry of the same row keeps its eid, so it is still counted once
         rec["eid"] = uuid.uuid4().hex[:20]

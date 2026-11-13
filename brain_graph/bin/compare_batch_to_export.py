@@ -1,5 +1,5 @@
 """compare_batch_to_export.py - are the math store's 10 Aug rows the same today as in the earliest record git holds of
-them? (R34, B07-R34-MATH-RESEAL-PREBACKUP-LAUNDERING-021; 28 Sep 09:3x, claude-825b1305)
+them?
 
 The re-seal's evidence rule compared each row with the 22 Aug backup, which proves only that nothing changed it after
 22 Aug. The math brain repository committed an export of the store on 15 Aug 17:01 UTC (a2e0b08ed9, "Deploy the
@@ -9,12 +9,9 @@ which fields), and which the export lacks.
 
     python compare_batch_to_export.py STORE REPO COMMIT OUT_JSON
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import io
 import json
 import sqlite3

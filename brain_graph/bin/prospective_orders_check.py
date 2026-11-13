@@ -1,5 +1,5 @@
 """prospective_orders_check.py - before he has to say an order again, did the standing-orders channel have it in front of
-the agent? (27 Sep, claude-825b1305; the prospective check pre-registered 18:1x in study/TWO_DAY_RUN_2026-09-26.md.)
+the agent?
 
 For every correction or repeat of his since SINCE (events_verdicts.jsonl, the capture's reading of his reactions):
   - his words: the owner row of the prompt ledger (memory/prompts/PROMPTS.jsonl) in the same session within 90 s;
@@ -12,12 +12,9 @@ report lists every case with his words for a reader to check.
 
     python prospective_orders_check.py [--since "YYYY-MM-DD HH:MM"] [--bar 30] [--out PATH]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import json
 import os
@@ -28,7 +25,7 @@ H = os.path.expanduser("~")
 BIN = os.path.join(H, ".claude", "brain_graph", "bin")
 LIVE = os.path.join(H, ".claude", "brain_graph", "live")
 VERDICTS = os.path.join(H, ".claude", "brain_graph", "events_verdicts.jsonl")
-PROMPTS = os.path.join(H, ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "memory", "prompts", "PROMPTS.jsonl")
+PROMPTS = os.path.join(H, ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace("\\", "-").replace("/", "-")), "memory", "prompts", "PROMPTS.jsonl")
 FIRES = os.path.join(LIVE, "fires.jsonl")
 CODEX = os.path.join(LIVE, "codex_orders.jsonl")
 sys.path.insert(0, BIN)

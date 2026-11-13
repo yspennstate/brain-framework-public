@@ -1,6 +1,5 @@
 """test_casecontrol_evidence.py - the correction case-control study binds the evidence it ran on, and its verifier refuses
-a missing or altered rows file (28 Sep 2026, claude-825b1305; scheduled audit account01/B01 r66,
-B01-R13-CORRECTION-CASECONTROL-EVIDENCE-GENERATION-UNBOUND-20260928).
+a missing or altered rows file.
 
     python test_casecontrol_evidence.py [--study PATH] [--old OLD_STUDY.py]
 
@@ -15,12 +14,9 @@ B01-R13-CORRECTION-CASECONTROL-EVIDENCE-GENERATION-UNBOUND-20260928).
     changed: refused (3)
 With --old the study before this change must have no evidence_generation (N1: the check can fail).
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import copy
 import importlib.util
 import json
@@ -91,38 +87,41 @@ def main():
         check(g0 == g0b and g0["events"]["events"] == 5 and g0["rows"]["rows"] == 1,
               "E3 nothing changed: the same digest and id twice (%s), 5 events, 1 row" % g0["id"][:12])
 
-        for r in RESULTS:
-            rc, out = verify(os.path.join(REPO, "results", r), "--binding", BINDING)
-            check(rc == 0 and out.startswith("MATCH"), "V1 %s with its rows and the binding: %s" % (r, out[:110]))
-        res_p = os.path.join(REPO, "results", RESULTS[1])
-        rc, out = verify(res_p, "--binding", BINDING, "--rows", os.path.join(tmp, "nowhere.jsonl"))
-        check(rc == 2, "V2 the rows file missing: exit %d, %s" % (rc, out[:80]))
-        b = json.load(open(BINDING, encoding="utf-8"))
-        src = os.path.join(st.SLM.STUDY, b["results"][RESULTS[1]]["rows_file"])
-        bad = os.path.join(tmp, "rows_altered.jsonl")
-        lines = open(src, encoding="utf-8").read().splitlines(True)
-        r0 = json.loads(lines[1])
-        r0["score"] = r0["score"] + 1.0
-        lines[1] = json.dumps(r0) + "\n"
-        open(bad, "w", encoding="utf-8").write("".join(lines))
-        rc, out = verify(res_p, "--binding", BINDING, "--rows", bad)
-        check(rc == 3, "V3 one score in the rows file changed: exit %d, %s" % (rc, out[:80]))
-        res_bad = json.load(open(res_p, encoding="utf-8"))
-        res_bad["matched_auc"] = 0.7
-        res_bad_p = os.path.join(tmp, RESULTS[1])
-        json.dump(res_bad, open(res_bad_p, "w", encoding="utf-8"))
-        b2p = os.path.join(tmp, "binding.json")
-        json.dump(b, open(b2p, "w", encoding="utf-8"))
-        rc, out = verify(res_bad_p, "--binding", b2p, "--rows", src)
-        check(rc == 1 and "matched_auc" in out, "V4 the rows intact, the result's AUC changed: exit %d, %s" % (rc, out[-60:]))
-        own = json.load(open(res_p, encoding="utf-8"))
-        own["evidence_generation"] = {"rows": {"file": os.path.basename(src), "sha256": st._sha_file(src)}}
-        own_p = os.path.join(tmp, "own_evidence.json")
-        json.dump(own, open(own_p, "w", encoding="utf-8"))
-        rc_a, out_a = verify(own_p, "--rows", src)
-        rc_b, out_b = verify(own_p, "--rows", bad)
-        check(rc_a == 0 and rc_b == 3, "V5 a result carrying evidence_generation: its own rows %d, one row changed %d" % (
-            rc_a, rc_b))
+        if not (os.path.exists(BINDING) and all(os.path.exists(os.path.join(REPO, "results", r)) for r in RESULTS)):
+            print("SKIP V1-V5 - the study's results and binding are not on this machine (a fresh install has none)")
+        else:
+            for r in RESULTS:
+                rc, out = verify(os.path.join(REPO, "results", r), "--binding", BINDING)
+                check(rc == 0 and out.startswith("MATCH"), "V1 %s with its rows and the binding: %s" % (r, out[:110]))
+            res_p = os.path.join(REPO, "results", RESULTS[1])
+            rc, out = verify(res_p, "--binding", BINDING, "--rows", os.path.join(tmp, "nowhere.jsonl"))
+            check(rc == 2, "V2 the rows file missing: exit %d, %s" % (rc, out[:80]))
+            b = json.load(open(BINDING, encoding="utf-8"))
+            src = os.path.join(st.SLM.STUDY, b["results"][RESULTS[1]]["rows_file"])
+            bad = os.path.join(tmp, "rows_altered.jsonl")
+            lines = open(src, encoding="utf-8").read().splitlines(True)
+            r0 = json.loads(lines[1])
+            r0["score"] = r0["score"] + 1.0
+            lines[1] = json.dumps(r0) + "\n"
+            open(bad, "w", encoding="utf-8").write("".join(lines))
+            rc, out = verify(res_p, "--binding", BINDING, "--rows", bad)
+            check(rc == 3, "V3 one score in the rows file changed: exit %d, %s" % (rc, out[:80]))
+            res_bad = json.load(open(res_p, encoding="utf-8"))
+            res_bad["matched_auc"] = 0.7
+            res_bad_p = os.path.join(tmp, RESULTS[1])
+            json.dump(res_bad, open(res_bad_p, "w", encoding="utf-8"))
+            b2p = os.path.join(tmp, "binding.json")
+            json.dump(b, open(b2p, "w", encoding="utf-8"))
+            rc, out = verify(res_bad_p, "--binding", b2p, "--rows", src)
+            check(rc == 1 and "matched_auc" in out, "V4 the rows intact, the result's AUC changed: exit %d, %s" % (rc, out[-60:]))
+            own = json.load(open(res_p, encoding="utf-8"))
+            own["evidence_generation"] = {"rows": {"file": os.path.basename(src), "sha256": st._sha_file(src)}}
+            own_p = os.path.join(tmp, "own_evidence.json")
+            json.dump(own, open(own_p, "w", encoding="utf-8"))
+            rc_a, out_a = verify(own_p, "--rows", src)
+            rc_b, out_b = verify(own_p, "--rows", bad)
+            check(rc_a == 0 and rc_b == 3, "V5 a result carrying evidence_generation: its own rows %d, one row changed %d" % (
+                rc_a, rc_b))
         if OLD:
             old = load(OLD, "scc_old")
             check(not hasattr(old, "evidence_generation"),

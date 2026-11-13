@@ -1,9 +1,9 @@
-"""quarantine_rows.py - a run never destroys an earlier run's rows (27 Sep, claude-825b1305).
+"""quarantine_rows.py - a run never destroys an earlier run's rows.
 
 The evaluators write their per-item rows (bank ids and ranks) under fixed names in the recall-keys quarantine and the
-brain-graph study tree, and each rerun rewrote the file: on 27 Sep the 05:11 canonw/stem run replaced the rows behind
-both published tokenizer results, which no longer exist. Those trees are brain data, never deleted (owner law, 26 Sep),
-and an overwrite is a deletion. So a writer passes its fixed path through keep_old() first: a file already there is
+brain-graph study tree, and each rerun rewrote the file: one rerun replaced the rows behind
+both published tokenizer results, which no longer exist. Those trees are brain data and are never deleted, and an
+overwrite is a deletion. So a writer passes its fixed path through keep_old() first: a file already there is
 copied beside itself under its own modification time, and only then written over. The fixed name stays the newest run,
 so readers of it keep working. If the copy fails, the run stops before it writes.
 

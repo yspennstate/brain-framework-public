@@ -1,4 +1,4 @@
-"""test_orders_channel.py - controls for the membrane's standing-orders channel (27 Sep, claude-825b1305).
+"""test_orders_channel.py - controls for the membrane's standing-orders channel (27 Sep).
 
     python test_orders_channel.py [PATH_TO_live_membrane.py]      (default: the installed one in bin)
 
@@ -40,6 +40,9 @@ def run(name, fn):
         FAILS.append(name)
 
 
+if not os.path.exists(LM.SIDECAR):          # a fresh install: no graph built yet, nothing to read
+    print("SKIP - no graph sidecar yet (a fresh install builds it on the first graph build): %s" % LM.SIDECAR)
+    sys.exit(0)
 lv = LM.Live(delta=None)
 GPU_Q = "gpu not being used render movies blender nvenc ffmpeg"
 CHAINED = "owner_allows_gpu_movies_before_restart_2026_09_05"
@@ -138,7 +141,7 @@ def refractory_and_seen():
 
 def hold():
     """One order line in four is held back per session and two-hour block (logged as 'held', no text); his laws are never
-    held. Since 28 Sep (account03/B08 R12, B08-R12-HOLD-PARITY-010) a held line spends the hourly budget a shown line
+    held. Since 28 Sep a held line spends the hourly budget a shown line
     would, so both arms leave the same fire times; before that this control asserted the opposite."""
     if not hasattr(LM, "held_back"):
         return False

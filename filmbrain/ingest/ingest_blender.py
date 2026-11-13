@@ -12,7 +12,7 @@ import json, sys
 sys.path.insert(0, os.environ.get("FILMBRAIN_ROOT") or os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from fb_store import Store, slug
 
-DUMP = os.path.join(os.environ.get("FILMBRAIN_ROOT") or os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "store", "blender_api.json")
+DUMP = os.path.expanduser(r"~/filmbrain/store/blender_api.json")
 
 # which craft anchors each API family belongs under
 FAMILY = {

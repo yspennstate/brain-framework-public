@@ -1,6 +1,6 @@
-"""study_expansion_filter.py - does dropping weak generated questions help the word index? (27 Sep, claude-825b1305)
+"""study_expansion_filter.py - does dropping weak generated questions help the word index?
 
-A scheduled audit (account04/B11, job R3) judged 207 stored questions: 94.7 percent answerable from their memory, 17.9
+A scheduled audit judged 207 stored questions: 94.7 percent answerable from their memory, 17.9
 percent so generic they would match hundreds of memories ("anything new?"), 5.3 percent claiming more than the memory says
 ("right now" on a dated snapshot, "all" or "the system" where the memory speaks of one cycle). Doc2Query-- (Gospodinov,
 MacAvaney and Macdonald, ECIR 2023) found that dropping weak generated queries helps. Three gates, per question:
@@ -15,12 +15,9 @@ ranks of the reworded bank go to the quarantine.
 
     python study_expansion_filter.py OUT_JSON [--skip-keys]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import hashlib
 import json

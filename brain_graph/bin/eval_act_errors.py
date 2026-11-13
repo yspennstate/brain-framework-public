@@ -1,5 +1,4 @@
-"""eval_act_errors.py - do error nodes that NAME THE ACT anticipate failures? (27 Sep, claude-825b1305; pre-registered
-12:2x in study/TWO_DAY_RUN_2026-09-26.md)
+"""eval_act_errors.py - do error nodes that NAME THE ACT anticipate failures?
 
 The live membrane's error lines are classes like err:Bash:python:exit1 attached by co-occurrence with the context, and
 they come true at about their base rate (the_membranes_error_lines_come_true_at_their_base_rate_2026_09_27). This asks
@@ -14,12 +13,9 @@ Read-only; aggregates only (no command text is printed).
 
     python eval_act_errors.py [OUT_JSON] [--window 20] [--min-n 5] [--days N] [--exclude TOOL,TOOL]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import json
 import os

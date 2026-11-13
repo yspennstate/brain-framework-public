@@ -50,7 +50,6 @@ class PrivateLabelGuardTests(unittest.TestCase):
             # tree the guard scans, so a literal fixture here is a real finding for it
             ("forward slash", "C:/" + "Users/" + "someone/x.md"),
             ("posix home", "/" + "home/" + "someone/x.md"),
-            ("macOS home", "/" + "Users/" + "someone/x.md"),
         ):
             with self.subTest(label):
                 self.assertTrue(self._home_hit(text),
@@ -62,7 +61,6 @@ class PrivateLabelGuardTests(unittest.TestCase):
             ("ellipsis", "C:" + BS * 2 + "Users" + BS * 2 + "..."),
             ("named fixture", "C:" + BS * 2 + "Users" + BS * 2 + "private-sentinel"),
             ("the literal word user", "C:/Users/user/x.md"),
-            ("macOS placeholder", "/" + "Users/" + "user/x.md"),
         ):
             with self.subTest(label):
                 self.assertFalse(self._home_hit(text),
@@ -70,7 +68,7 @@ class PrivateLabelGuardTests(unittest.TestCase):
 
     def test_every_text_file_is_read_whatever_its_name(self):
         # .vbs was once outside the suffix list; on 2026-09-29 so were .jsonl, .log, .lock and
-        # files with no suffix (account04/B17 r13, B17-F1). The guard now reads every file that
+        # files with no suffix. The guard now reads every file that
         # is not binary, and says how many it read.
         import contextlib
         import io

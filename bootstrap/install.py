@@ -28,6 +28,10 @@ SUBSYSTEMS = {
     "workspace": os.path.join("brain-framework", "workspace"),
     "body/crashguard": "CrashGuard",
     "tools": os.path.join("brain-framework", "tools"),
+    # The math store's package. Dreaming and brain_graph/bin scripts look for it at ../mathbrain/src and
+    # ../../mathbrain/src; without this entry an installed brain had none and imported whatever math_brain
+    # happened to be on the path, or failed.
+    "mathbrain": os.path.join(".claude", "mathbrain"),
 }
 
 # Many scripts and pages reach the shared modules through the brain's own working tree,

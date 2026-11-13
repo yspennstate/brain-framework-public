@@ -34,7 +34,7 @@ When the plan is correct, apply the same options:
 
 ## Choose and populate the memory corpus
 
-The installer writes the chosen project slug into `~/.claude/dreaming/BRAIN_SLUG`. The slug is the full project path with colons and separators replaced by dashes. For a project directory `/Users/<you>`, it is `-Users-<you>`; memories live in `~/.claude/projects/-Users-alex/memory`. Check the marker and directory before building indexes. A different session working directory must not silently select an empty corpus.
+The installer writes the chosen project slug into `~/.claude/dreaming/BRAIN_SLUG`. The slug is the full project path with colons and separators replaced by dashes. For a project directory `/Users/<you>`, it is `-Users-<you>`; memories live in `~/.claude/projects/{{BRAIN_SLUG}}/memory` (here `-Users-<you>`). Check the marker and directory before building indexes. A different session working directory must not silently select an empty corpus.
 
 Fill in the seed identity and relationship memories for a fresh brain. To restore an existing brain, copy the authorized lived corpus into this directory while preserving the seeds separately for comparison. The October Mac installation restored 28,219 files and 82 lived state files; those are historical counts for that corpus, not required targets. State artifacts can carry Windows paths, so inspect them before copying. Preserve ledgers and provenance rather than replacing them with fresh empty files.
 
@@ -63,8 +63,8 @@ Use the absolute interpreter with `-s` in each command, forward slash paths, and
 Install the Python wake implementation from `hooks/wake_brain.py` as `~/.claude/wake_brain.py`. Render `hooks/brain_startup.template.md` with the same installation values into `~/.claude/brain_startup.md`, or review the restored lived startup text and fix its paths. In the dispatch list, replace the two PowerShell wake entries with calls to the installed Python script using `--part 1` and `--part 2`. Run both parts manually before opening a new session:
 
 ```bash
-"$BRAIN_PY" -s "$HOME/.claude/wake_brain.py" --part 1
-"$BRAIN_PY" -s "$HOME/.claude/wake_brain.py" --part 2
+"$BRAIN_PY" -s ~/.claude/"wake_brain.py" --part 1
+"$BRAIN_PY" -s ~/.claude/"wake_brain.py" --part 2
 ```
 
 The Python wake reads the latest dated state-of-mind triplet and uses Mac load and memory pressure in place of Windows CrashGuard. A fresh install can correctly warn that no dream or embedding audit has run yet.
@@ -80,9 +80,9 @@ Merge the generated `~/.claude/CLAUDE.brain.md` into existing instructions if bo
 After the memory directory and code agree, build lexical and association artifacts:
 
 ```bash
-nice -n 15 "$BRAIN_PY" -s "$HOME/.claude/dreaming/bm25.py" build
-nice -n 15 "$BRAIN_PY" -s "$HOME/.claude/dreaming/build_spread_edges.py"
-"$BRAIN_PY" -s "$HOME/.claude/dreaming/brain.py" recall "a distinctive fact from an actual memory"
+nice -n 15 "$BRAIN_PY" -s ~/.claude/"dreaming/bm25.py" build
+nice -n 15 "$BRAIN_PY" -s ~/.claude/"dreaming/build_spread_edges.py"
+"$BRAIN_PY" -s ~/.claude/"dreaming/brain.py" recall "a distinctive fact from an actual memory"
 ```
 
 Replace the example query with a fact whose source file you can inspect. Check the returned memory, not just a successful exit. The October build reported 27,997 lexical documents and 93,702 association edges. Corpus changes alter both counts.
@@ -90,12 +90,12 @@ Replace the example query with a fact whose source file you can inspect. Check t
 For semantic recall, use the production sentence-transformer builder, then publish its staged artifact through the publication tool. The local LSA builder is diagnostic-only and must not replace the live sidecar. Set the correct memory directory explicitly:
 
 ```bash
-BRAIN_MEMORY="$HOME/.claude/projects/$(cat "$HOME/.claude/dreaming/BRAIN_SLUG")/memory"
+BRAIN_MEMORY=~/.claude/projects/"$(cat ~/.claude/dreaming/BRAIN_SLUG)"/memory
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1
-nice -n 15 "$BRAIN_PY" -s "$HOME/.claude/dreaming/build_memory_embeddings.py" "$BRAIN_MEMORY" --out "$HOME/.claude/dreaming/memory_embeddings.next.npz"
-"$BRAIN_PY" -s "$HOME/.claude/dreaming/publish_memory_embeddings.py" --staged "$HOME/.claude/dreaming/memory_embeddings.next.npz" --mem-dir "$BRAIN_MEMORY"
-"$BRAIN_PY" -s "$HOME/.claude/dreaming/embedding_coverage.py" --mem-dir "$BRAIN_MEMORY" --require-complete --write-status
-"$BRAIN_PY" -s "$HOME/.claude/dreaming/brain.py" recall "a distinctive fact from an actual memory"
+nice -n 15 "$BRAIN_PY" -s ~/.claude/"dreaming/build_memory_embeddings.py" "$BRAIN_MEMORY" --out ~/.claude/"dreaming/memory_embeddings.next.npz"
+"$BRAIN_PY" -s ~/.claude/"dreaming/publish_memory_embeddings.py" --staged ~/.claude/"dreaming/memory_embeddings.next.npz" --mem-dir "$BRAIN_MEMORY"
+"$BRAIN_PY" -s ~/.claude/"dreaming/embedding_coverage.py" --mem-dir "$BRAIN_MEMORY" --require-complete --write-status
+"$BRAIN_PY" -s ~/.claude/"dreaming/brain.py" recall "a distinctive fact from an actual memory"
 ```
 
 Run the builder and a dream sequentially. On a shared machine, keep builds at low priority and monitor resource use. The verified corpus produced 28,020 vectors of 384 dimensions and complete coverage. Confirm the coverage audit and that recall reports semantic recall on; creating an NPZ alone does not establish that it is published or used.
@@ -105,7 +105,7 @@ Run the builder and a dream sequentially. On a shared machine, keep builds at lo
 When recall is ready, inspect `~/.claude/dreaming/run_dream.py` and its tail, then run a manual nap:
 
 ```bash
-nice -n 15 "$BRAIN_PY" -s "$HOME/.claude/dreaming/run_dream.py" --type nap
+nice -n 15 "$BRAIN_PY" -s ~/.claude/"dreaming/run_dream.py" --type nap
 ```
 
 This changes derived brain state. Read the resulting `~/.claude/dreaming/logs/dream_*.log`. Review every `STEP FAILED`, `STEP CAPPED` and `STEP SKIPPED` entry as well as the final completion marker: this runner continues after individual step failures. A zero runner exit and “dream cycle complete” are insufficient evidence of a fully successful tail.
@@ -126,7 +126,7 @@ The POSIX governor can be observed once without installing a service:
 
 It publishes observed load and politeness state; the reviewed implementation does not kill or renice processes. Continuous governor execution and a mechanical dream schedule through launchd were not authorized in the observed installation. Proposed plists stay outside `~/Library/LaunchAgents` until the owner decides. A plist on disk is not a loaded service; record an actual loaded state and fresh output when scheduling is approved. Windows Task Scheduler, VBS and PowerShell launchers are not Mac installation steps.
 
-Math research support needs its own package and store. The October deployment restored a 51,052-row database from an export using the corrected importer (`math-research-brain` commit `2c6cde49`) and configured `MATHBRAIN_STORE` plus `MATHBRAIN_BUILD_SRC`. Database rows alone were insufficient: 7,310 of 11,451 cards referenced an absent `objects/sha256` tree, and some cards failed digest checks. Restore matching artifacts and verify reader integrity before treating this lane as fully working. Follow the math package's own instructions rather than treating the framework's isolated math smoke as proof of that lived store.
+Math research support needs its own package and store. The October deployment restored a 51,052-row database from an export using the corrected importer and configured `MATHBRAIN_STORE` plus `MATHBRAIN_BUILD_SRC`. Database rows alone were insufficient: 7,310 of 11,451 cards referenced an absent `objects/sha256` tree, and some cards failed digest checks. Restore matching artifacts and verify reader integrity before treating this lane as fully working. Follow the math package's own instructions rather than treating the framework's isolated math smoke as proof of that lived store.
 
 Film support stays in the checkout unless installed separately. From `filmbrain/`, run `python3 ingest/load_craft.py`, then `python3 tools/verify_tools.py`; run harvesters only for binaries actually present. `FILMBRAIN_ROOT` and `FILMBRAIN_DB` select alternate locations. The October authored store had 592 nodes, 996 edges and 11 stubs; all 20 inventoried film tools were absent. Craft recall can work while rendering tools remain unavailable. Keep a Mac inventory separate from a Windows inventory and record measured machine capability in `craft/this_machine.py`.
 
@@ -156,7 +156,7 @@ Read its TSV and summary; the harness itself does not return a failing process s
 
 Before syncing a restored brain with another machine, merge the ledgers. The Mac dream deliberately leaves prompt-shard publication disabled because rebuilding a month from a short local ledger could overwrite thousands of Windows prompts. Union the remote shard with local rows before publication. The shared task checklist likewise needs a union of ledger events, collision handling for reused task IDs, and regenerated state and Markdown. Never overwrite either machine's ledger or rebuild shared history solely from the smaller local copy.
 
-For deployment-specific new-memory publication, the install record describes an explicit new-files-only temporary Git index with `GIT_NO_LAZY_FETCH=1` and `git write-tree --missing-ok` for a partial clone. That technique does not merge modified ledgers by itself. Keep publication a separate reviewed operation, verify the exact paths at the remote afterward, and preserve the original copies. No automatic push, trading process or approval process is required to stand up recall and mechanical dreams.
+For deployment-specific new-memory publication, the install record describes an explicit new-files-only temporary Git index with `GIT_NO_LAZY_FETCH=1` and `git write-tree --missing-ok` for a partial clone. That technique does not merge modified ledgers by itself. Keep publication a separate reviewed operation, verify the exact paths at the remote afterward, and preserve the original copies. No automatic push or background service is required to stand up recall and mechanical dreams.
 
 If a restored Windows path produced a directory whose name literally contains backslashes, retain it until its state has been compared and merged into the correct Mac location. Similarly, a strong-node scan raising `ENAMETOOLONG` for a long wiki-link phrase needs a reviewed scanner fix and a new reviewed runtime generation; do not modify or repin a hash-pinned runtime in place. Its deliberately degraded observation state is a separate issue from the path defect.
 

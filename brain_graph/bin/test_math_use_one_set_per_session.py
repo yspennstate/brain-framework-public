@@ -1,5 +1,4 @@
-"""test_math_use_one_set_per_session.py - a session is one co-activation however many sources record it (29 Sep 2026,
-claude-825b1305; scheduled audit account01/B06 r24, B06-R70-MATH-USE-DOUBLE-COUNTS-SESSION-COACTIVATION-20260929).
+"""test_math_use_one_set_per_session.py - a session is one co-activation however many sources record it.
 
     python test_math_use_one_set_per_session.py [--old OLD_MATH_USE.py]
 
@@ -11,12 +10,9 @@ Every path the build reads or writes is in a temporary directory; nothing live i
  M5 claim sizes (use histories) are the same as the module before this change gives
 With --old, the module before this change must make the A-B edge from S1 alone in M1 (the check can fail).
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import hashlib
 import importlib.machinery
 import importlib.util

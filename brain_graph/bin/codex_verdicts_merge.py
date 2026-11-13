@@ -1,5 +1,4 @@
-"""One record of his Codex corrections, repeats and praise from the two derivations (28 Sep 2026, claude-825b1305; the
-scheduled audit jobs R25 and R30).
+"""One record of his Codex corrections, repeats and praise from the two derivations.
 
 Two files derive his verdicts in Codex sessions:
   - the ledger's (codex_verdicts.py, events_verdicts_codex.jsonl): prompts of the prompt ledger with origin "owner",
@@ -21,12 +20,9 @@ written: a row carries a 12-character hash of its prompt.
 
     python codex_verdicts_merge.py OUT_MERGED.jsonl OUT_REPORT.json
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import hashlib
 import io

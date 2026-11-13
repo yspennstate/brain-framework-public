@@ -1,5 +1,4 @@
-"""reflexes_citing_superseded.py - which compiled reflexes cite a memory that has since been superseded? (28 Sep 10:0x,
-claude-825b1305)
+"""reflexes_citing_superseded.py - which compiled reflexes cite a memory that has since been superseded?
 
 A reflex is a copy of an order's wording, compiled once; the order can move after it (the GPU policy moved four times in
 two weeks and the reflex spoke a step behind - scar-fire study, 28 Sep). This lists every compiled reflex whose source,
@@ -8,12 +7,9 @@ the order in force. It changes nothing.
 
     python reflexes_citing_superseded.py OUT_JSON
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import io
 import json
 import os

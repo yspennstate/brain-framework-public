@@ -1,4 +1,4 @@
-"""study_session_knn.py - do sessions that started like this one predict what it will read? (27 Sep, claude-825b1305)
+"""study_session_knn.py - do sessions that started like this one predict what it will read?
 
 His methodology: edges grow along the sequences things are used in, so a new ask should light what past asks like it
 led to. The cleanest form of that to test: for a session's first prompt, find the earlier sessions whose first prompts
@@ -13,12 +13,9 @@ studies. Gold: every memory the session read. Counts only in the result.
 
     python study_session_knn.py OUT_JSON [--k 10] [--min-history 15]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import bisect
 import collections
 import json
@@ -180,7 +177,7 @@ def main():
     json.dump(summ, open(keep_old(out), "w", encoding="utf-8"), indent=1)
     print(json.dumps(summ, indent=1))
     if "--rows" in a:
-        # one row per session for outside re-derivation (account04/B19's R5 audit, 27 Sep): no prompt, no memory names,
+        # one row per session for outside re-derivation: no prompt, no memory names,
         # the session id salted and hashed; the cutoff is the session's start, given as epoch and as his local time with
         # its offset, so nobody has to guess the clock the ledger wrote
         import hashlib

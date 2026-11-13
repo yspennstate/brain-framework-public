@@ -1,161 +1,188 @@
-# Context compaction as part of the memory
+# Compaction: how sessions compact and what is kept
 
-A long agent session eventually fills its context window, and the harness replaces the conversation with a summary.
-That summary is the session's own account of what it was asked, what it finished, what it still owes and what it was
-about to do next. Thrown away, it is the most expensive record a brain can lose, because the next session has to
-rebuild it from files and guesswork. Kept and linked, it lets the same agent, or a different one, resume the work.
+The agents that build and test the brain run for hours or days in one session. Every model call
+re-reads the whole context, so the cost of a turn is the size of the context, not the size of the
+new message. In one measured session on 9 October 2026 that was about 663,000 tokens a turn.
+Compaction replaces the conversation so far with a written summary and the session continues from
+it. This document describes how compaction is configured, when it is triggered, what the summary is
+told to keep, how every summary becomes a node in the brain, and what went wrong on the way. The code
+is in `framework/dreaming/`; the aggregate measurements are in Appendix I of
+`papers/math-brain-2026-10-24` (`sections/I_compaction.tex`).
 
-This note covers four things: when to compact, what the summary has to keep, how each compaction becomes a node of the
-graph, and how to measure what compaction saves. [everything-is-a-node.md](EVERYTHING_IS_A_NODE.md) explains why every
-compaction is a node at all; this note is the procedure.
+## The harness
 
-## 1. Why the window setting matters
+What follows was read from the Claude Code binary and checked against session transcripts.
 
-Every model call re-reads the whole context, so the cost of a turn grows with the size of the context. A session that
-carries 600k tokens pays for 600k tokens on every turn, mostly as cache reads. Compacting earlier makes turns cheaper,
-but only up to a point.
+- Automatic compaction summarizes the conversation when context use approaches `autoCompactWindow`,
+  a settings key between 100,000 and 1,000,000 tokens. The threshold is the smaller of that key and
+  the model's window. The same knob exists as the environment variable
+  `CLAUDE_CODE_AUTO_COMPACT_WINDOW`; `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` sets a percentage instead.
+- The window is read when a session starts. A session that was running when the setting changed keeps
+  compacting near the old limit: one session that started on 1 October compacted seven times on
+  9 October at 966,643 to 969,909 tokens, two hours after the window was set to 300,000.
+- A `PreCompact` hook receives the trigger (manual or automatic). Whatever it prints is handed to the
+  summarizer as instructions. A `PostCompact` hook receives the trigger and the summary text.
+- A hook cannot compact a session. No hook output field does it. An agent cannot type `/compact` to
+  itself in an interactive session either; that is the user's command.
+- Codex has no compaction hook. Its rollout files carry a `compacted` record, and it compacts at
+  `model_auto_compact_token_limit` in `~/.codex/config.toml`. In the Codex build used here the record's
+  message is empty and the summary is encrypted, so the text cannot be read back from the rollout.
 
-After a compaction a session does not start empty. It carries its instruction files, the memory index, whatever its
-start-up hooks print, the tool list and the summary itself. Measure that baseline before choosing a window: it is the
-input of the first model call after a compaction (input plus cache creation plus cache read in that call's usage). On
-the machine this brain runs on it was 140k to 160k tokens in October 2026.
+## Settings
 
-A window inside or just above the baseline makes a session compact every few turns. With a 200k window, headless
-sessions compacted every 15 messages or so (184 compactions in 2,843 messages) and paid more per message than
-interactive sessions at 300k, which compacted every 56 messages (552 in 31,113): about 50k input-equivalent tokens per
-message against 43k, before counting the compaction calls themselves. In the worst case the harness gives up with
-"Autocompact is thrashing". The rule: the window must sit well above the baseline. The working setting here is 300k
-for both Claude Code (`autoCompactWindow` in settings, or `CLAUDE_CODE_AUTO_COMPACT_WINDOW`) and Codex
-(`model_auto_compact_token_limit`).
+Both runtimes compact at 300,000 tokens: `autoCompactWindow` 300000 in `~/.claude/settings.json` and
+`model_auto_compact_token_limit` 300000 in `~/.codex/config.toml` (it had been 800,000). The window
+has to sit above the context a session carries right after a compaction. Here that baseline is
+140,000 to 160,000 tokens: the summary, the kept tail of the conversation, the system prompt, tool
+definitions and hook output. A 200,000-token window tried for headless workers sat close enough to
+that baseline that sessions compacted every few minutes and the harness reported that auto-compact
+was thrashing. Measure the baseline before choosing a window: it is the input of the first model call
+after a compaction (input plus cache creation plus cache read in that call's usage).
 
-A running session reads the window when it starts. Changing the setting does not move a session that is already
-running; it keeps compacting at its old threshold until it is restarted or compacted by hand.
+A window too close to the baseline also costs more per message. Headless sessions at 200,000 compacted
+every 15 messages or so (184 compactions in 2,843 messages) and read about 50,000 input-equivalent tokens a
+message; interactive sessions at 300,000 compacted every 56 messages (552 in 31,113) and read about 43,000,
+before counting the compaction calls themselves.
 
-## 2. Compact at the end of a task, not at the edge of the window
+## Compacting by task, not only by size
 
-A compaction at a task boundary loses less than one in the middle of a task, because the finished task can be
-summarized in a line and its working detail is already in files and commits. Signals that a task has ended: a task
-entry closed, a final report written, a push or a commit, a lease released, a handoff sent, tests passing, a
-checkpoint written, a change of subject.
+A summary written when a subject is finished loses less than one written in the middle of a subject.
+So 53 hooks (`compact_hooks.jsonl`, fired by `compact_hooks.py` on Claude through the hook dispatcher
+and on Codex through `hooks.json` with JSON output) watch for the end of a piece of work and tell the
+session to bring it to a stopping point. Their signals:
 
-An agent in an interactive session cannot run `/compact` on itself, and no hook output can trigger a compaction. What
-works is a Stop hook that, when the turn closed a task and the context is past a size threshold (150k here), starts a
-small windowless helper. The helper waits until the session is idle and then types `/compact` into that session's own
-console input buffer, never into the focused window. Idle is stricter than it looks:
+- a task closed on the checklist, a final report, a push, a commit, a released claim, a handoff sent,
+  a report or gate decision written, tests passing, a checkpoint written;
+- the user switching subject or correcting the agent (the correction goes on disk first);
+- size: context bands from 200,000 to 500,000 tokens, a large tool result that now rides in every
+  turn, many whole-file reads, long runs of small steps;
+- an idle gap on a large context, repeated failures, a background job without a recorded handle;
+- right after a compaction: start from the NEXT line, check claims and inbox, treat the user's newest
+  words as current, answer from the records rather than the old context.
 
-- the last assistant turn has ended;
-- no queued prompt or scheduled loop firing comes after it (a new turn shows first as a queue record, and the user
-  record reaches the transcript only with the first reply);
-- there has been no keyboard or mouse input for 15 seconds, so the keys never land in text a person is typing.
+Each hook has a cooldown, at most one fires per action, small routine commands stay silent, and fires
+are logged to `~/.claude/brain_graph/compactions/hook_fires.jsonl`. Mathematical work has one more path:
+a solver run that wants its result kept supplies a math-only digest (in the node's extra fields, or in the
+file named by `COMPACT_MATH_STAGE_FILE`), and `compact_nodes.py` hands it to `compact_math.py`, which checks
+it and stages it under `math_drafts` with a name ending in `.json.pending`, so nothing imports it into the
+math store before it is reviewed. The session summary itself is never used as mathematical input.
 
-A `/compact` typed into a busy session is not lost; the harness queues it and runs it at the next turn boundary. The
-helper gives up if a new prompt arrives while it waits, and fires at most once per 20 minutes per session.
+A hook can only tell the session; it cannot compact it. For interactive sessions a `Stop` hook therefore
+starts a small windowless helper when the turn closed a task and the context is past 150,000 tokens. The
+helper waits until the session is idle and types `/compact` into that session's own console input buffer,
+never into the focused window. Idle means the last assistant turn has ended, no queued prompt or scheduled
+loop firing comes after it (a new turn shows first as a queue record; the user record reaches the transcript
+only with the first reply), and there has been no keyboard or mouse input for 15 seconds. It gives up if a
+new prompt arrives while it waits and fires at most once per 20 minutes per session. A `/compact` typed into
+a busy session is queued by the harness, not lost. Headless workers compact best by ending: one task per
+session, a NEXT line, and the next session seeded from it.
 
-Headless workers compact best by ending. Give each session one task, have it write a NEXT line, and seed the next
-session from that line.
+Since no hook can compact a session, `compact_on_task_end.py` does it from outside. On `Stop`, when the
+turn closed a task (a checklist `done` command outside a heredoc, or the end-of-task line) and the
+context is 150,000 tokens or more, it starts a windowless helper that waits until the session is idle
+and types `/compact` into it. Idle needs three things: the last turn ended, no queued prompt or loop
+fire after it, and 15 seconds without keyboard or mouse input, so the keys never land inside text the
+user is typing. The first version judged idle by the last assistant record alone and was wrongly
+recorded as a failure: the keys had arrived, Claude Code queued `/compact`, and ran it at the end of a
+turn that had started 16 seconds earlier. A `/compact` typed into a busy session is queued, not lost.
 
-## 3. What the summary must keep
+A headless worker compacts best by ending: one task per session, the next seeded from its NEXT line.
+For Codex, `codex_manual_compact.py` saves a summary the agent writes itself (it must contain a NEXT
+line) as a compaction node, because the harness's own summary is unreadable.
 
-Claude Code passes the output of a PreCompact hook to the summarizer as instructions. The instruction used here:
+## What the summary is told to keep
 
-> Keep in the summary, word for word where they appear: the person's open requests with their times and task ids;
-> every id, commit hash, file path and card or item id the work depends on; what is done and verified versus still
-> open; the NEXT line if one was written; leases held and peer messages owed an answer; the agent's own id. Drop
-> finished subjects' tool output and anything already saved to a file, a memory or a commit, and name where it was
-> saved instead. Never copy test questions, answer keys or item text into the summary. Restrictions keep their scope
-> words ("for the night", "until he says", "this session").
+On `PreCompact`, `compact_nodes.py` tells the summarizer to keep the open requests in the user's
+words, task ids, commit hashes, file paths, held claims and the session's NEXT line, and never to copy
+test questions or answer keys. Two scars shaped this list:
 
-Two points in it come from failures. Scope words matter because a restriction that loses "for the night" becomes
-permanent. Test material is excluded because a summary can end up in a pushed file; a summary that mentions the test
-bank keeps its full text only in local storage, and its anchor carries no excerpt.
+- A summary keeps what was written down, not the reasoning or the work that was done. On 24 September
+  an agent told a peer that an experiment had never been run; two complete runs from before its
+  compaction were on disk. After a compaction, search the artifacts, not the summary.
+- A long `/goal` condition judged on the visible transcript can never read as met once the transcript
+  has been compacted. Recognize that and do not loop on it.
 
-The summary is still a bounded probe of the session's past. Before an agent says it did not do or produce something
-that predates its last compaction, it searches the files the work would have left (output names, scratch folders,
-the transcript). The summary drops runs the files remember.
+## Every compaction is a node
 
-## 4. Every compaction becomes a node
+On `PostCompact`, `compact_nodes.py` saves the summary as a node under
+`~/.claude/brain_graph/compactions/<date>/` and an anchor memory of the same name in the memory folder.
+The anchor holds the request, the pending work, the current work and the next step, and links to:
 
-The PostCompact hook receives the summary text. It writes the compaction twice.
+- a hub memory that describes compaction;
+- the same session's previous compaction;
+- the checklist tasks open under the session's agent, and other sessions' compactions on those tasks;
+- the five memories recall finds closest to the summary.
 
-- **The full node**: the whole summary under `compactions/<date>/<name>.md` in the graph store, with one row per node in
-  `INDEX.jsonl`. This is brain data and is never deleted.
-- **The anchor**: a short memory of the same name in the memory folder, holding a bounded excerpt (the request, the
-  pending tasks, the current work, the next step, about 3,600 characters) and a pointer to the full node. The anchor
-  is what makes the compaction reachable: lexical recall indexes the memory folder, and the graph builder turns the
-  anchor's links into edges. Anchors get no line in the always-loaded memory index.
+The graph rebuild turns those links into edges, so recall can reach a session's compactions by
+question. `INDEX.jsonl` holds one row per node (time, runtime, session, trigger, length, sha256, task
+ids, previous node, related memories). An anchor whose summary mentions test material carries no
+excerpt and is marked `test_adjacent`; the full text stays local. Compactions never enter the math
+store: copying them in would carry test material and private review text, so the store grows from
+memories instead.
 
-Each anchor links to:
+`compact_nodes.py --sweep` backfills from Claude transcripts (the `compact_boundary` record and its
+summary) and from Codex rollouts; the hook dispatcher starts it windowless at most every 15 minutes,
+under a lock. `--list` counts compactions read-only, `--relink` adds related links later, and
+`--paths-file` runs a disjoint shard in parallel. `compact_index.py` maintains the index. By 26 October
+the index held 11,581 nodes: 10,158 from Claude sessions and 1,423 from Codex.
 
-- the compaction hub, one node that every compaction hangs from;
-- the session's previous compaction (`previous`), so a session's compactions form a chain;
-- the open tasks of the session's agent on the task checklist, and other sessions' compactions on the same tasks;
-- related memories, found by recall and kept only when they pass a rare-word gate (below).
+Two hooks close the loop with the session itself. Right after a compaction a session is told whether
+its summary became a node, and how to rebuild it if not. `keep_working_after_compact.py` handles an
+agent that writes a recap after compacting and stops while its tasks are still open: on the first
+`Stop` after a compaction, and only when the checklist holds open entries under that agent, it answers
+`{"decision": "block"}` and lists the open work. It fires once per compaction and never while a stop
+hook is already active. An agent with nothing left says so in one line and stops. `wake_cached.py`
+answers `SessionStart` with source `compact` by handing back the wake text the session already
+received. Re-running the full wake after every compaction had stalled agents for 160 to 390 seconds
+each time.
 
-The hook then tells the session the name of its node, so the agent can read back what the summary dropped.
+Compaction nodes also compete in recall. A summary repeats the user's words exactly, so when a user's
+sentence is quoted back, the summaries that quote it can fill the first eight results above the memory
+that records the request. Capping summaries at one or two a session (28 October) and multiplying every
+summary's word score by 0.6 (2 November) were both rejected: a summary is often the only record of its
+session, and the second change cut the first eight on 1,976 questions about summaries from 482 to 129.
+What was kept moves a single row. The best record that is not a summary goes up to eighth place when it
+scores at least 0.7 of the top word score; on 187 quoted sentences the first eight rose from 168 to 170,
+with none worse. The numbers are in TESTS.md.
 
-**Related links need a gate.** Taking recall's top five results as "related" produced many off-topic links. Two
-changes fixed most of it. First, the query and the gate read the summary with the session plumbing removed: identity
-blocks, standing constraints, launcher text and agent ids appear in every summary and say nothing about its subject.
-Second, a candidate memory is kept only when the node holds enough of the memory's distinctive words: the score is
-the share of the memory's rare words (weighted by log inverse document frequency over the memory folder, with the
-word table rebuilt daily) that also appear in the node, and the cut is 0.03. On twelve nodes judged blind, 43 of the
-52 links kept were on topic and 6 off, against about 33 of 60 on topic for recall's top five alone. The gate also
-drops about two in five on-topic links, so a refill pass asks recall a second way and fills the remaining places
-through the same gate. A shared rare word can still be a false friend.
+## What went wrong, and the fixes
 
-**Robustness.** The hook reads its input as UTF-8 bytes and replaces a lone surrogate with U+FFFD; one compaction was
-lost to a console code page before that change. Every error is swallowed and logged, because a memory hook must never
-break a compaction. The hook runs in process inside the hook dispatcher; a hook that reads `sys.stdin.buffer` must
-fall back to `sys.stdin.read()` there, or it fails silently.
+- Lost to encoding (9 October). The hook read its input in the console code page, and a lone surrogate
+  made the UTF-8 write fail. It now reads bytes as UTF-8, and a lone surrogate becomes U+FFFD.
+- Only one node, in a place nobody looked (9 October). The early nodes lived only under
+  `brain_graph`, where neither recall nor the graph reads, and only one compaction had ever been saved.
+  The anchor memories fixed both.
+- Busy sessions dropped (14 October). The backfill matched a transcript compaction to a hook row
+  within 600 seconds by time alone, so a worker that compacted two or three times in ten minutes lost
+  the later ones: 1,012 of 1,764 between 2 and 11 October. A match now needs 80 percent text overlap
+  within 120 seconds, and targeted saves restored the missing nodes. The cut sits in a measured gap: a
+  node's own compaction scored at least 0.811 (median 1.00), and the 3,070 other compactions of the same
+  sessions within 30 minutes scored at most 0.730 (99th percentile 0.53).
+- Wrong session (12 October). A subagent's compaction reaches the hook with the parent's session id
+  and no agent id, and the agent's own compact record is appended only after `PostCompact` returns. A
+  late pass and the sweep now file it under the right agent (84 repaired). Workflow stream agents had
+  also been filed under their coordinator.
+- Codex (10 October). No Codex compaction had ever become a node: the record's message was empty, the
+  summary encrypted, and the sweeper cut session ids to 35 of 36 UUID characters. Codex now gets
+  metadata-only nodes, kept away from test working directories, plus the manual summary above.
+- Off-topic links (14 October). Recall's top five were 55 to 62 percent on topic in a blind check. A
+  rare-word overlap gate (above 0.03 by memory document frequency) raised that to about 83 percent, and
+  the linker now reads the summary without session plumbing (identity blocks, standing constraints,
+  launcher prompts). In a blind check of 20 nodes, all 8 that had no links gained some; of the 12 that
+  had links, 5 got better, 3 got worse and 4 were unchanged.
+- False notes (14 October). The hook said a claim had been released after a `--help` call. Its
+  claim-released and gate-written notes now read the command and its result. Replaying 111,785 tool
+  calls removed 66 false notes and added none. The hook also moved inside the dispatcher process, which
+  cut the median `PostToolUse` time from 0.28 to 0.08 seconds.
 
-## 5. Backfilling the compactions the hook missed
+## Measuring a compaction
 
-A sweep reads the transcripts and turns every compaction without a node into one. In Claude Code transcripts a
-compaction is a `compact_boundary` record, and the summary is the next user record. The sweep keeps a byte cursor
-per file, so repeat sweeps are cheap, and runs in the background at most every 15 minutes, one sweep at a time.
-
-Deciding whether a transcript compaction is already saved has to be done by content, not by time. Matching on "any
-saved node of the same session within ten minutes" drops the second and third compaction of a busy session; one
-backfill found 1,012 compactions missing out of 1,764 that way. The content rule: measure the overlap between the
-saved summary and the stretch of transcript it spans. A node's own compaction scored at least 0.811 (median 1.00);
-the 3,070 other compactions of the same sessions within 30 minutes scored at most 0.730 (99th percentile 0.53). The
-cut is 0.8, inside that gap.
-
-Subagent compactions can arrive with the parent's session and no agent id, so the sweep also looks for each
-unattributed summary in the session's agent transcripts and refiles it under the agent that wrote it.
-
-## 6. Runtimes without a compaction hook
-
-Codex has no compaction hook, and in the build used here its compaction record (`"type": "compacted"`) has an empty
-message: the model's summary is stored encrypted. Two things still work. The sweep saves a metadata node for each
-Codex compaction (event hash, window number, token counts, session and task links). And an agent can save a
-summary it writes itself as a checkpoint node: open requests, task ids, commits, paths, leases and a line beginning
-`NEXT:`, which the tool requires. Node names are content-addressed, so a retry after a crash writes nothing new.
-
-Thread ids in Codex are UUIDv7, whose first eight hex digits are the top of a millisecond clock and change only every
-65.5 seconds. Threads started within a minute share them, so a node must carry the full id.
-
-## 7. After the compaction
-
-Two hooks keep the work moving.
-
-- After a compaction, agents tend to write a recap and stop although their tasks are still open. A Stop hook that
-  returns `{"decision": "block", "reason": ...}` once per compaction sends them back: it lists the session's open
-  task entries and lets the agent stop with one line if everything is done or waiting. It never fires while
-  `stop_hook_active` is set, and only for a compaction near the end of the transcript and under six hours old.
-- Start-up hooks that run again after every compaction add their full cost each time. A slow orientation step (it took
-  up to 6.5 minutes here) should serve its last output again after a compaction instead of being re-run.
-
-## 8. Measuring what compaction saves
-
-Claude Code writes `preTokens` and `postTokens` on each `compact_boundary` record. `preTokens` agrees with what the last
-model call before the boundary read. `postTokens` does not describe what the next call reads: it counts roughly the
-summary and the fixed part, about 19k, while the first call after a compaction reads far more. A before-over-after
-ratio built from these two fields overstates the saving by about a factor of nine.
-
-Measure both sides from the assistant messages' usage instead (input plus cache read plus cache write), deduplicated
-by message id, because each API call is logged once per content block, and with sidechain records skipped. Over
-1,256 transcripts and 8,617 compactions (8,536 measurable), the medians were:
+The `postTokens` field of a compaction record (median about 19,000 tokens) is not what the next call
+reads. The next call carries the summary plus the kept tail of the conversation and the hook output.
+Measure both sides from the usage of the assistant messages around the boundary (input plus cache read
+plus cache write), counting each API call once by its message id, since a call is logged once per
+content block, and skipping sidechain records. Over 1,256 transcripts and 8,617 compactions (8,536
+measurable) the medians were:
 
 | | tokens |
 |---|---|
@@ -163,19 +190,46 @@ by message id, because each API call is logged once per content block, and with 
 | `postTokens` recorded by the harness | 18,980 |
 | first model call after the compaction | 166,019 (cache read 33,224, cache write 133,525) |
 
-The median ratio of the call before to the call after was 1.52 (1.63 for automatic compactions, 1.25 for manual ones).
-Most of what is re-read after a compaction is fixed context, so shrinking the fixed context is the other lever, and
-unlike compacting more often it loses no working detail. A cost estimate has to price the re-read tokens as
-cache reads and writes, at their own rates.
+The median ratio of the call before to the call after was 1.52 (1.63 for automatic compactions, 1.25
+for manual ones). A ratio built on `postTokens` comes out about nine times larger. Appendix I of
+`papers/math-brain-2026-10-24` tabulates the recorded fields, so its before-over-after median of 13.8
+describes the summary side only. Most of what is re-read after a compaction is fixed context, so
+shrinking the fixed context is the other lever, and unlike compacting more often it loses no working
+detail. Removed context is not billed tokens saved: a cost estimate prices the re-read tokens as cache
+reads and writes at their own rates, and adds the cost of writing the summary.
 
-## 9. Checks
+## How the Codex path was tested (9 October)
 
-- **Coverage**: compactions in the transcripts against nodes in the index, per runtime. Every compaction should have a
-  node, and a node should exist before the agent's next turn.
-- **Reach**: the share of anchors that appear in the recall index and the share that have graph edges. These lag the
-  nodes by one index refresh and one graph build. If the graph build stops (on a starved disk, for example), new
-  anchors keep being saved but get no edges, and nothing else reports it.
-- **Links**: the share of new anchors with at least one related link, tracked by day. A fall means the linker is
-  failing or starved, not that the sessions changed.
-- **The month-old test**: take ten pieces of work from a month ago and ask recall about each in ordinary words. The
+The Codex path was built on copies of the live helpers, and no candidate went live before it passed.
+The fifth candidate passed all of the following:
+
+- 66 focused unit tests covering the manual save, the metadata-only boundary nodes and the sweeper's
+  session identity (`framework/dreaming/test_codex_*.py`).
+- 61 controls from four older compaction suites, rerun against the candidate, and the 20 tests of the
+  math solver's compaction export.
+- A save through the real command line and the real mesh API on a synthetic file tree. It checked
+  interactive and worker saves, task links, that a second save changes nothing, that a private summary
+  stays out of the index, that a refused claim leaves no partial files, and that a save for the wrong
+  worker is refused.
+- Four real encrypted compaction records from one Codex thread. They became four metadata nodes with
+  full session ids and task and previous links, and no retained message was copied.
+- The three patches, applied with fixed line-ending settings, reproduce the candidate byte for byte.
+  The first check ran with git's default `autocrlf`, which turned LF into CRLF.
+
+Two earlier runs of the legacy suites failed and were kept. One wrapper passed a keyword argument
+before a positional one. Paths inside nested temporary folders ran past Windows' 260-character limit;
+a short fixture root with a depth guard under 250 fixed that. The check for flashing console windows
+was not conclusive. Three probes saw no new visible console window, but the longest gap between their
+samples was 131 to 535 ms, longer than a 100 ms flash, so they do not rule one out. A separate reviewer
+kept the candidate on function. The helper records compactions; it does not shrink the native context.
+
+## Checks
+
+- Coverage: compactions in the transcripts against nodes in the index, per runtime.
+- Reach: the share of anchors in the recall index and the share with graph edges. Both lag the nodes by
+  one index refresh and one graph build; if the graph build stops (on a starved disk, for example), new
+  anchors are still saved but get no edges.
+- Links: the share of new anchors with at least one related link, by day. A fall means the linker is
+  failing or starved.
+- The month-old test: ask recall, in ordinary words, about ten pieces of work from a month ago. The
   compaction that did the work should come back with its request, its task and its files.

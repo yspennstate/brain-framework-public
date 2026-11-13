@@ -1,5 +1,5 @@
 """test_sidecar_publication.py - no delta over a store the sidecar was not built from; the sidecar publish waits out a
-reader (29 Sep 2026, claude-825b1305; scheduled audit account02/B11 r83, B11-R64-SIDECAR-REPLACE-FAIL-MIXED-BASE-DELTA-01).
+reader (29 Sep 2026).
 
     python test_sidecar_publication.py [--old OLD_LIVE_DELTA.py]
 

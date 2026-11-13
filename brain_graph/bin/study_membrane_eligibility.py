@@ -1,7 +1,7 @@
 """study_membrane_eligibility.py - what the membrane would put into a fresh worker's context on a bank question, and
-whether that line names the answer (R12 step zero; 27 Sep, claude-825b1305).
+whether that line names the answer.
 
-R12's show-or-hold trial (scheduled audit account03/B08 auto30) randomizes the delivery of a line the membrane has already
+R12's show-or-hold trial randomizes the delivery of a line the membrane has already
 decided to show, on pairs of fresh benchmark workers. How many pairs it needs depends on two things that can be read
 without running a single worker: how often a fresh worker's first prompt produces a line at all (eligibility), and how
 often that line names the memory that answers the question (the most a shown line could add). This runs the membrane's
@@ -15,12 +15,9 @@ Counts only in the output; the per-question rows name gold memories and go to th
 
     python study_membrane_eligibility.py OUT_JSON [--limit N]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import json
 import os

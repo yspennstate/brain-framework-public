@@ -1,6 +1,5 @@
 """study_scar_fire_before_repeat.py - when he had to restate one of his standing orders, did a reflex for that order
-exist, and did it fire before he had to? (28 Sep 08:5x, claude-825b1305; registered in study/THREE_DAY_RUN_2026-09-27.md
-before any code.)
+exist, and did it fire before he had to?
 
 Each labelled correction (results/STANDING_ORDERS_LABELS_2026-09-27.json) names the orders it restated as memory slugs.
 A reflex is linked to an order when its source names the slug (strict) or any of its fields does (loose), and counts only
@@ -12,19 +11,15 @@ gets one class, first match wins:
   fired earlier in the session only
   never matched in the session
 The registered classes never looked at holds BEFORE his ask, so a reflex matched and held earlier in the session fell
-to "never matched in the session" (case 38: two holds before the ask; scheduled audit account02/B13 auto11, R38,
-B13-R38-REGISTERED-NEVER-MATCHED-IGNORES-PREASK-SUPPRESSION-024). Since 28 Sep 14:1x each row also carries
+to "never matched in the session". Since 28 Sep 14:1x each row also carries
 held_before_ask and class_with_preask_holds, where such a case reads "matched earlier in the session, held back each
 time"; the registered "class" and "classes" are kept as registered.
 
     python study_scar_fire_before_repeat.py LABELS_JSON OUT_JSON
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import glob
 import io

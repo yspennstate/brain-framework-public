@@ -1,5 +1,5 @@
 """study_lag_edges.py - does weighting a pair by how soon the target followed the source predict the next new thing better
-than equal credit? (27 Sep, claude-825b1305; scheduled audit account03/B03 r51, B03-R7-SEQ-LAG-WEIGHT-MISMATCH-001.)
+than equal credit?
 
 NODE_CLASSES.md describes a directed seq A -> B edge reinforced by exp(-lag/tau); the store gives every predecessor in
 its 600 s window equal credit, and the 26 Sep order-of-use study (study_sequence_model.py) tested only equal-credit
@@ -7,7 +7,7 @@ counts. This runs that study's split, loader and O(n log n) scorer unchanged and
 exp(-lag/tau), lag the shortest gap between a touch of the source and the target's first touch in the session (once
 per session and pair, as the equal-credit counts are), tau 60 s and 300 s, for both the directed and the co-use form.
 
-Registered before any number (brain_graph/study/THREE_DAY_RUN_2026-09-27.md, 23:1x): adopt the lag rule into graph_store
+Registered before any number: adopt the lag rule into graph_store
 only if a lag model gets at least 25 percent more right lines as served at the 2 percent bar than equal-credit co-use in
 the same run, with precision not lower, on at least as many sessions, and does not lose at every moment.
 
@@ -18,12 +18,9 @@ sessions still running, so an unbounded rerun scores more moments than the run i
 against the committed 124,344). Bounded at the committed run's load time, the equal-credit models must reproduce its
 figures (sequence 15/462, co-use 36/497 at the 2 percent bar) before a lag number is read.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import bisect
 import collections
 import json

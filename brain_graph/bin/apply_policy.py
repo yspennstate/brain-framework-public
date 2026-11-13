@@ -1,4 +1,4 @@
-"""apply_policy.py - set the live membrane's bars from one walk-forward study result, naming it (26 Sep, claude-825b1305).
+"""apply_policy.py - set the live membrane's bars from one walk-forward study result, naming it.
 
 A bar wired into the live hook carries the measurement that produced it (the brain's reflex: a deployed number names its
 estimator). Each bar is the score at which that channel's top line fired on a chosen share of the study's moments:
@@ -7,12 +7,9 @@ learner turns them on from its own judgments). Only the bars move; the rest of p
 
     python apply_policy.py <results json> [--dry]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import json
 import os
 import sys

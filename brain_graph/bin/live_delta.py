@@ -23,10 +23,10 @@ never the only copy of anything.
     python live_delta.py stats
     python live_delta.py selftest
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+import sys as _sys
+if __name__ == "__main__" and any(_a in ("-h", "--help") for _a in _sys.argv[1:]):
+    # Asking for help must not run the script's real work.
+    print((__doc__ or "").strip() or "usage: python " + _sys.argv[0])
     raise SystemExit(0)
 import collections
 import glob
@@ -96,7 +96,7 @@ def base():
     The generation comes from the sidecar and the hubs, half-life and first touches from the store directory, so the two
     must be the same build. They differ when a build swapped a new store in and the sidecar then failed to publish: a
     delta built on that pair would declare the old generation while reading the new store's hubs, and open_delta would
-    accept it over the old sidecar (29 Sep, account02/B11 r83, B11-R64-SIDECAR-REPLACE-FAIL-MIXED-BASE-DELTA-01).
+    accept it over the old sidecar (29 Sep).
     SidecarBehind is raised instead, and update() builds no delta until the sidecar is republished."""
     db = sqlite3.connect("file:%s?mode=ro" % SIDECAR.replace("\\", "/"), uri=True, timeout=10)
     try:
@@ -125,7 +125,7 @@ PREFIX_MARK = 1 << 20           # bytes hashed at each end of the store's prefix
 def prefix_marks(path, nbytes):
     """sha256 of the first and of the last megabyte of the event log's first nbytes, or None (the log is shorter than
     nbytes, or unreadable). run_graph's build records them beside the byte count it consumed; start_offset trusts that
-    count only while both still match (account04/B06 R12, 27 Sep)."""
+    count only while both still match (27 Sep)."""
     import hashlib
     try:
         nbytes = int(nbytes)
@@ -143,7 +143,7 @@ def prefix_marks(path, nbytes):
 
 def prefix_sha(path, nbytes):
     """sha256 of the event log's whole first nbytes, or None (shorter or unreadable). The two end marks miss a line
-    changed in the middle at the same length (account03/B12 R12, 28 Sep); hashing all 569 MB takes about 0.6 s, so the
+    changed in the middle at the same length (28 Sep); hashing all 569 MB takes about 0.6 s, so the
     build records this and start_offset checks it on every run."""
     import hashlib
     try:
@@ -203,7 +203,7 @@ def start_offset(b, path=EVENTS):
 def kind_resolver(kinds_cache=KINDS_CACHE):
     """session -> kind, by the store's own rule. The touch events key a session by its first 8 characters and the
     settled cache keys whole ids, so looking the event's key up in the cache never matched and every test worker
-    reached the fast layer (scheduled audit account01/B15, 27 Sep: 23,098 events, 9.6 percent of the log since
+    reached the fast layer (27 Sep: 23,098 events, 9.6 percent of the log since
     26 Sep 17:29, from 131 test sessions). With the default cache this is session_kinds.kind, which resolves an
     8-character key only when every session under it has one kind, exactly as graph_store.build calls it; a test that
     points kinds_cache elsewhere gets the same resolution over that file alone. Memoised per session."""
@@ -468,7 +468,7 @@ def pairs_of(events, hubs, now, half_life_s, first_seen=None):
     """The store's rule on the new events. Returns (edges, uses, out_w, in_w, total_w): edges[(src, dst)] =
     [weight, first time, last time]; a weight is 0.5 ** ((now - t) / half-life) (1 without a half-life). first_seen:
     {session: [nodes]} the store wrote in first_touch.json - what each session touched before the store's last event,
-    so a target touched long before the context read is a repeat here as it is in the store (account01/B20 R12)."""
+    so a target touched long before the context read is a repeat here as it is in the store."""
     by = collections.defaultdict(list)
     for s, ts, x, new in events:
         by[s].append((ts, x, new))
@@ -580,6 +580,9 @@ def update(now=None):
     """Rebuild the fast layer and point live/delta.json at it."""
     t0 = time.time()
     now = float(now or time.time())
+    if not os.path.exists(SIDECAR):       # a new install: no build has published a sidecar yet, so there is no base
+        return {"skipped": "no sidecar yet (the first build publishes one)", "events_new": 0, "edges": 0, "nodes": 0,
+                "newest_event": None}
     try:
         b = base()
     except SidecarBehind as e:            # the previous pointer stays, and open_delta keeps pairing it with its sidecar
@@ -632,7 +635,7 @@ def _same(a, b):
     """The same generation: the recorded values are equal. The pointer and the delta file copy the sidecar's own floats,
     which survive JSON unchanged (29 Sep: all three equal to the last digit in the live pointer, file and sidecar), so
     equality is exact. Until 29 Sep this allowed one second, and a sidecar or store rebuilt within that second took the
-    old delta (account02/B12 r90, account01/B19; the 00:3x reply had said the fields must be equal)."""
+    old delta (the 00:3x reply had said the fields must be equal)."""
     try:
         return float(a) == float(b)
     except (TypeError, ValueError):
@@ -684,7 +687,7 @@ def open_delta(sidecar_meta=None):
             return None, None
     # Every part of the base must be on record, in the pointer or the file, and in the sidecar. The comparisons above
     # skip a value that is missing, so a pointer and a file that both omit one - or a sidecar without it - could stand
-    # on any generation of it and would still be taken (account04/B12 r67, the dual legacy omission). A pointer that
+    # on any generation of it and would still be taken (the dual legacy omission). A pointer that
     # omits a value its file records is still judged by the file (the migration case the checks above were written
     # for). The writer has recorded all three in both places since 28 Sep, so only a legacy delta is turned away, and
     # the next run replaces it.

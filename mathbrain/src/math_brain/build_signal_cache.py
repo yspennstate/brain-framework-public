@@ -12,6 +12,11 @@ sessions running concurrently cannot race on the file. Re-run it after any bulk 
 """
 
 from __future__ import annotations
+import sys as _sys
+if __name__ == "__main__" and any(_a in ("-h", "--help") for _a in _sys.argv[1:]):
+    # Asking for help must not run the script's real work.
+    print((__doc__ or "").strip() or "usage: python " + _sys.argv[0])
+    raise SystemExit(0)
 
 import sys
 if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
@@ -28,7 +33,7 @@ from math_brain.retrieval import _index_signals_uncached, _signal_key
 from math_brain.store import ResearchStore
 
 # MATHBRAIN_STORE (as the hook reads it), else the population store of this checkout. Until 30 Sep one machine's
-# absolute user path was committed here, as it was in expansion.py (account04/B03).
+# absolute user path was committed here, as it was in expansion.py.
 STORE = Path(os.environ.get("MATHBRAIN_STORE", "").strip()
              or Path(__file__).resolve().parents[2] / "local" / "population" / "brain.sqlite3")
 CACHE = STORE.with_name("brain_signal_cache.pkl")

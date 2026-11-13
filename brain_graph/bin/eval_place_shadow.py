@@ -1,5 +1,5 @@
 """eval_place_shadow.py - do the membrane's place lines name a place the session then goes to, and one it was not
-already in? (27 Sep, claude-825b1305; pre-registered 12:3x in study/TWO_DAY_RUN_2026-09-26.md)
+already in?
 
 The live membrane (brain_graph/live/fires.jsonl) logs, at each evaluation, its place candidates [[name, weight], ...]
 (dir:... ids). Joined to the capture (events_touch.jsonl: dir and file events, session = first 8 of the id):
@@ -10,12 +10,9 @@ Read-only; aggregates only (place names are not printed, only counts).
 
     python eval_place_shadow.py [OUT_JSON] [--window 1800]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import bisect
 import collections
 import json

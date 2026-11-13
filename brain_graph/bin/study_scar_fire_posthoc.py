@@ -20,13 +20,13 @@ registered and are reported beside the registered ones, never instead of them.
     python study_scar_fire_posthoc.py LABELS_JSON REGISTERED_JSON OUT_JSON [V1_JSON]
 
 Version 2, 28 Sep 12:3x, after two scheduled audits of version 1:
-  account01/B13 (B13-R38-SCAR-FIRE-CLASSIFICATION-OVERSTATES-NOREFLEX-AND-BUDGET): "matched in the window but held
+  One review: "matched in the window but held
       back" merged the suppression reasons, and the text called all seven "held by the fire budget" when only five carry
       the cap (two were held by a recent mention alone); and the content map listed no reflex for the retired film while
       a generic one, his_call_is_final, existed. Now every hold keeps its typed reasons (cap, backoff, mention, prose),
       a fire-budget count is taken from rows with the cap only, and his_call_is_final is read in every case's window
       beside the order's own reflex (fires, holds and trigger reach) - a generic candidate, not an order's reflex.
-  account04/B17 (B17-07A..C): version 1 kept the first 300 characters of the wording each GPU case received, and the
+  Another review: version 1 kept the first 300 characters of the wording each GPU case received, and the
       8-character session key and minute-level times beside it. The wording is now its sha256 and the words the study
       tested (last_wording_carries); a row carries the case number, not the session key, and the ask to the hour. The
       classes never read the wording; with V1_JSON given, each class is checked equal to version 1's.

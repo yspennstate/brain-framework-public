@@ -1,16 +1,13 @@
-"""Controls for quarantine_rows.keep_old and its six writers (27 Sep, claude-825b1305).
+"""Controls for quarantine_rows.keep_old and its six writers.
 
 1-5 exercise keep_old in a temporary folder; 6 reads each writer's source and requires every fixed-name rows file it
 opens for writing to go through keep_old. Nothing live is read or written except the six sources, read-only.
 
     python test_quarantine_rows.py [BIN_DIR]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import os
 import re
 import sys

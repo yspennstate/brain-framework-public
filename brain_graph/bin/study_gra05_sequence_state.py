@@ -1,6 +1,5 @@
 """study_gra05_sequence_state.py - does the ORDER of the last two things an agent touched predict his correction better
-than what it touched together? (28 Sep, claude-825b1305; registered 05:3x in study/THREE_DAY_RUN_2026-09-27.md;
-scheduled audit account03/B03 r54, B03-R7-GRA05-HIGHER-ORDER-NOT-TESTED-001)
+than what it touched together?
 
     CASE      the agent's last tool moment at most CASE_WINDOW s before a correction or repeat of his, in one of his
               sessions after the cut
@@ -21,12 +20,9 @@ three scores with tool errors as the label are a separate endpoint, scored over 
     python study_gra05_sequence_state.py OUT_JSON [--cut "2026-09-01 00:00"] [--k 5] [--seed 7]
 Counts only in OUT_JSON; per-moment rows (session prefix, time, scores, case flag - no item names) go to study/.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import json
 import os

@@ -1,23 +1,20 @@
 """Build a copy of the use-grown graph store without the test workers' events, for the held-out measurement of the
-deployed graph mixture (the audit fleet's job R7). 27 Sep, claude-825b1305.
+deployed graph mixture.
 
 Mirrors run_graph.build and run_graph._recall_walk exactly - same event files (build_config.json), the bank exclusion,
 the half-life and the verdict file - except that the live touch file is first copied without the events of sessions
 session_kinds.py calls 'test'. Nothing live is written: the store goes to OUT, and its walk cache to the graph lane's
 cache folder under a key made from OUT's path, which no live store has. The events on disk are untouched.
 
-Its name says clean; what it builds is a KNOWN-TEST-EXCLUDED store (scheduled audit account04/B12 r6, 27 Sep): only
+Its name says clean; what it builds is a KNOWN-TEST-EXCLUDED store: only
 sessions classified 'test' are dropped, and his, 'script' and 'unknown' sessions stay, so it is not a store of the
 target population. A target-population store needs an allowlist of admissible sessions, which this does not have.
 
     python r7_clean_store.py OUT_DIR
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import json
 import os
 import sys

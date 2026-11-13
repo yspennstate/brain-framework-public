@@ -1,4 +1,4 @@
-"""Entry-point parity for the agents'-searches evaluator (27 Sep, claude-825b1305; audit account03/B12, R6).
+"""Entry-point parity for the agents'-searches evaluator.
 
 The command line of eval_expansion_agent_recalls.py once judged searches by a rule of its own while its helper used the
 shared judge. These controls run the real command-line entry points (main() of both file names) on a small synthetic
@@ -8,12 +8,9 @@ folder and the session classifier gets an empty transcript index.
 
     python test_eval_agent_recalls_parity.py
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import json
 import os
 import sys

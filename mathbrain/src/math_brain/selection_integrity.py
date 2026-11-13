@@ -19,7 +19,7 @@ def consistent_hits(hits, database, *, deadline, reader=read_current_note,
     selection. The caller ranked and gated the list as a whole - a margin
     against the runner-up, an exception granted to the first card, a test over
     the set - so a card dropped afterwards can leave a list no gate passed
-    (scheduled audit account04/B04 r69, 29 Sep 2026):
+    (29 Sep 2026):
       'drop'   the refused card is dropped and the rest kept, the behaviour
                before that audit; a refused first card moves the runner-up
                first under the first card's decision.

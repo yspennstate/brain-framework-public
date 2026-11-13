@@ -292,8 +292,7 @@ class StudyExecution:
     terminal and outcome slots. Whether its digests are the ledger's is a separate fact. The summary says the ledger is
     verified only when execute_prepared_study built the object (it reads every record back before building it) or when
     verify_against_ledger has just rechecked it against the ledger. Until 29 Sep the summary said verified for any
-    object the constructor accepted, and the constructor accepted repeated slot ids and non-digest strings (scheduled
-    audit account03/B09, B09-R79-STUDYEXECUTION-VERIFIED-SUMMARY-UNBOUND-20260929).
+    object the constructor accepted, and the constructor accepted repeated slot ids and non-digest strings.
     """
 
     run: EvaluationRun

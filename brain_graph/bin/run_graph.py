@@ -1,4 +1,4 @@
-"""run_graph.py - keeps the brain graph growing by itself (26 Sep, claude-9209cf81).
+"""run_graph.py - keeps the brain graph growing by itself (26 Sep).
 
 His order of 26 Sep 04:28: build the whole edge and diffusion part of the brain now, from the data we have. The capture
 (transcripts -> touch events) and the graph store (the learned edges) had run by hand from a session scratchpad; this
@@ -20,12 +20,9 @@ Windows power throttling, refuses to build with less than 3 GB of commit headroo
 logs/run_graph.log and the latest state to STATUS.json. Launched windowless by run_graph.vbs (wscript //B, pythonw).
 A build or an hourly capture that finds a run in progress waits up to three minutes for it; a fast run skips.
 Usage: run_graph.py capture|build|fast|status"""
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import ctypes
 import ctypes.wintypes as wt
 import io
@@ -141,8 +138,7 @@ def _os_lock(fd, take):
 
 class Lock:
     """One run at a time, held by the operating system on an open file for as long as the run holds it and released by
-    the system when the run ends, however it ends (29 Sep, scheduled audits account02/B18 r76 and account01/B18,
-    B18-R63-PID-REUSE-FALSE-LIVENESS-001 and B18-R63-RUNGRAPH-POSIX-CONTENTION-CRASH-20260929).
+    the system when the run ends, however it ends.
 
     Until then the lock was a file created exclusively with the holder's pid in it, broken when that pid was not running
     or the file was older than stale_s. A pid says only that some process with that number is running: a crashed run's
@@ -152,7 +148,8 @@ class Lock:
     it keeps waiting, for someone to stop by hand. The holder's pid, start time and token go in a note beside the lock
     (graph.lock.who), for diagnosis only; the lock file itself carries nothing."""
 
-    def __init__(self, name, stale_s=7200):
+    def __init__(self, name, stale_s=7200, warn=True):
+        self.warn = warn                            # a waiting run says a lock is stale once, not every 5 s
         self.path = os.path.join(HOME, name + ".lock")
         self.who = self.path + ".who"
         self.stale_s = stale_s
@@ -171,7 +168,6 @@ class Lock:
     def __enter__(self):
         # A lock that cannot be opened is a failure, not a run in progress: until 29 Sep both came back as held = False,
         # and a lock path that could never be opened read as healthy contention on every run while nothing ran
-        # (account04/B15 r9, B15-R63-LOCK-OPEN-FAILURE-MASQUERADES-AS-CONTENTION-20260929-01).
         stage = "making the lock folder"
         try:
             os.makedirs(os.path.dirname(self.path), exist_ok=True)
@@ -188,7 +184,7 @@ class Lock:
                 age = time.time() - os.path.getmtime(self.who)
             except OSError:
                 age = 0.0
-            if age > self.stale_s:
+            if age > self.stale_s and self.warn:
                 log("the graph lock has been held for %.1f h (%s); a live run is never broken - stop it by hand"
                     % (age / 3600.0, (self._note() or "no note").split(" ")[0]))
             return self
@@ -239,19 +235,42 @@ def capture(after=True):
     log("capture: +%.1f MB in %.0f s; %s" % (grew / 2**20, time.time() - t0, summary))
     status_update(capture_at=time.strftime("%Y-%m-%d %H:%M:%S"), capture_added_mb=round(grew / 2**20, 2),
                   events_mb=round(os.path.getsize(EVENTS) / 2**20, 1))
-    if after:
-        live_after_capture()
-    _fast_layer()
+    side = _side_lock()
+    try:
+        if after:
+            live_after_capture(sidecar=side.held)
+        if side.held:
+            _fast_layer()
+        elif after:
+            log("live delta waits: a build holds the sidecar lock while it builds the sidecar and recall walk; the "
+                "next run catches up")
+    finally:
+        side.__exit__(None, None, None)
 
 
 def fast():
     """The five-minute pass: capture, the memories written since the last pass into the sidecar, the fast layer."""
     capture(after=False)
-    t0 = time.time()
+    side = _side_lock()
     try:
-        log("live memories: %s in %.0f s" % (_memories(), time.time() - t0))
-    except Exception:
-        log("live memories FAILED: %s" % traceback.format_exc().strip().splitlines()[-1][:300])
+        if side.held:
+            t0 = time.time()
+            try:
+                log("live memories: %s in %.0f s" % (_memories(), time.time() - t0))
+            except Exception:
+                log("live memories FAILED: %s" % traceback.format_exc().strip().splitlines()[-1][:300])
+    finally:
+        side.__exit__(None, None, None)
+
+
+def _side_lock():
+    """The sidecar lock, taken at once or not at all (1 Nov). The graph lock used to cover a build from
+    its first event read to the end of its sidecar and recall walk: 27-45 min after the store swap on 30-31 Oct, and
+    3 h 34 min on 31 Oct 19:42-23:16, when the sidecar alone took 12,834 s and six hourly captures were skipped. Those
+    steps read only the store, so a build now lets the graph lock go after its swap and keeps this one. A run takes it
+    only while it holds the graph lock, so the locks are always taken in one order; a run that finds it held is behind
+    a build's sidecar and walk and leaves the sidecar steps to the next run."""
+    return Lock("sidecar", warn=False).__enter__()
 
 
 def _delta():
@@ -272,6 +291,56 @@ def _delta():
         log("live delta FAILED: %s" % traceback.format_exc().strip().splitlines()[-1][:300])
 
 
+def _pending_sidecar(sidecar=None, store=None):
+    """A finished sidecar.sqlite.new of the store now in place, or None (31 Oct).
+
+    A build swaps its store in, builds the sidecar to sidecar.sqlite.new, and renames it onto sidecar.sqlite; on Windows
+    the rename is refused while any reader has the sidecar open (SQLite opens without FILE_SHARE_DELETE), and on a busy
+    box the 15 s publish budget lost at every build from 30 Oct to 31 Oct (four of four). The next fast run then built
+    the whole sidecar again from the store (600-1750 s at BelowNormal) to end at the same rename. The finished .new is
+    still on disk: its meta rows are written last, in the build's final commit, so a .new with them is whole. It is
+    published as it stands when it is of this store's generation (built and until, as live_delta.base compares them),
+    of this live_sidecar version, and of the same correction-edge source; anything else is rebuilt as before."""
+    import sqlite3
+    import live_sidecar
+    sidecar = sidecar or live_sidecar.SIDECAR
+    new = sidecar + ".new"
+    if not os.path.exists(new):
+        return None
+    try:
+        db = sqlite3.connect("file:%s?mode=ro" % new.replace("\\", "/"), uri=True, timeout=10)
+        try:
+            meta = {k: json.loads(v) for k, v in db.execute("SELECT k, v FROM meta")}
+        finally:
+            db.close()
+    except Exception:
+        return None
+    if "attractors" not in meta or meta.get("version") != live_sidecar.VERSION:
+        return None                                       # no final commit: an interrupted build, rebuilt as before
+    store = store or STORE
+    try:
+        nm = json.load(open(os.path.join(store, "nodes.json"), encoding="utf-8")).get("meta", {})
+    except Exception:
+        return None
+    for mine, theirs in (("store_built", "built"), ("store_until", "until")):
+        a, b = meta.get(mine), nm.get(theirs)
+        if a is None or b is None or abs(float(a) - float(b)) > 1e-6:
+            return None
+    vs = RECENT_STORE if _config().get("corrections_from_live_capture") else None
+    if meta.get("verdict_store") != vs:
+        return None
+    return {"path": new, "what": "%s edges, %s memories, %s links, %s content, %s attractors" % (
+        meta.get("edges"), meta.get("memories"), meta.get("links"), meta.get("content"), meta.get("attractors"))}
+
+
+def _publish_pending(sidecar=None):
+    """Rename the finished .new onto the sidecar with live_sidecar.publish's retries; raises PermissionError when
+    readers held it for the whole budget. Returns the seconds waited."""
+    import live_sidecar
+    sidecar = sidecar or live_sidecar.SIDECAR
+    return live_sidecar.publish(sidecar + ".new", sidecar)
+
+
 def _sidecar_behind():
     """Why the sidecar is not the store's own generation, or None when it is (or when that cannot be read: the delta's
     own read then says what went wrong)."""
@@ -287,16 +356,26 @@ def _sidecar_behind():
 def _fast_layer(retry=True):
     """The fast layer after a capture or a build. A sidecar left behind the store (its publish failed after a build
     swapped the store in) is republished first, since a delta is built only over the sidecar's own store; if it is still
-    behind, no delta is built and the previous pair keeps serving (29 Sep, account02/B11 r83). retry=False is the build's
+    behind, no delta is built and the previous pair keeps serving. retry=False is the build's
     call, right after its own sidecar step failed; the next capture retries."""
     why = _sidecar_behind()
     if why and retry:
         t0 = time.time()
-        try:
-            log("live sidecar republished (it was behind the store: %s): %s in %.0f s" % (why[:200], _sidecar(),
-                                                                                       time.time() - t0))
-        except Exception:
-            log("live sidecar republish FAILED: %s" % traceback.format_exc().strip().splitlines()[-1][:300])
+        pending = _pending_sidecar()
+        if pending:                           # the build's own sidecar is finished and only its rename was refused
+            try:
+                waited = _publish_pending()
+                log("live sidecar published from the finished %s (it was behind the store: %s): %s, rename waited "
+                    "%.1f s, no rebuild" % (os.path.basename(pending["path"]), why[:200], pending["what"], waited))
+            except PermissionError as e:
+                log("live sidecar publish of the finished .new refused again (%s); no rebuild, the next run retries the "
+                    "rename" % str(e)[:200])
+        else:
+            try:
+                log("live sidecar republished (it was behind the store: %s): %s in %.0f s" % (why[:200], _sidecar(),
+                                                                                           time.time() - t0))
+            except Exception:
+                log("live sidecar republish FAILED: %s" % traceback.format_exc().strip().splitlines()[-1][:300])
         why = _sidecar_behind()
     if why:
         log("live delta skipped: the sidecar is behind the store (%s); the previous delta keeps serving with its own "
@@ -306,12 +385,15 @@ def _fast_layer(retry=True):
     _delta()
 
 
-def live_after_capture():
-    """The live lane's hourly half (26 Sep, claude-825b1305): judge the membrane's fires against what the sessions did
+def live_after_capture(sidecar=True):
+    """The live lane's hourly half (26 Sep): judge the membrane's fires against what the sessions did
     (graph_learn.py: edge factors, the serving bar, the recall weight), let memories written this hour into the
     sidecar's link and content layers so the hook can reach them before the next store build, rebuild the math brain's
     use layer from its serve log (math_use.py), and append the Codex rollouts' new bytes to events_codex.jsonl."""
     for name, fn in (("learn", _learn), ("memories", _memories), ("math use", _math_use), ("codex capture", _codex)):
+        if name == "memories" and not sidecar:
+            log("live memories wait: a build holds the sidecar lock; the next run adds them")
+            continue
         t0 = time.time()
         try:
             msg = fn()
@@ -370,7 +452,7 @@ def event_files():
     A Codex events file is left out, and the leaving logged, until the Codex capture keys sessions by a canonical id:
     extract_codex_events.py writes x + the last seven characters of the rollout id, which session_kinds cannot resolve
     (all 2,143 sessions of events_codex.jsonl read 'unknown' on 27 Sep), so the builder could not drop a script's session
-    and the store would stop being known-test-excluded (scheduled audit account01/B15, finding r52, 27 Sep). A study that
+    and the store would stop being known-test-excluded. A study that
     means to build with those events sets BRAIN_GRAPH_ALLOW_CODEX_EVENTS=1."""
     files = [EVENTS]
     try:
@@ -494,15 +576,53 @@ def _recall_walk():
     if not os.path.exists(src_cache):
         shutil.rmtree(new, ignore_errors=True)
         return "walk cache was not written; the old walk stays"
+    dst_cache = os.path.join(cache_dir, "%s_%s.npz" % (key(target), tag))
+    refused = _swap_store_and_walk(target, new, old, src_cache, dst_cache)
+    if refused:
+        return refused
+    return "walk of %d nodes, %d edges now under %s" % (g.N, g.nnz, os.path.basename(target))
+
+
+def _swap_store_and_walk(target, new, old, src_cache, dst_cache, tries=60, wait=2.0):
+    """Swap the new store in, then move its walk over the old walk's name. A reader that has the old walk open (recall
+    loads it with np.load and keeps the file) makes that move fail on Windows. On 31 Oct 00:17 it failed once and the
+    job stopped there, with the new store in place and the old walk beside it: the walk no longer matched the store, so
+    graph_lane served no walk and recall ran with the graph lane off until 09:44. Now the move is retried for about two
+    minutes (a recall holds the file for seconds), and if it is still refused the old store goes back, so the old
+    walk matches it again and the lane stays on until the next build. None on success, else the reason."""
     shutil.rmtree(old, ignore_errors=True)
     if os.path.exists(target):
         os.replace(target, old)
     os.replace(new, target)
-    dst_cache = os.path.join(cache_dir, "%s_%s.npz" % (key(target), tag))
-    os.replace(src_cache, dst_cache)
-    os.utime(dst_cache, None)                  # newer than the moved edges.npz, so cached() takes it
-    shutil.rmtree(old, ignore_errors=True)
-    return "walk of %d nodes, %d edges now under %s" % (g.N, g.nnz, os.path.basename(target))
+    err = None
+    for _ in range(max(1, tries)):
+        try:
+            os.replace(src_cache, dst_cache)
+            err = None
+            break
+        except PermissionError as e:
+            err = e
+            time.sleep(wait)
+    if err is None:
+        os.utime(dst_cache, None)              # newer than the moved edges.npz, so cached() takes it
+        shutil.rmtree(old, ignore_errors=True)
+        return None
+    why = "walk move refused %d times (%s)" % (max(1, tries), err)
+    try:
+        if os.path.exists(old):
+            os.replace(target, new)
+            os.replace(old, target)
+            shutil.rmtree(new, ignore_errors=True)
+            why += "; the old store is back and matches the old walk"
+        else:
+            why += "; there was no old store to put back"
+    except OSError as e:
+        why += "; putting the old store back failed too (%s)" % e
+    try:
+        os.remove(src_cache)
+    except OSError:
+        pass
+    return why
 
 
 def build():
@@ -518,9 +638,9 @@ def build():
     files = event_files()
     nbytes = os.path.getsize(EVENTS)         # where this build's events end: the fast layer starts here (27 Sep)
     try:                                     # and what those bytes were, so the fast layer can tell a rewritten log
-        import live_delta                    # (account04/B06 R12, 27 Sep)
+        import live_delta
         marks = live_delta.prefix_marks(EVENTS, nbytes) or (None, None)
-        full_sha = live_delta.prefix_sha(EVENTS, nbytes)   # the whole prefix (account03/B12 R12, 28 Sep)
+        full_sha = live_delta.prefix_sha(EVENTS, nbytes)   # the whole prefix
     except Exception:
         marks, full_sha = (None, None), None
     try:
@@ -564,12 +684,20 @@ def build():
         except Exception:
             log("recent store FAILED after %.0f s: %s; the previous one stays" % (
                 time.time() - t1, traceback.format_exc().strip().splitlines()[-1][:300]))
+    if _GRAPH is not None and _GRAPH.held:   # the rest reads only the store: captures may append events meanwhile
+        _GRAPH.__exit__(None, None, None)
+        log("build: graph lock released after the store swap; the sidecar and recall walk build under the sidecar lock")
     live_after_build()
     _fast_layer(retry=False)                  # the fast layer starts over on the new store at once (unless the sidecar
                                               # failed to publish: then the next capture republishes it first)
 
 
+BUILD_WAIT_S = 3600.0
+_GRAPH = None                                # the graph lock main() holds, so build() can let it go after its swap
+
+
 def main():
+    global _GRAPH
     polite()
     mode = sys.argv[1] if len(sys.argv) > 1 else "status"
     if mode == "status":
@@ -580,24 +708,40 @@ def main():
         sys.exit(2)
     if mode != "fast":                   # twelve fast runs an hour would bury the hourly and six-hourly lines
         log("%s started (%s)" % (mode, priorities()))     # a starved run is otherwise indistinguishable from a missed fire
-    deadline = time.time() + (0.0 if mode == "fast" else 180.0)
+    # A build waited 180 s for the lock, like the hourly capture. On the busy box an hourly capture or a catch-up fast run
+    # holds it 10-30 min, so from 21 Oct two of the four daily builds were skipped every day ("build skipped: a run is in
+    # progress", 22 of 142 since 26 Sep) and the store went 12 h between builds. A build now waits up to BUILD_WAIT_S;
+    # waiting is a sleep, and fast runs keep skipping at once (31 Oct).
+    t_start = time.time()
+    deadline = t_start + {"fast": 0.0, "capture": 180.0, "build": BUILD_WAIT_S}[mode]
+    warn, side_busy = True, False
     while True:
-        with Lock("graph") as lk:        # one lock for all: a build never reads a file the capture is appending to
-            if lk.held:
+        with Lock("graph", warn=warn) as lk:        # a build never reads a file the capture is appending to
+            side = _side_lock() if lk.held and mode == "build" else None   # nor swaps a store a sidecar is read from
+            if lk.held and (side is None or side.held):
+                if mode == "build" and time.time() - t_start > 60:
+                    log("build waited %.0f s for the graph and sidecar locks" % (time.time() - t_start))
+                _GRAPH = lk
                 try:
                     {"capture": capture, "build": build, "fast": fast}[mode]()
                 except Exception:
                     log("%s FAILED: %s" % (mode, traceback.format_exc().strip().splitlines()[-1][:300]))
                     status_update(**{mode + "_failed_at": time.strftime("%Y-%m-%d %H:%M:%S")})
                     raise
+                finally:
+                    _GRAPH = None
+                    if side is not None:
+                        side.__exit__(None, None, None)
                 return
+            side_busy = bool(lk.held)
             error = lk.error
+        warn = False
         if time.time() >= deadline:      # a fast run skips at once; the hourly and six-hourly runs wait for it
             if error:
                 log("%s FAILED: the graph lock could not be taken (%s); nothing ran" % (mode, error))
                 status_update(**{mode + "_lock_failed_at": time.strftime("%Y-%m-%d %H:%M:%S"), "lock_error": error})
                 sys.exit(3)
-            log("%s skipped: a run is in progress" % mode)
+            log("%s skipped: a run is in progress%s" % (mode, " (a build's sidecar and recall walk)" if side_busy else ""))
             return
         time.sleep(5.0)
 

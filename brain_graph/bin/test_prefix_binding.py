@@ -1,5 +1,5 @@
 """test_prefix_binding.py - the fast layer uses the store's byte count only while the log's prefix is the one the store
-consumed (27 Sep, claude-825b1305; account04/B06 R12).
+consumed.
 
     python test_prefix_binding.py [PATH_TO_live_delta.py]
 
@@ -9,12 +9,9 @@ Controls (temp log and temp STATUS; the live ones are never touched):
  P3 the first line rewritten in place, same length: the marks differ, so the start is found by time and a line is logged
  P4 a STATUS written before the marks existed: bytes mode, as before (nothing to check against)
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import importlib.util
 import json
 import os
@@ -75,7 +72,7 @@ json.dump({"build_events_bytes": nb, "build_store_built": built}, open(LD.STATUS
 got = LD.start_offset(b, path=ev)
 check(got == (nb, "bytes"), "P4 a STATUS without marks: %s" % (got,))
 
-# 28 Sep (account03/B12 R12): the two end marks leave the middle of the prefix unchecked; the build now records a
+# 28 Sep: the two end marks leave the middle of the prefix unchecked; the build now records a
 # sha256 of the whole prefix. One byte changed at the head, the middle and the tail, each at the same length.
 n_ctrl = 4
 if hasattr(LD, "prefix_sha"):

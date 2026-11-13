@@ -1,4 +1,4 @@
-"""study_live_membrane.py - the live membrane scored walk-forward on real sessions (26 Sep, claude-825b1305).
+"""study_live_membrane.py - the live membrane scored walk-forward on real sessions.
 
 A cut D (default three days ago). The store and the sidecar are built only from what happened before D (bank work left
 out as in every build, memories last written after D left out); then every session after D is replayed from the
@@ -230,7 +230,7 @@ def main():
     def session_kind(s8):                           # cli = a session he types in; sdk-cli = headless (a script's prompt)
         if s8 not in ep_cache:
             ep = ""
-            for f in glob.glob(os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), s8 + "*.jsonl"))[:1]:
+            for f in glob.glob(os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace("\\", "-").replace("/", "-")), s8 + "*.jsonl"))[:1]:
                 with open(f, encoding="utf-8", errors="replace") as fh:
                     for k, ln in enumerate(fh):
                         if k > 80:

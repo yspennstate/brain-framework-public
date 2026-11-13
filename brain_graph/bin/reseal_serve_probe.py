@@ -1,5 +1,4 @@
-"""reseal_serve_probe.py - does the math hook serve the 10 Aug curated cards before and after the re-seal? (28 Sep,
-claude-825b1305; the served-block comparison registered at 10:2x, first a targeted look.)
+"""reseal_serve_probe.py - does the math hook serve the 10 Aug curated cards before and after the re-seal?
 
 Today the hook's last read (selection_integrity -> current_note.read_current_note) refuses a card whose stored node
 digest matches neither the node nor its body ("stored_node_digest_mismatch"), and the 34 curated nodes of the 10 Aug
@@ -11,12 +10,9 @@ rehearsal environment with MATHBRAIN_STORE pointed at each copy. It prints which
 
     python reseal_serve_probe.py BASE_STORE CAND_STORE OUT_JSON
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import io
 import json
 import os

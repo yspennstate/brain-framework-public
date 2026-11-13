@@ -1,5 +1,5 @@
 """study_collision_replay.py - how often would a collision check on shared brain files have spoken last week?
-(registered 28 Sep 11:1x in THREE_DAY_RUN_2026-09-27.md; claude-825b1305)
+
 
 Reads the 2,919 Edit/Write calls of 21-28 Sep from UNCLAIMED_WRITES_2026-09-28.json (session, minute, root, file) and
 the mesh claims table. For W in 10, 30 and 60 minutes, a FIRE is the first edit of a (session, file) pair that falls
@@ -11,16 +11,12 @@ Every fire is listed with the other session, the gap and both sessions' edit cou
 ROWS_JSON defaults to UNCLAIMED_WRITES_PATHS_2026-09-28.json (2,948 calls, each with its full path; committed beside
 the result). The output names its input by sha256 and row count. Until 28 Sep 14:0x the default was
 UNCLAIMED_WRITES_2026-09-28.json (file names only), so a run of the committed default matched every REPORT.md, PREREG.md
-or LEDGER.md in any folder as one file and gave 20 fires at W = 30, not the 10 the full paths give (account03/B19 r61,
-B19-R41-REPLAY-FULLPATH-INPUT-UNSEALED-20260928). The claim arm reads the local mesh database and is not reproducible
+or LEDGER.md in any folder as one file and gave 20 fires at W = 30, not the 10 the full paths give. The claim arm reads the local mesh database and is not reproducible
 from committed files.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import io
 import json

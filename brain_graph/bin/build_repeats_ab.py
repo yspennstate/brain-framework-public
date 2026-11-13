@@ -1,4 +1,4 @@
-"""build_repeats_ab.py - what counting an exact repeat once does to the store (28 Sep, claude-825b1305; account03/B12 R12).
+"""build_repeats_ab.py - what counting an exact repeat once does to the store.
 
     python build_repeats_ab.py OUT_JSON [--keep-stores DIR]
 
@@ -8,12 +8,9 @@ events, pairs, co-activation pairs and total weight of each, how edge weights mo
 only one holds, the hubs, and the overlap of the 1,000 heaviest edges. The live store is not touched; the two stores
 are written to a temp folder and removed unless --keep-stores names one.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import json
 import os
 import shutil

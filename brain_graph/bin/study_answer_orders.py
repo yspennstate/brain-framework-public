@@ -1,5 +1,4 @@
-"""study_answer_orders.py - does the agent's own answer name the order he is about to have to say again? (28 Sep 07:1x,
-claude-825b1305; registered in study/THREE_DAY_RUN_2026-09-27.md before any code.)
+"""study_answer_orders.py - does the agent's own answer name the order he is about to have to say again?
 
 His 27 Sep 16:29 idea was that the brain should speak when a mistake is about to be made; the same week measured that
 his corrections follow quick on-task answers, not drift or struggle. So the moment to check is the answer. For the 20
@@ -15,12 +14,9 @@ were served at that score.
 
     python study_answer_orders.py LABELS_JSON OUT_JSON
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import glob
 import io
 import json

@@ -38,8 +38,7 @@ def _mesh(args, as_json=False):
     return r
 
 
-# The local REDACT above is a fallback subset that misses Telegram bot tokens (the owner runs live
-# notification bots), AIza / rpa_ / hf_ keys, long high-entropy tokens, JWTs, etc. Import the canonical
+# The local REDACT above is a fallback subset that misses Telegram bot tokens, AIza / rpa_ / hf_ keys, long high-entropy tokens, JWTs, etc. Import the canonical
 # patterns the push gate uses so a peer's leaked credential is never printed verbatim into a terminal.
 _SS_PATS = None
 try:

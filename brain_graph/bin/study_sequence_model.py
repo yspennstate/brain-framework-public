@@ -1,4 +1,4 @@
-"""study_sequence_model.py - can the ORDER in which things were used predict the next new thing? (26 Sep, claude-825b1305)
+"""study_sequence_model.py - can the ORDER in which things were used predict the next new thing?
 
 His voice note: edges grow along the sequences things are used in. The live graph learns windowed co-occurrence (PMI
 over a ten-minute context); this learns order literally. From every session before the cut, the sequence of distinct
@@ -12,12 +12,9 @@ common next-new item overall) and against order-free co-occurrence (the same cou
 
     python study_sequence_model.py OUT_JSON [--fast]     (--fast: the same moments and verdicts in O(n log n))
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import glob
 import json

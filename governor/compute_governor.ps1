@@ -705,7 +705,7 @@ while ($true) {
 
         # ---- distress evaluation (sustained, edge-fired) ----
         # disk free-space sense (added 2026-07-16 after C: hit 0 bytes with no alarm;
-        # an earlier data-loss write-up already knew: <4% free has corrupted data here)
+        # an earlier data-loss incident showed: <4% free has corrupted data here)
         $diskFreeGB = Get-DiskFreeGB
         # process-pressure sense (added 2026-07-19 after fork failures at ~474 procs /
         # 62 orphaned powershells wedged the machine while cpu/mem/disk all read ok;

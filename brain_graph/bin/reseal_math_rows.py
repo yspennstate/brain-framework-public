@@ -1,6 +1,6 @@
 """Re-seal the math store rows whose stored digest does not match their payload, and give the claims whose status the
-library does not know the status of the claims they replaced (unverified). B07-R13-MATH-GRAPH-ROW-DIGEST-BYPASS-019;
-28 Sep 2026, claude-825b1305. Nothing is deleted and no row's text changes.
+library does not know the status of the claims they replaced (unverified).
+Nothing is deleted and no row's text changes.
 
 A row is re-sealed only with evidence that its payload is the one it was written with:
   node   its claim's stored digest verifies over the claim's raw payload, the node body equals the claim statement, and
@@ -12,65 +12,52 @@ A row that fails its evidence is listed and left as it is.
 
 With --first-record FIRST.json (bin/batch_rows_first_record.py) every row must also have been recorded within
 --max-gap-min minutes (default 60) of its created_at and be unchanged from that record to now. A backup made twelve days
-later proves only that nothing changed the row after it (scheduled audit account02/B07,
-B07-R34-MATH-RESEAL-PREBACKUP-LAUNDERING-021, 28 Sep); a record made minutes after the write proves it is what was written.
+later proves only that nothing changed the row after it; a record made minutes after the write proves it is what was written.
 
     python reseal_math_rows.py STORE SRC_DIR EARLIEST_BACKUP OUT_LIST.json [--first-record FIRST.json
                                [--max-gap-min 60]] [--decisions DECISIONS.json --decisions-sha256 HEX] [--apply]
 Without --apply the store is not touched: the tool works on a copy it makes beside OUT_LIST.json and reports what the
 repair would do, the census and the get_claim sweep after it.
 
---apply also needs the row-level source decisions (scheduled audit account03/B07 R40,
-B07-R40-SOURCE-VERDICT-NOT-ENFORCED-BY-APPLY-001, 28 Sep): the structural checks above prove a row is what was written,
+--apply also needs the row-level source decisions: the structural checks above prove a row is what was written,
 not that what was written is right, and until this change the apply never read the source check. Now every row the
 structural plan would write must have a decision in DECISIONS.json (bind_source_decisions.py output) whose file sha256 is
 --decisions-sha256, whose row_sha256 equals the row as stored now, and which passed: reason "source check passes",
 source_faithful "yes", mathematically_correct "yes", no unsupported addition (a node also needs its claim's decision to
 pass). A row that fails its decision is withheld and listed. A planned row with no decision, a decision made on other
 content, or a decisions file other than the one named refuses the whole apply: nothing is written, exit 3.
-A decisions file holding more than one decision for a row refuses the apply too, whichever way they point (account02/B07
-R48, B07-R48-MATH-RESEAL-DUPLICATE-DECISION-LAST-WINS-028, 28 Sep): until then the file was read into a dict and the last
+A decisions file holding more than one decision for a row refuses the apply too, whichever way they point: until then the file was read into a dict and the last
 decision silently won, so a failing decision followed by a passing one for the same row wrote it.
-A node's claim decision is required, not only read when present (account01/B07 r66,
-B07-R66-R48-NODE-CLAIM-DECISION-OPTIONAL-IF-CLAIM-NOT-PLANNED, 28 Sep): a planned node whose claim has no decision, or
+A node's claim decision is required, not only read when present: a planned node whose claim has no decision, or
 whose claim decision was made on other content than the claim as stored now, refuses the apply like a planned row with
 no decision; until then a node whose claim was not itself in the plan was written on its own decision alone.
-An edge needs its endpoints' decisions to pass too (account01/B07 r67, B07-R67-R48-EDGE-RESEAL-CROSSES-WITHHELD-ENDPOINT,
-28 Sep): an edge whose source or target claim or node has a decision that does not pass is withheld with it; an endpoint
+An edge needs its endpoints' decisions to pass too: an edge whose source or target claim or node has a decision that does not pass is withheld with it; an endpoint
 with no decision is outside the batch and is not judged here. Until then an edge was re-sealed on its own decision while
 its endpoint stayed withheld.
-The writes are made in one transaction against the rows the validation read (account02/B12 auto11,
-B12-R83-RESEAL-VALIDATE-WRITE-TOCTOU, 28 Sep): the row_sha256 of every planned row is taken when it is planned, and the
+The writes are made in one transaction against the rows the validation read: the row_sha256 of every planned row is taken when it is planned, and the
 write, under BEGIN IMMEDIATE, re-reads each row before its update. If any planned row changed in between, every write
 is rolled back and the apply refused (exit 3). Until then the rows were validated on one connection and written by id
 on another, so a row changed in between was overwritten.
-The write is also held to the schema it was validated under, and to changing nothing but the planned rows (28 Sep,
-account02/B13 r70-r71 and account01/B07 r71, B13-R53-SCHEMA-TRIGGER-TOCTOU-035 and
-B07-R71-R53-PREEXISTING-TRIGGER-SIDE-EFFECT-BYPASSES-DEPENDENCY-CLOSURE): row hashes certify content, not what an UPDATE
+The write is also held to the schema it was validated under, and to changing nothing but the planned rows: row hashes certify content, not what an UPDATE
 does, and a trigger can make the tool's own UPDATE change a row it depends on after that row's last check. The canonical
 math store has no triggers, so --apply on a store with any trigger is refused before planning (exit 3). A dry run on such
-a store reports the census and the plan, runs nothing on its copy, and says an apply would be refused (29 Sep, account04/
-B13 r58, B13-R58-NOOP-UNRELATED-TRIGGER-REFUSAL-20260929: until then the dry run was refused too, so a store with nothing
-to repair and a trigger that no planned UPDATE could fire gave no census). The schema is hashed at the
+a store reports the census and the plan, runs nothing on its copy, and says an apply would be refused. The schema is hashed at the
 validation and again first thing under BEGIN IMMEDIATE, which also closes the window for a trigger installed in between;
 after the UPDATEs, the connection's total changes must equal the planned rows, every dependency is read again, and every
 planned row must hold exactly its validated columns with only the planned ones replaced. Any miss rolls back every write.
 RESEAL_TEST_BARRIER=PATH (tests only) makes the tool wait, after the validation and before the write transaction, until
 PATH exists; it writes PATH.waiting when it starts waiting.
-The output records the SQLite library version and the store's journal and locking modes (account04/B13 r53).
+The output records the SQLite library version and the store's journal and locking modes.
 
 A dry run reads a copy the SQLite backup API takes from one read transaction on the store, so the copy holds what the store
 holds, pages still in its write-ahead log included; the copy of the main file it used to take left those out, and a
 trigger committed to the log but not yet checkpointed was missing from the dry run while --apply, reading the store,
-refused on it (account04/B13 r4, B13-R58-WAL-SIDECAR-OMITTED-BY-DRYRUN-COPY-20260929-01). The modes in the output are the
+refused on it. The modes in the output are the
 store's, not the copy's.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import hashlib
 import json
 import os
@@ -95,7 +82,7 @@ if "--decisions" in sys.argv:
     for _x in json.loads(_raw.decode("utf-8"))["decisions"]:
         _k = (_x["table"], _x["id"])
         if _k in DECISIONS:
-            DEC_DUPS.add(_k)                    # two decisions for one row: neither binds (B07-R48)
+            DEC_DUPS.add(_k)                    # two decisions for one row: neither binds
         DECISIONS.setdefault(_k, _x)
 if "--decisions-sha256" in sys.argv:
     DEC_WANT = sys.argv[sys.argv.index("--decisions-sha256") + 1].lower()
@@ -132,7 +119,7 @@ def triggers(conn):
 
 
 def sqlite_modes(conn):
-    """The SQLite library and the store's journal and locking modes, for the output (account04/B13 r53)."""
+    """The SQLite library and the store's journal and locking modes, for the output."""
     return {"version": sqlite3.sqlite_version, "journal_mode": conn.execute("PRAGMA journal_mode").fetchone()[0],
             "locking_mode": conn.execute("PRAGMA locking_mode").fetchone()[0]}
 
@@ -227,11 +214,11 @@ def census(c):
 def main():
     if apply and (DECISIONS is None or DEC_WANT is None):
         refuse("--apply needs --decisions FILE and --decisions-sha256 HEX: a structural re-seal is written only for rows "
-               "whose source decision passed (B07-R40)")
+               "whose source decision passed")
     if DECISIONS is not None and DEC_WANT is not None and DEC_SHA != DEC_WANT:
         refuse("the decisions file's sha256 is %s, not the %s named" % (DEC_SHA, DEC_WANT))
     if apply and DEC_DUPS:
-        refuse("the decisions file holds more than one decision for %d row(s): which one binds is ambiguous (B07-R48); "
+        refuse("the decisions file holds more than one decision for %d row(s): which one binds is ambiguous; "
                "nothing written" % len(DEC_DUPS), {"duplicates": [{"table": t, "id": i} for t, i in sorted(DEC_DUPS)]})
     target = store
     if not apply:
@@ -249,7 +236,7 @@ def main():
         live.close()
         old.close()
         refuse("the store has %d trigger(s); the math store's schema has none, and a trigger can make a planned UPDATE "
-               "change rows the plan did not name (B13-R53-035, B07-R71); nothing written" % len(trig), {"triggers": trig})
+               "change rows the plan did not name; nothing written" % len(trig), {"triggers": trig})
     before = census(live)
     plan, refused = [], []
     for r in live.execute("SELECT id, payload_json, digest, created_at FROM claims"):
@@ -330,8 +317,7 @@ def main():
                             ok, why = False, "its endpoint's %s decision: %s" % (et[:-1], passed(ex)[1])
                             break
                         if not ex.get("row_sha256") or ex["row_sha256"] != row_sha256(live, et, end):
-                            # a passing verdict counts only for the content it was made on (28 Sep, account02/B07 r69,
-                            # B07-R24-MATH-RESEAL-UNPLANNED-ENDPOINT-TOCTOU-031); until then an endpoint's verdict was read
+                            # a passing verdict counts only for the content it was made on; until then an endpoint's verdict was read
                             # and its content was not
                             ok, why = False, "its endpoint's %s decision was made on other content (row_sha256 %s)" % (
                                 et[:-1], "missing" if not ex.get("row_sha256") else "differs")
@@ -349,7 +335,7 @@ def main():
                    % len(unmatched), {"unmatched": unmatched, "withheld": withheld})
         plan = keep
     if trig:
-        # a dry run on a store with triggers (account04/B13 r58): the census and the plan are what a dry run is for, and
+        # a dry run on a store with triggers: the census and the plan are what a dry run is for, and
         # a plan that is not run cannot fire a trigger; nothing runs on the copy, and an apply stays refused
         live.close()
         old.close()
@@ -368,8 +354,7 @@ def main():
     pre = {(t, i): row_sha256(live, t, i) for t, i, _c, _sq in plan}     # the rows as validated
     # ...and every row a planned row depends on: a node's claim, and an edge's two endpoints as claims and as nodes. None
     # of them is written, but each one's content is what made the repair right, so each is read again inside the write
-    # transaction and a change refuses the whole write (28 Sep, account02/B07 r69, B07-R24-MATH-RESEAL-UNPLANNED-ENDPOINT-
-    # TOCTOU-031: two reviewed edges point at a claim outside the reviewed rows, and only planned rows were re-read).
+    # transaction and a change refuses the whole write.
     deps = {}
     for t, i, _c, _sq in plan:
         keys = [("claims", i)] if t == "nodes" else []

@@ -1,4 +1,4 @@
-"""eval_graph_mixture.py - the graph lane as deployed, measured held out (the audit fleet's job R7; 27 Sep, claude-825b1305).
+"""eval_graph_mixture.py - the graph lane as deployed, measured held out.
 
 brain.py recall blends its word-search body with the graph lane (the use-grown walk and the memories' own links, half
 and half) at the dial's weight, 0.2 today. That weight was set at 0.1 from the reworded bank and then moved to 0.15 and
@@ -19,19 +19,16 @@ rebuilds every 15 minutes. The output records the sha256 of the pinned index, ea
 
 Per-question rows name gold memories, so they go to the key quarantine; the output holds counts only.
 
-WHAT WEIGHT 0 IS (27 Sep, scheduled audit account04/B12 r6): recall's head (policy routes and attachment promotions,
+WHAT WEIGHT 0 IS: recall's head (policy routes and attachment promotions,
 scored above the bm25 peak) and its body (bm25's hits with the name and question-coverage boosts, a superseded memory
 collapsed onto its correction) are kept as recall built them, and the association and semantic tails sit below both,
 so weight 0 is the deployed stack without the use-grown lane - the fusion effect conditional on recall's own pools,
 which is what the dial decides - and not a lexical-only system. The output says so under 'estimand'. Every
 hash is written in full; the replay control names the questions it could not reproduce.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import concurrent.futures
 import glob
 import hashlib
@@ -181,7 +178,7 @@ def main():
            "store_sha256": {name: {f: sha(os.path.join(store, f)) for f in ("edges.npz", "nodes.json", "uses.json")
                                    if os.path.exists(os.path.join(store, f))} for name, store in stores},
            # the use walk is read from a cache keyed by the store's absolute path (diffusion.Diffusion.cached): identical
-           # store bytes at another path have no walk, so the cache is part of the state (account03/B01 auto31, 27 Sep)
+           # store bytes at another path have no walk, so the cache is part of the state
            "walk_cache_sha256": {name: {os.path.basename(c): sha(c) for c in sorted(glob.glob(os.path.join(
                DR, "graph_lane_cache", hashlib.sha1(os.path.abspath(store).lower().encode("utf-8")).hexdigest()[:12] + "_*.npz")))}
                for name, store in stores},
@@ -237,12 +234,12 @@ def main():
         for r in rows_all:
             fh.write(json.dumps(r) + "\n")         # the graph list too: a replay can be rechecked offline
     res["seconds"] = round(time.time() - t0)
-    # FAIL CLOSED (account04/B14 r2 and B12 r6, 27 Sep): the replay at 0.2 is the positive control, so a run in which any
+    # FAIL CLOSED: the replay at 0.2 is the positive control, so a run in which any
     # arm lost a question or replayed one differently from what recall showed is written with control_passed false and
     # exits 2; its counts are not a result
     res["control_passed"] = all(st["sets"]["rows_missing"] == 0 and not st["sets"]["replay_mismatch_ids"]
                                 for st in res["stores"].values())
-    # A RESOLVABLE ARTIFACT (scheduled audit account04/B12 r7, 27 Sep): a hash without the bytes cannot be rerun, so the
+    # A RESOLVABLE ARTIFACT: a hash without the bytes cannot be rerun, so the
     # pinned word index is kept under a name made from its own hash (one copy per index generation, never overwritten),
     # and the code that produced the numbers is named by hash too. Only the .json.gz is kept (25 MB): the .pkl beside it
     # is bm25.py's parsed copy of the same json, rebuilt on load (39 MB), so its hash is recorded and its bytes are not.

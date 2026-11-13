@@ -1,15 +1,11 @@
-"""Widen split_the_population_before_naming_it to the population label its trigger missed (account01/B13 R27, 28 Sep,
-claude-825b1305), and add one line to recall_before_you_register's gut. Controls run on the serialized tool input,
+"""Widen split_the_population_before_naming_it to the population label its trigger missed, and add one line to recall_before_you_register's gut. Controls run on the serialized tool input,
 matched with re.I as the hook does; --write edits instincts_learned.json (backup first), --via-hook checks the compiled
 entry through instinct_prime._fire.
     python widen_population_reflex.py [--write] [--via-hook]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import json
 import os
 import re

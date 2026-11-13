@@ -106,7 +106,7 @@ def main():
         print("NOT FOUND ({}): {}".format(len(missing), ", ".join(missing)))
     json.dump({"found": [{"name": n, "path": p, "version": v} for n, p, v in found],
                "missing": missing, "checked": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())},
-              open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "INVENTORY.json"), "w", encoding="utf-8"), indent=2)
+              open(os.path.expanduser(r"~/filmbrain/tools/INVENTORY.json"), "w", encoding="utf-8"), indent=2)
 
 
 if __name__ == "__main__":

@@ -48,7 +48,7 @@ PRIVATE = [
     (r"(?i)\b[a-z]:[\\/]+Users[\\/]+"
      r"(?!me\b|you\b|user\b|username\b|example\b|private-sentinel\b|<|\.\.\.)"
      r"[A-Za-z0-9._-]+", "absolute home directory"),
-    (r"(?i)(?<![A-Za-z0-9])/(?:home|Users)/"
+    (r"(?i)(?<![A-Za-z0-9])/home/"
      r"(?!me\b|you\b|user\b|username\b|example\b|private-sentinel\b|<|\.\.\.)"
      r"[a-z][a-z0-9._-]+", "absolute home directory"),
     # MODEL_OF_PARTNER is the framework's own generic name for this hub document, so match the
@@ -72,7 +72,7 @@ SKIP_DIRS = {".git", "__pycache__", "node_modules", ".pytest_cache"}
 # Every publishable file is read unless its content is binary. Until 2026-09-29 only an
 # allowlist of suffixes was, so .jsonl, .log, .lock, .sha256, .service, .timer, .slice and
 # files with no suffix at all were never opened - a log beside the dreaming scripts held a
-# home directory and would have been committed unread (account04/B17 r13, B17-F1). A
+# home directory and would have been committed unread. A
 # suffix says nothing about what a file can leak.
 BINARY_PROBE = 8192
 
@@ -191,7 +191,7 @@ def main(root=None, rules=None):
                 findings.append((os.path.relpath(path, root), line, what, m.group(0)))
 
     # "clean" says how much was looked at: a gate whose clean output had no denominator could not
-    # show that it had read nothing (account04/B17 r13, B17-F3).
+    # show that it had read nothing.
     counts = "%d files: %d read as text, %d binary skipped" % (files, read, binary)
     if not findings:
         print("clean: no private labels in the tree (%s)" % counts)

@@ -1,5 +1,4 @@
-"""wrong_at_creation_control.py - the control account03/B12 asked for (B12-R34-FIRST-RECORD-IMMUTABILITY-NOT-
-AUTHENTICITY-20260928), registered 28 Sep 10:2x in THREE_DAY_RUN_2026-09-27.md; claude-825b1305.
+"""wrong_at_creation_control.py - a pre-registered control.
 
 A 10 Aug concept row is made wrong FROM ITS FIRST RECORD: in Lagrange's theorem "|H| is a divisor of |G|" becomes
 "|G| is a divisor of |H|", and the claim's payload, the ingest's own digest over it and the node body are changed
@@ -15,12 +14,9 @@ The live store, its backups, the object folder and the math brain repository are
     python wrong_at_creation_control.py POPULATION_DIR SRC_DIR WORK_DIR STUDY_DIR OUT_JSON
 STUDY_DIR holds concepts_formulas.json of the clean run and wiki_leads_cache.json.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import glob
 import io
 import json
@@ -39,7 +35,7 @@ NAMED = ("brain.sqlite3.bak_refw_ingest_20260812", "brain.sqlite3.bak_sandwichre
 
 LEMMA = ("claim_c9d0bb8354ebd968a84d4a76d6a7cca77c1a4a6c227fdc38065b4f1527e45d6c",   # exchangeable-pair identity
          "= 2 Var(X) - 2 Cov(X, X^L)", "= 2 Var(X) + 2 Cov(X, X^L)")
-# --lemma (account01/B07's second fixture, B07-R60-R40, 28 Sep 11:3x): the victim is a campaign lemma made wrong from its
+# --lemma: the victim is a campaign lemma made wrong from its
 # first record (the sign of the covariance flipped), and the check is lemma_fidelity_check.py against the campaign log,
 # which still says 2Var - 2Cov.
 

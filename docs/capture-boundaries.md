@@ -17,7 +17,7 @@ controls pass, both against the candidate and in a fresh process importing the i
 more controls also pass: the 881 completed events of a real rollout are unchanged, two retries after
 a lost journal add no duplicates, and a source shortened during a scan commits no unstable events.
 
-The code is `brain_graph/bin/extract_codex_events.py` and the controls are
+The code is `framework/brain_graph/bin/extract_codex_events.py` and the controls are
 `test_codex_capture_boundaries.py` beside it:
 
     python test_codex_capture_boundaries.py --implementation extract_codex_events.py --run-dir <new folder>

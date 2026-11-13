@@ -50,6 +50,11 @@ def main():
         return 0
     tmp = tempfile.mkdtemp(prefix="noconsole_")
     tag = "BrainNoConsoleTest_%d" % os.getpid()
+    # A run killed on a timeout skips the finally below and leaves its pair registered; remove pairs whose pid is gone.
+    ps("Get-ScheduledTask -TaskName 'BrainNoConsoleTest_*' -ErrorAction SilentlyContinue | ForEach-Object { "
+       "if ($_.TaskName -match '^BrainNoConsoleTest_(\\d+)_' -and "
+       "-not (Get-Process -Id ([int]$Matches[1]) -ErrorAction SilentlyContinue)) { "
+       "Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false } }", timeout=180)
     tasks = []
     try:
         nap = os.path.join(tmp, "nap.py")

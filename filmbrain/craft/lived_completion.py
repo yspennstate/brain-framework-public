@@ -71,8 +71,8 @@ NODES = [
     ("failure.cuda_quarantine", "an inherited visibility mask hides the CUDA device",
      "Historical Windows failure: nvidia-smi saw the GPU while CUDA returned no device because "
      "CUDA_VISIBLE_DEVICES=-1 was inherited from the July TDR quarantine. The 2026-09-05 probe "
-     "succeeded with the variable removed; the user-scope mask was then removed under the "
-     "owner's order, but existing parent processes still passed the old environment to children. "
+     "succeeded with the variable removed; the user-scope mask was then removed, "
+     "but existing parent processes still passed the old environment to children. "
      "Inspect the failing process's environment before blaming the driver. Any diagnostic "
      "override is scoped to that process and the machine's current GPU policy; this node does "
      "not authorize clearing a quarantine or describe CUDA support on a Mac. Source: "

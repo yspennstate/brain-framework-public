@@ -1,6 +1,4 @@
-"""source_check_0810.py - are the 10 Aug batch's concept claims what their sources say? (account03/B12,
-B12-R34-FIRST-RECORD-IMMUTABILITY-NOT-AUTHENTICITY-20260928; registered 28 Sep 10:2x in THREE_DAY_RUN_2026-09-27.md;
-claude-825b1305)
+"""source_check_0810.py - are the 10 Aug batch's concept claims what their sources say?
 
 The first-record rule shows what the 10 Aug ingest wrote and that nothing changed it since; it cannot show that what it
 wrote is right. For the concept claims of that batch ("harvested overview (Wikipedia lead)" and the one "QA-corrected"
@@ -17,12 +15,9 @@ and edges of the batch are read by hand against the campaign ledger; this script
 STORE may be a fixture copy; the batch is every claim created on 2026-08-10 whose domain names a Wikipedia lead or a
 QA correction. With --offline the Wikipedia leads come from CACHE_JSON only (a fixture run must not refetch).
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import hashlib
 import io
 import json

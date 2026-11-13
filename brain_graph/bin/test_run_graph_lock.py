@@ -1,6 +1,4 @@
-"""test_run_graph_lock.py - run_graph's lock is the operating system's (29 Sep 2026, claude-825b1305; scheduled audits
-account02/B18 r76 and account01/B18, B18-R63-PID-REUSE-FALSE-LIVENESS-001 and
-B18-R63-RUNGRAPH-POSIX-CONTENTION-CRASH-20260929; before that, 28 Sep, interactive audit IA-20260928-03).
+"""test_run_graph_lock.py - run_graph's lock is the operating system's.
 
     python test_run_graph_lock.py [--module RUN_GRAPH.py] [--old OLD_RUN_GRAPH.py]
 
@@ -72,7 +70,7 @@ def fresh(path, tag):
 
 
 def unopenable(path, tag):
-    """The lock's folder is a regular file, so the lock file cannot be made (account04/B15 r9). Returns the fast run's
+    """The lock's folder is a regular file, so the lock file cannot be made. Returns the fast run's
     exit code (None when it returned), its log, its status updates and (held, error) of a lock taken directly."""
     m, td, logs = fresh(path, tag)
     status = {}

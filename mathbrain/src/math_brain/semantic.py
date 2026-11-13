@@ -163,18 +163,16 @@ def _load_artifact() -> None:
 
     The vectors used to be read once per process and kept, so a caller that imports this module and runs many prompts
     (an evaluator, a replay) kept scoring against the first file it saw after the store's vectors were rebuilt, while a
-    fresh process scored against the new ones (account03/B11 r70, B11-R31-SEMTOP-CONTROL-MISSES-SEMANTIC-GENERATION-
-    20260928: top claim A before a valid rebuild, still A in the reused module, C in a fresh one). A file that fails to
+    fresh process scored against the new ones (28 Sep: top claim A before a valid rebuild, still A in the reused module, C in a fresh one). A file that fails to
     load leaves nothing behind, so the channel fails closed until a good file is in place, as a fresh process would.
 
     THE GENERATION IS THE SHA-256 OF THE BYTES. Every call reads the file once and hashes what it read; the vectors are
     parsed from those same bytes when the digest differs from the one they were read from, so a digest never names
-    vectors from another file (account04/B11 r4, B11-R31-SEMANTIC-LOAD-TOCTOU-20260929-01, where a replace between a
+    vectors from another file (where a replace between a
     stat and the read cached new bytes under the old identity). The key used to be the file's (inode, mtime, size) and
-    then also each zip member's (name, CRC-32, size) (account03/B01 r74, a rewrite through a hard link with the old mtime
-    put back). CRC-32 can be forced: four bytes solve for any CRC, and account03/B11 r90 and account04/B17 r74
-    (B11-R77-SEMANTIC-GENERATION-CRC32-COLLISION-20260929-R90, B17-R74-CRC32-COLLISION-PRESERVES-SEMANTIC-CACHE-
-    GENERATION-20260929) built two valid files with different vectors, a different top claim and every field of that key
+    then also each zip member's (name, CRC-32, size) (a rewrite through a hard link with the old mtime
+    put back). CRC-32 can be forced: four bytes solve for any CRC, and two
+    reviews (29 Sep) built two valid files with different vectors, a different top claim and every field of that key
     equal, so a reused module kept the first file's answer while a fresh one read the second's. Reading and hashing the
     file costs about 10 ms per call on the 17.5 MB live file, against 0.07 ms for the old key; the parse it replaces on
     a fresh process's first call costs 13 ms.
@@ -209,7 +207,7 @@ def _load_artifact() -> None:
                     "writer published" % (sha[:12], named[:12])
                 )
             # No pickle: an object array in the file would run code while it loads
-            # (account04/B17 r14, B17-R24-SEMANTIC-NPZ-ALLOW-PICKLE-CODE-EXEC-20260929). The
+            # The
             # vectors are float32 and every other field is a fixed-width string, so nothing
             # legitimate needs pickle.
             with np.load(io.BytesIO(data), allow_pickle=False) as fields:
@@ -247,8 +245,7 @@ def _load_artifact() -> None:
                 raise RuntimeError("claim identifiers are not unique")
             # One store digest per row, when the file records them: what lets a caller check
             # that a vector was made from the text its claim holds now, not only that the claim
-            # exists (account03/B12 r56,
-            # B12-R56-ID-ONLY-COVERAGE-CERTIFIES-UNBOUND-VECTOR-TEXT-20260929).
+            # exists.
             if digests is not None and (
                 digests.dtype.kind != "U" or digests.shape != identifiers.shape
             ):
@@ -258,8 +255,7 @@ def _load_artifact() -> None:
                 )
             # How each row was made, when the file records it: a legacy row carries its claim's digest but
             # no text of the claim reproduces it, so a caller must be able to tell it from a row that does
-            # (account04/B06 r76, B06-R76-LEGACY-DIGEST-MIGRATION-OPENS-UNVERIFIED-ROWS-20260929; account04/B14
-            # r8). The values are a closed set, and a file whose sources are not is refused.
+            # The values are a closed set, and a file whose sources are not is refused.
             if sources is not None and (
                 sources.dtype.kind != "U" or sources.shape != identifiers.shape
                 or not set(sources.tolist()) <= set(ROW_SOURCES)

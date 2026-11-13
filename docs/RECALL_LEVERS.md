@@ -1,6 +1,6 @@
 # Two recall levers, measured
 
-These tests cover deliberate recall (`dreaming/brain.py recall`) over the agents' own memory notes, not the math store. Each question was written to share as few content words as possible with the note that answers it. Scores give the rank of that note.
+These tests cover deliberate recall (`framework/dreaming/brain.py recall`) over the agents' own memory notes, not the math store. Each question was written to share as few content words as possible with the note that answers it. Scores give the rank of that note.
 
 ## Rewriting the question before recall (25-27 September 2026)
 

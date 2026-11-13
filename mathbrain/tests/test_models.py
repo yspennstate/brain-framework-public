@@ -58,7 +58,7 @@ def test_evidence_requires_scope() -> None:
 
 @pytest.mark.parametrize("result", ["false", "true", 0, 1, None])
 def test_evidence_result_must_be_a_boolean(result: object) -> None:
-    # a stored "false" read back as truthy was shown as a pass (account02/B19 auto57, R69 E2)
+    # a stored "false" read back as truthy was shown as a pass
     with pytest.raises(TypeError, match="boolean"):
         Evidence(
             claim_id="claim_1",

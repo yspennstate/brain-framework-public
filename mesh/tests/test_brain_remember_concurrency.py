@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 
-BRAIN = Path(__file__).resolve().parents[2] / "dreaming" / "brain.py"
+BRAIN = Path(os.environ.get("BRAIN_PY") or Path(__file__).resolve().parents[2] / "dreaming" / "brain.py")
 
 
 class BrainRememberConcurrencyTest(unittest.TestCase):
@@ -21,6 +21,10 @@ class BrainRememberConcurrencyTest(unittest.TestCase):
         self.env = os.environ.copy()
         self.env["BRAIN_MEM_DIR"] = str(self.mem)
         self.env["BRAIN_WRITE_LOCK"] = str(self.root / "memory.lock")
+        self.env["BRAIN_BM25_INDEX"] = str(self.root / "bm25_index.json.gz")
+        self.env["BRAIN_RECALL_REFRESH"] = "0"
+        (self.root / "home").mkdir()
+        self.env["HOME"] = self.env["USERPROFILE"] = str(self.root / "home")
 
     def tearDown(self):
         self.temp.cleanup()

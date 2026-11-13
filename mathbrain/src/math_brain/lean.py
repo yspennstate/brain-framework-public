@@ -257,7 +257,7 @@ class LeanResult:
 
         A build that passes as a diagnostic says here why it cannot issue evidence. On a platform where the Lean
         executable cannot be held against replacement (every platform but Windows) that includes
-        executable_lock_enforced (account04/B18, B18-R79-LEAN-POSIX-AUTHORITY-UNREACHABLE-20260929)."""
+        executable_lock_enforced."""
 
         return tuple(name for name, ok in self._authority_gates() if not ok)
 
@@ -1578,7 +1578,7 @@ def check_lean_file(
         reason = "Lean kernel build passed from the immutable local project snapshot"
         if not lease.lock_enforced:
             # the authority is Windows-only: elsewhere the executable is not held against replacement, so a passing
-            # build is a diagnostic and can issue no LEAN_KERNEL evidence (account04/B18-R79)
+            # build is a diagnostic and can issue no LEAN_KERNEL evidence
             reason += ("; diagnostic only: authority unsupported on this platform (the Lean executable can be held "
                        "against replacement only on Windows), so no LEAN_KERNEL evidence can be issued")
     elif failure_reason is not None:

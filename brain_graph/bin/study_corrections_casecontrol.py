@@ -1,5 +1,4 @@
-"""study_corrections_casecontrol.py - does the membrane's correction line rise before his corrections? (27 Sep,
-claude-825b1305; pre-registered 14:2x in study/TWO_DAY_RUN_2026-09-26.md).
+"""study_corrections_casecontrol.py - does the membrane's correction line rise before his corrections?
 
 The per-session replay (study_live_membrane + score_corrections_per_session) had three of his sessions with a correction
 after a sampled moment, too few to tell. This uses every correction or repeat of his after the cut instead of a sample:
@@ -21,19 +20,15 @@ the same reaction, scored against the SAME controls the case drew. A line that a
 above its placebo; a line that only rises with the session's phase scores them alike. The draws of the controls are not
 changed by the option, so the case arm reproduces the run without it.
 
-Each result carries evidence_generation (28 Sep, account01/B01 r66, B01-R13-CORRECTION-CASECONTROL-EVIDENCE-GENERATION-
-UNBOUND-20260928): the sha256 of the code that scored, the policy, the cut file, the sidecar and learned store, a digest of
+Each result carries evidence_generation: the sha256 of the code that scored, the policy, the cut file, the sidecar and learned store, a digest of
 every event of his sessions the study read (recaptured transcripts with the verdicts put back, so one changed transcript
 or verdict row changes it even when the cut does not move), and the per-moment rows file with its sha256 and row count;
 its id is the sha256 of all of them. Digests, counts and cutoffs only: no transcript text. verify_casecontrol.py
 recomputes the result from the rows file and refuses a missing or altered one.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import hashlib
 import json
 import os

@@ -1,5 +1,5 @@
 """study_drift_live.py (from study_drift_casecontrol.py, with the live arm) - can the brain graph tell that a session has drifted from his last ask, before he
-corrects it? (27 Sep, claude-825b1305; pre-registered 16:2x in study/TWO_DAY_RUN_2026-09-26.md)
+corrects it?
 
 His words, 19 Jul: "if we deviate too much from the propts then a propt fires, so every single part of the propt should be
 part of the brian, and if we move too far away it should fire, algorithmicl as part of the network". The question put to
@@ -24,12 +24,9 @@ sidecar), union (share with neither). Primary: union against word, per case, pai
 17:0x: a store cut on 1 Sep knew 78 pct of the ask words and little of September's territory).
 Counts only in OUT_JSON; per-moment rows (session prefix, time, scores, case flag - no words) go to study/.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import json
 import os
 import random

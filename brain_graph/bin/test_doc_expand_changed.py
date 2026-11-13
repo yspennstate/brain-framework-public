@@ -1,4 +1,4 @@
-"""Controls for doc_expand.py's changed-memory selection and its source digest (27 Sep, claude-825b1305).
+"""Controls for doc_expand.py's changed-memory selection and its source digest.
 
 A memory edited after its questions were written must get new ones; one merely touched, or edited beyond the part the
 question-writer reads, must not. Everything runs in a temporary folder with the Haiku call replaced; nothing live is read
@@ -6,12 +6,9 @@ or written.
 
     python test_doc_expand_changed.py
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import json
 import os
 import shutil
@@ -57,7 +54,7 @@ def main():
         write(mem, "m_settling", "Written a moment ago", "body text six", now - 10)
         long_tail = "x " * 800
         write(mem, "m_tail", "Edited only far past what the writer reads", "start " + long_tail + " tail changed", now - 3600)
-        # account01/B02 auto11: an edit made while the questions were being written (file older than the row) and one
+        # an edit made while the questions were being written (file older than the row) and one
         # made 30 s after the row; the digest has to catch both
         t_r = now - 3600
         write(mem, "m_during", "Edited while its questions were being written", "the text after the edit", t_r - 30)

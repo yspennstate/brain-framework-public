@@ -1,6 +1,5 @@
 """study_standing_orders.py - could the brain have handed the agent the order he then had to say again?
-(27 Sep 18:0x, claude-825b1305; his 17:4x "think about who it is not helping, and make it work ... the other index
-method does help, is there a way to combine them")
+(Asked whether the index method and the word method could be combined)
 
 Of his 73 corrections and repeats since 1 Sep, 22 restated an order of his that the brain already held (labelled by
 hand in standing_orders_labels.json: the GPU nine times, pictures and 3Blue1Brown motion six, the voice four, public
@@ -22,12 +21,9 @@ the number of distinct orders each method put in its top two over the stretch (n
 
     python study_standing_orders.py LABELS_JSON OUT_JSON
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import datetime
 import glob
@@ -44,14 +40,14 @@ import bm25  # noqa: E402
 import live_membrane as LM  # noqa: E402
 import study_live_membrane as SLM  # noqa: E402
 
-MEM = os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "memory")
+MEM = os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace("\\", "-").replace("/", "-")), "memory")
 REPO_MEM = os.path.join(os.path.expanduser("~"), "brain-repo", "01_ai_consciousness", "claude", "memory")
 FIELD = re.compile(r"^\s*(created_at|created|status|superseded_by)\s*:\s*(.+)$", re.M)
 SLUG_DAY = re.compile(r"_(20\d\d)_(\d\d)_(\d\d)")
 TOKEN = re.compile(r"[a-z][a-z0-9]{2,}")
 NOISE = {"users", "owner", "appdata", "local", "temp", "claude", "scratchpad", "projects", "com", "www", "http", "https",
          "exe", "bin", "tmp", "the", "and", "for", "with", "src", "lib", "home", "jsonl", "json", "txt", "html", "memory",
-         MEM.split(os.sep)[-2].lower(), "python", "bash", "powershell", "tool", "cmd", "file", "dir", "proj", "said", "kw", "hook"}
+         "python", "bash", "powershell", "tool", "cmd", "file", "dir", "proj", "said", "kw", "hook"}
 WEEKS = [("2026-09-01 00:00", "X_drift0901"), ("2026-09-08 00:00", "X_drift0908"), ("2026-09-15 00:00", "X_drift0915"),
          ("2026-09-22 00:00", "X_drift0922")]
 ARMS = ("ask", "context", "graph", "both")

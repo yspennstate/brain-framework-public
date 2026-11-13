@@ -1,4 +1,4 @@
-"""test_graph_learn_bars.py - the memory bars move once per batch of new evidence (27 Sep, claude-825b1305; the acceptance
+"""test_graph_learn_bars.py - the memory bars move once per batch of new evidence (27 Sep; the acceptance
 test the audit of 27 Sep asked for: replaying unchanged evidence must not move the threshold or the policy).
 
     python test_graph_learn_bars.py [PATH_TO_graph_learn.py]
@@ -7,9 +7,9 @@ import importlib.util
 import os
 import sys
 
-PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.expanduser("~"), ".claude", "brain_graph", "bin",
-                                                             "graph_learn.py")
-sys.path.insert(0, os.path.join(os.path.expanduser("~"), ".claude", "brain_graph", "bin"))   # its own imports
+HERE = os.path.dirname(os.path.abspath(__file__))
+PATH = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(HERE, "graph_learn.py")
+sys.path.insert(0, os.path.dirname(PATH))   # its own imports
 spec = importlib.util.spec_from_file_location("graph_learn_under_test", PATH)
 G = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(G)

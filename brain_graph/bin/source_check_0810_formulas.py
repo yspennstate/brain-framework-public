@@ -1,4 +1,4 @@
-"""source_check_0810_formulas.py - the second instrument for the 10 Aug concept replacements (28 Sep, claude-825b1305).
+"""source_check_0810_formulas.py - the second instrument for the 10 Aug concept replacements.
 
 The first pass (source_check_0810.py) found 0 of 25 statements contained in their harvested artifacts. Read by hand, the
 reason is the replacement itself: each harvested statement had lost its formulas ("then  is a divisor of ."), and the
@@ -12,12 +12,9 @@ A and B are computed; C is printed for a person to judge and the judgement is re
 
     python source_check_0810_formulas.py CONCEPTS_JSON WIKI_CACHE OBJECTS_ROOT OUT_JSON OUT_MD
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import difflib
 import io
 import json

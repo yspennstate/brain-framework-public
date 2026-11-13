@@ -536,7 +536,7 @@ The 80 percent target is useful production demand, not an idle stress test, a gu
 
 **Check:** Record actual input/output, renderer or encoder, device, PID plus birth, sampled compute/encode utilization, VRAM and end-to-end usable output per time. Check recent RAM/commit low-water headroom before model staging; unload a cancelled model at a safe boundary. Preserve BelowNormal background workers, CPU mask 0xc3f0 and responsive terminals. Reduce load on actual UI, thermal or memory pressure.
 
-**Evidence:** CX3567, owner_update:2026-09-05T09:26:46Z, owner-update:2026-09-05-active-gpu-use, owner-update:1788626329242, memory:owner_order_use_80_percent_of_the_gpu_everyone_2026_09_05.
+**Evidence:** CX3567, owner_update:2026-09-05T09:26:46Z, owner-update:2026-09-05-active-gpu-use, owner-update:1788626329242, memory:gpu_use_target_2026_09_05.
 
 **Hint:** Apply the cited owner preference; operational techniques are starting points until their named checks have actual evidence.
 

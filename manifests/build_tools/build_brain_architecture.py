@@ -24,7 +24,7 @@ if any(a in ("-h", "--help") for a in sys.argv[1:]):
 
 ROOT = sys.argv[1] if len(sys.argv) > 1 else "."
 CONS = os.path.join(ROOT, "01_ai_consciousness")
-# optional second argument: the live memory folder, when the repo's mirror of it lags (the Mac has no
+# optional second argument: the live memory folder, when the repo's mirror of it lags (macOS has no
 # mirror step; its views describe ~/.claude/projects/<slug>/memory, 30 Oct 2026)
 LIVE = sys.argv[2] if len(sys.argv) > 2 else os.path.join(CONS, "claude", "memory")
 OUT  = os.path.join(CONS, "brain")
@@ -34,13 +34,16 @@ import contextlib
 @contextlib.contextmanager
 def _out(name):
     """Write a view to name.tmp and rename it over the old one, so a build stopped by its cap (RELATED.md
-    takes over an hour on a loaded Mac) leaves the previous generation instead of a cut-off file."""
+    takes over an hour on a loaded macOS machine) leaves the previous generation instead of a cut-off file."""
     path = os.path.join(OUT, name)
     with io.open(path + ".tmp", "w", encoding="utf-8") as fh:
         yield fh
     os.replace(path + ".tmp", path)
 DREAMING = os.path.join(ROOT, "12_cognitive_architecture", "dreaming")
 sys.path.insert(0, DREAMING)
+# A fresh install keeps the dreaming scripts only under ~/.claude/dreaming; the repo copy of
+# that folder appears later, if at all. Look there second so supersession.py is found either way.
+sys.path.insert(1, os.path.join(os.path.expanduser("~"), ".claude", "dreaming"))
 from supersession import active_supersessions
 SUPERSEDED = active_supersessions(
     LIVE, index_path=os.path.join(DREAMING, "superseded.tsv"), include_frontmatter=True)

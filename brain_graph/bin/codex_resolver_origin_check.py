@@ -1,5 +1,4 @@
-"""codex_resolver_origin_check.py - how many of his Codex prompts does the rollout-origin rule move? (R30, scheduled audit
-account02/B15, B15-R30-ORIGIN-TEXTKEY-COLLISION-20260928; 28 Sep 10:0x, claude-825b1305)
+"""codex_resolver_origin_check.py - how many of his Codex prompts does the rollout-origin rule move?
 
 Resolves every Codex row of his in the prompt ledger twice with one Resolver: with the rollout check as it was (the
 prompt's opening anywhere in a rollout line) and as it is (inside a message sent to that session). Reports how many rows
@@ -8,12 +7,9 @@ rollout that carries a prompt only in developer context, and one that carries it
 
     python codex_resolver_origin_check.py OUT_JSON
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import io
 import json

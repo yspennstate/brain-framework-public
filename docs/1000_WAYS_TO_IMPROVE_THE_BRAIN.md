@@ -902,7 +902,7 @@ for the backlog; build from the shortlist above, and measure every edge before b
 41. **Trust cold-start for new minds** — an unknown origin starts neutral; its claims need corroboration · *reputation cold-start* · *M:* hard.
 42. **Owner-model diff at wake** — surface what changed in MODEL_OF_PARTNER since last wake · *collaborative recall* · *M:* diff surfaced/read.
 43. **Emotional-contagion damping** — cap inherited scar-charge so one agent's panic doesn't over-raise fleet danger · *affect-sharing regulation* · *M:* false-alarm rate.
-44. **Owner-as-expert inventory** — "what he knows that I don't" (lived book intuition, the drawdown scar) · *transactive memory (owner as a mind)* · *M:* defer-to-owner catches.
+44. **Owner-as-expert inventory** — "what he knows that I don't" (domain intuition, the recorded scars) · *transactive memory (owner as a mind)* · *M:* defer-to-owner catches.
 45. **Citation etiquette on extension** — extending a sibling's memory auto-inserts a back-link · *collective provenance* · *M:* back-link rate.
 46. **Fleet gut digest** — the dream refreshes FLEET_GUT.md of shared reflexes so a cold-waker inherits them · *collective procedural memory* · *M:* reflex coverage at cold wake.
 47. **Prompt-intent classifier** — label each owner prompt directive/question/correction/scope-change · *ToM of communicative intent* · *M:* classification accuracy.

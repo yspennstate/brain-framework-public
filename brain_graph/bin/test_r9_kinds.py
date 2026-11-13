@@ -1,5 +1,5 @@
 """test_r9_kinds.py - the fast layer leaves test workers out by the store's rule, and the kinds cache keeps every writer's
-kinds (27 Sep, claude-825b1305; scheduled audits account01/B15 and account02/B15, job R9). Temp files only.
+kinds. Temp files only.
 
     python test_r9_kinds.py [PATH_TO_live_delta.py] [PATH_TO_session_kinds.py]
 
@@ -10,12 +10,9 @@ Controls:
  3. with the default cache the fast layer asks session_kinds.kind, the store's own call (monkeypatched here)
  4. four processes that each load the cache, wait, add 25 kinds and save: all 100 plus the 2 already there survive
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import importlib.util
 import json
 import os

@@ -24,7 +24,7 @@ SWAP_WARN_MB = 6500         # swap used: hold new launches (16 GB machine)
 SWAP_DISTRESS_MB = 12000    # swap used: shed load before macOS starts killing processes
 # Swap TRAFFIC (vm_stat swapins + swapouts, pages/s since the last cycle). On 31 Oct 22:50 three jobs paged each other
 # at ~22,000 pages/s (16 KB pages, ~350 MB/s) with swap used 2.4 GB and 35% free, so the size gates above read ok while
-# btcsim4 ran at 3% of its speed. Lifetime average over 44 h was 3,300/s; thresholds provisional until swap_io_ps history.
+# a simulation ran at 3% of its speed. Lifetime average over 44 h was 3,300/s; thresholds provisional until swap_io_ps history.
 SWAP_IO_WARN_PS = 5000
 SWAP_IO_DISTRESS_PS = 15000
 _sat_run = 0

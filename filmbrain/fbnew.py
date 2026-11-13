@@ -3,8 +3,8 @@
 Start a new film. Writes a working project you can render immediately and then
 edit down to what you actually want.
 
-  python fbnew.py "the trading book explained" --kind lecture --minutes 6
-  cd ~/films/the_trading_book_explained
+  python fbnew.py "the brain explained" --kind lecture --minutes 6
+  cd ~/films/the_brain_explained
   python build.py
 
 The point is that the scaffold RENDERS before you have written anything. A
@@ -40,10 +40,9 @@ sys.path.insert(0, os.path.join(FB, "pipeline"))
 from beatfilm import Film
 import visuals as V
 
-NL = os.path.expanduser("~/narration_lab")
-VENV_PY = ("Scripts", "python.exe") if os.name == "nt" else ("bin", "python")
-AB_PY = os.path.join(os.path.expanduser("~/audiobook"), "venv", *VENV_PY)
-NL_PY = os.path.join(NL, "venv", *VENV_PY)
+NL = os.path.expanduser(r"~//narration_lab")
+AB_PY = os.path.expanduser(r"~//audiobook//venv//Scripts//python.exe")
+NL_PY = os.path.join(NL, "venv", "Scripts", "python.exe")
 HERE = os.path.dirname(os.path.abspath(__file__))
 CNW = (0x08000000 if os.name == "nt" else 0)
 

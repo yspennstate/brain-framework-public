@@ -1,5 +1,5 @@
-"""calib_orders_log.py - the orders-channel calibration read from the capture log instead of the transcripts
-(27 Sep 19:1x, claude-825b1305). calib_orders_fast.py re-parses every transcript since the start date, gigabytes, which
+"""calib_orders_log.py - the orders-channel calibration read from the capture log instead of the transcripts.
+calib_orders_fast.py re-parses every transcript since the start date, gigabytes, which
 at BelowNormal behind the film renders did not finish loading in 25 minutes. The capture log (events_touch.jsonl) holds
 the same events one JSON line each, time and session first, so a byte filter reads it in a minute.
 
@@ -11,12 +11,9 @@ Two parts, both with calib_orders_fast's replay and serving rule (stability 2, e
 
     python calib_orders_log.py OUT_JSON [--since "YYYY-MM-DD HH:MM"] [--membrane PATH] [--labels PATH] [--workers N]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import json
 import multiprocessing as mp

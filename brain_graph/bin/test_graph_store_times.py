@@ -1,11 +1,8 @@
 """Edge times in the store (graph_store.py, 27 Sep) against the fast layer's own computation (live_delta.pairs_of) on the
 same synthetic log, and through the sidecar (live_sidecar_times.py) into its edge table."""
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import importlib.util
 import json
 import os
@@ -16,7 +13,7 @@ import tempfile
 import numpy as np
 
 SP = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.expanduser("~/.claude/brain_graph/bin"))
+sys.path.insert(0, os.environ.get("BRAIN_GRAPH_BIN", os.path.dirname(os.path.abspath(__file__))))
 
 
 def load(name, path):
@@ -27,7 +24,7 @@ def load(name, path):
     return m
 
 
-BIN = os.path.expanduser("~/.claude/brain_graph/bin")
+BIN = os.environ.get("BRAIN_GRAPH_BIN", os.path.dirname(os.path.abspath(__file__)))
 GS = load("graph_store", os.path.join(BIN, "graph_store.py"))
 LS = load("live_sidecar", os.path.join(BIN, "live_sidecar.py"))
 LD = load("live_delta", os.path.join(BIN, "live_delta.py"))

@@ -1,19 +1,15 @@
-"""test_queued_prompts.py - his prompts typed while an agent works reach the capture and the verdict file (27 Sep,
-claude-825b1305). Such a prompt is written only as a queued_command attachment (and a queue-operation record), never
+"""test_queued_prompts.py - his prompts typed while an agent works reach the capture and the verdict file. Such a prompt is written only as a queued_command attachment (and a queue-operation record), never
 as a user record; until 27 Sep extract_touch_events.scan_file and backfill_history._verdicts_in read user records
 alone, and missed 1,213 of his 5,269 prompts since 16 Aug and 59 of his 165 corrections.
 
     python test_queued_prompts.py        exit 0 all pass, 1 a failure
 
 Controls on synthetic transcripts in a temp dir, plus one real transcript when it is present (his queued correction of
-26 Sep 20:11 in session fea50eb9). The pre-fix files fail the queued controls (checked at install).
+26 Sep 20:11 in session 5e550002). The pre-fix files fail the queued controls (checked at install).
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import collections
 import json
 import os
@@ -86,7 +82,7 @@ BH._verdicts_in(write("bh.jsonl", [queued("2026-09-27T09:00:00.000Z", "that is w
                 lambda ts, s, v: got.append(v), collections.Counter())
 check("the verdict backfill reads a queued correction and counts it once", got == ["correction"])
 
-REAL = os.path.expanduser(r"~\.claude\projects\{{BRAIN_SLUG}}\fea50eb9-ae81-4e52-bf60-6159a7bebd4a.jsonl")
+REAL = os.path.expanduser(r"~\.claude\projects\{{BRAIN_SLUG}}\5e550002-ae81-4e52-bf60-6159a7bebd4a.jsonl")
 if os.path.exists(REAL):
     t_corr = X.epoch("2026-09-26T17:11:01.000Z")
     e, st = scan(REAL)

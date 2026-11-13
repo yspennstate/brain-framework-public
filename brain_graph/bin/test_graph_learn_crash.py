@@ -1,5 +1,5 @@
 """test_graph_learn_crash.py - a learner run that dies after its database commit and before its state is saved does not
-count the same evidence twice (28 Sep 2026, claude-825b1305; interactive audit IA-20260928-06).
+count the same evidence twice (28 Sep 2026; interactive audit IA-20260928-06).
 
     python test_graph_learn_crash.py [--module GRAPH_LEARN.py] [--old OLD_GRAPH_LEARN.py]
 

@@ -1,15 +1,11 @@
-"""test_shared_edit_collision_hook.py - the in-process equivalence the dispatcher's allowlist asks for (28 Sep,
-claude-825b1305): shared_edit_collision_hook.py run through hook_dispatch.run_in_process and run as its own process give
+"""test_shared_edit_collision_hook.py - the in-process equivalence the dispatcher's allowlist asks for: shared_edit_collision_hook.py run through hook_dispatch.run_in_process and run as its own process give
 the same stdout and exit code on silent and loud payloads, each from the same starting ledger.
 
     python test_shared_edit_collision_hook.py
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import json
 import os
 import shutil

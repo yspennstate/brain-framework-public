@@ -1,6 +1,5 @@
 """test_fix_candidate_learner.py - the fix memory an error line names is recorded in both arms and under both estimands,
-and the learner judges it in both arms and learns from it in neither (28 Sep 2026, claude-825b1305; scheduled audit
-account01/B08 R49, B08-R49-TOTAL-ESTIMAND-FIX-ID-048 and B08-R49-ADAPTIVE-LEARNER-INTERFERENCE-047).
+and the learner judges it in both arms and learns from it in neither.
 
     python test_fix_candidate_learner.py [--membrane PATH] [--learner PATH] [--old-membrane PATH] [--old-learner PATH]
 
@@ -10,30 +9,26 @@ or HOLD. The fire-log rows it writes are then given to graph_learn.main() on a t
 receiver behaviour in both arms, and the learner's state is compared. Nothing live is read or written.
  M1 SHOW, focal: the row names M, delivered, spent, and the index of the line that carried it
  M2 HOLD, focal: the row names M, not delivered, spent; held_fix names M
- M3 HOLD, total: the row names M, not delivered, not spent, and no held_fix (the case B08-048 found unrecorded)
+ M3 HOLD, total: the row names M, not delivered, not spent, and no held_fix
  M4 SHOW, total: delivered and spent
  M5 a failed save in HOLD: nothing served, the row names M as withheld, neither delivered nor spent
  M6 the candidate is never kept in the session state on disk
  M7 the record carries the unit the assignment was drawn for (session, line, two-hour block), the same in both arms:
-    the trial id a paired analysis joins on (account03/B08 auto61, B08-R49-HELD-FIX-JUDGED-PROVENANCE-019)
+    the trial id a paired analysis joins on
  L1 SHOW and focal HOLD with no read of M: the same learned edges (none), the same tired set, the same memory-bar evidence
     and the same fire-rate slots; the fix report counts one shown and one held, neither read
  L2 four SHOWs of M in a day, never read: M is not tired; the control, four memory-channel lines of M never read: tired
  L3 a SHOW read within 30 minutes: no learned edge, the fix report counts it read; the control, a memory-channel line
     read: a positive edge
  L4 a row written before this change (no fix record): its carried memory is still read as a memory line
- L5 a SHOW record whose carried line has been deleted while the error line stays (account04/B20 r14,
-    B20-R37-COARSE-COMPLIANCE-WITHOUT-UPTAKE-20260928): counted as shown by assignment and as a missing line, never as a
+ L5 a SHOW record whose carried line has been deleted while the error line stays: counted as shown by assignment and as a missing line, never as a
     delivered candidate; the intact record counts no missing line
 With --old-learner the learner before this change must fail L1 and L2 (N1, N2); with --old-membrane the membrane before
 this change must leave the total-estimand HOLD row without the candidate (N3).
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import contextlib
 import copy
 import importlib.machinery
@@ -112,7 +107,8 @@ def membrane_row(path, name, hold, estimand="focal", fail_save=False, sid=None):
         open(lm.SIDECAR, "w").close()
         tp = os.path.join(tmp, "transcript.jsonl")
         open(tp, "w").write("{}\n")
-        pol = json.load(open(os.path.join(H, ".claude", "brain_graph", "live", "policy.json"), encoding="utf-8"))
+        pp = os.path.join(H, ".claude", "brain_graph", "live", "policy.json")
+        pol = json.load(open(pp, encoding="utf-8")) if os.path.exists(pp) else {}   # a fresh install has none yet
         pol.update(max_lines=2, max_fires_per_hour=6, serve_attr=False, serve_mem=False, serve_word=False,
                    serve_verdict=False, serve_orders=False, serve_successor=False, serve_err=True, serve_place=False,
                    err_hebb_min=1.0, err_skip=[], refractory_s=1800, hold_estimand=estimand)
@@ -170,6 +166,7 @@ def learn(path, name, fires, events):
         gl.STATUS, gl.STATE, gl.LOGMD = (os.path.join(live, "LIVE_STATUS.json"), os.path.join(live, "learn_state.json"),
                                          os.path.join(live, "LEARNING_LOG.md"))
         gl.DIAL, gl.PROJECTS = dial, os.path.join(tmp, "projects")
+        gl.EMITTED = os.path.join(live, "emitted.jsonl")        # the hook's print receipts: none in this run
         real_time, argv = gl.time.time, sys.argv
         gl.time.time = lambda: close + 100
         sys.argv = ["graph_learn.py"]
@@ -278,8 +275,8 @@ def main():
                                                                                      1.0, 0.0)],
           "L3 a SHOW read within 30 min: edges %s, fix read %s; the control, a memory-channel line read: edges %s" % (
               r[3], r[0]["precision"]["fix"]["shown_read"], rc[3]))
-    old_row = {k: v for k, v in s_row.items() if k != "fix"}
-    o = learn(LEARN, "gl_l4", [old_row], [])
+    old_row = {k: v for k, v in s_row.items() if k not in ("fix", "eid")}   # older rows carry neither
+    o = learn(LEARN, "gl_l4", [old_row], [[NOW + 3600, sid8, "dir", "x"]])   # seen after: not censored
     check(sorted(x[1] for x in o[3]) == ["mem:" + M, "mem:" + M] and all(x[3] == 1.0 for x in o[3]),
           "L4 a row from before this change (no fix record) is read as before: edges %s" % (o[3],))
 

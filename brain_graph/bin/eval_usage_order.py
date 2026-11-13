@@ -1,6 +1,6 @@
-"""eval_usage_order.py - does the usage tilt help once it is allowed to change the order? (27 Sep, claude-825b1305)
+"""eval_usage_order.py - does the usage tilt help once it is allowed to change the order?
 
-A scheduled audit (account03/B02, 26 Sep) showed that brain.py's usage tilt - ACT-R base-level activation of how often
+A scheduled audit showed that brain.py's usage tilt - ACT-R base-level activation of how often
 and how lately each memory was read, max +15 percent - multiplies the display score after the order is fixed, so on the
 default path it has never moved a rank. This measures the version that re-sorts the body of the bm25 block by the tilted
 score (brain_usage_study.py, a copy of brain.py with two study switches; the live file is untouched):
@@ -16,12 +16,9 @@ Counts only in the result.
 
     python eval_usage_order.py OUT_JSON [--sets bank,ep,agent,keys] [--workers 4]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import concurrent.futures
 import hashlib
 import io
@@ -102,7 +99,7 @@ STATE_GLOBS = (os.path.join(DR, "*.json"), os.path.join(DR, "*.gz"), os.path.joi
 def state_files():
     """{path: (size, mtime)} of the files a recall can read besides the memories: the word index and its caches, the
     graph lane's dial, store and walk cache, the sidecars, policies and tables. Compared at the start and the end of a
-    run, it says whether the retrieval state held still while the pairs ran (account03/B01's R1 audit, 27 Sep)."""
+    run, it says whether the retrieval state held still while the pairs ran."""
     import glob as _g
     out = {}
     for pat in STATE_GLOBS:

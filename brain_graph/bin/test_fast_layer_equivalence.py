@@ -1,5 +1,5 @@
 """test_fast_layer_equivalence.py - the five-minute fast layer (live_delta) keeps the targets the six-hour store
-(graph_store) keeps (27 Sep, claude-825b1305), after account01/B20 R12: the two differed on first touches outside the fast
+(graph_store) keeps: the two differed on first touches outside the fast
 layer's 8 MiB look-back and on which tenth of the tool targets they sampled.
 
     python test_fast_layer_equivalence.py [PATH_TO_graph_store.py PATH_TO_live_delta.py]
@@ -13,12 +13,9 @@ Controls:
     shown so the control can fail)
  E4 first_touch.json lists only sessions active in the last seven days of the store, and only first-touch kinds
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import importlib.util
 import json
 import os

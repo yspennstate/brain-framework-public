@@ -1,4 +1,4 @@
-"""eval_rewrite_his_words.py - does the rewrite before search help on HIS wording? (27 Sep, claude-825b1305)
+"""eval_rewrite_his_words.py - does the rewrite before search help on HIS wording?
 
 recall_rewrite.py was measured on model-reworded bank questions (+9 points at top 5). This asks the same of his own 56
 owner-voice questions (eval_brain_recall_fresh BANK + BANK_V2_EXTRA) and his 82 real first prompts
@@ -9,12 +9,9 @@ RECALL_REWRITE_NO_LOG=1). Counts only in the result; rows stay in the study fold
 
     python eval_rewrite_his_words.py OUT_JSON [--workers 3] [--only bank|ep]
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import concurrent.futures
 import json
 import math

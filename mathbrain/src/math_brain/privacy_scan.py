@@ -99,7 +99,7 @@ _SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("google-api-key", re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b")),
     ("slack-token", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{20,}\b")),
     # an incoming-webhook, workflow or trigger URL is the credential itself: whoever holds it can post to the channel
-    # (account04/B15, B15-R79-SLACK-INCOMING-WEBHOOK-URL-UNSCANNED-20260929-01: the host is public, so no other check
+    # (the host is public, so no other check
     # refused it). Two path segments at least, so a bare documentation host does not fire.
     (
         "slack-webhook",

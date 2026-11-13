@@ -1,17 +1,14 @@
-"""reseal_laundering_control.py - the attack B07 named (B07-R34-MATH-RESEAL-PREBACKUP-LAUNDERING-021), run on copies:
+"""reseal_laundering_control.py - the attack B07 named, run on copies:
 a batch row altered before the 22 Aug backup was taken, consistently (claim statement, claim digest over the raw
 payload, node body), so the re-seal's first rule sees nothing wrong. The old rule (identical in the 22 Aug backup) must
 re-seal it - the finding reproduced; the rule with --first-record must refuse it, and must still re-seal every other row
-it re-sealed before (28 Sep 09:4x, claude-825b1305). The live store and its backups are only read.
+it re-sealed before. The live store and its backups are only read.
 
     python reseal_laundering_control.py POPULATION_DIR SRC_DIR WORK_DIR OUT_JSON
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import glob
 import io
 import json

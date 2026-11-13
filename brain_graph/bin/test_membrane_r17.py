@@ -1,5 +1,5 @@
-"""test_membrane_r17.py - live_membrane.run from load to save as one transaction (27 Sep, claude-825b1305), after
-account01/B15 and account01/B20 (R17): parallel calls of one session could each serve the same line, a failed save still
+"""test_membrane_r17.py - live_membrane.run from load to save as one transaction:
+parallel calls of one session could each serve the same line, a failed save still
 returned the line, and a save failure outside the rename could leave a served row for a line that never printed.
 
     python test_membrane_r17.py [PATH_TO_live_membrane.py]
@@ -16,12 +16,9 @@ one does. Controls:
  T6 a lock held right now by another call: no line within a second, that lock left in place (held through the module's
     own lock since the lock became the operating system's, 28 Sep)
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import errno
 import importlib.util
 import json

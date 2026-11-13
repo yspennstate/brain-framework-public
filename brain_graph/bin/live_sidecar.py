@@ -420,7 +420,7 @@ PUBLISH_TRIES, PUBLISH_WAIT = 60, 0.25
 
 def publish(new, out, tries=None, wait=None):
     """Replace out with new, retrying while Windows refuses: SQLite opens its files without FILE_SHARE_DELETE, so a hook
-    reading the sidecar at that moment makes the rename fail (29 Sep, account02/B11 r83). Returns the seconds waited;
+    reading the sidecar at that moment makes the rename fail (29 Sep). Returns the seconds waited;
     raises the last PermissionError when readers held it for the whole budget (15 s), and the caller keeps the old
     sidecar and builds no delta over the new store until a later publish lands."""
     tries = PUBLISH_TRIES if tries is None else tries

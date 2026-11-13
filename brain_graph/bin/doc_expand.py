@@ -1,4 +1,4 @@
-"""doc_expand.py - write down, for each memory, the questions it answers, in plain words (26 Sep, claude-825b1305).
+"""doc_expand.py - write down, for each memory, the questions it answers, in plain words.
 
 The brain's search is lexical: a question in his everyday words misses the note written in technical words about half
 the time, and a rewrite of the QUESTION closes part of that gap (+9 points at top 5, at a model call per search). This
@@ -22,20 +22,20 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 
 HOME = os.path.expanduser("~")
-MEM = os.path.join(HOME, ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "memory")
+MEM = os.environ.get("BRAIN_MEMORY_DIR") or os.path.join(HOME, ".claude", "memory")
 OUT_DIR = os.path.join(HOME, ".claude", "brain_graph", "study", "doc_expansion")
 OUT = os.path.join(OUT_DIR, "expansions.jsonl")
 CLAUDE = os.path.join(HOME, ".local", "bin", "claude.exe" if os.name == "nt" else "claude")
-WORK = (os.path.join(os.environ.get("PUBLIC", HOME), "doc_expand_work") if os.name == "nt"
-        else os.path.join(HOME, ".claude", "brain_graph", "live", "doc_expand_work"))
+WORK = os.environ.get("DOC_EXPAND_WORK") or os.path.join(tempfile.gettempdir(), "doc_expand_work")
 NOWIN = 0x08000000 if os.name == "nt" else 0
 LOCK = threading.Lock()
 PROMPT = """[headless-worker] Below are short notes from a private collection about someone's own projects (software,
-experiments, simulations, films, trading, incidents). For each note, write three different questions a person might ask
+experiments, simulations, films, incidents). For each note, write three different questions a person might ask
 whose answer is in that note. Write them the way a busy person would type them: plain everyday words, not the note's own
 technical terms where an ordinary word would do, no file names unless the question is about the file. Output exactly one
 JSON object per line and nothing else, in the same order as the notes:
@@ -59,19 +59,18 @@ def note_text(slug, limit=700):
     return (desc + " " + body)[:limit].strip() or None
 
 
-# Explicit recovery order: no Claude agents before 15 Oct 23:45 local.
-# Keep the schedule enabled and existing expansion data intact; resume after expiry.
-OWNER_CLAUDE_HOLD_UNTIL = datetime.datetime.fromisoformat("2026-10-15T23:45:00+03:00").timestamp()
+# Optional pause: no model calls before this epoch time (DOC_EXPAND_HOLD_UNTIL); 0 means no pause.
+CLAUDE_HOLD_UNTIL = float(os.environ.get("DOC_EXPAND_HOLD_UNTIL") or 0)
 
 
-def owner_claude_hold(now=None):
-    return (time.time() if now is None else now) < OWNER_CLAUDE_HOLD_UNTIL
+def claude_hold(now=None):
+    return (time.time() if now is None else now) < CLAUDE_HOLD_UNTIL
 
 
 def ask(batch):
     """One Haiku call for [(slug, text)]; returns {slug: [q1, q2, q3]} for the notes it answered."""
-    if owner_claude_hold():
-        return {}, None, "owner hold: no Claude calls before 2026-10-15T23:45:00+03:00"
+    if claude_hold():
+        return {}, None, "hold: no model calls before DOC_EXPAND_HOLD_UNTIL"
     ids = {"n%03d" % i: slug for i, (slug, _t) in enumerate(batch, 1)}
     notes = "\n".join("[id=n%03d] %s" % (i, t) for i, (_s, t) in enumerate(batch, 1))
     cmd = [CLAUDE, "-p", "--safe-mode", "--model", "claude-haiku-4-5-20251001", "--output-format", "json",
@@ -113,10 +112,9 @@ def new_slugs(done, settle_s=120):
     minutes is left for the next run (it may still be being written). `done` is {slug: (written_at, sha or None)},
     the store's newest row per slug, which is the row bm25 uses. Changed means the text the writer sees now has a
     different digest from the row's; a row from before 27 Sep has no digest, and then a file modified after the row
-    counts as changed. Until 27 Sep a memory edited after its questions kept them (8 of 17,428 that morning, all
-    edited within the day; account03/B02's R4 audit). Until 28 Sep 04:1x the time test still ran first for a row with
+    counts as changed. Until 27 Sep a memory edited after its questions kept them. Until 28 Sep 04:1x the time test still ran first for a row with
     a digest too, so an edit made while the questions were being written, or within a minute after the row, was never
-    compared (account01/B02 auto11, B02-R4-SHA-INVALIDATION-MTIME-DEADZONE): the digest now decides every row that has
+    compared: the digest now decides every row that has
     one, which costs one read of each settled memory per run (15.6 s for 17,546 on 28 Sep, once an hour)."""
     sys.path.insert(0, os.path.join(HOME, ".claude", "dreaming"))
     import bm25
@@ -174,8 +172,8 @@ def main():
     a = ap.parse_args()
     if bool(a.slugs) == bool(a.new):
         ap.error("give exactly one of --slugs FILE or --new")
-    if owner_claude_hold():
-        print("owner hold: no Claude calls before 2026-10-15T23:45:00+03:00; no output changed", flush=True)
+    if claude_hold():
+        print("hold: no model calls before DOC_EXPAND_HOLD_UNTIL; no output changed", flush=True)
         return
     if a.out:
         OUT = os.path.abspath(a.out)

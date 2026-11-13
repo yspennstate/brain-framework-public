@@ -150,7 +150,7 @@ def keep_tool(s, ts, x, rate=0.1):
     """Whether a tool target is kept: a tenth of them, by a hash of the session key, the time to the millisecond and the
     node name. The fast layer (live_delta.keep_tool) uses this same rule, so a tool target it keeps between two stores
     is the one the next store keeps. Until 27 Sep the store drew from a seeded sequential generator, which no layer that
-    starts mid-log can reproduce: the two kept different tenths (account01/B20 R12)."""
+    starts mid-log can reproduce: the two kept different tenths."""
     return (zlib.crc32(("%s|%.3f|%s" % (s, ts, x)).encode("utf-8")) % 10000) < rate * 10000
 
 
@@ -224,7 +224,7 @@ def build(events, out, until=None, window=600.0, k=40, hub=0.30, tool_rate=0.1, 
                 S[n], TS[n], ND[n] = j, e["ts"], i
                 n += 1
     S, TS, ND = S[:n], TS[:n], ND[:n]
-    # An event read twice is one event (28 Sep, account03/B12 R12). A fork subagent's transcript carries the parent's
+    # An event read twice is one event (28 Sep). A fork subagent's transcript carries the parent's
     # records under the same uuid, and one hook call can be written as two attachments at the same millisecond: 2.5
     # percent of the log's lines repeat another line exactly. A capture interrupted before its state is saved would add
     # its tail again the same way. The same session, time and node count once; which copy stays does not matter.
@@ -436,7 +436,7 @@ class GraphStore:
             # (study_lag_edges.py, THREE_DAY_RUN 28 Sep): at the membrane's 2 percent bar it lost to equal-credit co-use
             # (38 right of 507 lines on 17 sessions, against 41 of 454 on 23); it found more right lines only when
             # serving four or more times as many lines as the membrane does. So the store keeps equal credit and names it
-            # for what it is (scheduled audit account03/B03 r51).
+            # for what it is.
             return "led_to" if self.names[x].startswith("err:") else "context"
         for j in ids:
             xs, w = self.rows(j, cap)
@@ -595,7 +595,7 @@ def main():
     sub.add_parser("selftest")
     a = ap.parse_args()
     if a.cmd == "build":
-        # the scheduled builds' population rule (27 Sep, audit account03/B15 R9): this command used to keep the test
+        # the scheduled builds' population rule (27 Sep): this command used to keep the test
         # workers run_graph.py leaves out, so one event log gave two different stores
         skip, sk = None, None
         if not a.include_test_workers:

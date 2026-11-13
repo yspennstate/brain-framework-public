@@ -12,7 +12,7 @@ maintainer needs in order to not re-import what was deliberately left out.
   checkpoints, learned state files (instinct corpora, salience scores, prediction
   ledgers, embeddings), logs, and the owner-model documents. The formats ship; the
   contents do not. `bootstrap/templates/seed_memories/` re-authors the seed set blank.
-- Everything in the source deployment's excluded domain (its production/trading stack
+- Everything in the source deployment's excluded domain (its production stack
   and anything coupled to it), including: a crash-notifier whose transport was that
   stack's mailer, an infrastructure prober for its data hub, snapshot/zip utilities
   hardwired to its trees, a disk-hygiene tool bound to its data directories and archive

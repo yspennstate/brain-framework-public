@@ -703,7 +703,7 @@ def test_one_sealed_run_forms_the_lean_route_and_two_source_trees_do_not(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """account04/B11, B11-R79-CROSS-GENERATION-FORMAL-EVIDENCE-PROMOTES-20260929-01, through the two local
+    """Through the two local
     authorities: the kernel and fidelity records issued for one sealed run promote the claim; a fidelity record
     issued on a revised source tree does not join the first run's kernel record."""
     claim = Claim("For every natural n, n + 0 = n.", ClaimKind.THEOREM)

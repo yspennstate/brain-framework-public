@@ -1,15 +1,12 @@
-"""Controls for math_use.py's session filter and math_note.py's fetch session column (27 Sep, claude-825b1305).
+"""Controls for math_use.py's session filter and math_note.py's fetch session column.
 
 Every path the build reads or writes is pointed into a temporary directory; nothing live is touched.
 
     python test_math_use_sessions.py
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import hashlib
 import importlib.util
 import json
@@ -99,7 +96,7 @@ def main():
             fh.write("%d\t%s\tclaim_F\n" % (now - 50, his))
             fh.write("%d\t\tclaim_G\n" % (now - 40))
             fh.write("%d\t%s\tclaim_H\n" % (now - 30, test))
-            fh.write("%d\t%s\tclaim_K\tfailed:2\n" % (now - 20, his))      # a refused read (B19-R79)
+            fh.write("%d\t%s\tclaim_K\tfailed:2\n" % (now - 20, his))      # a refused read
             fh.write("%d\t%s\tclaim_L\tok\n" % (now - 10, his))
         math_use.STORE = os.path.join(tmp, "store.json")
         sk.CACHE = os.path.join(tmp, "kinds.json")
@@ -167,7 +164,7 @@ def main():
         check("15 fetch log stays empty with no session", rows[2][1:] == ["", "claim_Z"], str(rows))
         check("16 an evaluation's own label wins over the shell's session", rows[3][1:] == ["vib-label", "claim_V"],
               str(rows))
-        # the read's outcome (account04/B19, 30 Sep): the row is written after the read, with ok or failed:<code>
+        # the read's outcome: the row is written after the read, with ok or failed:<code>
         import types
         saved_mods = {k: sys.modules.get(k) for k in ("math_brain", "math_brain.current_note")}
         pkg, cn = types.ModuleType("math_brain"), types.ModuleType("math_brain.current_note")

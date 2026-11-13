@@ -1,6 +1,6 @@
 """study_scar_fire_moviehook.py - for the scar-fire cases whose order had no reflex, did the MOVIE hook (a separate
 channel from the reflexes: ~/.claude/movie_sentinel/movie_alert_hook.py) put the order's wording into the session before
-his correction? Post-hoc beside study_scar_fire_posthoc.py (28 Sep 09:2x, claude-825b1305).
+his correction? Post-hoc beside study_scar_fire_posthoc.py.
 
 For each case it scans the correction's session transcript up to the correction for hook context that carries the
 order's wording (a pattern per theme, below) and reports how many deliveries there were, the first and last relative to
@@ -10,12 +10,9 @@ other hooks' sections (his own prompts, echoed by the owner-prompts hook, carry 
 
     python study_scar_fire_moviehook.py LABELS_JSON POSTHOC_JSON OUT_JSON
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import glob
 import io
 import json

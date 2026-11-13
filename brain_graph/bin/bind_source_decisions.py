@@ -1,5 +1,4 @@
-"""Bind each row-level source decision to the exact row content it judged (28 Sep, claude-825b1305; scheduled audit
-account03/B07 R40, B07-R40-SOURCE-VERDICT-NOT-ENFORCED-BY-APPLY-001).
+"""Bind each row-level source decision to the exact row content it judged.
 
 The source check of the 10 Aug batch judged 75 rows by reading their text against their sources, but its decisions
 named rows only by table and id, so nothing tied a decision to the content that was read. This adds row_sha256 to every
@@ -11,12 +10,9 @@ decision whose row cannot be matched that way gets no hash, and the re-seal refu
 Only reads the store and the backups (read-only connections). Prints OUT's sha256, the value the re-seal's
 --decisions-sha256 must name.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import hashlib
 import io
 import json
@@ -71,7 +67,7 @@ def main():
     d["bound"] = {"source_file": os.path.basename(dec_path), "source_sha256": hashlib.sha256(raw).hexdigest(),
                   "bound_rows": bound, "unbound_rows": unbound,
                   "hash": "sha256 of json.dumps([[column, value], ...] in column order, ensure_ascii=False, default=str)",
-                  "made": "28 Sep 2026, claude-825b1305 (bind_source_decisions.py)"}
+                  "made": "(bind_source_decisions.py)"}
     blob = json.dumps(d, ensure_ascii=False, indent=1).encode("utf-8")
     tmp = out + ".tmp"
     with io.open(tmp, "wb") as f:

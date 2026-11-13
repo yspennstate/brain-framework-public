@@ -183,7 +183,7 @@ def formal_lineage(evidence: Evidence, receipt: EvidenceReceipt) -> FormalLineag
 
     A Lean kernel record and a fidelity record make one VERIFIED route only when they share this; until 30 Sep 2026
     the route took the first record of each kind, so a kernel run on one source tree and a review of another could
-    promote a claim together (account04/B11, B11-R79-CROSS-GENERATION-FORMAL-EVIDENCE-PROMOTES-20260929-01). The
+    promote a claim together. The
     lakefile and the exact Lean result are not in the receipts and are not joined."""
 
     scope = evidence.scope

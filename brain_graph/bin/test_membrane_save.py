@@ -1,4 +1,4 @@
-"""test_membrane_save.py - live_membrane.save_state under the Windows rename race (27 Sep, claude-825b1305). Another hook
+"""test_membrane_save.py - live_membrane.save_state under the Windows rename race. Another hook
 call of the same session holding the state file open made os.replace raise Access denied, and the exception aborted the
 hook (17 'hook error: PermissionError' lines 26-27 Sep, each on an evaluation that served nothing). Temp dirs only.
 
@@ -9,12 +9,9 @@ Controls:
  B. the file held open for 60 ms: True after retrying, new state, no tmp left
  C. the file held open throughout: False within a second, no exception, old state intact, tmp removed, one log line
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import importlib.util
 import json
 import os

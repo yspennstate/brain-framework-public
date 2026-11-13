@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage a memory layer for the full brain graph (TOP10 rank 8, claude-1ca628ae, 3 Nov 2026).
+"""Stage a memory layer for the full brain graph .
 
 The installed full graph (graph_lane_store) is built from hook events, so it holds only the memories a hooked session
 wrote or recalled (7,795 of 45,087 on 3 Nov). This writes, beside it and never into it:
@@ -23,9 +23,10 @@ if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:
 import json, os, re, sys, time
 
 HOME = os.path.expanduser("~")
-MEM = os.path.join(HOME, ".claude/projects/{{BRAIN_SLUG}}/memory")
-STORE = os.path.join(HOME, ".claude/dreaming/graph_lane_store")
-OUT = os.path.join(HOME, ".claude/dreaming/graph_lane_stage_memlayer")
+DR = os.environ.get("BRAIN_DREAM_DIR", os.path.join(HOME, ".claude", "dreaming"))
+MEM = os.environ.get("BRAIN_MEM_DIR", os.path.join(HOME, ".claude", "projects", "{{BRAIN_SLUG}}", "memory"))
+STORE = os.path.join(DR, "graph_lane_store")
+OUT = os.path.join(DR, "graph_lane_stage_memlayer")
 LINK = re.compile(r"\[\[([^\]|#]+)")
 PATH = re.compile(r"(~/[^\s;,'\"`)\]]+|~/[^\s;,'\"`)\]]+)")
 
@@ -91,4 +92,7 @@ def main():
 
 
 if __name__ == "__main__":
+    if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+        print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
+        raise SystemExit(0)
     main()

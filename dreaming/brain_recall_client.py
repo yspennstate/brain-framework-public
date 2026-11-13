@@ -56,6 +56,42 @@ def _request(req, connect_timeout=0.5, read_timeout=180.0):
     return json.loads(buf.decode("utf-8")) if buf else None
 
 
+# Wait for a loading server instead of running cold (5 Nov 2026). A server that stopped on a code change had no
+# endpoint for about six minutes; 17 callers ran cold at once (one cold recall alone: 18 s, ~800 MB private), the
+# pile-up stretched a 2 s load (24 h median) to 114 s, and an agent at a 240 s cap lost both its recall calls.
+# When a spawn is under SPAWN_FRESH_S old, poll for the endpoint up to BRS_WAIT_LOADING_S (0 = off). Only a
+# refused/absent endpoint or a code-changed decline waits: a read timeout means the server is alive and hung, and
+# waiting again stacked a second 180 s read.
+WAIT_LOADING_S = float(os.environ.get("BRS_WAIT_LOADING_S", "30"))
+SPAWN_FRESH_S = 120.0
+WAITED_S = None
+
+
+def _wait_loading(req):
+    """A served reply from a server that finished loading within the wait, else None (the caller runs cold)."""
+    try:
+        if WAIT_LOADING_S <= 0 or time.time() - os.stat(SPAWN_STAMP).st_mtime > SPAWN_FRESH_S:
+            return None
+    except OSError:
+        return None
+    global WAITED_S
+    t0 = time.time()
+    deadline = time.time() + WAIT_LOADING_S
+    while time.time() < deadline:
+        time.sleep(0.5)
+        try:
+            reply = _request(dict(req))
+        except socket.timeout:
+            return None   # alive but not answering is not loading: never stack a second read timeout
+        except (OSError, ValueError, KeyError):
+            continue
+        if reply and str(reply.get("decline", "")).startswith("code changed"):
+            continue   # the old server is still answering while it stops; the new one is loading
+        WAITED_S = time.time() - t0
+        return reply
+    return None
+
+
 CLIENT_LOG = os.path.join(STATE_DIR, "client.jsonl")
 
 
@@ -78,22 +114,29 @@ def run(argv):
     if os.environ.get("BRAIN_RECALL_SERVER", "1") == "0":
         _note("off", env)
         return None
+    req = {"op": "recall", "argv": list(argv), "env": env, "cwd": os.getcwd()}
     try:
-        reply = _request({"op": "recall", "argv": list(argv), "env": env, "cwd": os.getcwd()})
+        reply = _request(dict(req))
     except (OSError, ValueError, KeyError) as e:
         # spawn unless the caller carries a BRAIN_ setting the server would decline (the server applies
         # BRAIN_RECALL_REFRESH per call and ignores the client's own BRAIN_RECALL_SERVER switch; 3 Nov 2026)
         if not any(k.startswith("BRAIN_") and k not in ("BRAIN_RECALL_REFRESH", "BRAIN_RECALL_LOG", "BRAIN_RECALL_SERVER")
                    for k in os.environ):
             _spawn()
-        _note("no server: " + type(e).__name__, env)
-        return None
+        # a read timeout means the server is alive and slow, not loading: waiting would add a second 180 s
+        reply = None if isinstance(e, socket.timeout) else _wait_loading(req)
+        if reply is None:
+            _note("no server: " + type(e).__name__, env)
+            return None
+    if reply and str(reply.get("decline", "")).startswith("code changed"):
+        _spawn()
+        waited = _wait_loading(req)
+        if waited is not None:
+            reply = waited
     if not reply or reply.get("decline") or "rc" not in reply:
-        if reply and str(reply.get("decline", "")).startswith("code changed"):
-            _spawn()
         _note("declined: " + str((reply or {}).get("decline") or "empty reply"), env)
         return None
-    _note("served", env)
+    _note("served" if WAITED_S is None else "served after wait %.1f s" % WAITED_S, env)
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")

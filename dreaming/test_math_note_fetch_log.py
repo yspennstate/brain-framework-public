@@ -5,6 +5,10 @@ must end in ok, the row for a refused id in failed:<code>, and the session colum
 CLAUDE_CODE_SESSION_ID, the variable the Claude Code tool shell actually sets.
 Run: python3 test_math_note_fetch_log.py (exit 0 = pass)
 """
+if __name__ == "__main__" and __import__("sys").argv[1:2] in (["-h"], ["--help"]):
+    print((__doc__ or "").strip() or "run with no arguments")
+    raise SystemExit(0)
+
 import os
 import shutil
 import subprocess
@@ -35,7 +39,9 @@ def run():
         tool = os.path.join(tmp, 'tool')
         os.makedirs(tool)
         shutil.copy2(os.path.join(HERE, 'math_note.py'), tool)
-        env = dict(os.environ, HOME=os.path.join(tmp, 'home'), CLAUDE_CODE_SESSION_ID='sess-7KDP-2210')
+        # USERPROFILE too: on Windows Path.home() reads it, not HOME.
+        env = dict(os.environ, HOME=os.path.join(tmp, 'home'), USERPROFILE=os.path.join(tmp, 'home'),
+                   CLAUDE_CODE_SESSION_ID='sess-7KDP-2210')
         env.pop('CLAUDE_SESSION_ID', None)
         codes = []
         for sid in ('good-id', 'bad-id'):

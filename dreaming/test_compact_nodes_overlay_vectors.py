@@ -1,6 +1,10 @@
 """compact_nodes._overlay_vectors starts the fresh-vector overlay after an anchor is written, and stays quiet in a test
 folder or when switched off. Runs a copy of compact_nodes.py beside a stand-in fresh_vectors.py that only drops a
 marker file, so no real overlay starts. POSIX only (the call is a no-op on Windows by design)."""
+if __name__ == "__main__" and __import__("sys").argv[1:2] in (["-h"], ["--help"]):
+    print((__doc__ or "").strip() or "run with no arguments")
+    raise SystemExit(0)
+
 import os
 import shutil
 import subprocess

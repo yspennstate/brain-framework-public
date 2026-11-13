@@ -1,11 +1,8 @@
 """test_rigor_hook.py - push every agent that builds or runs a brain test toward harder, longer, fairer tests.
 
-The owner, 3 Nov 2026 00:3x on the Mac: "some of the more recent test where way to simple which is why everyone did
-more or less the same well and got great scores that is not how life is. please make tests much harder, recall harder
-agentic testing harder everything should be harder ... make 50 hooks for testing which prompt agents with this and my
-other testing prompts, to make tests harder and more diverse and so on, and to read the task manager about this."
-Earlier: 2 Nov 23:34 (proof audits, agency, public benchmarks, quantify everything) and his 2 Nov 15:06 EST email
-("bigger stronger, more agentic tests that will showcase the strength of the brain").
+Tests that every arm passes with a high score cannot tell a brain from no brain. This hook keeps reminding the agent
+who builds or runs a test to make it harder, longer and more diverse: multi-hop recall, long agentic workflows, proof
+audits with planted errors and clean controls, public benchmarks, and a score for every part.
 
 Fifty cards, each with its own trigger. When a prompt or a tool call looks like test work, the hook shows the matching
 card this session has seen least recently, plus his orders the first time. UserPromptSubmit: at most one card every
@@ -15,7 +12,7 @@ Fail-open: any error prints nothing.
 
   python3 test_rigor_hook.py --list        print the 50 cards
   python3 test_rigor_hook.py --selftest    check triggers and rate limits on sample payloads
-claude-48dd2a83, 3 Nov 2026.
+3 Nov 2026.
 """
 
 import sys
@@ -32,14 +29,11 @@ GAP = {"UserPromptSubmit": 180, "PostToolUse": 600}
 PY = sys.executable or "python3"
 
 ORDERS = (
-    "FULL BRAIN FIRST (3 Nov 00:30-00:36, OWNER_ORDERS_FULL_BRAIN_AND_TESTS.md on yspennstate/brain-tasks-board): the brain arm runs on the full graph, 349,065 nodes and 15,473,498 edges (release brain-graph-full-2026-11-01); a smaller graph is a partial-brain result and is labeled so; hard problems only. "
-    "His testing orders, newest first. 3 Nov 00:3x: \"make tests much harder, recall harder, agentic testing harder, "
-    "everything should be harder ... the current ones are too simple and disadvantage the brain ... test longer "
-    "workflows, auditing, much much harder recall ... use Opus 5.5 and gpt-6.1-sol, no Sonnet ... check the task "
-    "manager much more often, respond to my messages faster.\" 2 Nov 15:06 EST: \"bigger stronger, more agentic tests "
-    "that will showcase the strength of the brain.\" 2 Nov 23:34: recall, proof audits with planted errors and clean "
-    "controls, your own brain-vs-no-brain tests, public benchmarks, agency (loops, stalls, stopping early), all "
-    "quantified. Task manager: %s ~/.claude/dreaming/task_checklist_hook.py list --all and "
+    "FULL BRAIN FIRST: the brain arm runs on the full graph; a smaller graph is a partial-brain result and is labeled "
+    "so; hard problems only. Testing orders: make tests much harder (recall, agentic work, auditing); test longer "
+    "workflows; use the same strong model in every arm; include proof audits with planted errors and clean controls, "
+    "brain-vs-no-brain tests, public benchmarks and agency (loops, stalls, stopping early), all quantified; read the "
+    "task manager often. Task manager: %s ~/.claude/dreaming/task_checklist_hook.py list --all and "
     "%s ~/.claude/dreaming/fleet_board.py check --agent <you>." % (PY, PY))
 
 GATE = re.compile(r"\b(tests?|testing|benchmarks?|a/b|brain[- ]vs|no[- ]brain|arms?|bank|pilot|grad(e|er|ing)|gold|"
@@ -79,7 +73,7 @@ CARDS = [
     (14, r"scar|mistake|trap|lesson", "Test whether the brain stops repeat mistakes: real tasks where one of our recorded "
         "scars is live in the environment, scored by a hidden checker on the finished work."),
     (15, r"the other laptop|laptop|the research box|other computer|cross", "Ask about results that were made on another computer. The "
-        "brain is supposed to make the other laptop's and the laptop's work visible here; git on the Mac cannot."),
+        "brain is supposed to make every computer's work visible here; git on one machine cannot."),
     (16, r"owner|rule|order|policy|compl", "Test compliance with his standing orders on tasks that tempt a violation "
         "(a paper that wants the old grant line, a push to a CI repo, a Sonnet launch). The brain knows the rules."),
     (17, r"change|correct|retract|update", "Ask for a value that changed two or three times and name the date you want "
@@ -150,11 +144,11 @@ CARDS = [
     (47, r"answer|give.?up|not_found|both", "Report accuracy on items both arms answered separately from give-ups. "
         "Rounds 2 and 3 'won' on persistence while both-answered accuracy was equal."),
     (48, r"push|github|save|publish|result", "Save as you go and push the test, the key, the scores and what was "
-        "learned: ai-memories for brain tests, math-research-brain for math tests."),
+        "learned: brain tests to the brain repository, math tests to the math repository."),
     (49, r"hypothes|pre.?regist|plan|design", "Write the hypothesis, the primary score and the analysis before the run, "
         "and keep them. Choosing the metric after seeing the scores is not a test."),
-    (52, r"graph|sidecar|link walk|graph_lane|brain arm", "Is the link walk on? The graph lane mixes two walks: the use-grown store and the memories' own links in ~/.claude/brain_graph/live/sidecar.sqlite. A missing sidecar quietly leaves the link walk empty (the Mac had none until 3 Nov). Run live_sidecar.py stats, write the link count next to the graph counts in the README, and set BRAIN_RECALL_LOG=0 and BRAIN_RECALL_REFRESH=0 in any recall loop."),
-    (51, r"brain arm|graph|recall|node|edge|full brain", "Which graph is your brain arm on? Full = 349,065 nodes and 15,473,498 edges (release brain-graph-full-2026-11-01; on the Mac ~/.claude/dreaming/graph_lane_store). Anything smaller, net.sqlite3 included, is a partial-brain result and must be labeled that way in every result."),
+    (52, r"graph|sidecar|link walk|graph_lane|brain arm", "Is the link walk on? The graph lane mixes two walks: the use-grown store and the memories' own links in ~/.claude/brain_graph/live/sidecar.sqlite. A missing sidecar quietly leaves the link walk empty. Run live_sidecar.py stats, write the link count next to the graph counts in the README, and set BRAIN_RECALL_LOG=0 and BRAIN_RECALL_REFRESH=0 in any recall loop."),
+    (51, r"brain arm|graph|recall|node|edge|full brain", "Which graph is your brain arm on? Full = 349,065 nodes and 15,473,498 edges (the full graph-lane store under ~/.claude/dreaming/graph_lane_store). Anything smaller, net.sqlite3 included, is a partial-brain result and must be labeled that way in every result."),
     (50, r"", "Read the task manager now and often: his newest messages on the fleet board and the open asks on the "
         "checklist. Answer his board messages within the tick, not the hour."),
 ]
@@ -233,11 +227,11 @@ def selftest():
     want = [c[0] for c in CARDS if c[1] is not None and c[1].search(q)]
     a = main(pay("UserPromptSubmit", prompt=q), t0)
     ca = int(a.split()[1].split("/")[0])
-    assert ca in want and "His testing orders" in a, a[:80]                                           # a matching card
+    assert ca in want and "Testing orders:" in a, a[:80]                                           # a matching card
     assert main(pay("UserPromptSubmit", prompt=q), t0 + 60) == ""                                    # 3-minute gap
     b = main(pay("UserPromptSubmit", prompt=q), t0 + 200)
     cb = int(b.split()[1].split("/")[0])
-    assert cb in want and cb != ca and "His testing orders" not in b, b[:80]                          # a new card
+    assert cb in want and cb != ca and "Testing orders:" not in b, b[:80]                          # a new card
     firsts = {pick(q, {}, "s%d" % k)[0] for k in range(200)}
     assert len(firsts) == len(want), (sorted(firsts), want)                     # every matching card leads somewhere
     assert main(pay("UserPromptSubmit", prompt="make dinner"), t0 + 999) == ""                       # no test words
@@ -253,6 +247,9 @@ def selftest():
 
 
 if __name__ == "__main__":
+    if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+        print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
+        raise SystemExit(0)
     if "--list" in sys.argv:
         print(ORDERS + "\n")
         for i, t, x in CARDS:

@@ -54,8 +54,7 @@ def _named_in():
 def run_hook(hook, store, prompt, sess):
     """(block, seconds, invalid). invalid is '' for a clean call, else why its output is not a measurement: a hook that
     exited nonzero, timed out or printed something other than its JSON delivers nothing in a session, so its titles are
-    never scored. Until 30 Sep a call that exited nonzero with output was parsed and scored like a clean one (account03/B01,
-    B01-R79-GATE-PROOFBANK-VIB-FAILED-HOOK-OUTPUT-SCORED-20260929)."""
+    never scored. Until 30 Sep a call that exited nonzero with output was parsed and scored like a clean one."""
     env = dict(os.environ, PYTHONIOENCODING="utf-8", MATHBRAIN_STORE=store, CLAUDE_SESSION_ID=sess)
     t0 = time.time()
     try:

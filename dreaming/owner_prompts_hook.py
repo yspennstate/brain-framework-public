@@ -111,8 +111,8 @@ def mode():
 # only thing that takes the block out of its context. So the CONTEXT schedule sends the full block when a context
 # begins - the session's first delivery, the first fire after a compaction, or when the last full block is K hours
 # old - and between those only his new asks, hourly. Every context still holds the whole block, so coverage is the
-# hourly block's by construction; the bytes fall 37 pct at K=2, 47 at K=3, 50 at K=4 (memory
-# owner_prompt_feed_fewer_but_relevant_measured_2026_09_24). The schedule file:
+# hourly block's by construction; the bytes fall 37 pct at K=2, 47 at K=3, 50 at K=4.
+# The schedule file:
 #   absent or "hourly"      the hourly block, his 2026-09-18 choice (the default)
 #   "hourly shadow K"       the hourly block, plus a log of what the context schedule would have sent (no output change)
 #   "context K"             the context schedule with a K-hour refresh; "context" alone = no age refresh
@@ -832,9 +832,12 @@ def prune_state(now=None):
         n = 0
         for name in os.listdir(STATE_DIR):
             p = os.path.join(STATE_DIR, name)
-            if name.endswith(".json") and now - os.path.getmtime(p) > STATE_KEEP_DAYS * 86400:
-                os.remove(p)
-                n += 1
+            try:  # another session's prune may remove the same file between listdir and here
+                if name.endswith(".json") and now - os.path.getmtime(p) > STATE_KEEP_DAYS * 86400:
+                    os.remove(p)
+                    n += 1
+            except FileNotFoundError:
+                continue
         with io.open(marker, "w", encoding="utf-8") as f:
             f.write(str(int(now)))
         return n

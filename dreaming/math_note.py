@@ -49,7 +49,13 @@ def main(argv=None):
     parser.add_argument('source_id')
     args = parser.parse_args(argv)
     home = Path.home()
-    sys.path.insert(0, str(home / 'math-brain-build/src'))
+    src = home / 'math-brain-build/src'
+    if not src.is_dir():
+        # an installed brain keeps the package next to this folder, in ../mathbrain/src
+        beside = Path(__file__).resolve().parent.parent / 'mathbrain' / 'src'
+        if beside.is_dir():
+            src = beside
+    sys.path.insert(0, str(src))
     try:
         from math_brain.current_note import main as read_note
         rc = read_note(['--database', str(home / 'math-brain-build/local/population/brain.sqlite3'),

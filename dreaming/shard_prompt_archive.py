@@ -20,6 +20,13 @@ usable `ts`, are NOT dropped - they go to PROMPTS_UNDATED.jsonl so the round-tri
 Writes are atomic (temp file + os.replace) and only happen when content actually changed, so a
 crash cannot leave a half-written shard and an unchanged month does not churn the repo.
 
+A MONTH PAST PART_CAP IS PUBLISHED IN PARTS. A busy month can outgrow one file: with agents on
+five-minute loops one month reached 67.8 MB and the next 32 MB in six days. A secret scanner that
+refuses objects over 64 MB then blocks the whole push, and GitHub refuses anything over 100 MB. Such
+a month is written as `PROMPTS_<YYYY-MM>.pNN.jsonl`, broken only at day boundaries and filled from
+the 1st, so a closed part never changes when later days arrive. A month under the cap keeps its one
+file, so nothing already published churns.
+
 Usage:
     python shard_prompt_archive.py            # publish shards, print the manifest
     python shard_prompt_archive.py --union-existing  # merge a partial ledger into existing shards
@@ -84,6 +91,43 @@ def group(lines: list[str]) -> dict[str, list[str]]:
     return buckets
 
 
+PART_CAP = 40 * 1048576   # bytes; a month over this is published as day-bounded parts
+
+
+def split_big_months(buckets: dict[str, list[str]]) -> dict[str, list[str]]:
+    """A month whose shard would pass PART_CAP becomes PROMPTS_<YYYY-MM>.pNN.jsonl parts.
+
+    Parts break only at a day boundary and are filled greedily from the 1st, so a part's edges depend only on the
+    days before it: a closed part never changes when later days are added. A single day over the cap stays whole in
+    its own part. Months under the cap keep their one-file name, so nothing old churns.
+    """
+    out: dict[str, list[str]] = {}
+    for key, lines in buckets.items():
+        size = sum(len(l.encode("utf-8")) + 1 for l in lines)
+        if key == UNDATED or size <= PART_CAP:
+            out[key] = lines
+            continue
+        days: dict[str, list[str]] = collections.OrderedDict()
+        for line in lines:
+            try:
+                d = str(json.loads(line).get("ts") or "")[:10]
+            except Exception:
+                d = ""
+            days.setdefault(d if len(d) == 10 else "~", []).append(line)
+        part, cur, cur_size = 1, [], 0
+        for d in sorted(days):
+            dl = days[d]
+            ds = sum(len(l.encode("utf-8")) + 1 for l in dl)
+            if cur and cur_size + ds > PART_CAP:
+                out["%s.p%02d" % (key, part)] = cur
+                part, cur, cur_size = part + 1, [], 0
+            cur.extend(dl)
+            cur_size += ds
+        if cur:
+            out["%s.p%02d" % (key, part)] = cur
+    return out
+
+
 def write_atomic(path: str, lines: list[str]) -> bool:
     """Write only when content differs. Returns True if the file changed."""
     body = "\n".join(lines) + "\n"
@@ -126,7 +170,11 @@ def union_shards(source: list[str], published: dict[str, list[str]]) -> dict[str
         if available[line]:
             available[line] -= 1
         else:
-            merged.setdefault(month_of(line), []).append(line)
+            month = month_of(line)
+            # a month already published in parts takes new lines in its last part, never a second whole-month file
+            parts = sorted(k for k in merged if k.startswith(month + ".p"))
+            key = month if month in merged or not parts else parts[-1]
+            merged.setdefault(key, []).append(line)
     return merged
 
 
@@ -152,7 +200,7 @@ def main() -> int:
         return 2
 
     source = read_source()
-    buckets = group(source)
+    buckets = split_big_months(group(source))
 
     if args.check:
         published = existing_shards()
@@ -207,6 +255,33 @@ def main() -> int:
         print("%-10s %8d %10.2f  %s %s"
               % (key, len(lines), size / 1048576.0, digest(lines)[:12],
                  "(updated)" if wrote else ""))
+
+    if not args.union_existing:
+        # UNDATED is a residue bucket, not a month. A ledger repaired after an undated shard was published leaves that
+        # shard behind, and the check below would read its stale lines as invented on every later run. Remove the
+        # residue shard when the source has no undated line. A MONTH shard is never removed here: a month missing from
+        # the ledger is a loss to investigate, not to mirror.
+        undated_path = os.path.join(ARCHIVE, "PROMPTS_%s.jsonl" % UNDATED)
+        if UNDATED not in buckets and os.path.exists(undated_path):
+            os.remove(undated_path)
+            changed.append(UNDATED + " (removed: no undated line left in the ledger)")
+            print("%-10s %8d %10s  removed, no undated line left in the ledger" % (UNDATED, 0, "-"))
+
+        # A month that moved between one file and parts leaves the old layout behind. Remove it only when the shards
+        # this run wrote already hold every source line (checked from disk), and only names of a month this run
+        # published, so a month missing from the ledger is still never removed here.
+        stale = [k for k in existing_shards() if k not in buckets and k != UNDATED
+                 and k.split(".p")[0] in {b.split(".p")[0] for b in buckets}]
+        if stale:
+            fresh = existing_shards()
+            flat_new = [l for k in sorted(buckets) for l in fresh.get(k, [])]
+            if collections.Counter(flat_new) == expected:
+                for k in stale:
+                    os.remove(os.path.join(ARCHIVE, "PROMPTS_%s.jsonl" % k))
+                    changed.append(k + " (removed: its records now live in the month's other layout)")
+            else:
+                print("shard_prompt_archive: old layout kept - the new shards do not yet hold every line",
+                      file=sys.stderr)
 
     # Re-read from disk and compare to the source again - the check that matters is what the
     # repo will actually carry, not what we intended to write.

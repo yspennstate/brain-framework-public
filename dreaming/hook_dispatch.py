@@ -581,6 +581,73 @@ def run_subprocess(cmd, args, payload, budget=None):
         return 1, "", "hook_dispatch: %r" % (e,)
 
 
+# THE HOOKS THAT RUN AS THEIR OWN PROCESS NO LONGER WAIT IN LINE. The loop ran every hook one after another, so on
+# UserPromptSubmit the six hooks that spawn cost the sum of their walls - 16.5 s of a 54 s median loop in one day's
+# profile (129 dispatches) - while each mostly waits on its own interpreter start and disk. They are now all started at
+# the top of the loop, BEFORE any in-process hook can change the cwd or the environment (so each child gets exactly the
+# cwd and env it got before), fed and read on their own threads, and collected after the in-process hooks; their
+# results go back into the settings order, so merge() is unchanged. Off for one dispatch: HOOK_PARALLEL_SUBPROC=0.
+PARALLEL_SUBPROC_EVENTS = {"UserPromptSubmit", "Stop", "SessionStart"}
+PARALLEL_AB_FLAG = os.path.expanduser("~/.claude/compute/hook_parallel_ab.on")
+
+
+class _Spawned(object):
+    """One hook started at the top of the loop; result() waits for it and returns (rc, out, err, seconds)."""
+
+    def __init__(self, cmd, args, payload, budget):
+        self.t0 = time.perf_counter()
+        self.t1 = None
+        self.res = None
+        self.budget = PER_HOOK_BUDGET_S if budget is None else budget
+        data = payload.encode("utf-8", "surrogateescape") if isinstance(payload, str) else (payload or b"")
+        try:
+            import subprocess
+            import threading
+            self._sp = subprocess
+            if args:
+                self.p = subprocess.Popen([cmd] + args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                          stderr=subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
+            else:
+                self.p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                          stderr=subprocess.PIPE, creationflags=CREATE_NO_WINDOW)
+            if getattr(self.p, "_handle", None):
+                _unthrottle(self.p._handle)
+            self.th = threading.Thread(target=self._talk, args=(data,), daemon=True)
+            self.th.start()
+        except Exception as e:
+            self.p, self.th = None, None
+            self.res = (1, "", "hook_dispatch: %r" % (e,))
+            self.t1 = time.perf_counter()
+
+    def _talk(self, data):
+        try:
+            out, err = self.p.communicate(input=data, timeout=max(0.1, self.budget - (time.perf_counter() - self.t0)))
+            self.res = (self.p.returncode, (out or b"").decode("utf-8", "replace"), (err or b"").decode("utf-8", "replace"))
+        except self._sp.TimeoutExpired:
+            try:
+                self.p.kill()
+                self.p.communicate(timeout=5)
+            except Exception:
+                pass
+            self.res = (1, "", "hook_dispatch: timed out after %gs" % self.budget)
+        except Exception as e:
+            self.res = (1, "", "hook_dispatch: %r" % (e,))
+        self.t1 = time.perf_counter()
+
+    def result(self):
+        if self.th is not None:
+            self.th.join(max(0.1, self.budget + 10 - (time.perf_counter() - self.t0)))
+            if self.res is None:                      # the thread is stuck past its budget: give up on it, never hang
+                try:
+                    self.p.kill()
+                except Exception:
+                    pass
+                self.res = (1, "", "hook_dispatch: timed out after %gs" % self.budget)
+                self.t1 = time.perf_counter()
+        rc, out, err = self.res
+        return rc, out, err, (self.t1 or time.perf_counter()) - self.t0
+
+
 RANK = {"allow": 0, "ask": 1, "deny": 2}
 
 # THE MERGED CONTEXT IS CUT TO WHAT THE MODEL CAN RECEIVE. Claude Code hands the model at most HARNESS_INLINE_MAX chars
@@ -1212,6 +1279,7 @@ def dispatch(event, payload, tool_name, settings_path=SETTINGS, force=False, ses
     flag_off += FLAG_SKIPPED[0]
     t1 = time.perf_counter()
     allow_memo = {}                  # the allowlist, read once for this dispatch (as_python_argv)
+    plan = []
     for cmd, args in entries:
         if headless and _entry_basename(cmd, args) in HEADLESS_SKIP:
             diet_skipped += 1
@@ -1227,16 +1295,34 @@ def dispatch(event, payload, tool_name, settings_path=SETTINGS, force=False, ses
             hook_payload = content_payload
         path, argv_tail = as_python_argv(cmd, args, memo=allow_memo)
         label = (os.path.basename(path or "") or _label_from_cmd(cmd, args)).strip()
+        plan.append((cmd, args, hook_payload, path, argv_tail, label))
+    spawned = {}
+    # A/B under the same load: while PARALLEL_AB_FLAG exists, half the profiled dispatches run the old sequential loop
+    # (their rows carry "s" where the parallel ones carry "p"). Remove the flag to end the test.
+    ab_seq = prof is not None and os.path.exists(PARALLEL_AB_FLAG) and os.urandom(1)[0] < 128
+    if event in PARALLEL_SUBPROC_EVENTS and os.environ.get("HOOK_PARALLEL_SUBPROC", "1") != "0" and not ab_seq \
+            and sum(1 for x in plan if not x[3]) > 1:
+        for i, (cmd, args, hook_payload, path, argv_tail, label) in enumerate(plan):
+            if not path:
+                spawned[i] = _Spawned(cmd, args, hook_payload, budget_for(event))
+    slots = [None] * len(plan)
+    for i, (cmd, args, hook_payload, path, argv_tail, label) in enumerate(plan):
+        if i in spawned:
+            continue
         m0 = len(sys.modules)
         t = time.perf_counter()
         if path:
             rc, out, err = run_in_process(path, hook_payload, argv_tail)
         else:
             rc, out, err = run_subprocess(cmd, args, hook_payload, budget_for(event))
+        slots[i] = (label, rc, out, err, time.perf_counter() - t, "i" if path else "s", len(sys.modules) - m0)
+    for i, sp in spawned.items():
+        rc, out, err, el = sp.result()
+        slots[i] = (plan[i][5], rc, out, err, el, "p", 0)
+    for label, rc, out, err, el, how, mods in slots:
         results.append((label, rc, out, err))
-        el = time.perf_counter() - t
         if prof is not None:
-            prof.append((label, el, "i" if path else "s", len(sys.modules) - m0, rc, len(out or "")))
+            prof.append((label, el, how, mods, rc, len(out or "")))
         # A SLOW HOOK THAT SUCCEEDS WAS INVISIBLE. This line used to fire only on a bad return code, so
         # every per-hook row in the log was a failure - and all of them were the same 120 s timeout. The
         # cost that actually lands on the owner had no rows at all: UserPromptSubmit runs 18 hooks for a
@@ -1416,7 +1502,35 @@ def _code_selftest():
     return 1 if fails else 0
 
 
+# Windows 11 power-throttles (EcoQoS) a windowless process by default, and every hook runs windowless. A/B on a probe's
+# own work in a CREATE_NO_WINDOW child, 6 alternating pairs: wall median 10.4 s default vs 6.4 s opted out, 5 of 6
+# pairs faster, cpu and answers identical. The dispatcher opts itself out at start and each hook process it starts
+# right after launch; children do not inherit it. Priority is untouched. HOOK_UNTHROTTLE=0 turns it off. Elsewhere
+# than Windows it does nothing.
+def _unthrottle(handle=None):
+    if os.name != "nt" or os.environ.get("HOOK_UNTHROTTLE", "1") == "0":
+        return False
+    try:
+        import ctypes
+
+        class _PPT(ctypes.Structure):
+            _fields_ = [("Version", ctypes.c_ulong), ("ControlMask", ctypes.c_ulong), ("StateMask", ctypes.c_ulong)]
+
+        k = ctypes.windll.kernel32
+        if handle is None:
+            k.GetCurrentProcess.restype = ctypes.c_void_p
+            handle = k.GetCurrentProcess()
+        fn = k.SetProcessInformation
+        fn.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p, ctypes.c_ulong]
+        fn.restype = ctypes.c_int
+        st = _PPT(1, 1, 0)          # PROCESS_POWER_THROTTLING_EXECUTION_SPEED in the mask, cleared in the state
+        return bool(fn(ctypes.c_void_p(int(handle)), 4, ctypes.byref(st), ctypes.sizeof(st)))
+    except Exception:
+        return False
+
+
 def main():
+    _unthrottle()
     event = "PreToolUse"
     if "--selftest" in sys.argv:
         return _fit_selftest() or _flag_selftest() or _code_selftest()

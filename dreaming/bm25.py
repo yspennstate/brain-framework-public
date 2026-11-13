@@ -1514,7 +1514,7 @@ def refresh(mem_dir=MEM, out=INDEX, quiet=False, build_if_absent=False):
             pass
 
 
-def refresh_in_memory(mem_dir=MEM, out=INDEX):
+def refresh_in_memory(mem_dir=MEM, out=INDEX, found=None):
     """The incremental merge of refresh() WITHOUT the publish: returns (payload, added, removed) where
     payload is exactly what refresh() would have written, or (None, 0, 0) when nothing is fresh, the
     generation is frozen, the index is missing, or the fresh set is large enough that refresh() would
@@ -1525,11 +1525,15 @@ def refresh_in_memory(mem_dir=MEM, out=INDEX):
     31 MB pickle, synchronously, while a person waited (memory
     a_deliberate_recall_republishes_the_whole_index_2026_09_13). The read path now merges the fresh
     memories in memory, scores this query on the merged payload (same ranking the published index
-    would give), and hands the publish to a detached windowless `bm25.py refresh`."""
+    would give), and hands the publish to a detached windowless `bm25.py refresh`.
+
+    found: the (fresh, gone) pair the caller just took from fresh_memories against this same index generation.
+    brain.recall passes it only while the index signature is unchanged; scanning the folder a second time cost
+    about 2.2 s of a recall. None scans here, as before."""
     out = os.fspath(out)
     if read_merge_frozen(out):
         return None, 0, 0
-    fresh, gone = fresh_memories(mem_dir, out)
+    fresh, gone = found if found is not None else fresh_memories(mem_dir, out)
     if not fresh and not gone:
         return None, 0, 0
     if len(fresh) > REFRESH_FULL_REBUILD_AT:

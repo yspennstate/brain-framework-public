@@ -2,6 +2,10 @@
 
 Runs code_changed on a Brain built without __init__ (no index load), with the server's folder pointed at a temp dir.
 Control: with BRS_LATE_IMPORT_WATCH=0 the same edit goes unseen, so the test can fail."""
+if __name__ == "__main__" and __import__("sys").argv[1:2] in (["-h"], ["--help"]):
+    print((__doc__ or "").strip() or "run with no arguments")
+    raise SystemExit(0)
+
 import importlib, os, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))

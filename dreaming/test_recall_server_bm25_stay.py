@@ -5,6 +5,10 @@ Builds a small brain in a temporary HOME, warms brain.py in one process, rebuild
 checks: the warm process held the old (now unlinked) postings file before release and holds nothing after; after
 release its recall of the new memory prints what a fresh process prints.
 Run: python3 test_recall_server_bm25_stay.py   (exit 0 = pass)"""
+if __name__ == "__main__" and __import__("sys").argv[1:2] in (["-h"], ["--help"]):
+    print((__doc__ or "").strip() or "run with no arguments")
+    raise SystemExit(0)
+
 import json, os, shutil, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -62,6 +66,11 @@ for i, q in enumerate((%r, %r)):
 
 
 def main():
+    if not os.path.isdir("/dev/fd"):
+        # held_deleted reads /dev/fd; where there is none (Windows) nothing can be observed, and an open file cannot
+        # be deleted there, so the hold this test guards cannot happen
+        print("SKIP no /dev/fd: an open postings file cannot be unlinked here")
+        return 0
     tmp = tempfile.mkdtemp(prefix="bm25stay_")
     fails = []
     try:
@@ -75,7 +84,7 @@ def main():
             idx.append("- [%s.md](%s.md) - %s" % (slug, slug, slug.replace("_", " ")))
         with open(os.path.join(mem, "MEMORY.md"), "w") as f:
             f.write("\n".join(idx) + "\n")
-        env = dict(os.environ, HOME=tmp, BRAIN_SLUG="t", BRAIN_BM25_INDEX=os.path.join(tmp, "bm25.json.gz"),
+        env = dict(os.environ, HOME=tmp, USERPROFILE=tmp, BRAIN_SLUG="t", BRAIN_BM25_INDEX=os.path.join(tmp, "bm25.json.gz"),
                    BRAIN_RECALL_LOG="0", BRAIN_RECALL_REFRESH="0", BRAIN_RECALL_QUERY_EMBED="0",
                    BRAIN_RECALL_SERVER="0")
         env.pop("BRAIN_MEM_DIR", None)

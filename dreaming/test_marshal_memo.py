@@ -2,6 +2,10 @@
 read after a change to the file must return the new content; a read with no change must come from the memo.
 
 Runs in a temporary HOME on scratch files. Run: python3 test_marshal_memo.py   (exit 0 = pass)"""
+if __name__ == "__main__" and __import__("sys").argv[1:2] in (["-h"], ["--help"]):
+    print((__doc__ or "").strip() or "run with no arguments")
+    raise SystemExit(0)
+
 import marshal, os, shutil, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))

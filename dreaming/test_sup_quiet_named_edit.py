@@ -1,6 +1,10 @@
 """_sup_quiet with `old`: a route-named file edited in place (there before and after, no pointer either time) is quiet;
 every other kind of change still goes to the real reader. Whenever the new rule says quiet, the real reader's map must
 be the same before and after. Synthetic folder in a temp dir; the frontmatter cache goes to the temp dir too."""
+if __name__ == "__main__" and __import__("sys").argv[1:2] in (["-h"], ["--help"]):
+    print((__doc__ or "").strip() or "run with no arguments")
+    raise SystemExit(0)
+
 import importlib.util, os, sys, tempfile, time
 # Discovery is not execution: a help request exits before any work.
 if "-h" in sys.argv[1:] or "--help" in sys.argv[1:]:

@@ -10,6 +10,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+_ROOT = str(Path(__file__).resolve().parents[3])     # the brain root: holds dreaming/ (and tools/ in a clone)
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+
 from dreaming.project_memory.clauses import MAX_PROMPT_CHARS, partition_spans, project_prompt
 from dreaming.project_memory.classify import (CLASSIFIER_VERSION, classification_digest,
                                                classify_clause, default_config, load_config)
@@ -28,7 +32,10 @@ from dreaming.project_memory.reclassify import (apply_reclassification,
 from dreaming.project_memory.sources import commit_manifests, configured_files, scan_sources
 from dreaming.project_memory.store import ProjectMemoryStore
 import dreaming.project_memory_hot_hook as standalone_hot
-from tools.install_project_memory import install
+try:
+    from tools.install_project_memory import install
+except ImportError:                                  # an installed brain ships without the repo's tools/ folder
+    install = None
 
 
 def config(*projects: tuple[str, list[str]]) -> dict:
@@ -495,6 +502,8 @@ class ProjectMemoryTests(unittest.TestCase):
             scan_sources(self.store, cfg)
 
     def test_installer_copies_shared_prompt_normalizer(self) -> None:
+        if install is None:
+            self.skipTest("tools/install_project_memory.py is not part of an installed brain; run from the clone")
         source_root = Path(__file__).resolve().parents[3]
         runtime_root = self.root / "installed" / "runtime"
         state_root = self.root / "installed" / "state"

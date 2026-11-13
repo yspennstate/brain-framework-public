@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build a COPY of the full brain store with the staged memory layer joined in (TOP10 rank 8, claude-1ca628ae, 3 Nov).
+"""Build a COPY of the full brain store with the staged memory layer joined in.
 
-  memlayer_store_build.py [--out DIR]     default ~/.claude/dreaming/graph_lane_store_memlayer
+  memlayer_store_build.py [--out DIR]     default <dream dir>/graph_lane_store_memlayer
 
 Reads graph_lane_store (never writes it) and graph_lane_stage_memlayer/{nodes_add,edges_add}.jsonl. Appends the
 missing memories as mem:<slug> nodes and adds every staged edge (links_to, cites, supersedes) as a co-activation edge
@@ -20,8 +20,9 @@ import json, os, shutil, sys, time
 import numpy as np
 
 HOME = os.path.expanduser("~")
-SRC = os.path.join(HOME, ".claude/dreaming/graph_lane_store")
-STAGE = os.path.join(HOME, ".claude/dreaming/graph_lane_stage_memlayer")
+DR = os.environ.get("BRAIN_DREAM_DIR", os.path.join(HOME, ".claude", "dreaming"))
+SRC = os.path.join(DR, "graph_lane_store")
+STAGE = os.path.join(DR, "graph_lane_stage_memlayer")
 
 
 def main():
@@ -78,4 +79,7 @@ def main():
 
 
 if __name__ == "__main__":
+    if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+        print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
+        raise SystemExit(0)
     main()

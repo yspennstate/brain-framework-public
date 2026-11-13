@@ -39,6 +39,14 @@ the night's judgments, and runs `hook_liveness.py`, which reports any part of th
 Every step runs with its own time limit and its exit code checked, because a step that hangs holds the dream's
 lock and cancels the next dream, and a step that fails in silence is a step nobody notices for days.
 
+On a new install `hook_liveness.py` prints a long list of files marked MISSING and ends with ATTENTION. That
+is expected. Each MISSING line names the hook or dream step that writes the file, and the file appears once that
+hook has fired in a session or the first dream has run. The dream-commit lines read UNKNOWN until the brain
+folder is a git repository with a remote, and the dispatcher line names the command that signs its allowlist.
+A Stop-order failure is different: it means the hooks are not wired, and running `framework/bootstrap/install.py` again
+with `--merge-settings` added wires them. Run the check again after the first week; a file still
+MISSING then belongs to a part that has stopped firing.
+
 ## Three kinds of dream
 
 The runner picks the kind from the hour (before 09:00 a filing dream, 09:00 to 16:00 a nap, after 16:00 a
@@ -66,6 +74,26 @@ its value is that the reliable work is never crowded out by the creative work.
 - It runs windowless (`launch_dream.vbs` on Windows) at low priority, and a file named `STOP` ends it.
 - A note it writes carries a status (`verified` or `provisional`) and the measurement behind it, so the agent that
   reads it later knows how far to trust it.
+
+## Guards on the way out
+
+A brain that publishes needs a check at the last door, because the dream and the agents write fast and nobody
+rereads every line before a push. Two scripts here sit in a clone's `pre-push` hook:
+
+- `github_push_cost_guard.py` refuses a push that would start billed GitHub Actions on a private repository
+  unless the head commit says `[skip ci]`, refuses a push that would leave a repository nearly empty, and, on the
+  repositories you list in `BRAIN_PRIVATE_TEXT_REPOS`, refuses added lines that match your private-text patterns
+  (one regular expression per line in the file named by `BRAIN_PRIVATE_TEXT_PATTERNS`; without it, home-directory
+  paths and email addresses). Put the names of people, clients, private repositories and internal projects in
+  that file before you make a public copy of a brain. Install with
+  `python github_push_cost_guard.py --install <clone>` and run `--selftest` first.
+- `paper_release_guard.py` runs from the same hook when it sits beside it, and refuses a paper pushed to a public
+  repository without its funding, competing-interest and AI declarations, or with a line running into the
+  margin. Finished grant numbers that must never be listed again go in `BRAIN_FINISHED_GRANTS`.
+
+Both log every decision. The push guard's three refusals each have a one-variable override (`ALLOW_PRIVATE_TEXT=1`,
+`ALLOW_CI_PUSH=1`, `ALLOW_MASS_DELETE=1`) for a push someone has read and decided on; the paper guard has none, and
+the fix is to the paper.
 
 ## Schedule it
 

@@ -249,8 +249,20 @@ def _distinctive_words(words, limit=12):
 def _load_superseded():
     """slug -> its correction. A superseded memory must never be surfaced when its correction is also
     in play (the Supersede/MemConflict stale-fact fix; eval_stale_fact shows relevance is stale-blind).
-    Built by schema_supersede.py; absent file -> empty map -> behaviour unchanged."""
-    return active_supersessions(MEM, index_path=os.path.join(DR, "superseded.tsv"))
+    Built by schema_supersede.py; absent file -> empty map -> behaviour unchanged.
+    In the hook the names come from the one shared folder read (see _mem_names), not from supersession's own
+    scandir (0.94 s on 53k files): this call takes no frontmatter, so only the set of .md file names is used, and
+    the shared read's names equal scandir's (53,098, same set). SPREAD_SHARED_LIST=0 lists as before."""
+    known = None
+    if _SHARE_LIST and os.environ.get("SPREAD_SHARED_LIST", "1") != "0":
+        if _MEM_STATS is None:
+            try:
+                _mem_names()
+            except Exception:
+                pass
+        if _MEM_STATS is not None:
+            known = {name[:-3] for name in _MEM_STATS}
+    return active_supersessions(MEM, index_path=os.path.join(DR, "superseded.tsv"), known_slugs=known)
 
 
 def _collapse_activations(act, parent, superseded):
@@ -522,7 +534,10 @@ def _load_embeddings():
     # the fail-closed boundary and would unexpectedly import NumPy on a damaged artifact.
     hot_loader = getattr(embedding_artifact, "load_verified_embeddings_lightweight", None)
     if hot_loader is not None:
-        return hot_loader(EMB, EMB_AUTHORITY, MEM, EXPECTED_EMB_MODEL)
+        global _MEM_STATS
+        loaded = hot_loader(EMB, EMB_AUTHORITY, MEM, EXPECTED_EMB_MODEL)
+        _MEM_STATS = getattr(loaded, "memory_stats", None)
+        return loaded
     return embedding_artifact.load_verified_embeddings(
         EMB, EMB_AUTHORITY, MEM, EXPECTED_EMB_MODEL
     )
@@ -797,9 +812,16 @@ def _index_lines():
 # resident listing), so the arm no longer lists the 50k-entry folder a second time - 2.2 s of a 6-8 s warm recall in
 # the server profile. Same names in the same order; None (the hook, any other caller, a failed listing) lists as before.
 MEM_NAMES = None
+# In the per-prompt hook (main() sets this) the name scan takes the embedding loader's bulk stat read instead of
+# os.listdir and hands it on, so the folder is read once a prompt, not twice. Same .md names in the same order as
+# listdir (53,077, checked); the scan only reads names ending in .md. SPREAD_SHARED_LIST=0 lists as before.
+_SHARE_LIST = False
+# {name.md: (size, mtime_ns)} from the last shared folder read in this process, or None.
+_MEM_STATS = None
 
 
 def _mem_names():
+    global _MEM_STATS
     if MEM_NAMES is not None:
         try:
             names = MEM_NAMES()
@@ -807,6 +829,16 @@ def _mem_names():
                 return names
         except Exception:
             pass
+    if (_SHARE_LIST and embedding_artifact is not None and os.environ.get("SPREAD_SHARED_LIST", "1") != "0"
+            and hasattr(embedding_artifact, "_PREFETCH")):
+        try:
+            st = embedding_artifact._bulk_md_stats(MEM)
+        except Exception:
+            st = None
+        if st is not None:
+            _MEM_STATS = st
+            embedding_artifact._PREFETCH = (MEM, time.monotonic(), st)
+            return list(st)
     return os.listdir(MEM)
 
 
@@ -852,6 +884,9 @@ class _RunIndex:
                 s.discard(key)
 
     def sync(self, keys, texts):
+        # the same list objects as last call: skip the element-wise compare (about 1.2 ms a call at 50,000 keys)
+        if keys is self.keys and texts is self.texts:
+            return
         if keys == self.keys and texts == self.texts:
             return
         old = self.text
@@ -895,6 +930,7 @@ class _RunIndex:
 
 
 _RUNIDX = {"calls": 0}
+_SLUG_REUSE = {}
 _RUNIDX_LOCK = threading.Lock()
 
 
@@ -962,7 +998,17 @@ def _seeds_from_prompt(words, idx, skip_records=False):
         names = _mem_names() if len(long_words) >= 2 else ()
         pairs = None
         if names and _runindex_ok("names", long_words):
-            slugs = [fn[:-3] for fn in names if fn.endswith(".md")]
+            # The resident server hands back the SAME held list object while the folder is unchanged; new slug
+            # strings every call made RunIndex.sync compare ~53k strings by content against the held ones, paging
+            # them in (sync was 22% of slow-call samples). The slug list is reused while `names` is the same object
+            # (held here, so its id cannot be recycled); any other list, e.g. a fresh listing, builds as before.
+            # Off: BRAIN_SEED_SLUG_REUSE=0.
+            c = _SLUG_REUSE.get("v")
+            if c is not None and c[0] is names and os.environ.get("BRAIN_SEED_SLUG_REUSE", "1") != "0":
+                slugs = c[1]
+            else:
+                slugs = [fn[:-3] for fn in names if fn.endswith(".md")]
+                _SLUG_REUSE["v"] = (names, slugs)
             pairs = _runindex_hits("names", slugs, slugs, long_words)
         if pairs is not None:
             for slug, overlap in pairs:
@@ -1065,11 +1111,104 @@ def _log_capped(sess, slug, n, gap, need):
     without touching surfaced.tsv."""
     if not re.match(r"^[0-9a-f]{8}-", sess):
         return
+    row = "%.0f\t%s\t%s\t%d\t%.0f\t%d\n" % (time.time(), sess[:12], slug, n, gap, need)
+    if _fresh_async():
+        _FW.put(("cap", row))
+        return
+    _append_capped(row)
+
+
+def _append_capped(row):
     try:
         with io.open(os.path.join(DR, "spread_capped.tsv"), "a", encoding="utf-8") as f:
-            f.write("%.0f\t%s\t%s\t%d\t%.0f\t%d\n" % (time.time(), sess[:12], slug, n, gap, need))
+            f.write(row)
     except Exception:
         pass
+
+
+# Under the resident server the dedup state's write went on the
+# reply path, and on a contended disk the os.replace of this 9 KB file took 1-4 s (13 of 498 slow served calls,
+# 5-6 Nov, faults.jsonl). The server holds the state in process and one writer thread flushes it; see _fresh.
+import threading as _threading
+import queue as _queue
+_FW = _queue.Queue()
+_FS = {"st": None, "sig": None, "mine": {}, "thread": None}
+_FS_LOCK = _threading.Lock()
+
+
+def _fresh_async():
+    if os.environ.get("SPREAD_SERVER_CHILD") != "1" or os.environ.get("SPREAD_FRESH_ASYNC", "1") == "0":
+        return False
+    if _FS["thread"] is None or not _FS["thread"].is_alive():
+        if _FS["thread"] is None:
+            import atexit
+            atexit.register(_fresh_flush)     # the server exits between calls on a code change: land queued stamps
+        t = _threading.Thread(target=_fresh_writer, name="fresh-writer", daemon=True)
+        _FS["thread"] = t
+        t.start()
+    return True
+
+
+def _state_sig():
+    try:
+        x = os.stat(STATE)
+        return (x.st_mtime_ns, x.st_size)
+    except OSError:
+        return None
+
+
+def _write_state(st):
+    _tmp = STATE + ".%d.tmp" % os.getpid()
+    with io.open(_tmp, "w", encoding="utf-8") as _f:
+        json.dump(st, _f)
+    os.replace(_tmp, STATE)
+
+
+def _fresh_writer():
+    while True:
+        kind, val = _FW.get()
+        try:
+            if kind == "cap":
+                _append_capped(val)
+                continue
+            with _FS_LOCK:
+                if val is not _FS["st"]:
+                    continue          # a newer state is queued behind this one
+                snap = dict(val)
+            _write_state(snap)
+            with _FS_LOCK:
+                _FS["sig"] = _state_sig()
+                for k, v in snap.items():
+                    if _FS["mine"].get(k) == v:
+                        del _FS["mine"][k]
+        except Exception:
+            pass
+        finally:
+            _FW.task_done()
+
+
+def _fresh_flush(timeout=5.0):
+    """Tests and shutdown: wait until every queued write landed."""
+    import time as _t
+    end = _t.time() + timeout
+    while _FW.unfinished_tasks and _t.time() < end:
+        _t.sleep(0.01)
+    return not _FW.unfinished_tasks
+
+
+def _fresh_load_async():
+    with _FS_LOCK:
+        sig = _state_sig()
+        if _FS["st"] is None or sig != _FS["sig"]:
+            try:
+                st = json.load(io.open(STATE, encoding="utf-8")) if sig is not None else {}
+            except Exception:
+                st = {}
+            for k, v in _FS["mine"].items():
+                if v > st.get(k, 0):
+                    st[k] = v
+            _FS["st"], _FS["sig"] = st, sig
+        return dict(_FS["st"])
 
 
 def _fresh(sess, slug, capped=False):
@@ -1079,10 +1218,14 @@ def _fresh(sess, slug, capped=False):
     if not sess:
         return True
     now = time.time()
-    try:
-        st = json.load(io.open(STATE, encoding="utf-8")) if os.path.exists(STATE) else {}
-    except Exception:
-        st = {}
+    _async = _fresh_async()
+    if _async:
+        st = _fresh_load_async()
+    else:
+        try:
+            st = json.load(io.open(STATE, encoding="utf-8")) if os.path.exists(STATE) else {}
+        except Exception:
+            st = {}
     st = {k: v for k, v in st.items() if now - v < 86400}
     key = sess + "|" + slug
     if now - st.get(key, 0) < DEDUP_SECS:
@@ -1101,14 +1244,17 @@ def _fresh(sess, slug, capped=False):
     # only real (uuid-shaped) sessions persist: test/eval fixtures were leaking keys into this
     # live state file (the ledgers-polluted-by-own-gate class, caught by the 07-09 graph audit)
     if re.match(r"^[0-9a-f]{8}-", sess):
+        if _async:
+            with _FS_LOCK:
+                _FS["mine"][key] = now
+                _FS["st"] = st
+            _FW.put(("state", st))
+            return True
         try:
             # atomic replace (2026-09-02): a bare truncate-and-dump let a concurrent reader see a half-written
             # file, fall back to {} and write back only its own key - the race that wiped the reflex hook's
             # backoff state across 21 sessions; same shape here
-            _tmp = STATE + ".%d.tmp" % os.getpid()
-            with io.open(_tmp, "w", encoding="utf-8") as _f:
-                json.dump(st, _f)
-            os.replace(_tmp, STATE)
+            _write_state(st)
         except Exception:
             pass
     return True
@@ -1149,13 +1295,26 @@ def _fdesc_cache():
 
 
 def _fdesc_save():
+    """Merge this process's new entries into the file another hook may have rewritten since it was read, then swap
+    it in: hooks run side by side, and a plain dump of the copy read at start would drop what the others added."""
     if not _FDESC.get("dirty"):
         return
     import marshal
+    out = _FDESC["c"]
+    new = _FDESC.get("new")
+    if new:
+        try:
+            with open(DESC_CACHE, "rb") as fh:
+                cur = marshal.load(fh)
+            if isinstance(cur, dict):
+                cur.update(new)
+                out = cur
+        except Exception:
+            pass
     tmp = "%s.%d.tmp" % (DESC_CACHE, os.getpid())
     try:
         with open(tmp, "wb") as fh:
-            marshal.dump(_FDESC["c"], fh)
+            marshal.dump(out, fh)
         os.replace(tmp, DESC_CACHE)
         _FDESC["dirty"] = False
     except Exception:
@@ -1167,13 +1326,26 @@ def _fdesc_save():
 
 def _file_desc(slug):
     path = os.path.join(MEM, slug + ".md")
-    try:
-        st = os.stat(path)
-    except OSError:
-        return ""
+    # The stat comes from the prompt's one shared folder read when it ran (see _mem_names), else os.stat: on a large
+    # memory folder the per-file stat of 45-280 candidates was most of this lookup's cost. SPREAD_DESC_STATS=0 stats
+    # every file.
+    st = None
+    if _MEM_STATS is not None and os.environ.get("SPREAD_DESC_STATS", "1") != "0":
+        try:
+            got = _MEM_STATS.get(slug + ".md")
+            if got is not None:
+                st = (int(got[0]), int(got[1]))
+        except Exception:
+            st = None
+    if st is None:
+        try:
+            s = os.stat(path)
+        except OSError:
+            return ""
+        st = (s.st_size, s.st_mtime_ns)
     cache = _fdesc_cache()
     hit = cache.get(slug)
-    if hit is not None and hit[0] == st.st_size and hit[1] == st.st_mtime_ns:
+    if hit is not None and hit[0] == st[0] and hit[1] == st[1]:
         return hit[2]
     txt = ""
     try:
@@ -1185,7 +1357,8 @@ def _file_desc(slug):
     except Exception:
         return txt
     # the stat was taken before the read, so a file written in between leaves an entry no later stat matches
-    cache[slug] = (st.st_size, st.st_mtime_ns, txt[:200])
+    cache[slug] = (st[0], st[1], txt[:200])
+    _FDESC.setdefault("new", {})[slug] = cache[slug]
     _FDESC["dirty"] = True
     return txt
 
@@ -1365,6 +1538,8 @@ def main():
         # exit before any work. See script_help_flag_can_execute_work.
         print(__doc__ or os.path.basename(__file__))
         return
+    global _SHARE_LIST
+    _SHARE_LIST = True
     try:
         # lstrip the UTF-8 BOM: a PowerShell 5.1 pipe (and any BOM-writing feeder) prepends
         # U+FEFF, json.loads refuses it, and the fail-safe would swallow the whole event -

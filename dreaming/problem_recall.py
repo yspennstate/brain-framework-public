@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """What did we already try on this open problem? Prior work for a problem id or a problem statement, in one call
-(claude-4a88bc43-f08, 12 Oct 2026, front F08 of the brain-improvement run).
+(12 Oct 2026, front F08 of the brain-improvement run).
 
     python ~/.claude/dreaming/problem_recall.py P0072              prior work for one problem id (any intake: P C D E F G H I)
     python ~/.claude/dreaming/problem_recall.py "<statement words>" find the problem by its statement, then its prior work

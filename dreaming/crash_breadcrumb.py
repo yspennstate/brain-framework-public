@@ -63,7 +63,9 @@ def killed(boot, me):
     A Codex rollout counts only if it never logged task_complete: `codex exec` workers start and end every few minutes
     (3 Nov: 79 rollouts in the 3 h before the panic, every one but the last ending in task_complete)."""
     out = []
-    for path in glob.glob(f"{H}/.claude/projects/*/*.jsonl") + glob.glob(f"{H}/.codex/sessions/*/*/*/*.jsonl"):
+    _cl = os.environ.get("BRAIN_TRANSCRIPTS_DIR", os.path.join(H, ".claude", "projects"))
+    _cx = os.environ.get("BRAIN_CODEX_SESSIONS_DIR", os.path.join(H, ".codex", "sessions"))
+    for path in glob.glob(os.path.join(_cl, "*", "*.jsonl")) + glob.glob(os.path.join(_cx, "*", "*", "*", "*.jsonl")):
         try:
             st = os.stat(path)
         except OSError:
@@ -117,4 +119,7 @@ def main():
 
 
 if __name__ == "__main__":
+    if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+        print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
+        raise SystemExit(0)
     main()

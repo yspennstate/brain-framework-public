@@ -15,7 +15,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.dont_write_bytecode = True
-OPS_SOURCE = REPLAY_SOURCE = None
+_HERE = Path(__file__).resolve().parent
+# under pytest the command line is absent; fall back to the sibling modules when they exist
+OPS_SOURCE = _HERE / 'verify_ops.py' if (_HERE / 'verify_ops.py').exists() else None
+REPLAY_SOURCE = _HERE / 'verify_replay.py' if (_HERE / 'verify_replay.py').exists() else None
 RISK = 'Dividing both sides by $x-1$ gives $y=2$.'
 JUST = 'Since $z$ is nonzero, its reciprocal exists.'
 OLD = 'For every $n$ there exists $m$ with $m > n$.'
@@ -153,8 +156,8 @@ for reverse in [False, True]:
 def main():
     global OPS_SOURCE, REPLAY_SOURCE
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--ops-source', type=Path, required=True)
-    parser.add_argument('--replay-source', type=Path, required=True)
+    parser.add_argument('--ops-source', type=Path, required=OPS_SOURCE is None, default=OPS_SOURCE)
+    parser.add_argument('--replay-source', type=Path, required=REPLAY_SOURCE is None, default=REPLAY_SOURCE)
     parser.add_argument('--json', type=Path)
     args = parser.parse_args()
     OPS_SOURCE, REPLAY_SOURCE = args.ops_source.resolve(), args.replay_source.resolve()

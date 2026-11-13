@@ -100,7 +100,7 @@ RECALL_DEPTH = int(os.environ.get("COMPACT_RECALL_DEPTH") or 150)
 # lex2 (14 Oct 14:3x): the gate reads the words of the whole link source, not the excerpt, and needs 0.08. Under lex1
 # (excerpt words, 0.03) 23 anchors kept no link: an excerpt of 36-132 words shares too few rare words with any memory.
 # On 33 nodes judged blind (23 of those, 10 linked controls; 220 picks, judgments_1410.tsv in
-# crash_recovery_20261014/work_aeda7a9b): controls 27 on topic, 8 weak, 2 off against lex1's 15, 9, 6; the 23 empty
+# crash_recovery_20261014/work_5e550004): controls 27 on topic, 8 weak, 2 off against lex1's 15, 9, 6; the 23 empty
 # ones 19 linked, 22 on, 11 weak, 10 off. Below 0.08 the whole-text score stops separating (0.05-0.08: 13 on, 28 off).
 MEM_DF = os.path.join(ROOT, "mem_df.json")
 REGATE_LOG = INDEX + ".regated"
@@ -699,7 +699,7 @@ def agent_identity(agent_id, agent_type="", session_id="", transcript_path=""):
     PreCompact/PostCompact arrive with no agent_id (measured 12 Oct 15:18: recovery agents s03 and s04 compacted and
     both payloads lacked it). This function uses agent_id when a payload carries one; agent_from_transcripts() finds
     the agent when it does not. Before 12 Oct this file did neither, so twenty FEI stream agents' compactions were filed
-    under their coordinator's session (2d8060eb). The agent's description and transcript sit beside the parent's
+    under their coordinator's session (5e550005). The agent's description and transcript sit beside the parent's
     transcript, in <session>/subagents/**/agent-<id>.meta.json. Returns {} for the main thread."""
     agent_id = str(agent_id or "").strip()
     if agent_id.startswith("agent-"):
@@ -795,7 +795,7 @@ def agent_from_transcripts(summary, session_id="", transcript_path="", window_s=
 
 
 def _agent_label(runtime, session_id, agent=None):
-    """'claude session 2d8060eb', or for a subagent 'claude workflow-subagent B04 ... (agent a19d5a05, session 2d8060eb)'."""
+    """'claude session 5e550005', or for a subagent 'claude workflow-subagent B04 ... (agent 5e550006, session 5e550005)'."""
     sid8 = (session_id or "unknown")[:8]
     if not agent or not agent.get("agent_id"):
         return "%s session %s" % (runtime, sid8)
@@ -943,12 +943,12 @@ def save_node(summary, runtime, session_id, trigger, source_path="", when=None, 
         # Backfill only: the same compaction the hook saved, whose text the transcript wraps in a preface and a tail.
         # Until 14 Oct any row of the session and agent within window_s counted as this compaction, so a session that
         # compacts every few minutes lost the next one (the 24 h to 14 Oct 07:50: 112 of 1,154 main-thread compactions
-        # had no node, all in headless sessions; e7253a64 lost 18 of 71). A row is now this compaction only when the
+        # had no node, all in headless sessions; 5e550007 lost 18 of 71). A row is now this compaction only when the
         # hook saved it (a backfilled one is matched by its sha above) and its summary is this text, measured both ways
         # (_same_compaction). Any agent: the hook files a subagent's compaction under its parent with no agent_id until
         # attribute() finds the agent. The sweep's window is 120 s from the compaction's boundary: a hook row lands 5 s
         # before to 47 s after it (1,067 rows, 48 h to 14 Oct 08:5x). Wider is not safer: two compactions of one
-        # session can share most of their text (9643c560 at 07:34:46 and 07:41:10 on 14 Oct share 0.86-0.91).
+        # session can share most of their text (5e550008 at 07:34:46 and 07:41:10 on 14 Oct share 0.86-0.91).
         flat = _WS_RX.sub(" ", summary)
         for r in rows:
             try:

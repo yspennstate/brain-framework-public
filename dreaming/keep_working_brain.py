@@ -269,7 +269,7 @@ def main():
             return 0
         _log(sid, "own-task")
         # the message sends it to the queue, whose W11-W110 block only a build rewrites; the counts were rebuilt only on
-        # a listed session's queue hand-out, so after a9b28e2d's last one (3 Nov 21:23) they sat 18 h old (4 Nov 17:2x)
+        # a listed session's queue hand-out, so after 5e55000d's last one (3 Nov 21:23) they sat 18 h old (4 Nov 17:2x)
         _refresh_found()
         sys.stdout.write(json.dumps({"decision": "block", "reason": (
             "Keep working: he told this session to (%s UTC: \"%s\") and has not said stop since. Take the next useful "
@@ -289,7 +289,7 @@ def main():
     open_steps = [l.strip() for l in lines if re.match(r"^\s*- \[ \]", l)
                   and not re.search(r"BLOCKED|OWNER DECISION", l)]
     # a step handed to one session ("by peer claude-<8 hex>") holds only that session; the others would only spin
-    # re-checking work that is not theirs (29 Oct: step 17 belonged to a9b28e2d)
+    # re-checking work that is not theirs (29 Oct: step 17 belonged to 5e55000d)
     def _holds(step):
         m = re.search(r"by peer claude-([0-9a-f]{8})", step)
         return not m or sid.startswith(m.group(1))

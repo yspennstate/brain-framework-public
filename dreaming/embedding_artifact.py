@@ -175,10 +175,80 @@ def _write_column_totals(cache, rows, columns, totals):
         pass
 
 
+def _win_bulk_md_stats(mem_dir):
+    """{name: (st_size, st_mtime_ns)} for the regular .md files in mem_dir, read in 1 MiB buffers of
+    FILE_FULL_DIR_INFO (GetFileInformationByHandleEx) instead of a DirEntry and a stat_result per file. Every value
+    equal to scandir's on 52.8k files, three runs; CPU 500 -> 391 ms. A reparse point among the .md names, or any
+    error, gives None and the caller's scandir runs."""
+    try:
+        import ctypes
+        import struct
+        from ctypes import wintypes
+
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        create = k32.CreateFileW
+        create.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD,
+                           wintypes.DWORD, wintypes.HANDLE]
+        create.restype = wintypes.HANDLE
+        info = k32.GetFileInformationByHandleEx
+        info.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
+        info.restype = wintypes.BOOL
+        close = k32.CloseHandle
+        close.argtypes = [wintypes.HANDLE]
+        # FILE_LIST_DIRECTORY, share read/write/delete, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS (needed for a dir)
+        handle = create(mem_dir, 0x1, 0x7, None, 3, 0x02000000, None)
+        if not handle or handle == ctypes.c_void_p(-1).value:
+            return None
+        size = 1 << 20
+        buf = ctypes.create_string_buffer(size)
+        # The buffer is read in place: `buf.raw` copied the whole 1 MiB after each of the ~157 kernel calls a
+        # 53k-entry listing takes, ~157 MB of fresh pages freed at once (43-45k page faults, 1.2-1.9 s a listing).
+        # In place: the same entries, 3-4k faults, 0.3-0.7 s.
+        raw = memoryview(buf).cast("B")
+        unpack = struct.unpack_from
+        epoch = 116444736000000000  # 1601 -> 1970 in 100 ns ticks, as os.stat converts
+        out, cls = {}, 15  # FileFullDirectoryRestartInfo first, then FileFullDirectoryInfo (14)
+        try:
+            while True:
+                if not info(handle, cls, buf, size):
+                    return out if ctypes.get_last_error() == 18 else None  # ERROR_NO_MORE_FILES ends the listing
+                cls = 14
+                off = 0
+                while True:
+                    nxt, _, _, _, write, _, eof, _, attr, nlen = unpack("<IIqqqqqqII", raw, off)
+                    name = str(raw[off + 68:off + 68 + nlen], "utf-16le")
+                    if name.endswith(".md"):
+                        if attr & 0x400:
+                            return None
+                        if not attr & 0x10:
+                            out[name] = (eof, (write - epoch) * 100)
+                    if not nxt:
+                        break
+                    off += nxt
+        finally:
+            raw.release()
+            close(handle)
+    except Exception:
+        return None
+
+
+# One-shot handoff: the prompt hook's seed arm already read the folder with _bulk_md_stats for its name scan; it
+# leaves (mem_dir, monotonic time, stats) here and the loader's next call for the same folder within 60 s takes it
+# instead of reading the folder a second time.
+_PREFETCH = None
+
+
 def _bulk_md_stats(mem_dir):
     """{name: (st_size, st_mtime_ns)} for the regular .md files in mem_dir from macOS getattrlistbulk, which returns
     a buffer of entries per call: 0.06 s for 29k files against 0.15 s for scandir plus a stat each (1 Nov 2026,
-    every value equal). A symlink is left out (its row then takes the hash check). None off macOS or on any error."""
+    every value equal). A symlink is left out (its row then takes the hash check). On Windows the same comes from
+    _win_bulk_md_stats. None elsewhere or on any error."""
+    global _PREFETCH
+    pf, _PREFETCH = _PREFETCH, None
+    if pf is not None and pf[0] == mem_dir and 0 <= time.monotonic() - pf[1] < 60:
+        return pf[2]
+    if os.name == "nt":
+        return _win_bulk_md_stats(mem_dir)
     if sys.platform != "darwin":
         return None
     try:
@@ -358,83 +428,93 @@ def load_verified_embeddings_lightweight(
         _utc(status.get("committed_at"))
         if expected_model and status.get("model") != expected_model:
             return None
-        if _LIGHT_MEMBER_CAP and _members_over_cap(actual_sidecar, _LIGHT_MEMBER_CAP):
-            return None
-        blob, actual_sha, actual_size, _ = read_known_bytes(actual_sidecar, expected_sha)
-        if actual_sha != expected_sha or actual_size != expected_size:
-            return None
+        # A hit stands for a full pass of the checks below on these exact bytes (see _meta_cache_read).
+        meta = _meta_cache_read(actual_sidecar, expected_sha, expected_size, status)
+        if meta is not None:
+            (slugs, text_hashes, built_at, source_size, source_mtime, row_safe, vec_shape, vec_raw,
+             actual_sha) = meta
+        else:
+            if _LIGHT_MEMBER_CAP and _members_over_cap(actual_sidecar, _LIGHT_MEMBER_CAP):
+                return None
+            blob, actual_sha, actual_size, _ = read_known_bytes(actual_sidecar, expected_sha)
+            if actual_sha != expected_sha or actual_size != expected_size:
+                return None
 
-        required = {
-            "slugs", "vecs", "model", "built_at", "schema_version", "text_sha256",
-            "source_size", "source_mtime_ns", "row_safe",
-        }
-        with zipfile.ZipFile(io.BytesIO(blob)) as archive:
-            infos = archive.infolist()
-            names = [info.filename for info in infos]
-            if len(names) != len(set(names)):
-                return None
-            if sum(info.file_size for info in infos) > _LIGHT_MEMBER_CAP:
-                return None
-            member_names = {name[:-4] for name in names if name.endswith(".npy")}
-            if required - member_names:
-                return None
-            arrays = {
-                name: _read_npy_payload(archive.read(name + ".npy"))
-                for name in required
+            required = {
+                "slugs", "vecs", "model", "built_at", "schema_version", "text_sha256",
+                "source_size", "source_mtime_ns", "row_safe",
             }
+            with zipfile.ZipFile(io.BytesIO(blob)) as archive:
+                infos = archive.infolist()
+                vinfo = archive.getinfo("vecs.npy")
+                names = [info.filename for info in infos]
+                if len(names) != len(set(names)):
+                    return None
+                if sum(info.file_size for info in infos) > _LIGHT_MEMBER_CAP:
+                    return None
+                member_names = {name[:-4] for name in names if name.endswith(".npy")}
+                if required - member_names:
+                    return None
+                arrays = {
+                    name: _read_npy_payload(archive.read(name + ".npy"))
+                    for name in required
+                }
 
-        slug_descr, slug_shape, slug_raw = arrays["slugs"]
-        slugs = _decode_npy_unicode(slug_descr, slug_shape, slug_raw)
-        hash_descr, hash_shape, hash_raw = arrays["text_sha256"]
-        text_hashes = _decode_npy_unicode(hash_descr, hash_shape, hash_raw)
-        model = _decode_npy_unicode(*arrays["model"])
-        built_at = _decode_npy_unicode(*arrays["built_at"])
-        schema_descr, schema_shape, schema_raw = arrays["schema_version"]
-        schema_values = _decode_npy_i64(schema_descr, schema_shape, schema_raw)
-        size_descr, size_shape, size_raw = arrays["source_size"]
-        source_size = _decode_npy_i64(size_descr, size_shape, size_raw)
-        mtime_descr, mtime_shape, mtime_raw = arrays["source_mtime_ns"]
-        source_mtime = _decode_npy_i64(mtime_descr, mtime_shape, mtime_raw)
-        safe_descr, safe_shape, safe_raw = arrays["row_safe"]
-        row_safe = _decode_npy_bool(safe_descr, safe_shape, safe_raw)
-        vec_descr, vec_shape, vec_raw = arrays["vecs"]
+            slug_descr, slug_shape, slug_raw = arrays["slugs"]
+            slugs = _decode_npy_unicode(slug_descr, slug_shape, slug_raw)
+            hash_descr, hash_shape, hash_raw = arrays["text_sha256"]
+            text_hashes = _decode_npy_unicode(hash_descr, hash_shape, hash_raw)
+            model = _decode_npy_unicode(*arrays["model"])
+            built_at = _decode_npy_unicode(*arrays["built_at"])
+            schema_descr, schema_shape, schema_raw = arrays["schema_version"]
+            schema_values = _decode_npy_i64(schema_descr, schema_shape, schema_raw)
+            size_descr, size_shape, size_raw = arrays["source_size"]
+            source_size = _decode_npy_i64(size_descr, size_shape, size_raw)
+            mtime_descr, mtime_shape, mtime_raw = arrays["source_mtime_ns"]
+            source_mtime = _decode_npy_i64(mtime_descr, mtime_shape, mtime_raw)
+            safe_descr, safe_shape, safe_raw = arrays["row_safe"]
+            row_safe = _decode_npy_bool(safe_descr, safe_shape, safe_raw)
+            vec_descr, vec_shape, vec_raw = arrays["vecs"]
 
-        if len(model) != 1 or len(built_at) != 1 or len(schema_values) != 1:
-            return None
-        if int(schema_values[0]) != RUNTIME_SCHEMA_VERSION:
-            return None
-        if status.get("model") != model[0] or status.get("built_at") != built_at[0]:
-            return None
-        if len(slug_shape) != 1 or len(hash_shape) != 1:
-            return None
-        if (vec_descr != "<f4" or len(vec_shape) != 2 or vec_shape[0] != len(slugs)
-                or vec_shape[1] < 1 or vec_shape[1] > 4096
-                or len(vec_raw) != vec_shape[0] * vec_shape[1] * 4):
-            return None
-        row_count = len(slugs)
-        if (row_count < 1 or len(text_hashes) != row_count
-                or size_shape != (row_count,) or mtime_shape != (row_count,)
-                or safe_shape != (row_count,)
-                or len(source_size) != row_count or len(source_mtime) != row_count
-                or len(row_safe) != row_count):
-            return None
-        slug_set = set(slugs)
-        if len(slugs) != len(slug_set):
-            return None
-        # The same checks over the joined text, not one call per row (about 30 ms on 29k rows). With a "/" separator
-        # basename(slug) != slug exactly when "/" is in slug; elsewhere keep the per-row form.
-        if os.sep == "/" and not os.altsep:
-            joined = "\0".join(slugs)
-            if "" in slug_set or "/" in joined or "\\" in joined:
+            if len(model) != 1 or len(built_at) != 1 or len(schema_values) != 1:
                 return None
-        elif any(not slug or os.path.basename(slug) != slug or "/" in slug or "\\" in slug
-                 for slug in slugs):
-            return None
-        if set(map(len, text_hashes)) != {64} or not _HEX_RUN_RE.fullmatch("".join(text_hashes)):
-            return None
-        if any(int(value) < 0 for value in source_size) or any(
-                int(value) < 0 for value in source_mtime):
-            return None
+            if int(schema_values[0]) != RUNTIME_SCHEMA_VERSION:
+                return None
+            if status.get("model") != model[0] or status.get("built_at") != built_at[0]:
+                return None
+            if len(slug_shape) != 1 or len(hash_shape) != 1:
+                return None
+            if (vec_descr != "<f4" or len(vec_shape) != 2 or vec_shape[0] != len(slugs)
+                    or vec_shape[1] < 1 or vec_shape[1] > 4096
+                    or len(vec_raw) != vec_shape[0] * vec_shape[1] * 4):
+                return None
+            row_count = len(slugs)
+            if (row_count < 1 or len(text_hashes) != row_count
+                    or size_shape != (row_count,) or mtime_shape != (row_count,)
+                    or safe_shape != (row_count,)
+                    or len(source_size) != row_count or len(source_mtime) != row_count
+                    or len(row_safe) != row_count):
+                return None
+            slug_set = set(slugs)
+            if len(slugs) != len(slug_set):
+                return None
+            # The same checks over the joined text, not one call per row (about 30 ms on 29k rows). With a "/" separator
+            # basename(slug) != slug exactly when "/" is in slug; elsewhere keep the per-row form.
+            if os.sep == "/" and not os.altsep:
+                joined = "\0".join(slugs)
+                if "" in slug_set or "/" in joined or "\\" in joined:
+                    return None
+            elif any(not slug or os.path.basename(slug) != slug or "/" in slug or "\\" in slug
+                     for slug in slugs):
+                return None
+            if set(map(len, text_hashes)) != {64} or not _HEX_RUN_RE.fullmatch("".join(text_hashes)):
+                return None
+            if any(int(value) < 0 for value in source_size) or any(
+                    int(value) < 0 for value in source_mtime):
+                return None
+
+            _meta_cache_write(actual_sidecar, expected_sha, status, blob, vinfo, vec_raw, vec_shape, slugs,
+                              text_hashes, built_at, source_size, source_mtime, row_safe)
 
         matrix = PackedFloat32Matrix(vec_raw, vec_shape[0], vec_shape[1])
         hashes_by_slug = dict(zip(slugs, text_hashes))
@@ -493,6 +573,9 @@ def load_verified_embeddings_lightweight(
         if not all_finite:
             return None
         loaded = LightweightVerifiedEmbeddings(active, matrix, bias, hashes_by_slug)
+        # {name.md: (size, mtime_ns)} as read above, for callers that would read the same folder again
+        # (spread_recall's name scan and supersession's known-slug set).
+        loaded.memory_stats = memory_stats
         # Same as load_verified_embeddings: keep the build's stat of each row so embedding_row_current answers a
         # later check of an unchanged file from one stat. Without it every spread_recall candidate was re-read and
         # re-hashed on each prompt (about 400 files, 0.2 s of a 0.65 s hook, 1 Nov).
@@ -512,6 +595,112 @@ def load_verified_embeddings_lightweight(
         return loaded
     except Exception:
         return None
+
+
+# The light loader's checked, decoded metadata (slugs, text hashes, source stats, row mask) and the byte offset of the
+# vecs payload, for one sidecar. Valid only while the sidecar's stat signature equals the one read_known_bytes
+# recorded when those bytes hashed to the pointer's sha, the same trust rule that already skips the sha256. Written
+# only after every check of the full path passed. On a hit the loader reads the vecs slice instead of the whole file
+# and skips the zip, the UTF-32 decode and the checks (about 0.4-0.9 s of each prompt on 53k rows).
+# EMB_META_CACHE=0 always takes the full path.
+_META_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".embedding_meta_cache.marshal")
+
+
+def _meta_cache_on():
+    return os.environ.get("EMB_META_CACHE", "1") != "0" and os.environ.get("EMB_SHA_STAT_CACHE", "1") != "0"
+
+
+def _sha_stat_sig(key, expected_sha):
+    try:
+        with open(_SHA_STAT_CACHE, encoding="utf-8") as fh:
+            rec = json.load(fh).get(key)
+        if isinstance(rec, dict) and rec.get("sha") == expected_sha and isinstance(rec.get("sig"), list):
+            return rec["sig"]
+    except Exception:
+        pass
+    return None
+
+
+def _meta_cache_read(path, expected_sha, expected_size, status):
+    if not _meta_cache_on():
+        return None
+    try:
+        import marshal
+        key = os.path.abspath(path)
+        with open(_META_CACHE, "rb") as fh:
+            rec = marshal.load(fh)
+        if (not isinstance(rec, dict) or rec.get("v") != 1 or rec.get("key") != key or rec.get("sha") != expected_sha
+                or rec.get("model") != status.get("model") or rec.get("built_at") != status.get("built_at")):
+            return None
+        sig = rec["sig"]
+        if _sha_stat_sig(key, expected_sha) != sig:
+            return None
+        rows, columns = rec["shape"]
+        nbytes = rows * columns * 4
+        with open(path, "rb") as fh:
+            before = os.fstat(fh.fileno())
+            if ([before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns] != sig
+                    or before.st_size != expected_size):
+                return None
+            fh.seek(rec["vec_off"])
+            vec = fh.read(nbytes)
+            after = os.fstat(fh.fileno())
+        if ([after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns] != sig
+                or len(vec) != nbytes):
+            return None
+        slugs, hashes = rec["slugs"], rec["hashes"]
+        source_size = memoryview(rec["ssz"]).cast("q")
+        source_mtime = memoryview(rec["smt"]).cast("q")
+        row_safe = memoryview(rec["safe"]).cast("B")
+        if not (rows == len(slugs) == len(hashes) == len(source_size) == len(source_mtime) == len(row_safe)):
+            return None
+        return (slugs, hashes, [rec["built_at"]], source_size, source_mtime, row_safe, (rows, columns),
+                memoryview(vec), expected_sha)
+    except Exception:
+        return None
+
+
+def _meta_cache_write(path, expected_sha, status, blob, vinfo, vec_raw, vec_shape, slugs, text_hashes, built_at,
+                      source_size, source_mtime, row_safe):
+    if not _meta_cache_on():
+        return
+    try:
+        import marshal
+        import struct
+        if vinfo.compress_type != 0 or len(built_at) != 1:
+            return
+        key = os.path.abspath(path)
+        sig = _sha_stat_sig(key, expected_sha)
+        # fstat, as read_known_bytes records it: on Windows os.stat's st_ctime_ns is the creation time and
+        # fstat's is the change time, so a stat-built signature would never match
+        with open(path, "rb") as fh:
+            st = os.fstat(fh.fileno())
+        if (sig is None or [st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns, st.st_ctime_ns] != sig
+                or st.st_size != len(blob)):
+            return
+        lh = vinfo.header_offset
+        if struct.unpack_from("<I", blob, lh)[0] != 0x04034B50:
+            return
+        name_len, extra_len = struct.unpack_from("<HH", blob, lh + 26)
+        vec_off = lh + 30 + name_len + extra_len + vinfo.compress_size - len(vec_raw)
+        if memoryview(blob)[vec_off:vec_off + len(vec_raw)] != vec_raw:
+            return
+        rec = {"v": 1, "key": key, "sha": expected_sha, "sig": sig, "model": status.get("model"),
+               "built_at": built_at[0], "shape": [int(vec_shape[0]), int(vec_shape[1])], "vec_off": vec_off,
+               "slugs": list(slugs), "hashes": list(text_hashes), "ssz": bytes(source_size),
+               "smt": bytes(source_mtime), "safe": bytes(row_safe)}
+        if rec["built_at"] != status.get("built_at"):
+            return
+        tmp = "%s.%d.tmp" % (_META_CACHE, os.getpid())
+        with open(tmp, "wb") as fh:
+            marshal.dump(rec, fh)
+        os.replace(tmp, _META_CACHE)
+    except Exception:
+        try:
+            os.remove("%s.%d.tmp" % (_META_CACHE, os.getpid()))
+        except Exception:
+            pass
+
 
 
 _SHA_STAT_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".embedding_sha_stat.json")
@@ -944,7 +1133,7 @@ def load_verified_embeddings(sidecar, authority_path, mem_dir=None, expected_mod
 
 
 # Exact-hash results kept across processes, per (sidecar sha, memory folder). The build's stats hold only for the
-# folder it read: a git checkout of the same memories (BRAIN_MEM_DIR on the ai-memories clone, as the recall tests
+# folder it read: a git checkout of the same memories (BRAIN_MEM_DIR on the brain-repo clone, as the recall tests
 # set it) has other mtimes, so every row fell to an exact hash, 28k file reads and ~7.5 s a recall (3 Nov 2026). A
 # row hashed once is answered from its unchanged size and mtime, the loader's own rule for the build's stats.
 def _verify_cache_path(mem_dir):

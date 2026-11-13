@@ -30,6 +30,10 @@ What it does (reads only; writes nothing; wires to nothing - safe to run any tim
 
   python foresight.py
 """
+if __name__ == "__main__" and __import__("sys").argv[1:2] in (["-h"], ["--help"]):
+    print((__doc__ or "").strip() or "run with no arguments")
+    raise SystemExit(0)
+
 import os, io, re, time
 from collections import defaultdict
 

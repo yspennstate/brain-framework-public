@@ -5,6 +5,10 @@ Builds a small brain in a temporary HOME and, in one server Brain, checks: not d
 walks and the listing equals a fresh walk (names in order, kind, every stat slot), keeping unchanged entry objects;
 the next listing is not a full walk; served recall equals a cold process; a planted stale size is replaced.
 Run: python3 test_resident_listing_mac_idle.py   (exit 0 = pass; prints SKIP and exits 0 off macOS)"""
+if __name__ == "__main__" and __import__("sys").argv[1:2] in (["-h"], ["--help"]):
+    print((__doc__ or "").strip() or "run with no arguments")
+    raise SystemExit(0)
+
 import os, shutil, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))

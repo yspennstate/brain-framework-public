@@ -44,7 +44,7 @@ def _rewrites():
         return {}
 MIN_N = 4
 # the routes a fire can come by (the fire log's column 7: regex, graph, ff; hook for the Codex path). A judged row's
-# `path` outside these is no route: the hand sheet of 2 Sep (session 7dcb21b8) wrote its source there (27 Sep).
+# `path` outside these is no route: the hand sheet of 2 Sep (session 5e55000f) wrote its source there (27 Sep).
 KNOWN_PATHS = ("regex", "graph", "ff", "hook")
 
 

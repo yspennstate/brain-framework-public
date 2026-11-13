@@ -274,6 +274,43 @@ assoc.sort(reverse=True)
 # 0.72 calibrated cosine once same-series slug-prefix pairs are dropped; the misses were exactly
 # the boilerplate the prefix filter now catches. Fail-safe: no sidecar / no numpy -> empty list,
 # agenda unchanged.
+def _top_sem_pairs(V, cut, pid, codes, keep=4000, block=1024):
+    """Pairs i < j with V[i].V[j] >= cut, best `keep` by dot, as arrays (I, J, D).
+
+    Row blocks over columns j >= i, so no full Gram is built (over ~50k rows it was 9.9 GB a copy plus 19.7 GB of
+    triu indices, and its MemoryError emptied the list every night). The filters run INSIDE the loop: pairs of one
+    series (equal pid) and pairs whose code i*n+j is in `codes` (sorted, unique: already linked, co-cited or
+    wiki-linked) are dropped before the top `keep` is taken. Keeping the top first and filtering after returned
+    only near-duplicates and already-linked pairs, and so no association at all. Ties go row-major."""
+    import numpy as _np
+    n = len(V)
+    I = _np.empty(0, _np.int64); J = _np.empty(0, _np.int64); D = _np.empty(0, V.dtype)
+    for s0 in range(0, n, block):
+        blk = V[s0:s0 + block] @ V[s0:].T
+        r, cc = _np.nonzero(blk >= cut)
+        m = cc > r
+        r, cc = r[m], cc[m]
+        gi, gj = s0 + r, s0 + cc
+        m = pid[gi] != pid[gj]
+        r, cc, gi, gj = r[m], cc[m], gi[m], gj[m]
+        if len(codes) and len(r):
+            # binary search is an exact membership test on a sorted unique array; np.isin re-sorts it per block
+            q = gi * n + gj
+            pos = _np.searchsorted(codes, q)
+            pos[pos == len(codes)] = 0
+            m = codes[pos] != q
+            r, cc = r[m], cc[m]
+        I = _np.concatenate([I, s0 + r]); J = _np.concatenate([J, s0 + cc])
+        D = _np.concatenate([D, blk[r, cc]])
+        if len(D) > 4 * keep:
+            kth = _np.partition(D, len(D) - keep)[len(D) - keep]
+            m = D >= kth
+            I, J, D = I[m], J[m], D[m]
+            cut = max(cut, kth)
+        del blk
+    return I, J, D
+
+
 sem_assoc = []
 try:
     import numpy as _np
@@ -324,29 +361,40 @@ try:
                  if s in mems and not mems[s]["transient"] and _tier.get(s) != "unconscious"]
         if _keep:
             _V = _vecs[_keep]
-            # 30 Oct: same-series pairs (one session's compaction chain, one catalogue's cards) sit near 1.0 and
-            # filled the whole best-4000 window, so the loop below turned all 4000 away and B got no semantic
-            # pair at all. Drop them before the cut, by the same test as _same_series (first 12 characters agree)
-            _pre = {}
-            _pid = _np.array([_pre.setdefault(_slugs[i][:-3][:12], len(_pre)) if len(_slugs[i]) >= 15 else -1 - n
-                              for n, i in enumerate(_keep)])
-            # 30 Oct: the full N x N matrix, its triu index pairs and their argsort came to 15+ GB at 27,916 memories
-            # and swapped the Mac. Only pairs at 0.72 or above are ever used and only the best 4000 of those, so go
-            # block by block and keep each block's best 4000 (the global best 4000 lie in that union)
-            _cand = []
-            for _s in range(0, len(_keep), 1024):
-                _blk = (_V[_s:_s + 1024] @ _V.T - _bias) / (1.0 - _bias)
-                _r, _q = _np.nonzero(_blk >= 0.72)
-                _up = (_q > _r + _s) & (_pid[_r + _s] != _pid[_q])
-                _r, _q = _r[_up], _q[_up]
-                _cv = _blk[_r, _q]
-                if len(_cv) > 4000:
-                    _top = _np.argpartition(-_cv, 4000)[:4000]
-                    _r, _q, _cv = _r[_top], _q[_top], _cv[_top]
-                _cand.extend(zip(_cv.tolist(), (_r + _s).tolist(), _q.tolist()))
-            _cand.sort(key=lambda t: -t[0])
-            for _c, _i, _j in _cand[:4000]:
-                if len(sem_assoc) >= 10:
+            # Row blocks over columns j >= i, keeping only the best 4000 pairs above the cut. The full
+            # Gram over ~50k rows was 9.9 GB a copy plus 19.7 GB of triu indices; its MemoryError fell
+            # into the except below, so this list came back empty every night (found 3 Nov 2026).
+            # Same pair set as the full matrix (float32 noise ~2e-6); ties go row-major.
+            _cut = _np.float32(0.72 * (1.0 - _bias) + _bias)       # cal >= 0.72  <=>  dot >= _cut
+            # same-series = the 12-char prefix id; linked / co-cited / wiki-linked = sorted pair codes i*n+j
+            _n = len(_keep)
+            _names = [_slugs[k][:-3] for k in _keep]
+            _pos = {nm: q for q, nm in enumerate(_names)}
+            _pfx = {}
+            _pid = _np.array([_pfx.setdefault(nm[:12], len(_pfx)) if len(nm) >= 12 else -1 - q
+                              for q, nm in enumerate(_names)], dtype=_np.int64)
+            _codes = []
+
+            def _addpair(x, y):
+                qx, qy = _pos.get(x), _pos.get(y)
+                if qx is not None and qy is not None and qx != qy:
+                    _codes.append(min(qx, qy) * _n + max(qx, qy))
+            for _x, _y in _linked:
+                _addpair(_x, _y)
+            for _x, _y in cocited:
+                _addpair(_x, _y)
+            for _q, _k in enumerate(_keep):
+                for _l in mems[_slugs[_k]]["links"]:
+                    _t = resolve(_l)
+                    if _t:
+                        _addpair(_names[_q], _t)
+            _codes = _np.unique(_np.array(_codes, dtype=_np.int64))
+            _I, _J, _D = _top_sem_pairs(_V, _cut, _pid, _codes)
+            _C = (_D - _bias) / (1.0 - _bias)
+            for _k in _np.lexsort((_J, _I, -_C))[:4000]:
+                _i, _j = int(_I[_k]), int(_J[_k])
+                _c = float(_C[_k])
+                if _c < 0.72 or len(sem_assoc) >= 10:
                     break
                 _a, _b = _slugs[_keep[_i]], _slugs[_keep[_j]]
                 _an, _bn = _a[:-3], _b[:-3]

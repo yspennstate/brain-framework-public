@@ -11,10 +11,10 @@ at the Stop it blocks once when the report claims more than the turn checked.
 One card per kind of work (math, code, result) per session, again after three hours. Silent on status questions and
 errands. Runs for Claude (hook_dispatch) and Codex (hooks.json); the output is the JSON both accept. Fail-safe silent.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+import sys as _sys
+if __name__ == "__main__" and any(_a in ("-h", "--help") for _a in _sys.argv[1:]):
+    # Asking for help must not run the script's real work.
+    print((__doc__ or "").strip() or "usage: python " + _sys.argv[0])
     raise SystemExit(0)
 import hashlib
 import io

@@ -40,8 +40,7 @@ HOOK = Path(os.environ.get("MATH_SENSE_HOOK",
                            Path(__file__).resolve().parent / "math_sense.py"))
 
 # A must-speak block counts only when every card in it is whole - a claim id and a trust tag - read by the shared
-# parser. Until 30 Sep a block over 120 characters passed, so eleven header-only blocks (no id, no tag) read healthy
-# (account04/B07, B07-R79-INCOMPLETE-CARD-PASSES-REGRESSION-GATES).
+# parser. Until 30 Sep a block over 120 characters passed, so eleven header-only blocks (no id, no tag) read healthy.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from math_block_parse import delivery_problem  # noqa: E402
 
@@ -133,7 +132,7 @@ MUST_STAY_SILENT = [
 
 TIMEOUT = float(os.environ.get("MATH_SENSE_HEALTHCHECK_TIMEOUT", "60"))
 
-# 2026-09-29 (scheduled audit B19-R79-HEALTHCHECK-IGNORES-HOOK-EXIT): ask() used to keep stdout only,
+# 2026-09-29: ask() used to keep stdout only,
 # so a hook that printed a valid block and then exited 7 passed a must-speak row, and one that crashed
 # before printing passed a must-stay-silent row. The reply now carries the exit status, and a row is
 # judged on its content only when the hook exited 0 and printed nothing or the hook protocol's JSON.

@@ -70,7 +70,7 @@ STREAMS = {
     # is exactly the freshness-theater the equity-breaker scar names. The stamp is written
     # only when growth actually ran.
     os.path.join("network", ".grow_ran.json"): "dream_grow.py (dream persist, nightly)",
-    # the reflex gate's evidence (29 Sep, scheduled audit account04/B04 r6, B04-R43-STALE-PRECISION-PRIOR): the
+    # the reflex gate's evidence (29 Sep): the
     # judge appends verdicts only when it judges, so its log's age is the data's age; the table is rebuilt from
     # the log, and a rebuild over an unchanged log would look fresh on its own. The judge stopped from 26 Sep to
     # the 27th's evening with nothing saying so, and the gate went on reading a day-old table.

@@ -128,6 +128,21 @@ def _index_file_signature(path):
     return (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns)
 
 
+def _own_memory_dir():
+    """This install's memory folder, found as brain.py finds its corpus: $BRAIN_SLUG, then the BRAIN_SLUG marker the
+    installer writes beside this file, then the slug Claude Code derives from the home path."""
+    slug = os.environ.get("BRAIN_SLUG", "").strip()
+    if not slug:
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "BRAIN_SLUG"), encoding="utf-8") as fh:
+                slug = fh.read().strip()
+        except OSError:
+            slug = ""
+    home = os.path.expanduser("~")
+    slug = slug or home.replace(":", "-").replace(chr(92), "-").replace("/", "-")
+    return os.path.join(home, ".claude", "projects", slug, "memory")
+
+
 def build(store_path):
     sys.path.insert(0, os.path.expanduser("~/math-brain-build/src"))
     from math_brain.store import ResearchStore
@@ -211,8 +226,7 @@ def build(store_path):
         try:
             from math_brain import expansion as _X
             _tx = time.time()
-            _mem = (os.environ.get("MATHBRAIN_EXPANSION_MEMORY", "").strip()
-                    or os.path.join(os.path.expanduser("~"), ".claude", "projects", (os.environ.get("BRAIN_SLUG") or os.path.expanduser("~").replace(":", "-").replace(chr(92), "-").replace("/", "-")), "memory"))
+            _mem = os.environ.get("MATHBRAIN_EXPANSION_MEMORY", "").strip() or _own_memory_dir()
             expansion = _X.build(store_path, current_all, memory_dir=_mem)
             _last = dict(getattr(_X, "LAST_BUILD", {}) or {})
             _side = _last.get("sidecar")     # the file this build wrote, or None

@@ -12,7 +12,8 @@ Correctness rules:
   never served by old code; the next client call runs cold and starts a fresh server.
 - A call whose BRAIN_* environment differs from the server's is declined, and the client runs cold.
 - One call at a time; a call that would wait more than LOCK_WAIT seconds is declined (client runs cold).
-- Exits after IDLE_EXIT seconds without a call, or when its working set passes RSS_CAP.
+- Exits after IDLE_EXIT seconds without a call, or when its working set passes RSS_CAP, or when one call has held
+  the lock past ORPHAN_S (its client stopped reading at 180 s, so nobody is waiting for the answer).
 Launched windowless by the client (python.exe with CREATE_NO_WINDOW, so its own children inherit a hidden
 console). Read-only on the brain except what recall itself writes (its usage logs). Never deletes anything.
 """
@@ -32,6 +33,9 @@ CALL_LOG = os.path.join(STATE_DIR, "calls.jsonl")
 STATE_TTL = float(os.environ.get("BRS_STATE_TTL", "120"))
 IDLE_EXIT = float(os.environ.get("BRS_IDLE_EXIT", "7200"))
 LOCK_WAIT = float(os.environ.get("BRS_LOCK_WAIT", "20"))
+# A call still holding the lock this long has outlived its client's 180 s read timeout: nobody reads its answer,
+# and every caller behind it is declined busy. 0 turns the exit off.
+ORPHAN_S = float(os.environ.get("BRS_ORPHAN_S", "200"))
 RSS_CAP = int(float(os.environ.get("BRS_RSS_CAP_GB", "2.5")) * 1024 ** 3)
 # Mac, 5 Nov 2026 (claude-1ca628ae): every BM25 rebuild unlinks the old postings sidecar (~157 MB), but a reader this
 # process opened keeps it on disk until we exit; after 19 h one server held 11 of them (2.3 GiB with other deleted
@@ -572,6 +576,8 @@ def main():
     lock = threading.Lock()
     token = secrets.token_hex(16)
     last = {"t": time.time(), "bm25": bm25_gen(), "gens": 0}
+    cur = {"t0": None}   # when the call now holding the lock took it
+    orphaned = {"s": None}
     stop = threading.Event()
 
     class Handler(socketserver.StreamRequestHandler):
@@ -588,6 +594,7 @@ def main():
             elif not lock.acquire(timeout=LOCK_WAIT):
                 reply = {"decline": "busy"}
             else:
+                cur["t0"] = time.time()
                 try:
                     # code first (3 Nov 2026): with the env check ahead of it, a server whose callers were all declined
                     # on env never saw its own code change and kept running the old code.
@@ -667,6 +674,7 @@ def main():
                                 last["respawn"] = True
                                 stop.set()
                 finally:
+                    cur["t0"] = None
                     last["t"] = time.time()
                     lock.release()
             try:
@@ -716,7 +724,18 @@ def main():
             if time.time() - last["t"] > IDLE_EXIT:
                 log("idle exit")
                 break
-            # 6 Nov 2026 (claude-95df24fa, Mac): the resident listing's periodic full walk (FULL_EVERY, 600 s) ran inside
+            t0c = cur["t0"]
+            if ORPHAN_S > 0 and t0c is not None and time.time() - t0c > ORPHAN_S:
+                orphaned["s"] = round(time.time() - t0c, 1)
+                log("a call has held the lock %.0f s, past its client's read timeout; exiting" % orphaned["s"])
+                try:
+                    with open(CALL_LOG, "a", encoding="utf-8") as fh:
+                        fh.write(json.dumps({"t": round(time.time(), 1), "op": "orphaned", "ms": int(orphaned["s"] * 1000),
+                                             "aborted": True}) + "\n")
+                except Exception:
+                    pass
+                break
+            # 6 Nov 2026: the resident listing's periodic full walk (FULL_EVERY, 600 s) ran inside
             # whichever recall came after it fell due. Here it runs between calls, a tick or so early; a call that
             # arrives meanwhile waits on the lock (~0.2 s). BRS_IDLE_FULL=0 turns it off.
             rb = brain.resident
@@ -780,6 +799,10 @@ def main():
                 log("started a successor after the index change")
             except Exception as e:
                 log("successor start failed: %s: %s" % (type(e).__name__, e))
+        if orphaned["s"] is not None:
+            # the orphaned call's thread is still running; leave without waiting on it, so the server lock and the
+            # port are free for the next server at once
+            os._exit(0)
 
 
 if __name__ == "__main__":

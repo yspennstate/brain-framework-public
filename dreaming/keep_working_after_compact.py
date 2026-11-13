@@ -11,10 +11,10 @@ when the compaction is in the transcript's last 3 MB and under 6 hours old, and 
 working entries under this session's agent id. The reason tells the agent it may stop with one line when everything is
 done or waiting on the user or a running job, so a finished agent pays one short turn, nothing more. Silent on any error.
 Fires are logged to ~/.claude/brain_graph/compactions/keep_working_fires.jsonl."""
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+import sys as _sys
+if __name__ == "__main__" and any(_a in ("-h", "--help") for _a in _sys.argv[1:]):
+    # Asking for help must not run the script's real work.
+    print((__doc__ or "").strip() or "usage: python " + _sys.argv[0])
     raise SystemExit(0)
 import io
 import json

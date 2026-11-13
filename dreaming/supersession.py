@@ -453,7 +453,7 @@ _FM_CACHE_NAME = "supersession_frontmatter_cache.json"
 # (size, mtime_ns), so every unchanged file would keep serving the empty target the old parse recorded.
 # 3 (28 Sep): an entry holds the strict target and the prose pointer's candidate apart, and the candidate's target is
 # looked for in this call's own directory listing, never taken from the cache (IA-20260928-04).
-# 4 (29 Sep, account03/B19 r75 and account02/B11 auto46): an entry is keyed by size, mtime, ctime and birth time,
+# 4 (29 Sep): an entry is keyed by size, mtime, ctime and birth time,
 # so a file replaced by rename with its old size and mtime is read again (Windows gives the renamed file a new creation
 # time; POSIX changes ctime on any write or utime). The one case still read from the cache is an in-place write of the
 # same size whose mtime is then set back to the same 100 ns on Windows; no writer here does that. Targets resolve
@@ -464,8 +464,8 @@ _FM_CACHE_VERSION = 5   # 5 (4 Oct 2026): a qualified pointer no longer routes -
 
 def _md_files(memory_dir):
     """The folder's memory files: .md names that are FILES (a directory named *.md is not a memory; a file symlink is),
-    as DirEntry objects. One enumeration for every reader here, so the targets, the known slugs and the audit agree
-    (account03/B19 r75, B19-R64-DIRECTORY-MD-COUNTED-AS-KNOWN-MEMORY). [] when the folder cannot be read."""
+    as DirEntry objects. One enumeration for every reader here, so the targets, the known slugs and the audit agree.
+    [] when the folder cannot be read."""
     try:
         with os.scandir(memory_dir) as it:
             return [e for e in it if e.name.endswith(".md") and e.is_file()]
@@ -489,7 +489,9 @@ def _fm_cache_path(memory_dir):
     Mac, and other agents' recalls queued 5-13 min behind it."""
     import hashlib
     tag = hashlib.sha256(os.path.normcase(os.path.abspath(memory_dir)).encode("utf-8")).hexdigest()[:12]
-    return os.path.join(HERE, "supersession_frontmatter_cache.%s.json" % tag)
+    # BRAIN_SUPERSESSION_CACHE_DIR moves the cache out of the code folder (tests point it at a temp dir)
+    return os.path.join(os.environ.get("BRAIN_SUPERSESSION_CACHE_DIR") or HERE,
+                        "supersession_frontmatter_cache.%s.json" % tag)
 
 
 # What the last _frontmatter_targets call read: memory_dir and pointers, file name -> (strict, candidate) for every file

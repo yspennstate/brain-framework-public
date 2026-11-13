@@ -10,7 +10,7 @@ Keys are read from the quarantine only to score and are never printed. First rea
 40, paraphrase node 11 of 40 (24 with the plain-question coverage floor off) - memory
 the_math_hook_is_lexical_and_paraphrases_lose_most_of_what_it_finds_2026_09_25.
 
-TWO NATURAL FRAMINGS (4 Oct 2026, claude-4a88bc43). The bank's template wraps each description in a 50-word frame that
+TWO NATURAL FRAMINGS (4 Oct 2026). The bank's template wraps each description in a 50-word frame that
 shares its words with the boilerplate of every ledger card, so the shortest boilerplate card wins: 10 of the 22 template
 blocks the coverage floor silenced on 4 Oct were led by one card. The same 40 descriptions in a short natural question reach
 their answer node 27 of 40 under the same gates (template 14), and in "What is known about ...?" only 12 - mostly refused
@@ -75,7 +75,7 @@ def main():
 
     def one(w):
         iid, form, q = w
-        # _run returns (block, ids, seconds, invalid) since 30 Sep 03:32 (account03/B01): until this line followed it the
+        # _run returns (block, ids, seconds, invalid) since 30 Sep 03:32: until this line followed it the
         # instrument raised on its first call and the gate's row read "paraphrase summary line not found"
         block, ids, secs, bad = vib._run(q, env, timeout=180)
         if bad:

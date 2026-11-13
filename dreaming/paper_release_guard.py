@@ -20,12 +20,11 @@ Use:
 A file that is not a paper (a table fragment, a beamer talk) is skipped. A draft that must go to a public repo
 before it is finished does not exist: finish it first. There is no bypass.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+import sys as _sys
+if __name__ == "__main__" and any(_a in ("-h", "--help") for _a in _sys.argv[1:]):
+    # Asking for help must not run the script's real work.
+    print((__doc__ or "").strip() or "usage: python " + _sys.argv[0])
     raise SystemExit(0)
-
 import io, json, os, re, shutil, subprocess, sys, tarfile, tempfile, time, urllib.request
 
 LOG = os.path.expanduser("~/.claude/dreaming/logs/paper_release_guard.log")
@@ -120,8 +119,8 @@ INPUT = re.compile(r"\\(?:input|include|subfile)\s*\{([^}]+)\}|\\input\s+([^\s{}
 
 
 def expand_inputs(t, dirs, depth=0):
-    """Inline \\input/\\include targets (claude-8bb6672a, 2 Nov: declarations kept in sections/declarations.tex
-    were read as missing). dirs: the paper's folder first, then the repo root; LaTeX resolves against both."""
+    """Inline \\input/\\include targets (so that declarations kept in a separate file such as
+    sections/declarations.tex are read). dirs: the paper's folder first, then the repo root; LaTeX resolves against both."""
     if depth > 4:
         return t
 

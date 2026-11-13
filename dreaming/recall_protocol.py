@@ -41,25 +41,45 @@ def package_dir():
         return HERE / 'math_brain_not_installed'
     return Path(spec.origin).parent
 
+# Bump PROTOCOL by hand when a frame, a request field or a response field changes meaning: it is part of the code
+# key and the stamp, so clients then refuse every older server. An edit to the WIRE files that keeps the protocol
+# (logging, timeouts, retries, the server's reload and catch-up code) changes no answer, so those files are left out
+# of the key: a running server keeps serving and the keeper starts the new server beside the old one (recall_keeper.py,
+# overlap restart). With the wire files in the key, every such edit sent every caller to the cold path for the minutes
+# a new server takes to load.
+PROTOCOL = 1
+WIRE_FILES = ('recall_protocol.py','recall_client.py','recall_server.py','server_safety.py')
+
+def wire_files():
+    return [HERE / name for name in WIRE_FILES]
+
+def wire_key():
+    """The content of the wire files, for the keeper's overlap restart. By content, not mtime: a touch with the same
+    bytes must not start a successor (it would find the running server's mutex and exit as a second instance)."""
+    digest = hashlib.sha256()
+    for path in wire_files():
+        digest.update(canonical(path).encode('utf-8') + b'\0')
+        digest.update(path.read_bytes() if path.exists() else b'')
+    return digest.hexdigest()
+
 def code_files():
-    # fastrecall_delta.py since 4 Nov: the server runs its extend() on every store change, and without it in the
-    # stamp a fix to it never reached the resident server (claude-c462c100)
+    # The files whose bytes decide an answer. fastrecall_delta.py is one: the server runs its extend() on every store
+    # change, so a fix to it must restart the resident server like any other answer-deciding file.
     files = [HERE / name for name in ('candidate_manifest.json','baseline_math_recall.py','math_recall.py','fastrecall.py',
-                                     'fastrecall_delta.py','math_strength.py','recall_protocol.py',
-                                     'recall_client.py','recall_server.py')]
+                                     'fastrecall_delta.py','math_strength.py')]
     files += sorted(package_dir().glob('*.py'))
     files.append(HERE/'query_embed.py')
     return [path for path in files if path.exists()]   # an install without the eval candidates stamps what it has
 
 def code_stamp(extra=()):
-    rows=[]
+    rows=[('protocol',PROTOCOL)]
     for path in code_files()+[Path(p) for p in extra]:
         st=path.stat()
         rows.append((canonical(path),st.st_size,st.st_mtime_ns))
     return hashlib.sha256(json.dumps(rows,separators=(',',':')).encode('utf-8')).hexdigest()
 
 def code_key():
-    digest = hashlib.sha256()
+    digest = hashlib.sha256(b'protocol %d\0' % PROTOCOL)
     for path in code_files():
         digest.update(canonical(path).encode('utf-8') + b'\0')
         digest.update(path.read_bytes())

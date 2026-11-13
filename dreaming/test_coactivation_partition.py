@@ -24,12 +24,11 @@ fold_targets rewrites it (a fresh two-memory log each time, so every fold is a d
 With OLD_COACTIVATION_END.py (the file before 28 Sep), P1 must fail; with --old-prune PRE_29SEP.py (the file before the
 floor applied at read), P5 and P6 must fail: the checks can fail.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+import sys as _sys
+if __name__ == "__main__" and any(_a in ("-h", "--help") for _a in _sys.argv[1:]):
+    # Asking for help must not run the script's real work.
+    print((__doc__ or "").strip() or "usage: python " + _sys.argv[0])
     raise SystemExit(0)
-
 import importlib.machinery
 import importlib.util
 import inspect

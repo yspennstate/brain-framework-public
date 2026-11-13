@@ -14,7 +14,7 @@ than WINDOW_MIN. It takes no mesh claim, never blocks, and on any error says not
 only, never deleted (owner law 2026-09-26).
 
 Reading the ledger, deciding and appending this edit's line are one transaction under a short lock on LEDGER + ".lock"
-(28 Sep, scheduled audit account03/B15, B15-R41-READ-BEFORE-APPEND-TOCTOU-20260928: two sessions editing one file at the
+(28 Sep: two sessions editing one file at the
 same moment both read the ledger before either appended, and neither was told). The lock is held for the few
 milliseconds of that transaction, never through the edit; if it cannot be had within LOCK_WAIT_S the hook goes ahead
 without it rather than hold up the edit.
@@ -85,7 +85,7 @@ def tail_lines(path):
 
 def session_key(session_id):
     """The identity two ledger rows are compared on: a hash of the whole session id. Until 28 Sep the hook kept and
-    compared only its first 8 characters (account01/B19 auto11 and account03/B19 r61, R41), so two sessions sharing
+    compared only its first 8 characters, so two sessions sharing
     them were one session to it. No two of 1,088 Claude session ids share them, but Codex ids are time-ordered and
     share them for sessions started within about a minute. The 8 characters stay in the row for display."""
     return hashlib.sha256(str(session_id).encode("utf-8", "replace")).hexdigest()[:16]
@@ -223,7 +223,7 @@ def selftest():
     ok.append(("a Read is ignored", run("eeeeeeee", mem, t0 + 7610, tool="Read") == ""))
     lines = io.open(led, encoding="utf-8").read().splitlines()
     ok.append(("ledger: five shared edits recorded, the outside path and the Read not", len(lines) == 5))
-    # two sessions whose ids share their first 8 characters (account01/B19 auto11, account03/B19 r61; R41): one session
+    # two sessions whose ids share their first 8 characters: one session
     # to the hook before 28 Sep, two now. Codex ids are time-ordered and look like these for sessions a minute apart.
     a_full, b_full = "01a0c3c2-1111-7aaa-8aaa-000000000001", "01a0c3c2-2222-7bbb-8bbb-000000000002"
     src = io.open(os.path.abspath(__file__), encoding="utf-8").read()
@@ -255,7 +255,7 @@ def selftest():
                "[collision]" in run("", mem, t0 + 300, full=a_full, ledger=lled)))
     ok.append(("a legacy row (no key) with this session's 8 characters stays silent",
                run("", other_mem, t0 + 300, full=a_full, ledger=lled) == ""))
-    # the race account03/B15 found (R41): two sessions start an edit of one file at the same moment. A pause between
+    # the race: two sessions start an edit of one file at the same moment. A pause between
     # the decision and the append widens the window; under the lock the second waits and is told.
     ok.extend(race_checks(os.path.abspath(__file__), d, mem))
     # the same race with the lock taken out: the check must be able to fail (both read before either appends)

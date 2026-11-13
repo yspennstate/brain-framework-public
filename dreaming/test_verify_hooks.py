@@ -8,10 +8,10 @@ payload the runtime would send. A gate that blocks everything is as broken as on
 has silent controls beside its firing ones: a claim backed by a check that ran after the last edit, a labelled status,
 a claim about recorded earlier work, a chat reply, and the loop guard (one block per rule per session).
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+import sys as _sys
+if __name__ == "__main__" and any(_a in ("-h", "--help") for _a in _sys.argv[1:]):
+    # Asking for help must not run the script's real work.
+    print((__doc__ or "").strip() or "usage: python " + _sys.argv[0])
     raise SystemExit(0)
 import importlib.util
 import json

@@ -758,8 +758,7 @@ def search_nodes(mem: str | os.PathLike[str] | Path, query: str,
     that matches the rare terms still clears the floor.
 
     failures: pass a list and a bundle that fails verification is left out of the search, its bytes and scores counting
-    for nothing, and named in the list as (slug, error type) - no text of it (28 Sep, scheduled audit account03/B02
-    r68, B02-R1-ATTACHMENT-CORRUPTION-GLOBAL-RECALL-STOP-001: one broken bundle anywhere used to abort the whole search,
+    for nothing, and named in the list as (slug, error type) - no text of it (28 Sep: one broken bundle anywhere used to abort the whole search,
     and brain.py's recall with it). Without the list the first failure raises, as before, for callers that want that.
     """
     q = set(_tokens(query))

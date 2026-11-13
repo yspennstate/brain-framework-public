@@ -136,7 +136,7 @@ function Push-WithResync {
         [int] $SleepSeconds = 20,
         [scriptblock] $Logger = { param($m) Write-Host $m }
     )
-    # 2026-09-28 (account03/B06 r55, R51-B06-PUSH-WITH-RESYNC-UNLEASED-REWIND-38): every attempt is leased to the base the
+    # 2026-09-28: every attempt is leased to the base the
     # range was certified against. Unleased, a remote rewound after the last check (main moved from A back to its parent
     # R) took B as a fast-forward and published A, which no scan had covered. A lease refused by a moved main goes through
     # the refresh, re-sync and re-certify below, and the retry is leased to the new base. A matching lease would also let

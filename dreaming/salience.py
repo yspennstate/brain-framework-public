@@ -84,37 +84,43 @@ def lexical_counts(head):
     return raw_fear, len(joy_rx.findall(head)), len(stakes_rx.findall(head)), final_fear
 
 
-# The three lexicon scans were 28 s of a 70 s dream agenda (cProfile, about 30,000 memories, 1 ms a head),
-# and consciousness.py pays them again. The counts depend only on the file, so keep them per file under its
-# (size, mtime_ns), taken BEFORE the read: a file rewritten mid-read is then stored under its old stat and re-scanned
-# next time. Only for the live memory dir (tests score temp dirs), and dropped whole if a lexicon pattern changes.
-LEX_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".salience_lex_cache.marshal")
-_LEX_TAG = "\0".join(rx.pattern for rx in _UNICODE_LEXICONS)
+# The three lexicon scans cost ~3.4 ms a head; over ~50k memories that was 170 s of every
+# score_corpus call (3 Nov 2026: the dream's agenda step ran 574 s on a quiet box and hit its
+# 1800 s cap under load). Counts depend only on the head text and the patterns, so they are
+# cached by a digest of both. A lexicon edit changes the key and the cache refills itself.
+# A rebuilt cache, not brain data: deleting the file only costs one slow run.
+import hashlib, pickle
+_LEX_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache", "salience_lexical_counts.pkl")
+_LEX_KEY = hashlib.blake2b("\x00".join(r.pattern + str(r.flags) for r in _UNICODE_LEXICONS + _ASCII_LEXICONS)
+                           .encode("utf-8"), digest_size=8).hexdigest()
 
 
-def _lex_cache_load(mem_dir):
-    if os.path.realpath(mem_dir) != os.path.realpath(MEM_DEFAULT):
-        return None
+def _head_digest(head):
+    return hashlib.blake2b(head.encode("utf-8", "surrogatepass"), digest_size=16).digest()
+
+
+def _load_lex_cache():
     try:
-        with open(LEX_CACHE, "rb") as fh:
-            got = marshal.load(fh)
-        if isinstance(got, dict) and got.get("tag") == _LEX_TAG and isinstance(got.get("e"), dict):
-            return got["e"]
+        with open(_LEX_CACHE, "rb") as fh:
+            d = pickle.load(fh)
+        if isinstance(d, dict) and d.get("key") == _LEX_KEY and isinstance(d.get("counts"), dict):
+            return d["counts"]
     except Exception:
         pass
     return {}
 
 
-def _lex_cache_save(entries):
-    tmp = "%s.%d.tmp" % (LEX_CACHE, os.getpid())
+def _save_lex_cache(counts):
     try:
+        os.makedirs(os.path.dirname(_LEX_CACHE), exist_ok=True)
+        tmp = "%s.%d.tmp" % (_LEX_CACHE, os.getpid())
         with open(tmp, "wb") as fh:
-            marshal.dump({"tag": _LEX_TAG, "e": entries}, fh)
-        os.replace(tmp, LEX_CACHE)
+            pickle.dump({"key": _LEX_KEY, "counts": counts}, fh, protocol=pickle.HIGHEST_PROTOCOL)
+        os.replace(tmp, _LEX_CACHE)
     except Exception:
         try:
-            os.unlink(tmp)
-        except OSError:
+            os.remove(tmp)
+        except Exception:
             pass
 
 # A memory that has itself been SUPERSEDED / REFUTED should FADE, so its correction (the fresh
@@ -209,9 +215,12 @@ def _infer_type(fn, body):
         return "user"
     return "project"
 
-def score_corpus(mem_dir=MEM_DEFAULT, curated_names=None):
+def score_corpus(mem_dir=MEM_DEFAULT, curated_names=None, bodies=None):
     """Return {fname: {salience, valence, charge, why, type, date}} for every live memory.
-    Pure read-only. curated_names: set of basenames present in MEMORY.md (auto-read if None)."""
+    Pure read-only. curated_names: set of basenames present in MEMORY.md (auto-read if None).
+    bodies: optional {fname: text} a caller already read (utf-8, errors=replace, as _read does);
+    a file missing from it is read from disk. dream.py passes its own reads, which saves a
+    second pass over every memory (~88 s on 49.8k files, 3 Nov 2026)."""
     now = time.time()
     today = time.strftime("%Y-%m-%d")
 
@@ -232,12 +241,9 @@ def score_corpus(mem_dir=MEM_DEFAULT, curated_names=None):
         p = os.path.join(mem_dir, fn)
         if not os.path.isfile(p):
             continue
-        try:
-            st = os.stat(p)
-            stat_key = (st.st_size, st.st_mtime_ns)
-        except OSError:
-            stat_key = None
-        body = _read(p)
+        body = bodies.get(fn) if bodies else None
+        if body is None:
+            body = _read(p)
         head = body[:1600]
         dm = DATE_F.search(fn) or DATE_F.search(FM_DESC.search(body).group(1) if FM_DESC.search(body) else "")
         date = f"{dm.group(1)}-{dm.group(2)}-{dm.group(3) or '01'}" if dm else None
@@ -276,24 +282,20 @@ def score_corpus(mem_dir=MEM_DEFAULT, curated_names=None):
     # max charge; below, the low-charge members' persistence is boosted toward it.
     _SESS = re.compile(r"originSessionId:\s*([0-9A-Za-z-]{8,})")
     _ch, _sess, _counts = {}, {}, {}
-    _lex_old = _lex_cache_load(mem_dir)
-    _lex_new, _lex_hits = {}, 0
+    _lex_old = _load_lex_cache()
+    _lex_new = {}
     for fn, m in mems.items():
-        sk = m["stat_key"]
-        hit = _lex_old.get(fn) if (_lex_old is not None and sk is not None) else None
-        if hit is not None and hit[0] == sk[0] and hit[1] == sk[1]:
-            counts = tuple(hit[2])
-            _lex_hits += 1
-        else:
+        _dg = _head_digest(m["head"])
+        counts = _lex_old.get(_dg)
+        if counts is None:
             counts = lexical_counts(m["head"])
-        if sk is not None:
-            _lex_new[fn] = (sk[0], sk[1], counts)
+        _lex_new[_dg] = counts
         _counts[fn] = counts
         _ch[fn] = min(1.0, sum(counts[:3]) / 6.0)
         _sm = _SESS.search(m["body"])
         _sess[fn] = _sm.group(1) if _sm else None
-    if _lex_old is not None and (_lex_hits != len(_lex_new) or len(_lex_old) != len(_lex_new)):
-        _lex_cache_save(_lex_new)
+    if _lex_new.keys() != _lex_old.keys():
+        _save_lex_cache(_lex_new)
     _sessmax = {}
     for fn, s in _sess.items():
         if s:

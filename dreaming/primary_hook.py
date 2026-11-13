@@ -15,10 +15,10 @@ C:/Users/me/.claude/dreaming/PRIMARY_HOOK_OFF (the partner's call only). State: 
     python primary_hook.py --runtime codex     Codex (JSON hookSpecificOutput; Codex discards plain stdout)
     python primary_hook.py --selftest          four controls on a temporary state file; the live state is untouched
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+import sys as _sys
+if __name__ == "__main__" and any(_a in ("-h", "--help") for _a in _sys.argv[1:]):
+    # Asking for help must not run the script's real work.
+    print((__doc__ or "").strip() or "usage: python " + _sys.argv[0])
     raise SystemExit(0)
 import io
 import json
@@ -29,6 +29,9 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(HERE, "primary_hook_state.json")
 OFF = os.path.join(HERE, "PRIMARY_HOOK_OFF")
+# The three-minute line is for a machine running many agents at once. A new install starts without it; create
+# PRIMARY_HOOK_ON beside this file to turn it on. The directive rules and the usage watch below are unaffected.
+ON = os.path.join(HERE, "PRIMARY_HOOK_ON")
 EVERY_S = 180
 LINE = ("[primary-hook] Work faster, be more efficient, finish the job faster. The timeline is soon. Communicate faster, "
         "build faster, give a deliverable: agents are waiting on you. Find the nearest bottleneck and clear it; speed "
@@ -153,7 +156,7 @@ def main(argv):
         except Exception:
             payload = {}
         key, now = session_key(payload), time.time()
-        lines = [LINE] if due(key, now) else []
+        lines = [LINE] if os.path.exists(ON) and due(key, now) else []
         prompt = payload.get("prompt") if isinstance(payload, dict) else ""
         lines += directive_lines(key, prompt if isinstance(prompt, str) else "", now)
         lines += usage_lines(key, payload, now)

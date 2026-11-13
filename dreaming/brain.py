@@ -795,6 +795,10 @@ _CTAIL_FS = re.compile(r"^\s*full_summary:\s*(\S.*?)\s*$", re.M)
 # that file's identity (size, mtime_ns, inode, ctime_ns, taken from the open handle); a file replaced or rewritten
 # gets a new identity and is read again. BRAIN_MARSHAL_MEMO=0 turns it off.
 _MARSHAL_MEMO = {}
+# A file's timestamp moves only at the clock tick (about 15 ms on NTFS, a jiffy on Linux), so a same-size rewrite inside
+# the tick a load saw keeps the identity. A load keeps its value only once the mtime is this old, so any later write
+# lands on a later tick (git's racy-clean rule). A file this fresh is read again, once.
+_MARSHAL_SETTLE_NS = 2_000_000_000
 
 
 def _marshal_ident(st):
@@ -811,7 +815,11 @@ def _marshal_load_memo(path):
         if got is not None and got[0] == ident:
             return got[1]
         v = marshal.load(fh)
-    _MARSHAL_MEMO[path] = (ident, v)
+    import time
+    if time.time_ns() - ident[1] >= _MARSHAL_SETTLE_NS:
+        _MARSHAL_MEMO[path] = (ident, v)
+    else:
+        _MARSHAL_MEMO.pop(path, None)
     return v
 
 
@@ -831,6 +839,9 @@ def _marshal_dump_memo(path, value):
         # handle, as in the load: on Windows os.stat(path) reads the directory entry, whose ctime lags the file's, and
         # an identity taken that way never matched a load's and the memo never hit.
         try:
+            # from an open handle, as _marshal_load_memo reads it: on Windows os.stat and os.fstat report different
+            # st_ctime_ns for the same file (20 of 20 trials, Python 3.14, NTFS), so an identity taken with os.stat
+            # never matched a load and the dump was never kept
             with open(path, "rb") as fh:
                 st = os.fstat(fh.fileno())
             if (st.st_ino, st.st_size, st.st_mtime_ns) == mine:
@@ -4208,6 +4219,113 @@ def recall_or(queries, n=8, k=60):
     return 0
 
 
+# PAST-SESSION SEGMENT SLOT. A question about a past session is answered by a transcript, and the memory corpus holds
+# none. One transcript segment from the segments index (session_segments.py builds it, a separate index so the memory
+# ranking is untouched) takes display slot 5 when the question carries a session cue, or when the top segment's raw
+# BM25 clears SEG_SLOT_FLOOR. The floor was fitted on one generation of about 16,000 segments; a corpus of a different
+# size wants its own (BRAIN_SEG_SLOT_FLOOR). No index, or a stale sidecar: score_postings returns None and the slot
+# stays empty (fail-open, logged). BRAIN_RECALL_SEGMENT_SLOT=0 restores the old output.
+SEG_SLOT_INDEX = os.environ.get("BRAIN_SEG_INDEX") or os.path.join(
+    os.path.expanduser("~"), ".claude", "brain_graph", "segments_index", "bm25_index.json.gz")
+SEG_SLOT_FLOOR = float(os.environ.get("BRAIN_SEG_SLOT_FLOOR", "22.416"))
+SEG_SLOT_CUE = re.compile(
+    r"\b(session|sessions|conversation|earlier|last time|yesterday|you said|you told|i said|i asked|i told|"
+    r"we (discussed|talked|decided|agreed)|did i (ask|say|tell)|when did|that night|that morning|transcript|chat|"
+    r"(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.? \d{1,2}|"
+    r"\d{1,2} (jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*|\d{4}-\d{2}-\d{2}|"
+    r"(mon|tues|wednes|thurs|fri|satur|sun)day)\b", re.I)
+# Repeat damping: a session already shown a segment in the last SEG_SLOT_REPEAT_MIN minutes is not shown it again, and
+# slot 5 keeps the note it had. Measured on a live log: 36 pct of inserts were such repeats, and the displaced note was
+# on topic in about two of three graded rows. An empty session id is never damped. 0 turns it off.
+SEG_SLOT_REPEAT_MIN = float(os.environ.get("BRAIN_SEG_SLOT_REPEAT_MIN", "60"))
+
+
+def _seg_slot_log():
+    return os.environ.get("BRAIN_SEGMENT_SLOT_LOG") or os.path.join(
+        os.path.expanduser("~"), ".claude", "brain_graph", "logs", "segment_slot.jsonl")
+
+
+def _seg_recent_repeat(sess, slug, tail_bytes=262144):
+    """True when this session was already shown this segment within SEG_SLOT_REPEAT_MIN minutes."""
+    if not sess or SEG_SLOT_REPEAT_MIN <= 0:
+        return False
+    try:
+        with open(_seg_slot_log(), "rb") as fh:
+            fh.seek(0, 2)
+            start = max(0, fh.tell() - tail_bytes)
+            fh.seek(start)
+            lines = fh.read().decode("utf-8", "replace").splitlines()
+            if start:
+                lines = lines[1:]          # a read that starts mid-file may start mid-line
+    except OSError:
+        return False
+    cutoff = time.time() - SEG_SLOT_REPEAT_MIN * 60
+    needle = '"slug": %s' % json.dumps(slug, ensure_ascii=False)
+    for ln in reversed(lines):
+        if needle not in ln or ('"sess": "%s"' % sess) not in ln:
+            continue
+        try:
+            r = json.loads(ln)
+            t = time.mktime(time.strptime(r["ts"], "%Y-%m-%dT%H:%M:%S"))
+        except (ValueError, KeyError):
+            continue
+        if t < cutoff:
+            return False          # rows are appended in time order; the newest match is already too old
+        if r.get("gate") in ("bm25", "cue"):
+            return True
+    return False
+
+
+def _segment_slot(query, a0_5=None):
+    """(slug, raw, gate, snippet, path) for the segment to show, or None; always writes one monitor row.
+    a0_5 is the note recall would show in slot 5 (the one an open gate displaces), logged on every row."""
+    t0 = time.time()
+    row = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "q": query[:200], "a0_5": a0_5}
+    # the caller's session, so repeats are counted per session (the recall server sets the caller's env per call)
+    row["sess"] = (os.environ.get("CLAUDE_CODE_SESSION_ID") or os.environ.get("CODEX_THREAD_ID") or "")[:8]
+    out = None
+    try:
+        import bm25 as _b
+        hits = _b.score_postings(query, 50, index_path=SEG_SLOT_INDEX) if os.path.exists(SEG_SLOT_INDEX) else None
+        cue = bool(SEG_SLOT_CUE.search(query))
+        if hits is None:
+            row["gate"] = "no_sidecar"
+        elif not hits:
+            row["gate"] = "no_hit"
+        else:
+            slug, raw = hits[0]
+            gate = "cue" if cue else ("bm25" if raw >= SEG_SLOT_FLOOR else None)
+            row.update({"gate": gate or "closed", "raw": round(raw, 3), "slug": slug})
+            if gate and _seg_recent_repeat(row["sess"], slug):
+                row["gate"] = "repeat"
+            elif gate:
+                path = os.path.join(os.path.dirname(SEG_SLOT_INDEX), "memory", slug + ".md")
+                with open(path, encoding="utf-8", errors="replace") as fh:
+                    txt = fh.read(6000)
+                m = re.search(r'^source:\s*"?([^"\n]+)', txt, re.M)
+                src = m.group(1).split("/")[-1] if m else ""
+                parts = txt.split("\n---\n", 1)
+                body = " ".join((parts[1] if len(parts) > 1 else txt).split())
+                out = (slug, raw, gate, (src + ": " if src else "") + body, path)
+    except Exception as exc:
+        row["gate"] = "error %s" % type(exc).__name__
+    row["ms"] = int((time.time() - t0) * 1000)
+    try:
+        lp = _seg_slot_log()
+        os.makedirs(os.path.dirname(lp), exist_ok=True)
+        with open(lp, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+    return out
+
+
+def _print_segment_row(seg):
+    print("  ---- [past session; bm25 %.1f, %s] %s" % (seg[1], seg[2], seg[0]))
+    print("        %s" % (seg[3] if len(seg[3]) <= SNIPPET_MAX else seg[3][:SNIPPET_MAX].rstrip() + " ..."))
+    print("        read it: %s" % seg[4])
+
+
 def _recall_body(query, n=8):
     # q61c (4 Nov 2026, claude-68ceaf54): ACRONYM JOIN FROM A FROZEN TABLE. A question that spells out a term
     # ("in the money") joins the acronym ("itm") only for rows where the notes use the acronym at least as often as
@@ -4317,7 +4435,7 @@ def _recall_body(query, n=8):
               "brain.py verify-attachments." % (len(attachment_failures),
                                          ", ".join("%s (%s)" % f for f in attachment_failures[:12])))
         # The seeds above were drawn before the bundles were verified, and spread_recall's BM25 arm reads the published
-        # index, which can still hold a failed bundle's text (B02-R23 below). A failed parent keeps only the seed its own
+        # index, which can still hold a failed bundle's text (below). A failed parent keeps only the seed its own
         # index line or file name earns, by spread_recall's overlap rule; a policy or pinned seed stays as it was given.
         _own_words = sr._distinctive_words(words) if len(words) >= 2 else []
         for _slug in sorted({s for s, _e in attachment_failures}):
@@ -5611,11 +5729,18 @@ def _recall_body(query, n=8):
         if status == "legacy" and _frontmatter_retracted(slug):
             status = "retracted"
         displayed.append((sc, ls, gs, ss, slug, status))
+    _seg = (_segment_slot(query, displayed[4][4] if len(displayed) >= 5 else None)
+            if os.environ.get("BRAIN_RECALL_SEGMENT_SLOT", "1") != "0" else None)
+    if _seg and len(displayed) >= 5:
+        displayed = displayed[:-1]          # the segment takes slot 5; the list keeps its length
     _print_strong_node_advisory(row[4] for row in displayed)
     print("recall: %r  (lex %d seeds | graph %s | semantic %s)" % (
         query, len(seeds), "on" if act else "off", "on" if sem else "off"))
     shown = 0
     for sc, ls, gs, ss, slug, status in displayed:
+        if _seg and shown == 4:
+            _print_segment_row(_seg)
+            _seg = None
         # the memory's own description, not its MEMORY.md line (2026-09-23): the index line repeats the slug twice
         # inside a 200-character cap, so the snippet ran a median 73 characters against the description's 237 and
         # a question-first description lost its answer; read for the displayed rows only
@@ -5648,6 +5773,8 @@ def _recall_body(query, n=8):
         print("  %.2f [%s] %s" % (sc, label, slug))
         print("        %s" % (d if len(d) <= SNIPPET_MAX else d[:SNIPPET_MAX].rstrip() + " ..."))
         shown += 1
+    if _seg:                                 # a list shorter than five: the segment goes last
+        _print_segment_row(_seg)
     if _absent_terms:
         print("  [absent] no memory contains: %s - if the question rests on %s, the brain may not hold it at all; "
               "otherwise the corpus says it in other words, so rephrase." % (

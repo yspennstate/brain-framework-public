@@ -8,12 +8,9 @@ the flock; after that holder is killed with SIGKILL the kernel drops the lock an
 once (it then stops in main() because brain.py is deliberately absent from the folder). Skipped on Windows, where
 the lock is msvcrt's. Takes about 45 seconds.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+if "-h" in __import__("sys").argv[1:] or "--help" in __import__("sys").argv[1:]:
+    print((__doc__ or "").strip() or "usage: python %s" % __import__("os").path.basename(__file__))
     raise SystemExit(0)
-
 import os, shutil, signal, subprocess, sys, tempfile, time
 
 if os.name == "nt":

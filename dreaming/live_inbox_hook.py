@@ -1,6 +1,6 @@
 """live_inbox_hook.py - show a Claude or Codex session the messages waiting for it, within one tool call.
 
-Before 1 Oct 2026 no hook on this machine read the agent mesh: a message sent to "claude-7fe30841" sat undelivered until
+Before 1 Oct 2026 no hook on this machine read the agent mesh: a message sent to an agent's name sat undelivered until
 that agent ran `agent_mesh.py inbox` by hand (three hourly broadcasts to this very session were found that way), and the
 dots' brain-inbox messages reached nobody until someone read the board. The relay (12_cognitive_architecture/live_inbox/
 live_inbox.py) now turns every inbox message for a local session into a mesh message; this hook puts mesh messages in
@@ -20,7 +20,7 @@ readable with `agent_mesh.py inbox --include-acked`). Output: plain text for the
 for Codex. Fail-open: any error prints nothing. Switch: ~/.agents/live_inbox/HOOK_ON (the dispatcher's enabled_if).
 A message the relay fanned out because no session holds its name (topic brain-inbox-broadcast) is shown but never
 blocks a stop or wakes a waiter: only mail addressed to the session does.
-claude-7fe30841, 1 Oct 2026; the waiter offer, the broadcast rule and the 3 s look by claude-7fe30841-inbox the same
+1 Oct 2026; the waiter offer, the broadcast rule and the 3 s look by the inbox agent the same
 evening (his 22:3x order: "messages go through right away and prompt the other agents")."""
 import sys
 if __name__ == "__main__" and ("-h" in sys.argv[1:] or "--help" in sys.argv[1:]):
@@ -51,7 +51,7 @@ TALKERS = os.path.join(STATE_DIR, "talkers")      # live_inbox.py send/event tou
 TALK_WINDOW_S = 6 * 3600    # a session that sent or was shown inbox mail in the last 6 h is offered a waiter
 NUDGE_EVERY_S = 2 * 3600    # at most one waiter offer per session per 2 hours
 # A request, warning or handoff shown once and still unacknowledged is listed again 30 min, 2 h and 8 h after its
-# delivery, then left to the inbox (account04/B20, 4 Oct: the hook dropped ack-required mail after delivery while the
+# delivery, then left to the inbox (4 Oct: the hook dropped ack-required mail after delivery while the
 # mesh kept it pending). Only mail delivered in the last day: 2,553 of the 2,601 such rows on 4 Oct were older than a
 # week and addressed to sessions and boxes long gone. The relay's own reminders are not reminded about.
 ACK_AFTER_S = (1800, 7200, 28800)
@@ -399,7 +399,7 @@ def main():
             st["last_reg"] = now - REG_EVERY_S + 60       # try again in a minute
             _log(f"{agent} {event} register failed: {type(e).__name__}: {str(e)[:160]}")
     ids = [agent, f"{runtime}:{sid[:16]}"]
-    # A launcher that names its worker (series_keeper sets AGENT_MESH_ID=codex-0d21ef1c-s1c) gets mail sent to that name
+    # A launcher that names its worker (series_keeper sets AGENT_MESH_ID=codex-d4e5f6a7-s1c) gets mail sent to that name
     # too. Before 15 Oct mail to the name waited forever: the hook read only codex-<first 8 of the thread>, and Codex
     # thread ids are time-ordered, so threads started within about a minute share those 8 (s3 and s4 both 01a13b70).
     named = (os.environ.get("AGENT_MESH_ID") or "").strip()
@@ -412,7 +412,7 @@ def main():
         st["last_check"] = 0                               # look again at the next tool call
         _log(f"{agent} {event} read failed: {type(e).__name__}: {str(e)[:160]}")
     # Messages an earlier look showed but could not stamp delivered (the mesh was locked past its 0.6 s) are stamped
-    # now and kept out of this look, so a message is never shown twice. account04/B10 (4 Oct): 135 of 2,157 stamps had
+    # now and kept out of this look, so a message is never shown twice. On 4 Oct 135 of 2,157 stamps had
     # failed since 1 Oct, and 37 of 302 inbox files were shown to the same session more than once. A crash before
     # this record is written leaves the message unstamped and it is shown again, which is the safe side.
     pending = {r[0] for r in rows}
@@ -511,7 +511,7 @@ def main():
     sys.stdout.flush()
     if inbox_files:                                       # the sender learns within one relay pass that it was seen
         try:
-            # each row names the mesh messages it covers and the digest of the text shown (account04/B10), so a second
+            # each row names the mesh messages it covers and the digest of the text shown, so a second
             # row for one file can be told apart from a replay of the same text
             digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
             ids_by_file = {}

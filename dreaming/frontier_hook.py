@@ -11,10 +11,10 @@ repository, or when the session's own task line on the agent mesh names the prog
 gives the program's frontier once and, at most hourly after that, only what was added since. Otherwise silent, and
 silent on any error. Standard library only; the math store and the mesh are opened read-only.
 State: one small JSON per session under frontier_hook_state/ beside this file."""
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+import sys as _sys
+if __name__ == "__main__" and any(_a in ("-h", "--help") for _a in _sys.argv[1:]):
+    # Asking for help must not run the script's real work.
+    print((__doc__ or "").strip() or "usage: python " + _sys.argv[0])
     raise SystemExit(0)
 import json
 import os

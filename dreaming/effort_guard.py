@@ -23,10 +23,10 @@ so notes and memories may quote the old values. Refusals are logged to ~/.claude
 SessionStart (run with --session-start) prints one line only when the settings lock has drifted.
 Only his words in a live session change this.
 """
-
-import sys
-if __name__ == "__main__" and any(arg in ("-h", "--help") for arg in sys.argv[1:]):
-    print(__doc__ or "No command-line options.")
+import sys as _sys
+if __name__ == "__main__" and any(_a in ("-h", "--help") for _a in _sys.argv[1:]):
+    # Asking for help must not run the script's real work.
+    print((__doc__ or "").strip() or "usage: python " + _sys.argv[0])
     raise SystemExit(0)
 import json
 import os

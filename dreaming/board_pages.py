@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 """board_pages.py - this computer's owner prompts and who is in charge of what, as two pages on brain-tasks-board.
 
-Owner order, 1 Nov 2026 20:15 (laptop, T-20261101-026): "set up the task repo so that agents communicate through it
-better, and so that any prompt I write ends up somewhere there and agents say what they are in charge of, that way
-agents know what is going on, what I am interested in, what loop prompts I am writing and the overall system
-operating ... they should also say which agent is working on which loop or prompt". Same evening, from the Mac
-(FM-20261101-221509): "agents on one computer are not seeing what agents in other places are doing".
+The task board is where agents on several computers see each other's work: every owner prompt lands on a page,
+each running loop is listed with the agent that runs it, and each agent states what it is in charge of. Without these
+pages an agent on one computer cannot see what agents elsewhere are doing.
 
-Two pages per computer, rewritten by `fleet_board.py sync-tasks` (task FleetBoardSyncTasks on the laptop):
+Two pages per computer, rewritten by `fleet_board.py sync-tasks` (a scheduled task on each computer):
 
   coordination/computers/<computer>/OWNER_PROMPTS.md
       LOOPS RUNNING: every loop he started that fired in the last 36 hours - the agent running it, his order's first
@@ -135,8 +133,7 @@ def _entry_line(e):
         s += " - working on: " + (w[:220] + " ..." if len(w) > 220 else w)
     r = " ".join(str(e.get("result") or "").split())
     if e.get("status") == "done" and r:
-        # the ask and what came of it on one row (owner 1 Nov 20:15: "the information and data obtained from all the
-        # prompts should be going online and used by agents")
+        # the ask and what came of it on one row, so what each prompt produced is visible to every agent
         s += " - RESULT %s: %s" % (e.get("done_at") or "", r[:300] + " ..." if len(r) > 300 else r)
     return s
 
@@ -236,8 +233,8 @@ def agents_page(computer, now=None):
 MEMDIR = os.path.dirname(os.path.dirname(PROMPTS))
 LEDGER = os.path.join(HOME, "brain-repo", "12_cognitive_architecture", "brain_improvement",
                       "IMPROVEMENT_LEDGER.jsonl")
-# the laptop and the other laptop write arrivals here; the Mac's online_memory_pull.py writes the same {"name": ...} lines to the
-# second path, and reading only the first listed the Mac's imports as its own results
+# some computers write arrivals to the first path and others (online_memory_pull.py) write the same {"name": ...} lines to
+# the second; reading only the first listed one computer's imports as its own results
 ARRIVALS = (os.path.join(HOME, ".claude", "online_pull", "arrivals.jsonl"),
             os.path.join(HOME, ".claude", "dreaming", "online_memory_pull.jsonl"))
 RESULT_H, INDEX_LINES, MAX_MEM, MAX_LEDGER = 48, 700, 150, 40
@@ -280,9 +277,7 @@ def _arrived():
 
 def results_page(computer, now=None):
     """What this computer found in the last 48 hours: the memories filed here (status, the hook line) and the brain
-    improvement ledger rows written here. Owner order 1 Nov 20:15 (T-20261101-026): "brain results, tests results,
-    and so on should end up in the online brain and obtained for all agents faster, that way agents know what is
-    cutting edge and what we are doing". Reads the newest lines of MEMORY.md and the files they name; it never lists
+    improvement ledger rows written here, so agents on every computer see the newest results quickly. Reads the newest lines of MEMORY.md and the files they name; it never lists
     the memory folder (43k files)."""
     now = now or datetime.now()
     cut = now - timedelta(hours=RESULT_H)
@@ -365,9 +360,8 @@ FB = None   # fleet_board sets this to itself before it builds the pages (its ap
 
 def unanswered_page(computer, now=None):
     """UNANSWERED.md: the fleet messages of the last 48 hours from the OTHER computers, each with what this computer
-    did about it - a reply posted from here, an ack by an agent here, or nothing yet. TOP10 rank 2, 3 Nov 2026: this
-    laptop was the slow answerer (first answer median 9-12 min against the other laptop's 2 min, ROUNDTRIP.md) because its agents
-    see the inbox only on a prompt; this page lets the sender see which requests are still waiting here, and lets an
+    did about it - a reply posted from here, an ack by an agent here, or nothing yet. A computer whose agents see
+    the inbox only on a prompt answers slowly (a first-answer median of 9-12 min against 2 min elsewhere); this page lets the sender see which requests are still waiting here, and lets an
     agent here pick one up. It records only what is on the board; it never answers for an agent."""
     F = FB
     if F is None:
@@ -379,7 +373,7 @@ def unanswered_page(computer, now=None):
     here = " on " + computer
 
     def ts(m):
-        # the id is the sender's own clock; its header carries the offset (the other laptop -0500, the Mac +0400)
+        # the id is the sender's own clock; its header carries the offset (for example -0500 or +0400)
         i = re.match(r"FM-(\d{8})-(\d{6})", m["id"])
         o = re.search(r"([+-])(\d{2})(\d{2})\s*$", m.get("when") or "")
         if not (i and o):

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Compact a session when it finishes a task (claude-322bc92e, 9 Oct 2026; his words 22:4x: "no make a hook that compacts
-agents when they finish a task").
+"""Compact a session when it finishes a task (9 Oct 2026).
 
 Why a hook cannot just call /compact: Claude Code takes /compact only as typed input. Its hook outputs are decision,
 reason, stopReason, terminalSequence (OSC titles and bells only), additionalContext and the like; none compacts (read
@@ -15,7 +14,7 @@ writes to the session while it waits (he may be typing) or it is not idle within
 Idle means: the transcript quiet IDLE_S, the last turn ended and no queue-operation or loop fire since (a new turn shows
 as a queue-operation before its user record is written), and no keyboard or mouse input for OWNER_STILL_S.
 
-Proven 10 Oct on claude-322bc92e: the keys typed at 00:56:16 entered that session's queue (queue-operation enqueue
+Proven 10 Oct on one session: the keys typed at 00:56:16 entered that session's queue (queue-operation enqueue
 "/compact" at 21:56:16Z), and Claude Code ran /compact when the turn that had started 16 s earlier ended (22:03:02Z).
 That turn was the reason for the 7-minute delay; the idle rule above now waits for such a turn to finish.
 
@@ -81,7 +80,7 @@ def is_prompt(r, notifications=True):
     (an attachment of type queued_command; tool results come back as lists). Task notifications wake a turn too."""
     if r.get("type") == "user" and isinstance((r.get("message") or {}).get("content"), str):
         # Stop-hook feedback and scheduled loop prompts are isMeta records: a turn boundary, but not him typing (the
-        # 00:02 10 Oct helper for 51330238 gave up 4 s in because the summary hook's feedback looked like his prompt)
+        # 00:02 10 Oct helper for 5e550009 gave up 4 s in because the summary hook's feedback looked like his prompt)
         return notifications or not r.get("isMeta")
     a = r.get("attachment") or {}
     if r.get("type") == "attachment" and a.get("type") == "queued_command":
@@ -92,7 +91,7 @@ def is_prompt(r, notifications=True):
 def turn_start(r):
     """Where a turn begins for the question 'was a task closed in it': his prompt, a prompt queued while the agent worked,
     or a loop prompt. A task notification or the Stop hooks' own feedback continues the turn it lands in: on 10 Oct 03:33
-    background-task notifications cut claude-322bc92e's turn after its checklist 'done', and the hook saw no task closed."""
+    background-task notifications cut an agent's turn after its checklist 'done', and the hook saw no task closed."""
     if r.get("type") == "user":
         c = (r.get("message") or {}).get("content")
         if not isinstance(c, str):
@@ -160,7 +159,7 @@ def session_process():
 
 def is_claude(pid):
     """A live Claude Code process. A long-running session's binary is often renamed by an update while it runs
-    (claude.exe.old.<stamp>.<pid>; 322bc92e's was on 9 Oct), so the name only has to start with claude.exe."""
+    (claude.exe.old.<stamp>.<pid>; 5e55000a's was on 9 Oct), so the name only has to start with claude.exe."""
     return os.path.basename(process_image(pid)).startswith("claude.exe")
 
 
@@ -191,7 +190,11 @@ def hook():
     if sys.platform != "win32":  # the console injection is Win32 only
         return 0
     try:
-        data = json.loads(sys.stdin.buffer.read().decode("utf-8", "replace") or "{}")
+        raw = sys.stdin.buffer.read().decode("utf-8", "replace")
+    except AttributeError:  # in-process under hook_dispatch the stdin is a StringIO, already text
+        raw = sys.stdin.read()
+    try:
+        data = json.loads(raw or "{}")
     except ValueError:
         return 0
     sid, path = data.get("session_id") or "", data.get("transcript_path") or ""
@@ -368,7 +371,7 @@ def selftest():
         content = [{"type": "text", "text": "Done." + (" (This was your 21:40 ask: build it.)" if end_line else "")}]
         if done:
             content.append({"type": "tool_use", "name": "Bash",
-                            "input": {"command": "python checklist.py done T-20261009-128 \"ok\""}})
+                            "input": {"command": "python checklist.py done T-20990101-128 \"ok\""}})
         recs.append({"type": "assistant", "message": {"content": content, "stop_reason": "end_turn",
                                                        "usage": {"input_tokens": 10, "cache_read_input_tokens": tokens}}})
         return recs
@@ -379,7 +382,7 @@ def selftest():
     later = turn() + [{"type": "user", "message": {"content": "new ask"}}]    # a later prompt opens a new turn
     ok &= decide(later, "s", state={})[0] is False
     written = turn() ; written[1]["message"]["content"] = [{"type": "tool_use", "name": "Write",
-                       "input": {"content": "python checklist.py done T-20261009-128"}}]
+                       "input": {"content": "python checklist.py done T-20990101-128"}}]
     ok &= decide(written, "s", state={})[0] is False                         # a file's text is not a closed task
     queued = turn() + [{"type": "attachment", "attachment": {"type": "queued_command", "prompt": "next ask"}}]
     ok &= decide(queued, "s", state={})[0] is False                          # a queued prompt opens a new turn

@@ -1,16 +1,36 @@
 # Standing up a fresh brain
 
-1. Clone this repository somewhere permanent and run the commands below from its
-   `framework/` folder. The installer copies the governor, mesh, workspace and tools into
-   `%USERPROFILE%\brain-framework`, and the launchers point at that installed copy, so the
-   clone can live anywhere. Keep it, though: the network builders in step 6 run from it.
+1. Clone this repository somewhere permanent and run the commands below from the root of
+   the clone. The installer copies the governor, mesh, workspace and tools into
+   `~/brain-framework` (`%USERPROFILE%\brain-framework` on Windows), and the launchers point
+   at that installed copy, so the clone can live anywhere. Keep it, though: the network
+   builders in step 6 run from it.
+
+   You need Python 3.11 or newer. On macOS, `/usr/bin/python3` is 3.9 and is too old: install
+   a newer one (python.org or Homebrew) and use its full path below. On Linux, use your
+   distribution's `python3` if it is 3.11 or newer.
 
 2. Dry-run the installer, read what it plans, then apply:
 
    ```
+   # Windows (PowerShell)
    python bootstrap/install.py --project-dir C:\Users\<you> --timezone <tz>
    python bootstrap/install.py --project-dir C:\Users\<you> --timezone <tz> --apply
+
+   # macOS and Linux
+   python3 bootstrap/install.py --project-dir "$HOME" --timezone <tz>
+   python3 bootstrap/install.py --project-dir "$HOME" --timezone <tz> --apply
    ```
+
+   On macOS and Linux the installer writes the hook wiring with your Python's full path and
+   the Python wake (`wake_brain.py --part 1`, `--part 2`) in place of the PowerShell one;
+   `docs/MACOS_INSTALL.md` has the rest of the Mac steps.
+
+   For Codex, add `--merge-codex` to the `--apply` run: the same hooks are merged into
+   `~/.codex/hooks.json` (the wiring is also written to `bootstrap/hooks.codex.generated.json`
+   if you prefer to merge by hand). Codex reads a hook's context only from JSON output
+   (`hookSpecificOutput.additionalContext`); a hook that prints plain text reaches Claude Code
+   but not Codex, so check a Codex session's first turn for the wake text.
 
    `--timezone` takes `UTC` (the default) or an IANA name such as `Europe/London`. Python on
    Windows has no time-zone database of its own, so any name other than UTC needs

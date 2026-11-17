@@ -1,6 +1,5 @@
 """test_push_with_resync_lease.py - the nightly dream's Push-WithResync publishes nothing its certification did not cover,
-even when the remote is rewound between the last check and the push (28 Sep 2026; scheduled audit
-account03/B06 r55, R51-B06-PUSH-WITH-RESYNC-UNLEASED-REWIND-38).
+even when the remote is rewound between the last check and the push (28 Sep 2026).
 
     python test_push_with_resync_lease.py [--lib DREAM_GIT_SYNC.ps1] [--old PRE_28_SEP.ps1] [--old-stale PRE_14_OCT.ps1]
 

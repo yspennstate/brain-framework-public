@@ -274,7 +274,7 @@ class Diffusion:
         """Whether the walk cached at path was built from the store as it is now. A cache records the identity of the
         store it was built from (source_identity) and is used only while that identity holds. Until 30 Sep it was used
         whenever it was newer than edges.npz, so a store rolled back to an older edges.npz with its time kept (a restore
-        with cp -p or robocopy) was walked with the newer store's matrix (1000-page report D05-T04). A cache written
+        with cp -p or robocopy) was walked with the newer store's matrix. A cache written
         before the identity was recorded keeps the old rule until the next build replaces it."""
         try:
             with np.load(path) as z:
@@ -388,7 +388,7 @@ class Diffusion:
             # best first, equal scores in name order (slug_list is sorted), and the cut at depth made the same way.
             # Until 30 Sep argpartition and an unstable argsort put tied memories in an order of their own (three exact
             # ties came out c, a, b) and chose which of a tie crossing the cut survived; 35 of 60 recent recall queries
-            # had exact ties, none across the cut (1000-page report D04-T05)
+            # had exact ties, none across the cut
             pos = np.flatnonzero(col > 0)
             top = pos[np.lexsort((pos, -col[pos]))][:k]
             out.append([(self.slug_list[i], float(col[i])) for i in top] if with_scores

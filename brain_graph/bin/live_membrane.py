@@ -1107,7 +1107,7 @@ def lock_session(sid, wait=0.5, stale=None):
     `wait` seconds leaves the moment to the call holding it and serves nothing.
 
     The lock is the operating system's, held on an open file for as long as this process holds it, and released by the
-    system when the process ends however it ends (28 Sep, interactive audit IA-20260928-03). Until then it was a file
+    system when the process ends however it ends (28 Sep). Until then it was a file
     created exclusively and taken over when older than 60 seconds, whoever held it, and removed at unlock whoever it
     belonged to by then: a live call slower than 60 s (the worst of 8,577 evaluations took 85 s) lost its lock to a
     second call, and its unlock then removed the second call's lock. `stale` is kept for callers and is not used: a dead

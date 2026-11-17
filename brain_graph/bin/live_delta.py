@@ -356,7 +356,7 @@ def read_events(b, path=EVENTS, kinds_cache=KINDS_CACHE, start=None, mode=None, 
 
     Context: a new event's count depends on its session's events up to COVER seconds before it. Until 29 Sep the read
     began a fixed 8 MiB before the start, which a burst of other sessions, or a session captured days late, pushes
-    that context out of (interactive audit IA-20260928-05; the log is far from time-ordered - 70 percent of its lines
+    that context out of (the log is far from time-ordered - 70 percent of its lines
     were appended over an hour after a later-stamped line, one run five days late - and 82 of 100 past store cuts
     needed more than 8 MiB, median 24 MB). Now the read starts at the latest mark of the running maximum (ts_marks)
     below the earliest new event minus COVER, which provably holds everything those windows need, and parses only the
@@ -648,7 +648,7 @@ def open_delta(sidecar_meta=None):
     reads the base alone. open_delta.refused says why, for a diagnosis.
 
     The base is identified by all it records - its last event, the store's build and the sidecar's build - in the pointer,
-    in the file the pointer names and against the sidecar (28 Sep, interactive audit IA-20260928-02). Until then only the
+    in the file the pointer names and against the sidecar (28 Sep). Until then only the
     last event time was compared, so a store rebuilt with other filtering or config up to the same event took a delta
     counted on the old one. A pointer written before the sidecar's build time was added to it is judged on what it has."""
     open_delta.refused = None

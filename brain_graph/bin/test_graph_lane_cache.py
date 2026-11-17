@@ -1,4 +1,4 @@
-"""graph_lane's caches follow the generation of the file they read (30 Sep 2026; interactive audit B100-03).
+"""graph_lane's caches follow the generation of the file they read (30 Sep 2026).
 
     python test_graph_lane_cache.py [GRAPH_LANE.py] [--old OLD_GRAPH_LANE.py]
 
@@ -12,9 +12,8 @@ does; L4 an unchanged file is served from the cache (the same object); L5 a miss
 read once it appears; L6 a replacement that never lands (the publish gave up) keeps the old generation; L7 two arms in
 one interpreter, each ranking through link_ranked from its own sidecar; L8 at most four generations are held; L9 a file
 that changes while it is read answers that call and is not cached; W1-W3 the walk cache follows the store's edges.npz
-the same way. N1-N3 (with --old) run L1, L2 and W1 on the code before the change and show the stale graph.
-
-1000-page report D05-T04 (30 Sep): W4 rewrites edges.npz in place at the same size and puts its write time back, and
+the same way. N1-N3 (with --old) run L1, L2 and W1 on the code before the change and show the stale graph. 30 Sep: W4
+rewrites edges.npz in place at the same size and puts its write time back, and
 needs the new walk (the code before read the old one); D1-D4 hold the walk's disk cache to the store it was built from:
 used while the identity matches, refused for a store rolled back to other edges with an older time (the time rule used
 it), a same-size npz with a changed member reads as new, and a cache written before identities keeps the time rule.
@@ -137,7 +136,7 @@ def walk_cases(g, td, tag):
 
 
 def walk_rewrite_case(g, td):
-    """W4 (1000-page report D05-T04): the edges file rewritten in place, same size, write time put back."""
+    """W4: the edges file rewritten in place, same size, write time put back."""
     import types
     fake = types.ModuleType("diffusion")
     fake.Diffusion = FakeDiffusion
@@ -163,7 +162,7 @@ def walk_rewrite_case(g, td):
 
 
 def diffusion_cases(diffusion_path, td):
-    """D1-D4 (1000-page report D05-T04): the walk's disk cache is used only for the store it was built from."""
+    """D1-D4: the walk's disk cache is used only for the store it was built from."""
     import numpy as np
     dm = load(diffusion_path, "diffusion_under_test")
     store = os.path.join(td, "dstore")

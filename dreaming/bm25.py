@@ -448,7 +448,7 @@ def read_doc(mem_dir, slug):
         attachment_text = node_docs.search_text_for_node(mem_dir, slug)
     except Exception as exc:
         # A bundle that fails verification adds nothing to its parent's entry, and the rest of the index is read (28 Sep,
-        # scheduled audit account03/B02 r68, B02-R1-ATTACHMENT-CORRUPTION-GLOBAL-RECALL-STOP-001). Until then one broken
+        # Until then one broken
         # bundle stopped the whole build and emptied recall's BM25 block: the live lane reads a fresh parent here, and a
         # damaged file is fresh by its mtime. The parent's own text is still indexed; the bundle is named on stderr.
         attachment_text = ""
@@ -1213,7 +1213,7 @@ def fresh_memories(mem_dir=MEM, index_path=INDEX, entries=None):
                 except OSError:
                     continue
     # A memory whose attachments changed after the last scan is fresh too: read_doc indexes their text, so what the
-    # index should hold for it changed (28 Sep, account02/B02 R1, B02-R1-ATTACHMENT-REFRESH-DROPS-LIVE-PROMOTION-001:
+    # index should hold for it changed (28 Sep:
     # until then an incremental refresh never re-read an attachment-only change, and its newer index then switched off
     # brain.py's live promotion of that attachment while the index still lacked the text).
     have = set(fresh)
@@ -1221,7 +1221,7 @@ def fresh_memories(mem_dir=MEM, index_path=INDEX, entries=None):
         if t >= since and slug in present and slug not in have:
             fresh.append(slug)
     # ...and so is one whose bundle manifest differs from the one recorded when its text was read, whatever the mtimes
-    # say (28 Sep, account03/B02 r71, B02-R23-ATTACHMENT-STALE-BM25-DIGEST-BYPASS-001: a bundle replaced with its old
+    # say (28 Sep: a bundle replaced with its old
     # mtimes kept was never re-read, so its old text went on ranking the parent). A parent with no recorded digest is
     # left to the mtime test above.
     recorded = _marker_manifests(index_path)
@@ -1576,7 +1576,7 @@ def scrub_in_memory(slugs, mem_dir=MEM, out=INDEX, payload=None):
     written. For a parent whose attachment bundle just failed verification: read_doc indexes its own text and nothing
     from the bundle, so this recall does not rank it on text the verifier rejected. The published index may still hold
     that text when the damage kept the bundle's mtime (the incremental refresh never sees it); the next full build
-    re-reads every parent (28 Sep, account03/B02 r71, B02-R23-ATTACHMENT-STALE-BM25-DIGEST-BYPASS-001).
+    re-reads every parent (28 Sep).
     Returns None when there is nothing to scrub or no index to scrub."""
     slugs = sorted(set(slugs or ()))
     if not slugs:

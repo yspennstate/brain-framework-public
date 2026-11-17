@@ -213,7 +213,7 @@ def _is_test_head(head, _sk):
 
 def _session_kinds():
     try:
-        # the rule lives in session_kinds.py, shared by every consumer of use (27 Sep, audit account02/B13); the loop
+        # the rule lives in session_kinds.py, shared by every consumer of use (27 Sep); the loop
         # in _is_test_head is the same rule, kept only for a machine where that module cannot be imported
         sys.path.insert(0, os.path.join(os.path.expanduser("~"), ".claude", "brain_graph", "bin"))
         import session_kinds as _sk

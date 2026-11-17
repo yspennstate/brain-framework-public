@@ -14,20 +14,18 @@ replaced started three git processes per ref, and a new branch on a remote with 
 the fallback for any answer the batched search cannot read. Everything reachable from that base is already on the
 remote, so every commit the new ref makes reachable is in the scan (it may scan more, never less). Until 28 Sep the base came from the local tracking refs, and a tracking ref left
 ahead of the remote by a rewind (or behind it by a missed fetch) could leave a commit the push made reachable out of
-the scan (account02/B06 r65, R24-B06-PREPUSH-NEW-REF-FALLBACK-CAN-NARROW-20260928). The push refuses when the remote
+the scan. The push refuses when the remote
 cannot be read or none of its advertised commits shares history with the pushed one. A deletion (all-zero local oid)
 sends no content and is not scanned. Git's hook environment (GIT_DIR and friends) is removed before the scanner runs,
 because the scanner refuses inherited repository overrides.
 
 The gate reads the commit graph the way the scanner does and the remote will: no replace objects, no grafts, no shallow
 file. Until 28 Sep 20:5x its merge-base honored refs/replace while the scanner disabled replacements, so a local
-replacement that grafted an unrelated remote commit onto the pushed history certified one commit and published three
-(account03/B19 r69, B19-R51-FRESH-BASE-REPLACE-REF-GRAPH-MISMATCH-20260928). Those three settings go only to the gate's
+replacement that grafted an unrelated remote commit onto the pushed history certified one commit and published three. Those three settings go only to the gate's
 own git calls; the scanner sets them itself and refuses them inherited.
 
 A new ref's base rests on some other ref of the remote (the witness), and that ref can move or be deleted while the scan
-runs, which leaves commits the scan treated as already published newly reachable (account02/B06 r68,
-R51-B06-NEWREF-WITNESS-DELETE-CUSTOMREF-20260928). After the scan the base is chosen again from what the remote advertises
+runs, which leaves commits the scan treated as already published newly reachable. After the scan the base is chosen again from what the remote advertises
 then; a base the first range does not cover is scanned too, and after three moves the push is refused. What the hook
 cannot close is the moment between its own exit and the remote's ref update: an update of an existing ref is guarded by
 the old id git sends with it, a new ref by nothing but this re-check.

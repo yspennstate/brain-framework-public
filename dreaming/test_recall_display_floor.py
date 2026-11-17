@@ -1,5 +1,4 @@
-"""Recall's display floor skips a low row; it does not end the list (28 Sep 2026; scheduled audit
-account01/B02 R1, the 0.02 display cutoff).
+"""Recall's display floor skips a low row; it does not end the list (28 Sep 2026, the 0.02 display cutoff).
 
 On the bm25-first path recall's list runs in segment order - the BM25 block (floored at 0.05), then the lexical, graph
 and semantic tails - not by display score. The display loop used to end at the first row scoring 0.02 or less.

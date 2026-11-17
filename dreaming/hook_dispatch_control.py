@@ -149,7 +149,7 @@ def control_b():
     code, out, err = HD.merge([("a", 0, "", ""), ("b", 0, "", "")], "PreToolUse")
     p = (code == 0 and out == "")
     print("   all silent -> silent:%s" % ("PASS" if p else "FAIL")); ok &= p
-    # 28 Sep (interactive audit IA-20260928-07): a Stop hook's top-level block must leave at the top. shape() above
+    # 28 Sep: a Stop hook's top-level block must leave at the top. shape() above
     # reads hookSpecificOutput only, so these two are checked on the merged JSON itself.
     code, out, err = HD.merge([("wt", 0, '{"decision":"block","reason":"keep going"}', "")], "Stop")
     o = json.loads(out) if out else {}

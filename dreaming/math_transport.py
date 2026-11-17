@@ -98,8 +98,8 @@ def hold_state(now=None):
     return True, h
 
 
-# A HOLD SET WHILE A RUN IS UNDER WAY STOPS THAT RUN BEFORE ITS NEXT WRITE (29 Sep, scheduled audit account04/B19,
-# B19-R79-TRANSPORT-HOLD-CHECK-TOCTOU-20260929). A run checked the hold once, then scanned (a full pass reads every
+# A HOLD SET WHILE A RUN IS UNDER WAY STOPS THAT RUN BEFORE ITS NEXT WRITE (29 Sep).
+# A run checked the hold once, then scanned (a full pass reads every
 # memory) and wrote; a hold set during the scan did not stop it. Now every write of a run - one memory's claim with its
 # ledger and queue rows, a queue row, the prefilter rebuild, the claim vectors, the state file - happens under WRITE_LOCK
 # after the hold is read again, and `hold` writes its file under the same lock. A write therefore either finishes before
@@ -764,8 +764,7 @@ def revisions(since=None, store=STORE):
 def _sqlite_copy(src, dst):
     """A copy of a SQLite store's committed state, through the backup API from one read transaction, written as a
     single rollback-journal file. The store runs in WAL mode, where committed pages sit in brain.sqlite3-wal until a
-    checkpoint, and a copy of the main file alone leaves them out: the class of account04/B13 r4
-    (B13-R58-WAL-SIDECAR-OMITTED-BY-DRYRUN-COPY-20260929-01), found in the reseal tool's dry run and here the same day."""
+    checkpoint, and a copy of the main file alone leaves them out: found in the reseal tool's dry run and here the same day."""
     tmp = dst + ".tmp"
     for p in (tmp, tmp + "-wal", tmp + "-shm", tmp + "-journal"):
         if os.path.exists(p):
@@ -1125,7 +1124,7 @@ def run(dry=False, full=False):
         if (n_ing or n_rev or _stale) and not dry:
             with gate():
                 rebuild_prefilter()
-        # THE CLAIM VECTORS FOLLOW THE STORE TOO (29 Sep, scheduled audit account01/B09 r31). The meaning channel's vectors
+        # THE CLAIM VECTORS FOLLOW THE STORE TOO (29 Sep). The meaning channel's vectors
         # were only ever extended by hand, so a claim this run ingested had no vector: the channel could not name it, and the
         # hook's agreement check chose among the older claims. Every run now embeds the claims the file lacks (in-process,
         # like the prefilter: a subprocess would open a console), whoever wrote them; nothing is written when none is missing.

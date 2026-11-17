@@ -73,7 +73,7 @@ def claim_view(node: GraphNode, statement: str, assumptions: Sequence[str]) -> G
     drops. Anything else comes back unchanged: a node with neither assumptions nor
     conditions, a node in either marked shape, or a claim that does not match the body.
 
-    Why (30 Sep 2026, 1000-page report test D10-T01): 5,690 of the store's 8,243 claim
+    Why (30 Sep 2026): 5,690 of the store's 8,243 claim
     nodes are overlay nodes. Of the 4,163 claims with hypotheses, 3,125 delivered every one
     at the live 480-character budget with no query, and 3,763 through this view; the rest
     overflow the Assumes clause's 220-character cap, which ends in "...". On the regression

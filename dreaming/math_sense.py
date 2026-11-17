@@ -117,8 +117,8 @@ STORE_PATH = os.environ.get("MATHBRAIN_STORE", "")
 # SHADOW (MATHBRAIN_SHADOW, default off; 29 Sep 2026, job R70). The hook computes and prints its block as usual but
 # records nothing that says a card was served: no session guard shard, no use log, no vouch serve row, no surfaced
 # row, no session math context, and its silence notes go to the harness file. The subagent adapter runs its held arm
-# this way, so a subagent that received nothing is not counted as exposed (scheduled audits account02/B05 and
-# account01/B14 on serve logs written before any receiver). Every other run is unchanged.
+# this way, so a subagent that received nothing is not counted as exposed
+# (on serve logs written before any receiver). Every other run is unchanged.
 SHADOW = os.environ.get("MATHBRAIN_SHADOW", "0").strip() in ("1", "on", "true")
 MAX_BLOCK_CHARS = int(os.environ.get("MATHBRAIN_MAX_BLOCK_CHARS", "3000"))
 MAX_STATEMENT_CHARS = int(os.environ.get("MATHBRAIN_MAX_STATEMENT_CHARS", "480"))
@@ -1285,16 +1285,14 @@ _REVIEW_KINDS = ("discovery_report", "human_proof_review")
 def _review_reads(claim_ids, store_path=None):
     """claim id -> the latest sound recorded read of it (tools/record_review.py), for the cards about to be shown.
 
-    Read after the selection, for those cards only, through the evidence table's claim index (29 Sep, account04/B10 r27,
-    B10-R45-REVIEW-SCAN-COMPLEXITY-OMISSION-20260929: the read used to decode every evidence row before ranking, to
+    Read after the selection, for those cards only, through the evidence table's claim index (29 Sep: the read used to decode every evidence row before ranking, to
     annotate at most four cards). Each row is judged on its own, as the store's evidence_for judges it - a JSON object
     whose id, claim and time are the row's and whose digest is the row's digest - and its `passed` must be a real
-    boolean (account02/B19 auto57-58, B19-R69-TRUST-HINT-EVIDENCE-INTEGRITY-BYPASS-20260929 and
-    B19-R69-NONOBJECT-EVIDENCE-SILENCES-MATH-HOOK-20260929): until then a payload edited without its digest was shown
+    boolean: until then a payload edited without its digest was shown
     as a human's pass, the string "false" read as a pass, and a payload that was a JSON list or null raised past the
     row's guard and silenced the whole hook. A row that fails is skipped, so its card reads unverified; nothing here
-    changes which cards are shown, or silences the block. Only the three values the tag uses are kept (account04/B17
-    r15: the reviewer's name and the free-text summary were copied for every row). The record is shown beside the hint
+    changes which cards are shown, or silences the block. Only the three values the tag uses are kept (the reviewer's
+    name and the free-text summary were copied for every row). The record is shown beside the hint
     and does not change the tag's verdict: an agent's read is a discovery report, not an authority (the store's own
     promotion rules say so), and a human's single read makes a claim provisional at most."""
     ids = sorted({str(i) for i in claim_ids if i})
@@ -1345,8 +1343,8 @@ def _claim_parts(claim_ids, store_path=None):
 
     An overlay claim's node lists its assumptions as bare lines after the statement, so the renderer took them for the
     statement's tail and cut them first: on the gate's 218 bank prompts 90 of 466 served cards lost a hypothesis whose
-    words appear nowhere else on the card, and 29 through the view (1000-page report D10-T01, 30 Sep 2026; report
-    audits/reports/2026/09/30/r1000_d_tests). The claim row keeps the two apart, and _claim_view renders the card
+    words appear nowhere else on the card, and 29 through the view (30 Sep 2026).
+    The claim row keeps the two apart, and _claim_view renders the card
     from it. A row is used only when it is sound, as _review_reads judges evidence: a
     JSON object that builds a Claim whose id and digest are the row's. Anything else is skipped and that card renders
     as it did before; nothing here changes which cards are shown."""
@@ -1433,7 +1431,7 @@ def _trust_tag(meta, read=None):
             parts.append("unreviewed")
         # a revision that declared its own status (retracted, refuted, gap found, verified ...) says so here, apart
         # from the closing word, which stays the authenticated one: a declared retraction must not reach a session as
-        # a plain 'unverified', and a declared 'verified' is not a verification (30 Sep, account02/B11-R79)
+        # a plain 'unverified', and a declared 'verified' is not a verification (30 Sep)
         declared = meta.get("declared_status")
         if isinstance(declared, str) and declared.strip() and declared.strip().lower() != "unverified":
             parts.append("declared " + declared.strip().lower().replace("_", " "))
@@ -2675,7 +2673,7 @@ def _prefilter_revision_nodes(store, prefilter_ids, max_revision_nodes=4096):
             if edge.kind is EdgeKind.PROVES or edge.kind is EdgeKind.REFUTES:
                 answers.setdefault(edge.target_id, []).append(edge.source_id)
         for qid in list(wanted):
-            # A superseded source is never loaded as an answer (2026-09-27, account03/B07). This closure runs after the
+            # A superseded source is never loaded as an answer (2026-09-27). This closure runs after the
             # revision walk above, so an old revision added here arrives without its newer revision and without the
             # SUPERSEDES edge that marks it historical (the return keeps only edges with both ends loaded), and
             # retrieve() would rank it as current. A relation is bound to the revision it was written against: the
@@ -4240,8 +4238,8 @@ def _vouch_agrees(prompt, chosen):
 # channel, the prefilter gate passes (its top candidate) and the block floor passes (the served lead card); fails closed
 # without the claim vectors.
 COV_AGREE = os.environ.get("MATHBRAIN_COV_AGREE", "1").strip() not in ("0", "off", "false", "")
-# THE AGREED CARD IS SEALED (MATHBRAIN_COV_SEAL, default on; arm cand76, 28 Sep; scheduled audit account03/B07 auto11,
-# B07-R22-COVAGREE-USE-ORDER-001). A coverage floor yields because the word and the meaning channels agree on one card,
+# THE AGREED CARD IS SEALED (MATHBRAIN_COV_SEAL, default on; arm cand76, 28 Sep).
+# A coverage floor yields because the word and the meaning channels agree on one card,
 # and the stages after it (lead filter, integrity reread, property order, session dedup, twin collapse, the math-use
 # reorder) could still put another card first. When a yield was used, the use reorder is skipped and the block is
 # emitted only if its first card is still the meaning channel's first claim.
@@ -4493,8 +4491,7 @@ def _quote_uncovered(prompt, hits):
 
 _COV_AGREED = {}
 _SEMTOP = {}
-# A FIRST CLAIM NEEDS A WINNER (MATHBRAIN_SEMTOP_MARGIN, default 1e-6; 29 Sep, scheduled audits account01/B10 r24,
-# B10-R68-SEMANTIC-ARGMAX-WITHOUT-EVIDENCE-02, and account04/B11 r5, B11-R68-RAW-ARGMAX-UNBOUND-AGREEMENT-20260929-01).
+# A FIRST CLAIM NEEDS A WINNER (MATHBRAIN_SEMTOP_MARGIN, default 1e-6; 29 Sep).
 # np.argmax always names a claim: over a flat or tied similarity vector it names the first index, so "the meaning
 # channel's first claim" existed with no evidence behind it, and it agreed with the lexical top whenever that happened to
 # be the same index. The channel now names a claim only when the cosines are finite, spread, and the top one beats the
@@ -4525,26 +4522,26 @@ def _semantic_winner(cos, ids, np_):
     return str(ids[int(first)])
 
 
-# THE VECTORS MUST COVER THE STORE (29 Sep, scheduled audit account01/B09 r31, the store-binding caveat of R68). The
+# THE VECTORS MUST COVER THE STORE (29 Sep, the store-binding caveat of R68). The
 # claim vectors are a file beside the store, and nothing refreshed them after an ingest, so a claim filed today had no
 # vector: the meaning channel picked its first claim from the claims the file held. When the new claim is the right
 # answer and an older one leads on the words and wins on meaning among the rest, the two channels agree on the older
 # card and the gate yields to it. The channel now names nobody while a current claim has no vector or a vector names no
 # node of the store. The math transport extends the file on every run (math_claim_vecs.py), so the gap lasts one run at
 # most; math_claim_vecs.coverage holds the same rule for the transport's status line.
-# THE TEXT IS BOUND TOO (29 Sep, scheduled audit account03/B12 r56). Ids alone let a file made from one store pass
+# THE TEXT IS BOUND TOO (29 Sep). Ids alone let a file made from one store pass
 # against another store that holds the same ids with other text. The file records each row's store digest
 # (node_digests), math_brain.semantic reads them into _digests, and a row whose digest is not the store's counts as a
 # claim without a vector. Loaded vectors that carry no digests (an older file, or a loader that does not read them)
 # name nobody.
-# A VECTOR OF UNKNOWN TEXT IS NOT BOUND (29 Sep, scheduled audits account04/B06 r76 and account04/B14 r8). The migration
+# A VECTOR OF UNKNOWN TEXT IS NOT BOUND (29 Sep). The migration
 # that bound the file wrote each row's current digest, and marked the rows no text of their claim reproduces as legacy in
 # row_source; this check read the digest and not the mark, so 6,229 vectors of unknown text passed as bound. A legacy row
 # now counts as a claim without a vector of its current text, and the channel names nobody while the file holds one.
 _SEMTOP_WHY = {}
 
 
-# A SELECTED CARD THE INTEGRITY READ REFUSES REFUSES THE BLOCK (29 Sep, scheduled audit account04/B04 r69). The read used to
+# A SELECTED CARD THE INTEGRITY READ REFUSES REFUSES THE BLOCK (29 Sep). The read used to
 # drop a refused card and serve the rest, so a refused first card moved the runner-up first under decisions made for the
 # first card - its margin, and the coverage exception granted when both channels agreed on it - and a refused later card
 # changed the set that the block-coverage floor and the generic-only test had judged. The block is now refused whenever
@@ -4552,8 +4549,8 @@ _SEMTOP_WHY = {}
 # as before. Measured the day it landed, on his 489 gate-passing prompts: 68 served, one of them with a refused card (a
 # third card, the claim whose body is empty), none with a refused first card; 142 of the store's 8,243 servable cards
 # failed the read (100 missing artifact bindings, 34 stored-digest mismatches, 8 claim/statement mismatches).
-# THE KEYWORD FOLLOWS THE PACKAGE'S OWN FORM (29 Sep, scheduled audit account01/B02 auto11,
-# B02-R78-LEGACY-CHECKOUT-REFUSAL-DOWNGRADE-20260929). math_brain has said "refuse the block" two ways: on_refusal="all"
+# THE KEYWORD FOLLOWS THE PACKAGE'S OWN FORM (29 Sep).
+# math_brain has said "refuse the block" two ways: on_refusal="all"
 # (from 6f2742b41f) and strict=True (7282e5a080, the same morning's first form). The hook asked only for the first and passed
 # nothing otherwise, so a hook running over the 7282 package, or any package without either, dropped the refused card as
 # before 29 Sep. Now each known form gets its own keyword, and a package offering neither returns None: the caller serves
@@ -4576,7 +4573,7 @@ def _claim_vectors_cover_store(ids, store=None, digests=None, sources=None):
     that name no node of it. With digests (one per id: the store digest of the text each vector was made from), a row
     whose digest is not the store's counts as a claim without a vector; with sources (one per id, the file's
     row_source), so does a row of unknown text (legacy), whatever digest it carries; and so does an id that names more
-    than one row, superseded or not (account04/B06 r75: the winner is a row, and a second row of the same claim is a
+    than one row, superseded or not (the winner is a row, and a second row of the same claim is a
     second voice no check has seen). Read in one snapshot, every call: the store runs in WAL mode, so its file's time
     says nothing about what it holds."""
     import sqlite3
@@ -4605,8 +4602,8 @@ def _claim_vectors_cover_store(ids, store=None, digests=None, sources=None):
     return sorted(missing), sorted(set(have) - set(nodes))
 
 
-# THE MEANING CHANNEL NAMES A CURRENT REVISION (MATHBRAIN_SEMTOP_CURRENT; 4 Oct 2026, the live-path variant of scheduled audit
-# account04/B03). The argmax ran over every claim vector, and the 361 claims a newer immutable revision supersedes all keep
+# THE MEANING CHANNEL NAMES A CURRENT REVISION (MATHBRAIN_SEMTOP_CURRENT; 4 Oct 2026, the live-path variant of scheduled audit).
+# The argmax ran over every claim vector, and the 361 claims a newer immutable revision supersedes all keep
 # theirs: asked "What is <title>?" for 327 revised claims, the winner was the OLD revision 181 times and the current one 79
 # times (current revisions only: 167). retrieve() ranks current revisions only, so the agreement COV_AGREE looks for could not
 # happen on exactly the cards that were revised. With the dial on, the superseded revisions are masked out before the winner.
@@ -4907,7 +4904,7 @@ def _reset_cov_agree_state():
 def _reset_per_prompt_state():
     """A caller that runs several prompts in one process must not carry one prompt's vouch route, agreed card or pool
     adjacency into the next (the live hook runs one process per prompt; found 28 Sep in an in-process measurement). The
-    adjacency joined on 28 Sep (account02/B11 auto37, B11-R31-POOL-ADJ-FALLBACK-STATE-LEAK-01): the full-store path never
+    adjacency joined on 28 Sep: the full-store path never
     set it, so a prompt that fell back after a prefiltered one ranked with the earlier pool's links."""
     _VOUCH["route"] = False
     _VOUCH["card"] = None
@@ -5990,8 +5987,8 @@ def _main_body(data, out):
             if not _sealed:
                 _silence_note(data, "coverage_agree_identity_lost")
                 return
-        # THE VOUCHED CARD IS SEALED TOO (29 Sep; scheduled audit account01/B08 auto11,
-        # B08-R19-VOUCH-FINAL-IDENTITY-NOT-SEALED-079). The vouch route opens a prompt the gate refused because the
+        # THE VOUCHED CARD IS SEALED TOO (29 Sep).
+        # The vouch route opens a prompt the gate refused because the
         # served first card is also the meaning channel's first claim, and the stages after that check (session dedup,
         # twin collapse, the block budget, which drops a card too long to fit and keeps going) can put another card
         # first. A vouched block goes out only if it still leads with the card the two channels agreed on.
@@ -6093,7 +6090,7 @@ def _silence_note(data, reason, harness_only=False):
         # to do with - measured directly, all four passed it comfortably and the two it really silenced
         # were absent-target questions it was right to silence. A harness can now map a row back to its
         # bank item, and a real session can be traced without this file ever holding what was typed.
-        # What the fingerprint is and is not (29 Sep, scheduled audit account04/B10 r26, B10-R45): the
+        # What the fingerprint is and is not (29 Sep): the
         # first 40 bits of an unkeyed SHA-1, so anyone holding a prompt can confirm it is in the file -
         # which is how the harness matches rows to its bank - and it is not anonymous. The file stays on
         # this machine and in no repository. At 2,373 distinct prompts (29 Sep) the chance that any two

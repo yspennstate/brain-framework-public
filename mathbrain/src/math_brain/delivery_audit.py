@@ -78,7 +78,7 @@ ASSERTED_CONTRACT = ("a positive value of two or more digits, optionally with a 
                      "after is/are/was/were/equals/gives/yields/returns (optionally 'exactly' or "
                      "'precisely') or after '='")
 
-# The same idea over the representations ASSERTED leaves out (interactive audit IA-20260929-MB-05):
+# The same idea over the representations ASSERTED leaves out:
 # a sign (-, U+2212, +), one digit, a decimal, a fraction, scientific notation or a power of ten,
 # and a bound introduced by <, >, <=, >=, U+2264 or U+2265 or by 'at most' / 'at least'. An arrow
 # (->, =>) and an inequality (!=) are not a stated value.
@@ -98,7 +98,7 @@ BROAD_CONTRACT = ("a value after the ASSERTED verbs (also 'at most' / 'at least'
 
 
 # A delivered number says nothing about the conditions it holds under (30 Sep 2026,
-# 1000-page report D10: "grade sign, domain, quantifier ... not only retained numbers").
+# "grade sign, domain, quantifier ... not only retained numbers").
 # This line counts the claims that list hypotheses and asks whether every one of them
 # reaches the rendered text.
 ASSUMPTIONS_CONTRACT = ("a claim with at least one hypothesis among its own assumptions "

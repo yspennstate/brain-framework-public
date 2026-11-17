@@ -44,7 +44,7 @@ def publish(cache: dict, dest: Path, tries: int = 20) -> None:
 
     Until 29 Sep 2026 every build wrote through one fixed name, dest + ".tmp": a second builder opening it truncated the
     first builder's finished file, the first then published a zero-byte cache, and the second failed on a name already
-    moved (interactive audit 20260929T154310Z, INT-R79-SIGNAL-CACHE-SHARED-TEMP-20260929). A reader copes with a bad cache
+    moved. A reader copes with a bad cache
     (load_signal_cache returns 0 and retrieve() recomputes), so this cost speed, not answers. Each writer now has a unique
     temporary file and removes only that one; what is published always reads back as a whole cache; the replace is retried
     while a reader holds the destination open (Windows refuses to replace an open file)."""

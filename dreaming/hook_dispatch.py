@@ -319,7 +319,7 @@ def log(s):
         pass
 
 
-# THE MATCHER IS THE HARNESS'S OWN RULE (29 Sep, interactive audit BRAIN-INTERACTIVE-20260928-CRITICAL-PATH, D05). Read out
+# THE MATCHER IS THE HARNESS'S OWN RULE (29 Sep). Read out
 # of Claude Code 2.1.284 (its hook matcher and the value each event matches): an empty matcher or "*" matches everything;
 # a matcher of letters, digits, "_" and "|" only - and ",", " " and "-" on the events in _COMMA_EVENTS - is a list of
 # exact names, split on "|" (and ","), with the legacy tool names mapped to today's; anything else is a regular expression
@@ -664,7 +664,7 @@ OVERFLOW_KEEP_S = 48 * 3600
 _LAST_FIT = [None]        # (total_chars, n_hooks, n_cut, path) of the last merge that had to cut, for the dispatch log
 
 
-# EVERY OVERFLOW FILE IS ITS OWN, AND NONE IS LOST (29 Sep, critical-path audit D06). The name carried the event, eight
+# EVERY OVERFLOW FILE IS ITS OWN, AND NONE IS LOST (29 Sep). The name carried the event, eight
 # characters of the session and the second, and the file was opened "w": two cuts in one second for one session (or two
 # sessions sharing eight characters) wrote the same file, and the pointer the first one had already delivered named the
 # second one's text. Each call now adds its process id and a random id and creates the file exclusively. And an expired
@@ -912,7 +912,7 @@ def _finish_top(top):
 def merge(results, event, session=""):
     """results: list of (label, rc, stdout, stderr). Returns (exit_code, stdout_text, stderr_text).
 
-    TOP-LEVEL FIELDS STAY TOP-LEVEL (28 Sep, interactive audit IA-20260928-07). A hook's JSON has two layers: the
+    TOP-LEVEL FIELDS STAY TOP-LEVEL (28 Sep). A hook's JSON has two layers: the
     universal fields (continue, stopReason, suppressOutput, systemMessage) and, on Stop, UserPromptSubmit and PostToolUse,
     decision and reason, all at the top; and hookSpecificOutput for the event's own fields. This function used to fold
     every top-level key into hookSpecificOutput, so a Stop hook's {"decision": "block"} left as
@@ -941,7 +941,7 @@ def merge(results, event, session=""):
         if not isinstance(obj, dict):
             contexts.append((label, text))
             continue
-        # ONE HOOK'S BAD JSON CANNOT UNDO ANOTHER'S ANSWER (29 Sep, critical-path audit D03). A hookSpecificOutput that
+        # ONE HOOK'S BAD JSON CANNOT UNDO ANOTHER'S ANSWER (29 Sep). A hookSpecificOutput that
         # is not an object, or a permissionDecision that is not allow/ask/deny, raised here, merge() never reached the
         # exit-2 check below, and the caller's except turned the whole event into exit 0: a veto already made by an
         # earlier hook was lost to a later hook's typo. Such a hook's JSON is now dropped whole and named in the log,
@@ -989,7 +989,7 @@ def merge(results, event, session=""):
             hso["additionalContext"] = "\n".join(t for _, t in contexts)
     # A decision leaves only when a hook made one. Until 29 Sep a PreToolUse event with any context and no decision was
     # given "allow" here, which skips the permission prompt: every reflex or note on a tool call approved that call
-    # (critical-path audit D01). Claude Code delivers PreToolUse context without a decision (2.1.284, proved on 29 Sep
+    # Claude Code delivers PreToolUse context without a decision (2.1.284, proved on 29 Sep
     # with a one-hook headless session: the context reached the model either way).
     if decision:
         hso["permissionDecision"] = decision
@@ -1011,7 +1011,7 @@ def merge(results, event, session=""):
 
 
 def _restrictive_fallback(results, event):
-    """When merge() itself fails: keep what restricts and drop the rest (critical-path audit D03). An exit 2 blocks as
+    """When merge() itself fails: keep what restricts and drop the rest. An exit 2 blocks as
     before; else an explicit deny on PreToolUse, or a top-level block or stop, leaves as the only answer; else nothing.
     Never raises."""
     try:
@@ -1169,7 +1169,7 @@ def _owner_words(payload):
 def _entry_basename(cmd, args):
     """The script file an entry runs, whatever process runs it (a content hook must be recognised on either path). Until
     29 Sep this asked as_python_argv, which answers None for a hook forced onto its own process, so the two project-memory
-    hooks in HEADLESS_SKIP were never recognised and never skipped (critical-path audit D04)."""
+    hooks in HEADLESS_SKIP were never recognised and never skipped."""
     try:
         return os.path.basename(script_argv(cmd, args)[0] or "").lower()
     except Exception:

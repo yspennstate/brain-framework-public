@@ -28,7 +28,7 @@ every stop is one, and a gate that stood down there would never fire where most 
 it out of a loop and out of the way: the stop right after one of its blocks, in the same turn, is never blocked (that
 stop is where the agent's answer to the block is logged), and a rule blocks once per turn - the user prompt the work
 answers - and again in that turn only after REARM_S and for a different claim. Until 30 Sep 03:0x it was once per rule
-per session, so a session reused for a second task never met the gate again (1000-page report D12-T02); until 30 Sep
+per session, so a session reused for a second task never met the gate again; until 30 Sep
 12:4x the stop after a block was spared even when it answered a new prompt. Every decision is logged to
 verify_gate_log.jsonl with the evidence it saw, and the next stop after a block logs what the agent did about it (checks
 added, claim kept or softened). A block lands after the claim is written, so its follow-ups measure correction, not

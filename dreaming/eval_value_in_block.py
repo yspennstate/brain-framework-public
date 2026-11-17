@@ -85,7 +85,7 @@ def _run(question, env, timeout=90):
     """(block, ids, seconds, invalid). invalid is '' for a clean call, else why the block is not a measurement: a hook
     that exited nonzero, timed out or printed something other than its JSON delivers nothing in a session. Until 30 Sep
     the exit code was never read, a timeout counted as a silent hook, and output that was not JSON was scored as the
-    block (account03/B01, B01-R79-GATE-PROOFBANK-VIB-FAILED-HOOK-OUTPUT-SCORED-20260929)."""
+    block."""
     sess = "vib-" + uuid.uuid4().hex[:12]
     t0 = time.time()
     try:

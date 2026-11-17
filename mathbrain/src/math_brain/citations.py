@@ -30,7 +30,7 @@ class CitationCheck:
     #: the source's hypotheses and domain cover every case the attributed claim states. A source
     #: that proves a finite-dimensional, special or asymptotic case of a general, dimension-free or
     #: exact claim does not match: that is partial support or an unsupported generalization
-    #: (1000-page report D09-T04). Asked on its own because a reviewer who reads a matching
+    #: Asked on its own because a reviewer who reads a matching
     #: statement tends to tick statement_match without comparing the ranges.
     scope_match: bool
     checked_by: str
@@ -50,7 +50,7 @@ class CitationCheck:
         missing = [name for name, value in required.items() if not value.strip()]
         if missing:
             raise ValueError(f"citation check is missing: {', '.join(missing)}")
-        # the record is typed at construction (interactive audit, B100-06, 30 Sep 2026): the string "false" is
+        # the record is typed at construction (B100-06, 30 Sep 2026): the string "false" is
         # truthy, so a flag read from text used to make fully_verified true
         if not isinstance(self.verdict, CitationVerdict):
             raise TypeError("citation check verdict must be a CitationVerdict")

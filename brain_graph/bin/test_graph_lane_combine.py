@@ -1,5 +1,5 @@
 """graph_lane.combine: a source at weight zero takes no part, and a constant list normalizes as fuse_scores does
-(29 Sep 2026; interactive audit BM-20260929-01).
+(29 Sep 2026).
 
     python test_graph_lane_combine.py [GRAPH_LANE.py] [--old OLD_GRAPH_LANE.py]
 

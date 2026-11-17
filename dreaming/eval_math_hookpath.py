@@ -38,7 +38,7 @@ HOOK = os.path.join(HERE, "math_sense.py")
 STATE = os.path.join(HERE, "state")
 BANK = os.path.join(STATE, "math_probe_fresh_20260903.json")
 # The block is read by the shared parser (math_block_parse), which reads both card formats. This file kept a
-# private pair of patterns until 30 Sep (account02/B07, B07-R79-MATH-HOOKPATH-EVALUATOR-IGNORES-CHILD-EXIT-056);
+# private pair of patterns until 30 Sep;
 # on 238 blocks the live hook served on 29 Sep (577 cards) the two gave the same titles and ids on every block.
 sys.path.insert(0, HERE)
 from math_block_parse import card_is_complete, delivery_problem, iter_cards  # noqa: E402
@@ -91,7 +91,7 @@ def ask(prompt, env):
     except OSError as x:
         launch = repr(x)[:160]
     dt = time.time() - t0
-    # 30 Sep (account02/B07, B07-R79-MATH-HOOKPATH-EVALUATOR-IGNORES-CHILD-EXIT-056): a block counts only from a hook
+    # 30 Sep: a block counts only from a hook
     # that finished and exited 0 - Claude Code uses a UserPromptSubmit hook's output only on exit 0, so a valid-looking
     # block from a hook that then exited 7 was scored as served here and never reached a session. A nonzero exit, a
     # launch error or output that is not the hook's JSON makes the row invalid: its content is not scored, and the
@@ -106,7 +106,7 @@ def ask(prompt, env):
             block = json.loads(raw)["hookSpecificOutput"]["additionalContext"]
         except Exception:
             invalid = "hook output is not the hook's JSON"
-    # 30 Sep (account04/B07, B07-R79-INCOMPLETE-CARD-PASSES-REGRESSION-GATES): a card that lost its id or trust line, or
+    # 30 Sep: a card that lost its id or trust line, or
     # a block with text but no readable card, reached the session broken. Until now the header's title still scored a
     # hit; such a row is a delivery failure, kept out of every rate like a crashed call and counted.
     broken = [] if invalid else [c for c in iter_cards(block) if not card_is_complete(c)]

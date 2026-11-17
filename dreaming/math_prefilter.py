@@ -219,7 +219,7 @@ def build(store_path):
     # sidecar), so a revised or newly transported card is expanded at the next index build and a superseded one loses
     # its words with it. Any failure builds the index without expansion, exactly as before.
     # The memory directory is named here: since 30 Sep the library has no default of its own and says in LAST_BUILD
-    # whether it was unconfigured, found no directory, or built nothing (account04/B03), and the index records that
+    # whether it was unconfigured, found no directory, or built nothing, and the index records that
     # status instead of a path to a sidecar that was never written.
     expansion, expansion_meta = {}, {"path": None, "cards": 0}
     if os.environ.get("MATHBRAIN_EXPANSION", "1").strip() not in ("0", "", "off", "false"):

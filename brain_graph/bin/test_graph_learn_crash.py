@@ -1,5 +1,5 @@
 """test_graph_learn_crash.py - a learner run that dies after its database commit and before its state is saved does not
-count the same evidence twice (28 Sep 2026; interactive audit IA-20260928-06).
+count the same evidence twice (28 Sep 2026).
 
     python test_graph_learn_crash.py [--module GRAPH_LEARN.py] [--old OLD_GRAPH_LEARN.py]
 
@@ -33,7 +33,7 @@ OLD = os.path.abspath(ARGS[ARGS.index("--old") + 1]) if "--old" in ARGS else Non
 fails, ran = [], []
 SID = "aaaaaaaa-1111-4000-8000-000000000000"
 # the searches come from ten sessions: the learner moves the dial only on ten or more, each one vote (30 Sep, the
-# 1000-page report's D03-T02); SID is the first of them and the one the membrane evaluation belongs to
+# SID is the first of them and the one the membrane evaluation belongs to
 SESS = [SID] + ["%08x-1111-4000-8000-000000000000" % (0xbbbbbbb0 + k) for k in range(9)]
 
 

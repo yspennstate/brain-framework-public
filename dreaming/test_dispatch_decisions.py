@@ -1,6 +1,5 @@
 """test_dispatch_decisions.py - the hook dispatcher keeps what its hooks decided, runs the hooks the harness would run,
-and keeps every overflow record (29 Sep 2026; interactive audit BRAIN-INTERACTIVE-20260928-CRITICAL-PATH,
-findings D01, D03, D04, D05 and D06).
+and keeps every overflow record (29 Sep 2026).
 
     python test_dispatch_decisions.py [HOOK_DISPATCH.py] [--old OLD_HOOK_DISPATCH.py]
 

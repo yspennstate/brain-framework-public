@@ -210,7 +210,7 @@ os.utime(lock_of("s5"), (old, old))
 r = call("s5")
 check(r == "[brain] x" and not lock_held("s5"), "T5 a dead call's lock is taken over (%r)" % r)
 
-# T6. Since 28 Sep (interactive audit IA-20260928-03) the lock is the operating system's, held on an open file: a file on
+# T6. Since 28 Sep the lock is the operating system's, held on an open file: a file on
 # its own is no longer a lock, so a live holder is simulated by holding the session through the module's own lock_session
 # (a second descriptor cannot take it, in this process or another). The old protocol's simulation stays for old modules.
 held = None

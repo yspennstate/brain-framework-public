@@ -16,7 +16,7 @@ channel therefore reports how far a claim stands out from the corpus for THIS qu
 WHAT THE SCORE IS NOT. It is relative prominence, not relevance and not confidence. Any
 spread of cosines puts some claim above the mean, so a question with no close claim still
 lifts its most similar ones, and adding a constant to every cosine or scaling them all
-leaves every score unchanged (interactive audits IA-20260929-052554-03 and MB-02). An
+leaves every score unchanged. An
 abstention on "nothing is close" would need a threshold on the raw cosine calibrated on
 held-out answerable and unanswerable questions; none is applied here. standout_details()
 returns the raw cosine beside each score, and lane_status() says why a call returned
@@ -82,8 +82,7 @@ def lane_status() -> tuple[str, str]:
 
     States: DISABLED, NOT_LOADED, DEPENDENCY_UNAVAILABLE, NO_ARTIFACT, INVALID_ARTIFACT,
     READY, ENCODER_FAILURE, NO_SPREAD, NO_MATCH. An empty result from standout_scores means
-    that no claim stood out only when this says NO_MATCH
-    (interactive audit IA-20260929-MB-03)."""
+    that no claim stood out only when this says NO_MATCH."""
     if not enabled():
         return ("DISABLED", "MATH_BRAIN_SEMANTIC is not on")
     return _status
@@ -228,7 +227,7 @@ def _load_artifact() -> None:
                 )
             # A NaN or infinite coordinate made every question's spread non-finite, so the channel
             # returned nothing for every question while available() said it was healthy
-            # (IA-20260929-MB-03).
+            #
             if vectors.ndim != 2 or vectors.shape[1] == 0:
                 raise RuntimeError(
                     f"claim vectors must be a 2-D array, found shape {vectors.shape!r}"

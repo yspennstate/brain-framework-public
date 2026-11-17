@@ -2945,7 +2945,7 @@ def _query_semantic_scores(query, k=None, floor=None):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# R11 query-meaning lane (13 Oct 2026, T-20261012-066): the lane above, on by default, with three
+# R11 query-meaning lane (13 Oct 2026): the lane above, on by default, with three
 # changes measured on the 22 Sep 999-item recall bank (dev half = even sha1(id); the held half scored once) and on
 # BRAINDEV. (1) The query is encoded with bge's own retrieval instruction ("Represent this sentence for searching
 # relevant passages: ") - the sidecar's model was trained to read a query that way, and query_embed.py never added it.
@@ -4075,7 +4075,7 @@ def _display_rows(scored, n, floor=0.02, floor_break=False):
     """The rows recall shows: at most n, in the order given, skipping any row whose display score is at or below the
     floor. On the bm25-first path the list runs in segment order (the BM25 block, then the lexical, graph and semantic
     tails), not by display score, so a low row is skipped, never the end of the list; until 28 Sep a low row ended it
-    and hid later tail rows above the floor (scheduled audit account01/B02 R1). floor_break=True keeps that old stop
+    and hid later tail rows above the floor. floor_break=True keeps that old stop
     (BRAIN_RECALL_FLOOR_BREAK=1)."""
     out = []
     # Compaction anchors can be a third of the memory files, and one session's compactions repeat the same words, so
@@ -4419,7 +4419,7 @@ def _recall_body(query, n=8):
     # immediately, even before the nightly BM25 rebuild. Integrity failure is a stop condition:
     # silently skipping a damaged "full notes" file recreates the exact harm this lane closes.
     # One bundle that fails verification is left out of the search and named, not a stop for every query (28 Sep,
-    # scheduled audit account03/B02 r68, B02-R1-ATTACHMENT-CORRUPTION-GLOBAL-RECALL-STOP-001): its text and scores never
+    # its text and scores never
     # count, the line below says the attachment corpus is incomplete and which bundles, and the rest of recall runs.
     # Until then one broken bundle anywhere ended every deliberate recall before BM25 ranked anything.
     attachment_failures = []
@@ -4477,7 +4477,7 @@ def _recall_body(query, n=8):
     # from the start of the scan that produced the index (bm25.scan_reference), not from the index file's mtime:
     # an incremental refresh re-reads a parent whose attachment changed since that start, and until 28 Sep a
     # refresh that did not re-read it still made the index newer than the attachment, so the promotion stopped
-    # while the index lacked the text (account02/B02 R1, B02-R1-ATTACHMENT-REFRESH-DROPS-LIVE-PROMOTION-001).
+    # while the index lacked the text.
     try:
         from bm25 import INDEX as _bm25_index_path, scan_reference as _bm25_scan_reference
         _index_read = _bm25_scan_reference(_bm25_index_path)
@@ -4737,7 +4737,7 @@ def _recall_body(query, n=8):
                 print("  [warn] bm25 refresh skipped (%s: %s)" % (type(_rf_exc).__name__, _rf_exc))
             # A bundle that failed verification above is re-read here before anything is scored, refresh or no refresh:
             # the index may hold its text from before the damage, and a damage that kept the bundle's mtime is never
-            # fresh to the refresh (28 Sep, account03/B02 r71, B02-R23-ATTACHMENT-STALE-BM25-DIGEST-BYPASS-001: the
+            # fresh to the refresh (28 Sep: the
             # parent ranked on the rejected text at exactly its healthy score while the warning said it counted for
             # nothing). Only the failed parents are re-read; nothing is published.
             _failed_parents = sorted({s for s, _e in attachment_failures})
@@ -5050,8 +5050,8 @@ def _recall_body(query, n=8):
                 continue
             seen_rank.add(slug)
             if tier.get(slug) == "unconscious":
-                # THE UNCONSCIOUS TIER IS A GATE ON LEXICAL EVIDENCE (stated 28 Sep, scheduled audit account03/B02 r67,
-                # B02-R1-UNCONSCIOUS-TIER-LEXICAL-SUPPRESSION-001). A log-substrate stub found by its words is marked
+                # THE UNCONSCIOUS TIER IS A GATE ON LEXICAL EVIDENCE (stated 28 Sep).
+                # A log-substrate stub found by its words is marked
                 # seen here, so its bm25 score and its lexical component count for nothing: it is listed after every
                 # tail with a display score of 0.5 * graph + 0.25 * semantic, and without graph or semantic support
                 # it is not shown. The comment here used to call this a demotion. A demotion was built and measured
@@ -5140,8 +5140,8 @@ def _recall_body(query, n=8):
             _rest = max((b for s, b in order if s not in _pol), default=bm_peak)
             _lift = {s: _rest + 2.0 + _pol[s] / policy_peak for s in _pol}
             order = sorted([(s, _lift.get(s, b)) for s, b in order], key=lambda item: -item[1])
-        # HEAD BY PROMOTION (28 Sep, scheduled audit account03/B01 auto63, B01-R1-BOOSTED-BM25-CROSSES-PROTECTED-HEAD-
-        # BOUNDARY-20260928). The query-semantic and graph blends below split the order into a head they leave alone and a
+        # HEAD BY PROMOTION (28 Sep).
+        # The query-semantic and graph blends below split the order into a head they leave alone and a
         # body they blend, and they drew the line at the lexical peak: every row scoring above bm_peak was head. The name-
         # and question-coverage boosts multiply a bm25 score by up to four, so a well-named ordinary hit crossed that line,
         # skipped both blends and was left out of the graph lane's seeds (it seeds from the body's top ten), and it could

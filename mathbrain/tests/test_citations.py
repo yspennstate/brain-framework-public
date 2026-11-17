@@ -43,7 +43,7 @@ def test_exact_booleans_decide_full_verification() -> None:
     assert not replace(_supported(), assumptions_match=False).fully_verified
 
 
-# B100-06 (interactive audit, 30 Sep 2026): the string "false" is truthy, so a flag read from text made
+# B100-06 (30 Sep 2026): the string "false" is truthy, so a flag read from text made
 # fully_verified true; a record is typed when it is built.
 @pytest.mark.parametrize(
     "flag", ["assumptions_match", "statement_match", "authorship_match", "scope_match"]
@@ -73,7 +73,7 @@ def test_a_missing_field_is_still_refused_by_name() -> None:
         replace(_supported(), checked_by=None)
 
 
-# 1000-page report D09-T04: a source proving a finite-dimensional case, cited for a
+#: a source proving a finite-dimensional case, cited for a
 # dimension-free theorem.
 def _finite_dimensional_source() -> CitationCheck:
     return replace(

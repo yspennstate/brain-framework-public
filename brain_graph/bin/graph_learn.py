@@ -289,8 +289,8 @@ def _lane():
 
 
 def fuse(body, graph, lam, bounds=None):
-    """The order recall would have shown at graph weight lam: graph_lane.fuse_scores, the function recall runs (29 Sep,
-    interactive audit G03: this kept its own copy, which ordered equal scores by hash, differently from one process to
+    """The order recall would have shown at graph weight lam: graph_lane.fuse_scores, the function recall runs (29 Sep:
+    this kept its own copy, which ordered equal scores by hash, differently from one process to
     the next). `bounds` (lo, hi, glo, ghi) are the whole lists' minimum and maximum as recall_log.jsonl records them
     since 27 Sep: the log keeps 30 items of each list, and fusion scales by the whole list's range, so without them a
     replay reorders the top 10 of about 2 recalls in 5."""
@@ -300,8 +300,8 @@ def fuse(body, graph, lam, bounds=None):
 
 
 def replay_complete(body, graph, lam, bounds, target, n=None):
-    """Whether target's replayed rank at weight lam is the rank recall would have given over the whole lists (29 Sep,
-    interactive audit G02: a candidate cut from both logged lists can win once lam mixes them, and the replay never sees
+    """Whether target's replayed rank at weight lam is the rank recall would have given over the whole lists (29 Sep: a
+    candidate cut from both logged lists can win once lam mixes them, and the replay never sees
     it). A list of CUT items may have been cut, and an item cut from it scored at most its last kept score. So each
     candidate's true score lies between its replayed score and that plus what it could have had in a cut list it is not
     kept in, and a candidate kept in neither list lies between 0 and the sum of both. The rank is exact when every other
@@ -343,7 +343,7 @@ def search_session(r, by_s):
     """The session a logged search belongs to: the one the record names (brain.py logs it since 27 Sep 02:40), else the
     one whose 'recalled' events carry the shown slugs within 90 s (the legacy join, for older records).
 
-    A record that names its session is never given to another one (28 Sep, interactive audit IA-20260928-01): when the
+    A record that names its session is never given to another one (28 Sep): when the
     named session is not among the loaded transcripts its outcome is unobserved and the search is not judged. Until then
     such a record fell through to the overlap join, and a session that recalled the same memory within 90 s took the
     search and its reads. The overlap join is for records that name no session, and a tie between sessions is no
@@ -503,7 +503,7 @@ def main():
     emitted = emitted_eids() if any(f.get("eid") for f in st["pending"]) else set()
     n_unemitted = 0
     n_censored = 0
-    # ONE OUTCOME, ONE CREDIT (30 Sep, the 1000-page report's D03-T01: the learner must not reward itself for speaking).
+    # ONE OUTCOME, ONE CREDIT (30 Sep: the learner must not reward itself for speaking).
     # Each evaluation is judged on its own window, so a line served ten times before the session read it once took ten
     # successes from that one read (a fixture: pos 10). A read now credits only the last serve of the same line before
     # it in that session; an earlier serve of it has no outcome of its own and teaches nothing, neither way. Measured the
@@ -521,7 +521,7 @@ def main():
             continue
         s = str(f.get("sid", ""))[:8].lower()
         out = [x for x in by_s.get(s, []) if f["t"] < x[0] <= f["t"] + HORIZON]
-        # CENSORED, NOT IGNORED (30 Sep, the 1000-page report's D16-T05). A line the session did not take counts as
+        # CENSORED, NOT IGNORED (30 Sep). A line the session did not take counts as
         # ignored only when the session was seen after the window closed; a session that ended inside the window (or
         # has not been seen since) could not have read it, and until now each of its lines drew a negative. Such a
         # line now has no outcome and teaches nothing either way. A line it did take is a success as before.
@@ -638,7 +638,7 @@ def main():
     tests = [j for j in judged if j.get("kind") == "test"]
     judged = [j for j in judged if j.get("kind") != "test"]     # what the edges, the bars and the precision learn from
     # 3. learning on the edges that lit each judged line. Each evaluation's identity goes into the processed table in the
-    # same transaction as its counts, and one already there adds nothing (28 Sep, interactive audit IA-20260928-06): the
+    # same transaction as its counts, and one already there adds nothing (28 Sep): the
     # state file with the consumed offsets is written in step 8, after this commit, so a run that died in between left
     # the counts in and the evaluations pending, and the next run judged and counted them again.
     n_learn, n_dup = 0, 0

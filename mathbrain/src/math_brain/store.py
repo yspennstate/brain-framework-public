@@ -331,7 +331,7 @@ class ResearchStore:
         The writable open turns on WAL, runs the schema script and records the current version.
         It used to ask what version the file carried only after all that, so a newer store it
         refused had already been given WAL, this build's tables and a second version row
-        (interactive audit IA-20260929-052554-02, 29 Sep 2026). This read changes nothing.
+        (29 Sep 2026). This read changes nothing.
 
         A file with no tables is a new store. A file whose schema_meta is empty is accepted only
         when every table in it is one this build's schema creates: that is this build's own

@@ -800,7 +800,7 @@ def test_a_cross_generation_event_from_before_the_join_fails_replay(tmp_path: Pa
 
 
 def test_a_forged_from_status_alone_breaks_the_chain(tmp_path: Path) -> None:
-    """1000-page report D08-T04: only the event's from_status is altered.
+    """: only the event's from_status is altered.
 
     Replay must refuse the chain, not trust the stored label."""
     claim = Claim("n + 0 = n", ClaimKind.THEOREM)

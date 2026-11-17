@@ -5,7 +5,7 @@
 
 Runs each verification hook in-process the way hook_dispatch.py does (run_in_process with the wired arguments) and
 passes its output through hook_dispatch.merge, the function whose Stop handling dropped every JSON block from 15 to 28
-Sep (IA-20260928-07). Checks that a verify_gate block arrives as a top-level decision:block, and that verify_sense and
+Sep. Checks that a verify_gate block arrives as a top-level decision:block, and that verify_sense and
 verify_ops contexts arrive in hookSpecificOutput.additionalContext. The hooks' state and logs are pointed at a
 temporary directory through environment variables the hooks read, so no live state is written.
 """

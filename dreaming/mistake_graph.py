@@ -167,7 +167,7 @@ REFLEX_MARK = re.compile(r"reflex:\s*", re.I)
 HEADER = re.compile(r"^\s*-\s*\*\*(?P<hdr>.+?)\*\*(?P<rest>.*)$", re.S)
 # Since August the corrections are dated prose bullets - "- 2026-09-27 05:2x his clock (agent, topic): what happened ...
 # Rule: what to do next time" - not the bold wrong:/lesson: form, and until 27 Sep this parser saw none of them (175
-# bullets, 172 of them from September; scheduled audit account02/B13). The header ends at the first colon followed by a
+# bullets, 172 of them from September). The header ends at the first colon followed by a
 # space, so a clock like 05:2x stays in it; the lesson starts at a rule-like marker, and a bullet without one is all
 # 'wrong' with an empty lesson - still a correction, still tokens for the families.
 DATED = re.compile(r"^\s*-\s*(?P<hdr>20\d\d-\d\d-\d\d.{0,200}?):\s(?P<rest>.*)$", re.S)

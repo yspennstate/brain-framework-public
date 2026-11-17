@@ -82,7 +82,7 @@ def _touch_text(data):
     return " ".join(parts)
 
 
-# THE RECEIVER, NOT THE SESSION (30 Sep 2026; the 1000-page report's D12-T01, second channel). A
+# THE RECEIVER, NOT THE SESSION (30 Sep 2026). A
 # subagent's tool step carries its parent's session_id and its own agent_id, so the state below was shared with the
 # parent: a research subagent working the program's folder got nothing for an hour after its parent had touched the
 # folder, and the child that does the proof work is the one that needs the frontier. State is now kept per receiver,

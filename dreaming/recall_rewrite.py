@@ -7,7 +7,7 @@ of the four searches for 132 of 300 reworded questions, against 104 for the ques
 under a cent a question. This runs the same four searches and interleaves them - the first result of each, then the
 second of each, and so on - so its first twenty lines are the four top-fives the measurement counted when the lists
 share no memory; a memory two lists share is shown once, and the twenty lines then reach below a list's top five
-(each list is searched ten deep at -n 20; scheduled audit account02/B08 auto11, 27 Sep).
+(each list is searched ten deep at -n 20, 27 Sep).
 Read at the same number of lines, though (27 Sep, brain_graph/results/REWRITE_FUSED_EQUAL_LINES_2026-09-27.json), the
 interleaved list is a wash against plain recall - 109 against 105 at five lines, 150 against 149 at twenty - so it is a
 second look, not a better first search: after a plain recall missed, its twenty lines held the note 25 times in 151.

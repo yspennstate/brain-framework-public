@@ -53,7 +53,7 @@ def main():
         print("  (old graph_learn not loaded: %s)" % exc)
 
     # 1. log_recall writes the whole lists' bounds, keeps up to 100 items of each (30 before 29 Sep) and the whole lists'
-    # lengths, so a replay knows whether a list was cut (interactive audit G02)
+    # lengths, so a replay knows whether a list was cut
     log = os.path.join(tempfile.mkdtemp(prefix="rl_"), "recall_log.jsonl")
     os.environ.update(BRAIN_RECALL_LOG="1", BRAIN_RECALL_LOG_PATH=log)
     os.environ.pop("BRAIN_RECALL_LOG_FULL", None)

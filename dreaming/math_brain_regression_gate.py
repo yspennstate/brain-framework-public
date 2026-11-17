@@ -82,7 +82,7 @@ def _invalid_to_row(row, inst, out, name):
     """Read an evaluator line's '| invalid N (reason: k; ...)' tail into the row. A hook call that exited nonzero, failed
     to launch or printed something other than its JSON delivers nothing in a session, so any such call is a breach; a
     call that timed out makes the row inconclusive (an error), not a breach. A line with no invalid count comes from an
-    evaluator that does not check its calls, and is an error too (account03/B01, 30 Sep 2026)."""
+    evaluator that does not check its calls, and is an error too (30 Sep 2026)."""
     m = re.search(r"\| invalid (\d+)(?: \(([^)]*)\))?", out or "")
     if not m:
         row["errors"].append("%s: the summary carries no invalid-call count" % name)
@@ -304,8 +304,7 @@ def main():
 
 def production_math_block(pout):
     """(served, problem) for the dispatcher's stdout on the production-flags probe. Until 30 Sep the probe passed on the
-    literal marker alone, so a block whose cards had lost their id and trust lines read as served (account04/B07,
-    B07-R79-INCOMPLETE-CARD-PASSES-REGRESSION-GATES). The math section of the dispatcher's context - the marker to the
+    literal marker alone, so a block whose cards had lost their id and trust lines read as served. The math section of the dispatcher's context - the marker to the
     next hook's tag line; the block's own '[math-brain: N note(s) omitted ...]' line belongs to it - must hold at least
     one card and every card whole. The dispatcher's cut, when the hooks overflow its cap, works at line boundaries and
     can leave a header without its id line; that is a delivery failure too."""
@@ -383,10 +382,10 @@ def _main_locked():
                 inst[form + "_not_scored"] = s[form].get("not_scored", 0)
             _un_n = s["unanswerable"]["n"]
             inst["absent_fire"] = round(s["unanswerable"]["false_fire"] / _un_n, 3) if _un_n else 0.0
-            # 2026-09-30 (account02/B07, B07-R79-MATH-HOOKPATH-EVALUATOR-IGNORES-CHILD-EXIT-056): the evaluator scores a
+            # 2026-09-30: the evaluator scores a
             # block only from a hook that exited 0 and counts the calls that exited nonzero, failed to launch or printed
             # something other than the hook's JSON. Such a call delivers nothing in a session, so it is a breach.
-            # Since 30 Sep (account04/B07-R79) a block with an incomplete card or no readable card is counted the same way:
+            # Since 30 Sep a block with an incomplete card or no readable card is counted the same way:
             # the session received it broken.
             inst["invalid_rows"] = s.get("invalid", 0)
             if inst["invalid_rows"]:

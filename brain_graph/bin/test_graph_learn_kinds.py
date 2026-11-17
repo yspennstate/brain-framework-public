@@ -158,7 +158,7 @@ def main():
         check("session_kind reads his / test / script / unknown", got == ["his", "test", "script", "unknown"], str(got))
 
         now = time.time()
-        # each session one vote, ten sessions needed (30 Sep, the 1000-page report's D03-T02); until then this control
+        # each session one vote, ten sessions needed (30 Sep); until then this control
         # moved the weight on forty searches from the one session below
         recs, ev = synthetic("11111111-0000-4000-8000-000000000001", 40, now)
         status, lam = run(gl, tmp, recs, ev, now)

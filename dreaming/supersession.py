@@ -60,7 +60,7 @@ def _lenient_target(body, memory_dir):
 
 def _lenient_candidate(body):
     """The prose pointer's leading slug before the existence test: what the frontmatter cache keeps, so the test is
-    made again on every call against the current directory (28 Sep, interactive audit IA-20260928-04: the cache kept
+    made again on every call against the current directory (28 Sep: the cache kept
     the tested result, and a pointer whose target appeared after the predecessor was cached stayed unrouted until the
     predecessor itself changed)."""
     match = FRONTMATTER_RX.search(body or "")
@@ -452,7 +452,7 @@ _FM_CACHE_NAME = "supersession_frontmatter_cache.json"
 # Bump this whenever the PARSE changes, or the fix does not reach the corpus: a cache entry is keyed by
 # (size, mtime_ns), so every unchanged file would keep serving the empty target the old parse recorded.
 # 3 (28 Sep): an entry holds the strict target and the prose pointer's candidate apart, and the candidate's target is
-# looked for in this call's own directory listing, never taken from the cache (IA-20260928-04).
+# looked for in this call's own directory listing, never taken from the cache.
 # 4 (29 Sep): an entry is keyed by size, mtime, ctime and birth time,
 # so a file replaced by rename with its old size and mtime is read again (Windows gives the renamed file a new creation
 # time; POSIX changes ctime on any write or utime). The one case still read from the cache is an in-place write of the

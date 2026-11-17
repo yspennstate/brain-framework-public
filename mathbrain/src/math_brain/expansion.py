@@ -53,7 +53,7 @@ PROMPTS = _env_path("MATHBRAIN_EXPANSION_PROMPTS")
 #: the sidecar it wrote (or None) and a reason when it built nothing.
 LAST_BUILD: dict = {}
 K = int(os.environ.get("MATHBRAIN_EXPANSION_K", "20") or 20)
-# A sealed build refuses a prompt record it cannot read instead of counting around it (interactive audit B100-05): for
+# A sealed build refuses a prompt record it cannot read instead of counting around it: for
 # ordinary serving a quarantined record keeps the build alive, for a sealed generation it would silently change the
 # corpus the generation declares.
 STRICT = os.environ.get("MATHBRAIN_EXPANSION_STRICT", "0").strip() not in ("0", "", "off", "false")
@@ -117,15 +117,15 @@ def _his_counts(cache_path, strict=None, prompts=None):
 
     The count is order-independent: every prompt of a cluster contributes its terms, each term once per cluster.
     Until 29 Sep only a cluster's first prompt was read, so a later prompt's own terms were dropped and the counts
-    depended on the order (interactive audit BM-20260929-03). The cache is bound to the prompt file's resolved path
+    depended on the order. The cache is bound to the prompt file's resolved path
     and the SHA-256 of its bytes, the tokenizer's source digest and HIS_RULE; until 29 Sep it was keyed by size and
-    modification time alone, so another file, or the same file replaced, with an equal stamp read the old counts
-    (BM-20260929-02). The cache is published atomically under a private temporary name.
+    modification time alone, so another file, or the same file replaced, with an equal stamp read the old counts. The
+    cache is published atomically under a private temporary name.
 
     A record that cannot be read as an owner prompt is refused and counted, never guessed at: a line that is not JSON,
     JSON that is not an object, an owner record with no text or with a text that is not a string. Until 30 Sep a
-    non-string text reached str.strip and the whole count raised, which dropped the expansion from the index build
-    (interactive audit B100-05). Other speakers' records and owner prompts under 12 characters are left out by the
+    non-string text reached str.strip and the whole count raised, which dropped the expansion from the index build.
+    Other speakers' records and owner prompts under 12 characters are left out by the
     rule, not refused."""
     strict = STRICT if strict is None else strict
     prompts = Path(prompts) if prompts else PROMPTS
@@ -137,7 +137,7 @@ def _his_counts(cache_path, strict=None, prompts=None):
         return {}, 0, {}
     tokenizer = _tokenizer_identity()
     # an unreadable tokenizer source is no identity: two such environments would share one key, so the cache is neither
-    # read nor written then (interactive audit, p. 42)
+    # read nor written then (p. 42)
     cacheable = tokenizer != "unknown"
     key = (VERSION, HIS_RULE, str(prompts.resolve()), hashlib.sha256(raw).hexdigest(), tokenizer)
     if cacheable:
@@ -211,7 +211,7 @@ LOCK_STALE_S = 900.0
 
 @contextlib.contextmanager
 def _build_lock(path, wait_s=None, stale_s=None):
-    """One expansion build at a time for a sidecar (interactive audit B100-04, 30 Sep 2026). A lock file older than
+    """One expansion build at a time for a sidecar (30 Sep 2026). A lock file older than
     stale_s is a builder that died holding it and is taken over; a live one is waited for up to wait_s, then the build
     fails, which the prefilter records and builds without expansion, as for any expansion failure."""
     wait_s = LOCK_WAIT_S if wait_s is None else wait_s
@@ -256,7 +256,7 @@ def _publish(path, payload) -> bool:
     """Write the sidecar under a private temporary name and swap it in, unless the sidecar already there was built from
     a newer store state (a later generation); then leave it and return False. Until 30 Sep every build staged through
     the one name path + ".tmp", so two builds could publish each other's bytes and the second then failed on a missing
-    file (interactive audit B100-04)."""
+    file."""
     try:
         with open(path, "rb") as fh:
             current = pickle.load(fh)

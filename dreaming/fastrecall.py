@@ -36,7 +36,10 @@ PIN_RETRIEVAL = "350904078336b15b89ae71cf3e57678c360fdb85949402dd42ea592e883d0a7
 #: other retrieval.py versions this module was checked against, each by an A/B over the printed top 8. The published
 #: math-brain's (c72c1524, the Mac's install): 30 of 30 queries identical to the Mac's own fastrecall (5 Nov,
 #: parity/fr_pin_ab.py). Without it the fast path refused every call there and number-word and title variants never ran.
-PINS_ALSO = frozenset({"c72c15245c0d5f6d3b2329ce985f43624a7193a5b4e6485d2588f4086542e778"})
+#: The retrieval.py shipped in this repository (mathbrain/src/math_brain/), 4930c1b2, is the primary pin of the
+#: published math brain's fastrecall.
+PINS_ALSO = frozenset({"c72c15245c0d5f6d3b2329ce985f43624a7193a5b4e6485d2588f4086542e778",
+                       "4930c1b233d8f8ad0b90dc131b1fc8712794e2f3c4e0b62bf92a132847464565"})
 #: the query encoder whose ONNX session the Encoder thread builds ahead of time
 PIN_QUERY_EMBED = "855b962e6c462ef151ce9c9417208214bd13750af26ee35bb5c5d6dd3cae57d8"
 #: the framework's own query_embed.py (the Mac lineage, abe75d08): same MODEL_DIR, _STATE and available() the Encoder
@@ -207,6 +210,21 @@ def _plain(*values):
 
 
 # ----------------------------------------------------------------------------------------------------------- build
+def _nodes_in_table_order(con):
+    """The cards in iter_nodes' order (created_at, id), read by one pass over the table.
+
+    iter_nodes asks SQLite for ORDER BY created_at, id, which it answers by walking idx_nodes_created_at and fetching
+    every row by a random lookup: about 94k scattered page reads, most of the 15-27 min cold build (5 Nov profile:
+    12 s of CPU in 21 min). Reading the table in storage order and sorting here gives the same list: id is the primary
+    key, so (created_at, id) is a total order, and Python's str order is SQLite's BINARY order (code points = UTF-8 bytes).
+    """
+    from math_brain.models import GraphNode, NodeKind
+    rows = con.execute("SELECT id, kind, title, body, metadata_json, created_at FROM nodes").fetchall()
+    rows.sort(key=lambda r: (r[5], r[0]))
+    return [GraphNode(id=r[0], kind=NodeKind(r[1]), title=r[2], body=r[3], metadata=json.loads(r[4]), created_at=r[5])
+            for r in rows]
+
+
 def _read_store(store_path):
     import warnings
     from math_brain.store import ResearchStore
@@ -220,7 +238,7 @@ def _read_store(store_path):
             if began:
                 con.execute("BEGIN")
             try:
-                nodes = list(store.iter_nodes())
+                nodes = _nodes_in_table_order(con)
                 edges = list(store.iter_edges(skip_unknown=True))
             finally:
                 if began and con.in_transaction:

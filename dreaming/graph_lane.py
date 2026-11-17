@@ -136,10 +136,13 @@ def ranked(query, allowed=None, lex_top=(), depth=200, d=None):
     # word, on all 22 seed questions at 16 and at 14 (4 Nov 2026), the 200-deep graph list the same on
     # 10 of 13 walks with the same memories on all 13; ppr median 175 -> 154 ms. Set here, never in the dial: the
     # iteration count is part of the walk cache's name. BRAIN_PPR_ITERS=20 restores the old walk.
+    # 8 since 10 Nov 2026: served answers identical on all 22 seed questions at 10 and at 8 against 16, noise
+    # floor 22/22; on 40 bank questions the gold rank was the same at 8 and 16 and the walk took 0.13 s against
+    # 0.25 s. BRAIN_PPR_ITERS=16 restores the 4 Nov walk.
     try:
-        iters = int(os.environ.get("BRAIN_PPR_ITERS", "16"))
+        iters = int(os.environ.get("BRAIN_PPR_ITERS", "8"))
     except ValueError:
-        iters = 16
+        iters = 8
     R = g.ppr(S, iters=iters)
     return g.ranked_memories(R, gamma=d["gamma"], allowed=allowed, depth=depth, with_scores=True)[0]
 

@@ -241,6 +241,11 @@ def score_corpus(mem_dir=MEM_DEFAULT, curated_names=None, bodies=None):
         p = os.path.join(mem_dir, fn)
         if not os.path.isfile(p):
             continue
+        try:
+            st = os.stat(p)
+            stat_key = (st.st_size, st.st_mtime_ns)
+        except OSError:
+            stat_key = None
         body = bodies.get(fn) if bodies else None
         if body is None:
             body = _read(p)

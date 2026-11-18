@@ -172,12 +172,14 @@ three into a fresh install's agent instructions.
 
 Use the same Python environment for setup and tests. The vendored Proofswarm tests
 require its declared dependencies, including Pydantic 2; a bare pytest installation
-will produce two collection errors and fail both local mock tests. Install them
-before running the framework suite:
+will produce two collection errors and fail both local mock tests. The resilience
+backups and their tests need the `cryptography` package; without it `preflight.py`
+reports three collection errors under `resilience`. Install them before running the
+framework suite:
 
 ```
 python -m pip install -e ./methods/proofswarm
-python -m pip install pytest pytest-timeout
+python -m pip install pytest pytest-timeout cryptography
 ```
 
 ```

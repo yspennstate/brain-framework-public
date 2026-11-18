@@ -201,7 +201,7 @@ copies the tree and redirects state, so it never touches live memory, the mesh o
 workspace.
 
 By default it tests this checkout, not an installed home. `bootstrap/install.py` places only
-the roots in its `SUBSYSTEMS` map, and the math brain and the film brain are not among them.
+the roots in its `SUBSYSTEMS` map; the math brain has been among them since 13 November 2026, the film brain is not.
 To test an install, run the bootstrap into an empty home and point the smoke at it:
 
 ```

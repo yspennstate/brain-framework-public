@@ -99,6 +99,15 @@ install the hook wiring, fill in the identity templates, and let the first sessi
 writing memories. The system grows by use; nothing here requires the lived content it was
 extracted from.
 
+After installing, run `python scripts/brain_doctor.py` (add `--home <dir>` for an install made with
+`--home`). It reads files and changes nothing, and it reports four levels: installed, wired, delivering
+and working. Exit 0 means the brain is installed, its hooks are wired, a hook has fired in a real session
+in the last day and recall answers; 1 means a check failed; 2 means nothing failed but something cannot
+be decided yet. Each failing line prints the command that fixes it. A fresh install exits 1 on the
+reflex-table check until `python ~/.claude/dreaming/instincts.py` has run once, then 2 until a hook has
+fired in a real session. `skills/brain-framework/` is the skill an agent
+loads to connect to a brain, check it and keep it working; its `SKILL.md` says how.
+
 One layer arrives switched off. The strong-node layer turns a mistake mechanism that has recurred
 more than ten times into a designated node whose access raises a warning. It runs only from a
 reviewed, hash-pinned scanner generation installed under

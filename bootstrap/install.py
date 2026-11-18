@@ -367,6 +367,17 @@ def main():
 
     home = os.path.abspath(a.home)
     slug = slug_for(a.project_dir)
+    # An install made before 18 November 2026 named the corpus with the older rule (only ':' and the
+    # path separators became '-'). If that corpus exists and the new name has none, keep the old name
+    # so a re-install never points the runtime at an empty folder; the memories stay where they are.
+    legacy = a.project_dir.replace(":", "-").replace("\\", "-").replace("/", "-")
+    if legacy != slug:
+        old_mem = os.path.join(home, ".claude", "projects", legacy, "memory")
+        new_mem = os.path.join(home, ".claude", "projects", slug, "memory")
+        if os.path.isdir(old_mem) and not os.path.isdir(new_mem):
+            print(f"keeping the existing memory corpus {legacy} (named by the older rule); "
+                  f"Claude Code's own name for this project is {slug}")
+            slug = legacy
     claude = os.path.join(home, ".claude")
     dreaming = os.path.join(claude, "dreaming")
     err_hex = os.path.join(dreaming, "error_graph").encode("utf-8").hex()

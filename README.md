@@ -99,6 +99,17 @@ install the hook wiring, fill in the identity templates, and let the first sessi
 writing memories. The system grows by use; nothing here requires the lived content it was
 extracted from.
 
+One layer arrives switched off. The strong-node layer turns a mistake mechanism that has recurred
+more than ten times into a designated node whose access raises a warning. It runs only from a
+reviewed, hash-pinned scanner generation installed under
+`~/.claude/dreaming/strong_nodes/runtime/<generation>/`, and only after a reviewer places the
+`ENABLED` marker beside it. Neither the scanner generation nor the marker is in this repository.
+On a fresh install `brain.strong_node_proposals()` returns `DISABLED`,
+`python dreaming/strong_node_watch.py` prints "no reviewed scanner installed ... nothing to
+watch", and `--status` reports no readable report. That is the expected state of a new brain,
+not a broken install; everything else, recall and the dream included, works without it.
+(Checked on a fresh macOS install, 18 November 2026.)
+
 ## The math brain
 
 The mathematical store that runs on this framework is published separately at

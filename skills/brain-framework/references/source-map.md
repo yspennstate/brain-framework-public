@@ -1,6 +1,6 @@
 # Original-source resolution
 
-Authority: [brain-framework-public at cb70da320cdbe77aaafd639be9e70c286d9a03b0](https://github.com/yspennstate/brain-framework-public/tree/cb70da320cdbe77aaafd639be9e70c286d9a03b0). `upstream-lock.json` records all Git blob hashes. The offline archive contains that exact public tree without lived state. Keep this revision stable across the task and workers.
+Authority: [brain-framework-public at ca3d7bae9f2d4d22ab91a23005ce85364ddebbf7](https://github.com/yspennstate/brain-framework-public/tree/ca3d7bae9f2d4d22ab91a23005ce85364ddebbf7). `upstream-lock.json` records all Git blob hashes. The offline archive contains that exact public tree without lived state. Keep this revision stable across the task and workers.
 
 Run the installed `scripts/brainctl.py status` to locate an existing deployment's original `source`. `brainctl.py source` acquires/verifies pinned source from the bundle, or, when the skill ships inside the public repository (`skills/brain-framework/`, or `framework/skills/brain-framework/` in math-brain-public) and no bundle is present, from that checkout, file by file against the lock (`scripts/repin_lock.py --check` shows drift); `source --network` fetches GitHub and verifies the same hashes; `source --source PATH` accepts a matching authorized checkout. Acquisition is source access, not runtime installation. Do not trust an unverified cache, branch label or installer exit as source evidence.
 

@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/yspennstate/brain-framework-public",
-  "revision": "cb70da320cdbe77aaafd639be9e70c286d9a03b0",
+  "revision": "ca3d7bae9f2d4d22ab91a23005ce85364ddebbf7",
   "subdir": "",
   "excluded_prefixes": [
     "skills/brain-framework/"
@@ -16,7 +16,7 @@
     },
     {
       "path": "README.md",
-      "sha": "225baa60ea6ad8ce9b976ffb8e93b11b86e3880e"
+      "sha": "455069082ab2c3caa0f5a18ba0965e595117c035"
     },
     {
       "path": "body/crashguard/README.md",

@@ -1,0 +1,125 @@
+{
+ "about": "Files a working checkout must hold. scripts/brain_doctor.py reads the rows for the repository it runs in and reports any that are missing.",
+ "files": [
+  {
+   "repo": "brain-framework-public",
+   "path": "bootstrap/install.py",
+   "need": "required"
+  },
+  {
+   "repo": "brain-framework-public",
+   "path": "docs/METHOD.md",
+   "need": "required"
+  },
+  {
+   "repo": "brain-framework-public",
+   "path": "dreaming/brain.py",
+   "need": "required"
+  },
+  {
+   "repo": "brain-framework-public",
+   "path": "dreaming/hook_dispatch.py",
+   "need": "required"
+  },
+  {
+   "repo": "brain-framework-public",
+   "path": "dreaming/instincts.py",
+   "need": "required"
+  },
+  {
+   "repo": "brain-framework-public",
+   "path": "dreaming/strong_node_watch.py",
+   "need": "required"
+  },
+  {
+   "repo": "brain-framework-public",
+   "path": "hooks/brain_startup.template.md",
+   "need": "required"
+  },
+  {
+   "repo": "brain-framework-public",
+   "path": "hooks/settings.hooks.template.json",
+   "need": "required"
+  },
+  {
+   "repo": "brain-framework-public",
+   "path": "hooks/hooks.codex.template.json",
+   "need": "required"
+  },
+  {
+   "repo": "brain-framework-public",
+   "path": "scripts/brain_doctor.py",
+   "need": "required"
+  },
+  {
+   "repo": "brain-framework-public",
+   "path": "skills/brain-framework/SKILL.md",
+   "need": "required"
+  },
+  {
+   "repo": "brain-framework-public",
+   "path": "skills/brain-framework/references/upstream-lock.json",
+   "need": "required"
+  },
+  {
+   "repo": "math-brain-public",
+   "path": "framework/bootstrap/install.py",
+   "need": "required"
+  },
+  {
+   "repo": "math-brain-public",
+   "path": "framework/docs/METHOD.md",
+   "need": "required"
+  },
+  {
+   "repo": "math-brain-public",
+   "path": "framework/dreaming/brain.py",
+   "need": "required"
+  },
+  {
+   "repo": "math-brain-public",
+   "path": "framework/dreaming/hook_dispatch.py",
+   "need": "required"
+  },
+  {
+   "repo": "math-brain-public",
+   "path": "framework/dreaming/instincts.py",
+   "need": "required"
+  },
+  {
+   "repo": "math-brain-public",
+   "path": "framework/dreaming/strong_node_watch.py",
+   "need": "required"
+  },
+  {
+   "repo": "math-brain-public",
+   "path": "framework/hooks/brain_startup.template.md",
+   "need": "required"
+  },
+  {
+   "repo": "math-brain-public",
+   "path": "framework/hooks/settings.hooks.template.json",
+   "need": "required"
+  },
+  {
+   "repo": "math-brain-public",
+   "path": "framework/hooks/hooks.codex.template.json",
+   "need": "required"
+  },
+  {
+   "repo": "math-brain-public",
+   "path": "framework/scripts/brain_doctor.py",
+   "need": "required"
+  },
+  {
+   "repo": "math-brain-public",
+   "path": "framework/skills/brain-framework/SKILL.md",
+   "need": "required"
+  },
+  {
+   "repo": "math-brain-public",
+   "path": "framework/skills/brain-framework/references/upstream-lock.json",
+   "need": "required"
+  }
+ ]
+}

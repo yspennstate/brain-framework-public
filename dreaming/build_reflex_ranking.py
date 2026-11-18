@@ -192,6 +192,8 @@ def load_events(days):
     """Fire events from the log: one event per (ts,session) write batch -> set of reflex ids."""
     events = {}
     cutoff = time.time() - days * 86400
+    if not os.path.exists(FIRELOG):        # a new brain has fired no reflex yet
+        return events
     with io.open(FIRELOG, encoding="utf-8", errors="replace") as f:
         for ln in f:
             p = ln.rstrip("\n").split("\t")

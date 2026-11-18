@@ -9,6 +9,7 @@ the live mesh at ~/.agents/coordination is never touched.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 

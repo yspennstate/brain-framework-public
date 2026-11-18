@@ -20,7 +20,7 @@ graph-near memory still contributes), which is the point: 'heredoc' can wake the
 Reuses spread_recall's graph knobs (DECAY=0.5, HOPS=2) so the diffusion matches the conscious side.
 Stdlib only, forward-slash paths. Run: python graph_fire/build_anchors.py
 """
-import os, io, json, re, math, collections
+import os, io, json, re, math, collections, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DREAM = os.path.dirname(HERE)
@@ -161,7 +161,6 @@ def main():
         # exit before any work. See script_help_flag_can_execute_work.
         print(__doc__ or os.path.basename(__file__))
         return
-    import sys
     method, out_path = "bfs", OUT
     for a in sys.argv[1:]:
         if a.startswith("--method="):

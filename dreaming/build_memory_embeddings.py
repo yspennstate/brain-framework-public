@@ -23,7 +23,7 @@ sidecar has no hashes, so the first v2 refresh correctly performs one full rebui
 Writes are staged and atomic: a fully validated temporary NPZ is fsynced and only then replaces
 ``--out``. Direct output to the fixed live pathname is refused. Production activation must go
 through ``publish_memory_embeddings.py``, which creates an immutable content-addressed generation
-and atomically commits its authority pointer. See ``EMBEDDING_PUBLICATION.md``.
+and atomically commits its authority pointer (see that script's docstring).
 
 Usage::
 

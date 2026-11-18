@@ -114,10 +114,12 @@ The first dreams on a new brain end with "dream cycle complete with 5 failed ste
 That is expected too. Three of the steps measure history the brain does not have yet: the mistake
 graph watch needs recorded corrections, the keyword topic nodes need enough memories for a node
 to clear its membership bounds, and the regression gate fails its judge-agenda check and leaves
-three checks incomplete until reflexes have fired and been judged. The two embedding steps need
-`sentence-transformers` (`python -m pip install sentence-transformers`); without it recall keeps
-its lexical and graph lanes and the wake check reports the embeddings as missing. The count
-falls as the brain is used. Any other failed step, or a traceback in the dream log under
+three checks incomplete until reflexes have fired and been judged. The two embedding steps fail
+because no embedding generation exists yet: building one needs `sentence-transformers`, and the
+coverage check stays failed until a generation has been published through
+`dreaming/publish_memory_embeddings.py`, a step the macOS dream defers. Until then recall keeps its
+lexical and graph lanes and the wake check reports the embeddings as missing. Any other failed
+step, or a traceback in the dream log under
 `~/.claude/dreaming/logs/`, is a real fault. (Measured on a fresh macOS install, 18 November 2026.)
 
 ## The math brain

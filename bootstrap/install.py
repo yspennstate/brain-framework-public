@@ -88,9 +88,11 @@ MEM_SEEDS = {
 
 
 def slug_for(project_dir):
-    # the transcript-dir convention: ':' and path separators become '-'
-    # (double dashes are preserved; C:\Users\me -> C--Users-me)
-    return project_dir.replace(":", "-").replace("\\", "-").replace("/", "-")
+    # the transcript-dir convention: every character other than a letter, digit or '-' becomes '-'
+    # (double dashes are preserved; C:\Users\me -> C--Users-me, /Users/me/my_proj -> -Users-me-my-proj).
+    # Turning only ':' and the separators into '-' left '_' and '.' in place, so a project path with
+    # either got a memory folder that Claude Code never reads (found 18 November 2026).
+    return re.sub(r"[^A-Za-z0-9-]", "-", project_dir)
 
 
 def expand(text, tok, as_json=False):

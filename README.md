@@ -211,7 +211,7 @@ python scripts/smoke_framework.py --installed <empty dir> --receipt installed.js
 
 The installed run copies back only what the installer placed and checks that, so a component
 the install lacks fails as absent. At present it passes every check for what the installer
-carries and reports the math brain and the film brain absent. `--receipt PATH` records the
+carries, the math brain included, and reports the film brain absent (checked 18 November 2026). `--receipt PATH` records the
 kind of tree tested, a hash over its files, the commit and the installer's hash beside every
 check.
 

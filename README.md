@@ -113,8 +113,8 @@ not a broken install; everything else, recall and the dream included, works with
 ## The math brain
 
 The mathematical store that runs on this framework is published separately at
-[math-brain-public](https://github.com/yspennstate/math-brain-public): about thirteen
-thousand cards (definitions, theorems, proof techniques and the agents' own results) joined
+[math-brain-public](https://github.com/yspennstate/math-brain-public): about 89,000
+cards (definitions, theorems, proof techniques and the agents' own results) joined
 by typed links, with the importer, the recall tools, the prompt hook, a starter kit for a
 brain in another field, and the tests that measure what the store does for an agent.
 [docs/MATH_BRAIN_SETUP.md](docs/MATH_BRAIN_SETUP.md) takes a fresh machine from this

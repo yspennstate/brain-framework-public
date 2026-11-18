@@ -3,7 +3,7 @@
 The two public repositories are two halves of one system.
 
 - [brain-framework-public](https://github.com/yspennstate/brain-framework-public) is the machinery: shared memory, the wake ritual, the prompt hooks, the nightly dream, the reflexes compiled from mistakes, the agent mesh and the fleet supervisor.
-- [math-brain-public](https://github.com/yspennstate/math-brain-public) is the mathematical store that runs on it: about thirteen thousand cards and their typed links, the importer, the recall tools and the prompt hook that serves cards to an agent. Its `framework/` folder is a copy of the framework as it stood at the export date; the framework repository is the one to install from.
+- [math-brain-public](https://github.com/yspennstate/math-brain-public) is the mathematical store that runs on it: about 89,000 cards and 127,000 typed links (export of 18 November 2026), the importer, the recall tools and the prompt hook that serves cards to an agent. Its `framework/` folder is a copy of the framework as it stood at the export date; the framework repository is the one to install from.
 
 You can run the math store on its own (the math repository's README shows how, in five commands). Install the framework as well when you want the agent to keep memories between sessions, dream over them, and get math notes and its own past work in the same prompt.
 

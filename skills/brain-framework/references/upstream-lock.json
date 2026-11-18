@@ -1,0 +1,6150 @@
+{
+  "repository": "https://github.com/yspennstate/brain-framework-public",
+  "revision": "cb70da320cdbe77aaafd639be9e70c286d9a03b0",
+  "subdir": "",
+  "excluded_prefixes": [
+    "skills/brain-framework/"
+  ],
+  "files": [
+    {
+      "path": ".gitattributes",
+      "sha": "f984011373079472cdb776a280f508cb30d1bf2b"
+    },
+    {
+      "path": ".gitignore",
+      "sha": "ca74ce24501b2468cd7606af985a6b137b654688"
+    },
+    {
+      "path": "README.md",
+      "sha": "225baa60ea6ad8ce9b976ffb8e93b11b86e3880e"
+    },
+    {
+      "path": "body/crashguard/README.md",
+      "sha": "66982087112fd69881f174f25b228ccfc6d03651"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-apply-admin-hardening.ps1",
+      "sha": "da9cfc04c0b7c257dbe1c19d2865226e69be18a3"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-archive.ps1",
+      "sha": "b9205c647fc17e3534daf0488e8f9dcdb188cb4e"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-audit-summary.ps1",
+      "sha": "8585027b1885e6d49ed389735c962a5f8078b849"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-chrome-health.ps1",
+      "sha": "8b0fd33d576fa16b942404c5dceca2c4bf1a4df7"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-chrome-optimize.ps1",
+      "sha": "b5f16da16890baaea8c244919145bfa00d0a9b5a"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-common.ps1",
+      "sha": "d749adb042e7856d19678325e61585162c840555"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-coverage.ps1",
+      "sha": "efb8499b43217eaf776b6b6b3a046f3745b3f4be"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-crisis-correlator.ps1",
+      "sha": "0bc0ace93cd658ceae427c62149f8ab541e78dd5"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-dedup-watcher.ps1",
+      "sha": "b6bf72899ca80dce209dbc0d6a36a0c2613009bb"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-driver-health.ps1",
+      "sha": "2e575cfe7aa8148a70ab5a402f084ae99b7d1f85"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-export-prometheus.ps1",
+      "sha": "c6dcc106e374723db2a84139303b040240d3dbc0"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-export-state.ps1",
+      "sha": "2484722dc944d897f88d5b11cbe4ed1c58666482"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-forensic-dump.ps1",
+      "sha": "3719ea05c6cd771b57594a0007eceed2d82f7729"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-gpu-keepalive.py",
+      "sha": "4c885e71fd241924f8e61141d2fd70d64c69b22f"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-gpu-trend-predictor.ps1",
+      "sha": "c98bd36edb750adcc5d2adea8569391c9607c16a"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-gpu-watch.ps1",
+      "sha": "6592812a57deb9d31419f1bc16530dc2e895251d"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-harden-os.ps1",
+      "sha": "62cf7f208427dee4db5f1c4b464ae8a0d69b1594"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-health-check.ps1",
+      "sha": "b6290b7651cd0b8eac393aa77108e71be58d475d"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-hid-watch.ps1",
+      "sha": "cf55cfd3479a41616d05c25ac68677395f5efa43"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-html-publisher.ps1",
+      "sha": "da4edc63e3c41ecad297db8adfefeae0c277b988"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-html-status.ps1",
+      "sha": "bb9bb81e9847d7731a7009d33b8ef41716350c46"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-install.ps1",
+      "sha": "6ec6481c22c044d86d46987761544500b4f2f5f8"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-keepalive-health.ps1",
+      "sha": "687a51324895b286d414b7e2b43c2c9a06d5b839"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-kill-suspended-dupes.ps1",
+      "sha": "c9a3fe23160eced18ae3c92e2291ee8aa7c4dd2e"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-launch-all.ps1",
+      "sha": "31b52ee1874dac6a6dd816c3ed1848b5aea7536e"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-log-rotate.ps1",
+      "sha": "ae78552f24006c21377664fa0efa8999228ad0e4"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-master-dashboard.ps1",
+      "sha": "ab3ac97c4bf97005a93758339f45973c83841528"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-mitigate.ps1",
+      "sha": "77a57db5bbfe873ec893476f4a9a9bad366d1697"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-panic.ps1",
+      "sha": "3de5f62ca41e233ef8ea05806edd5202e560bf3a"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-pcie-watch.ps1",
+      "sha": "ecd749e509f0bb98d980f9f74d71b46c8efa0d02"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-postmortem.ps1",
+      "sha": "d793ae25aad690bedfdcf1a3bef52244fc1cd6e3"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-power-guard.ps1",
+      "sha": "6bae9bcbfb00a270c141ca751afbc75036d02040"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-power-watch.ps1",
+      "sha": "d91cd5eea7e9bd3918ab60214b65ce6afd7dfb4e"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-preflight.ps1",
+      "sha": "6ea10bd82b912282fa3dd71ec0e6df410b3f9b52"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-process-watcher.ps1",
+      "sha": "1d985f69e9c2add4df5cffa54ab90e52307a4a67"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-pulse-graph.ps1",
+      "sha": "387471fe3d32b9c282f2a003eaba5de054012288"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-pulse.ps1",
+      "sha": "c88506dbc3c4819cee949bb0dc3eb93a883a52ae"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-recovery.ps1",
+      "sha": "0d2b599061b56cd45dc0b31bbcfbc062f769f1d2"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-ring-recorder.ps1",
+      "sha": "d8adae75c014ccc51deaaa0230a307eb39104d63"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-rollback-all.ps1",
+      "sha": "3dac37373c39806b0fe9818dfa4407664e14e944"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-self-heal.ps1",
+      "sha": "c5b9f0caf8a905704515af8c185c1731abaf8a6f"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-sentinel.ps1",
+      "sha": "6f438be4ab53546c76698e1bf59081bd9552b587"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-session-summary.ps1",
+      "sha": "32b9840661062e29acc3ef41954e939da23baefc"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-singleton-enforcer.ps1",
+      "sha": "914af1253b823d95a15c14ab575adfac06a2a3d3"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-sleep-defender.ps1",
+      "sha": "47f6991a0f03b64665249644ce342c8dff368efc"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-smoke-all.ps1",
+      "sha": "8e843971b58cc1274b92159e7bf203b9c1fd0363"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-startup-marker.ps1",
+      "sha": "a22dc36d2191bec07f9b05fcb278f584de1934e8"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-stats.ps1",
+      "sha": "3a5425e56c2af53eb523e2013a7940d88a27b8d2"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-status.ps1",
+      "sha": "33d3015656167713c8c4527522e5ae3852c74bfb"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-summary-card.ps1",
+      "sha": "b73920c97ca15756e00eae669f2cbec437b88868"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-summary.ps1",
+      "sha": "05123bf4f1991e551dc8f953f54288467ef0cd21"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-today.ps1",
+      "sha": "39c2ba653adfad5cdf18d75430fbd3b176516fed"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-tools-list.ps1",
+      "sha": "2971af68d607602a12599006af4cd252f073bafe"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-trend-analyzer.ps1",
+      "sha": "8cd6373aa6d0c0302b5fa57c2a213accaba5f1aa"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-uninstall-all.ps1",
+      "sha": "471a5c1a6ef45fdab775acbb9af9b88b649cb853"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-update-watcher.ps1",
+      "sha": "1b047a80f7e4d5019657f4b2fae8fb15deb50538"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-validate-config.ps1",
+      "sha": "b874989734b502e6d1c4c1cb15dae5325a5cc194"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-watchdog.ps1",
+      "sha": "eb327b6b6ad1dd862ebebeaf7f205f8cb70ea5f9"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-watchdog2.ps1",
+      "sha": "dfb7e1c19766a842ae5d6d3bfca82ddc93ac7717"
+    },
+    {
+      "path": "body/crashguard/bin/crashguard-wudfrd-watch.ps1",
+      "sha": "acb612f520a41feb5c0bb456d579b51db5c02ee6"
+    },
+    {
+      "path": "body/crashguard/configs/policies.json",
+      "sha": "fc69851620727e698f3e3a9a5540cfc05ea3f287"
+    },
+    {
+      "path": "body/crashguard/configs/thresholds.json",
+      "sha": "ef247f2675a9e058ddcfd03ef19255f64f80018c"
+    },
+    {
+      "path": "body/crashguard/docs/observer-integration.md",
+      "sha": "c96972d73468e71edd1d306c684ff7ad0d5aac3f"
+    },
+    {
+      "path": "body/crashguard/docs/rootcause-2026-06-01-idle-rtd3-tdr.md",
+      "sha": "9b80b42cb49e50a401498863fee4c321edbeb830"
+    },
+    {
+      "path": "body/crashguard/docs/user-mandate.md",
+      "sha": "4f52989dc6a082ad5340225855ffe803efb00a1d"
+    },
+    {
+      "path": "body/crashguard/launch_all_hidden.vbs",
+      "sha": "213b617f0fede1eb05c3d6a45f03b69bf42aa803"
+    },
+    {
+      "path": "body/crashguard/status.html",
+      "sha": "27316540710abe56a0a4f8dc20630dc3e8d6afd1"
+    },
+    {
+      "path": "body/crashguard/tests/replay/replay-historical-crashes.ps1",
+      "sha": "3e3e21336a7824b9753ac4f6b29eb860afc5cbd0"
+    },
+    {
+      "path": "body/crashguard/tests/stress/stress-cpu-ram.ps1",
+      "sha": "07e0aaef66060eee37b59ac0fae0a4a210b517e3"
+    },
+    {
+      "path": "body/crashguard/tests/stress/stress-ram-heavy.ps1",
+      "sha": "2f125be56e99b4baec71f8f75cc198e5a73b0127"
+    },
+    {
+      "path": "body/crashguard/tests/unit/test-chaos.ps1",
+      "sha": "6d4458b17e21b4a6d9532af4ffa37c98f8b04499"
+    },
+    {
+      "path": "body/crashguard/tests/unit/test-crisis-correlator.ps1",
+      "sha": "809d0be688e195f714de3db42c37561714e9fd55"
+    },
+    {
+      "path": "body/crashguard/tests/unit/test-policy-criticality.ps1",
+      "sha": "54f1d77af3cc975a88d1668bcb36c22af492d2de"
+    },
+    {
+      "path": "body/crashguard/tests/unit/test-rollback.ps1",
+      "sha": "31c0c4d44b10e722161615acb209714afb18afb7"
+    },
+    {
+      "path": "bootstrap/README.md",
+      "sha": "91deeeccc269c81cd20eb851aca9ae6710872dc1"
+    },
+    {
+      "path": "bootstrap/install.py",
+      "sha": "2743ef46facca904e527add89aa18ec4a8274723"
+    },
+    {
+      "path": "bootstrap/templates/CLAUDE.template.md",
+      "sha": "caf204dfd11eb193960bf2d34a06cf3fd70c74dc"
+    },
+    {
+      "path": "bootstrap/templates/seed_memories/identity_who_you_are.md",
+      "sha": "506ebbef59e91ff8595a50883004b7f4c977a29a"
+    },
+    {
+      "path": "bootstrap/templates/seed_memories/method_think_creatively.md",
+      "sha": "15d81402bb9ac6259b47d49c522149376923034a"
+    },
+    {
+      "path": "bootstrap/templates/seed_memories/method_write_like_a_human.md",
+      "sha": "fd7ca206463250cc47a18161e691fb94edae563b"
+    },
+    {
+      "path": "bootstrap/templates/seed_memories/relationship_our_work_together.md",
+      "sha": "042b7e9bd62939ff24a71819cffd2e685aca926a"
+    },
+    {
+      "path": "bootstrap/templates/seed_memories/shared_language.md",
+      "sha": "02ee484c4807a34824364c08bc42006dfcd32149"
+    },
+    {
+      "path": "bootstrap/templates/seed_memories/values_what_we_stand_for.md",
+      "sha": "8560930e6ebd603bbeeddced37b93a1c12e03bf0"
+    },
+    {
+      "path": "brain_graph/bin/add_reflex_register.py",
+      "sha": "8d97ffee9db1db1ec66c823c5bc3c1f01e9a32b7"
+    },
+    {
+      "path": "brain_graph/bin/apply_policy.py",
+      "sha": "d816547f5e63ddc6c718732fb8d93953bdad9fa0"
+    },
+    {
+      "path": "brain_graph/bin/backfill_history.py",
+      "sha": "99f590e746062192afcacd46b5c3ab2a93723355"
+    },
+    {
+      "path": "brain_graph/bin/batch_rows_first_record.py",
+      "sha": "e7dd490d2e0aabbe9e610b47d709d02a34afa347"
+    },
+    {
+      "path": "brain_graph/bin/bind_source_decisions.py",
+      "sha": "edfef9bb736e2d679d08140d68c50bc0ab07e415"
+    },
+    {
+      "path": "brain_graph/bin/build_repeats_ab.py",
+      "sha": "e7dac7c994cb1bacd8a21e2264c6e7a008961a80"
+    },
+    {
+      "path": "brain_graph/bin/calib_orders_fast.py",
+      "sha": "a98fdaeb78f45e59a6e5d3b6bdd3f4a7e207fbac"
+    },
+    {
+      "path": "brain_graph/bin/calib_orders_log.py",
+      "sha": "3e4d34e680d960f986a741e401f9c4a6ec48b894"
+    },
+    {
+      "path": "brain_graph/bin/check_lag_train_equals_train.py",
+      "sha": "4d17c0919eb4f766cb7832e1809e44c3cbedd1c2"
+    },
+    {
+      "path": "brain_graph/bin/check_no_console.ps1",
+      "sha": "137602e61c01bf08e3776d115922d51c2fbf310d"
+    },
+    {
+      "path": "brain_graph/bin/claim_files.sh",
+      "sha": "c2a2e7bc5872690ebc4a20d3ee836f15bfb482ca"
+    },
+    {
+      "path": "brain_graph/bin/codex_resolver_origin_check.py",
+      "sha": "a84cb2405d09115ca8b6b860b96c0eaf3992ca4f"
+    },
+    {
+      "path": "brain_graph/bin/codex_verdicts.py",
+      "sha": "97dc7be0a787c52f213012bb24cc7ebff1bfb723"
+    },
+    {
+      "path": "brain_graph/bin/codex_verdicts_merge.py",
+      "sha": "d69d35dd4db9d593dd7784d9785bdf1cd4fb71f4"
+    },
+    {
+      "path": "brain_graph/bin/compare_batch_to_export.py",
+      "sha": "8ada90bd6101d81e96bee9e8155b97718c394eee"
+    },
+    {
+      "path": "brain_graph/bin/compare_dates_placebo.py",
+      "sha": "c589be232a73f1443dbaf802cff31a4f1e9bd79d"
+    },
+    {
+      "path": "brain_graph/bin/conftest.py",
+      "sha": "0856071f312de7cbd7ac0af7fac1d56162fbf1bd"
+    },
+    {
+      "path": "brain_graph/bin/context_rank.py",
+      "sha": "3f9d1bd99b8321485f867fd7707d8be3e66263c1"
+    },
+    {
+      "path": "brain_graph/bin/doc_expand.py",
+      "sha": "9287c3798cab28dc35e753d84485300c7f9bd936"
+    },
+    {
+      "path": "brain_graph/bin/doc_expand_launcher.vbs",
+      "sha": "31f6627d95acd2d02f0f8f7e2094c249308707dd"
+    },
+    {
+      "path": "brain_graph/bin/equivalence_membrane_hook.py",
+      "sha": "c38dc5f1717a72af0d66b62fbee0f013b807c659"
+    },
+    {
+      "path": "brain_graph/bin/eval_act_errors.py",
+      "sha": "f6a69a78fce330956eaf5de2904b81454eda5aa8"
+    },
+    {
+      "path": "brain_graph/bin/eval_agent_recalls_fixed.py",
+      "sha": "1750fca5719af3e555fcccd8792c0c07844b9664"
+    },
+    {
+      "path": "brain_graph/bin/eval_dates_endtoend.py",
+      "sha": "35e50b73b51737c0d1b305a4049e86aee84af4cf"
+    },
+    {
+      "path": "brain_graph/bin/eval_doc_expansion.py",
+      "sha": "1ada87070aceff069b4057baaec2e5e0eaff986d"
+    },
+    {
+      "path": "brain_graph/bin/eval_err_shadow.py",
+      "sha": "6ec408aa880a442f0aa3a2b6f9787b38013b9134"
+    },
+    {
+      "path": "brain_graph/bin/eval_err_shadow_bar.py",
+      "sha": "1418e2ac013b3ac1106d1d1fecd742df38bdd773"
+    },
+    {
+      "path": "brain_graph/bin/eval_expansion_agent_recalls.py",
+      "sha": "c423c91bebcfa15a7db6aaad3d526bacad2eef89"
+    },
+    {
+      "path": "brain_graph/bin/eval_expansion_endtoend.py",
+      "sha": "9937992885e1596b344b01dc1ff8e59f0e2f3f45"
+    },
+    {
+      "path": "brain_graph/bin/eval_graph_mixture.py",
+      "sha": "7cd254bb545d003499144cbf810a2bdbe4a971ff"
+    },
+    {
+      "path": "brain_graph/bin/eval_head_struct.py",
+      "sha": "72e68e4e8d4042d61a741289090d38775b07c483"
+    },
+    {
+      "path": "brain_graph/bin/eval_place_shadow.py",
+      "sha": "0ee778504fabe3ebc096e72ea3dbb92bf1623e8e"
+    },
+    {
+      "path": "brain_graph/bin/eval_rewrite_fused.py",
+      "sha": "21ce81b41b887a7dac9b8c62963bf4e1245da392"
+    },
+    {
+      "path": "brain_graph/bin/eval_rewrite_his_words.py",
+      "sha": "1a57cf6435f51363aa092b62cece213cbc51a406"
+    },
+    {
+      "path": "brain_graph/bin/eval_usage_order.py",
+      "sha": "624a603377d0d474931e6bde71bbb5e5f390ba15"
+    },
+    {
+      "path": "brain_graph/bin/export_mem_edges.py",
+      "sha": "476497fed5310b2ac5a45b3979922cd4b6ca6f12"
+    },
+    {
+      "path": "brain_graph/bin/extract_codex_events.py",
+      "sha": "5112058edb3ea4c79a4f12de2104a0fadc3d7a80"
+    },
+    {
+      "path": "brain_graph/bin/extract_touch_events.py",
+      "sha": "bd4df89a9042306ba124fb9cb97f1bb486406ab1"
+    },
+    {
+      "path": "brain_graph/bin/graph_digest_census.py",
+      "sha": "4a7b494df7dffde29a2d7a37d1183d9ca75f2ba3"
+    },
+    {
+      "path": "brain_graph/bin/graph_digest_reseal_check.py",
+      "sha": "fe9ef37392437afdd54548fc438dfcc5bf77021d"
+    },
+    {
+      "path": "brain_graph/bin/graph_digest_why.py",
+      "sha": "3fe2a517c43efbea93581c0a9dbfcbe0e78fe805"
+    },
+    {
+      "path": "brain_graph/bin/graph_learn.py",
+      "sha": "3df28c804ca0a679a4a13056d4aa1fd9f7f84237"
+    },
+    {
+      "path": "brain_graph/bin/graph_recall.py",
+      "sha": "43fe8072227dc4d870f0a84e84d176df5b8fceda"
+    },
+    {
+      "path": "brain_graph/bin/graph_store.py",
+      "sha": "3dc16557d8df22d16bb6a732f119c7bcbf2a4e8e"
+    },
+    {
+      "path": "brain_graph/bin/lemma_fidelity_check.py",
+      "sha": "54d0e57b5b85f8eb04585e53b2a7c09ce2dfb709"
+    },
+    {
+      "path": "brain_graph/bin/live_delta.py",
+      "sha": "b586a9515fee02717c4d1054354eb783c18e4e8c"
+    },
+    {
+      "path": "brain_graph/bin/live_membrane.py",
+      "sha": "82c16b0de9a9ce6fd9e2e5d8f550f8ca0ce5aca2"
+    },
+    {
+      "path": "brain_graph/bin/live_sidecar.py",
+      "sha": "d06c4c78cf53f154bdeeb82d17385ac88b1f463d"
+    },
+    {
+      "path": "brain_graph/bin/math_use.py",
+      "sha": "183b46f020d25888f2236a5cd52c8afe879f3095"
+    },
+    {
+      "path": "brain_graph/bin/prospective_orders_check.py",
+      "sha": "cfe939365f1ac14a43cce97a02d387ebc429b200"
+    },
+    {
+      "path": "brain_graph/bin/quarantine_rows.py",
+      "sha": "da1336a49b735ddb6273f0ff1abe7f9cf17ba3c3"
+    },
+    {
+      "path": "brain_graph/bin/r7_clean_store.py",
+      "sha": "5f180dd8e0f7a7d545c4f494a0138fc2526da5b5"
+    },
+    {
+      "path": "brain_graph/bin/recall_determinism.py",
+      "sha": "cc1035921a84da6da67e24f61c4a02d68cb438d4"
+    },
+    {
+      "path": "brain_graph/bin/reflex_dev_bank_eval.py",
+      "sha": "06f39c0b19f87f2fb6dffa0c65257c1b75e67d51"
+    },
+    {
+      "path": "brain_graph/bin/reflex_wording_vs_source_age.py",
+      "sha": "5932acca561cfd1178277bb5233552153a89ee12"
+    },
+    {
+      "path": "brain_graph/bin/reflexes_citing_superseded.py",
+      "sha": "af4fc8f4b5c5335107b4f888d6fbacd0b4b30c03"
+    },
+    {
+      "path": "brain_graph/bin/replay_reflex_widening.py",
+      "sha": "e3dce65178b346ce42a4a662b48daff7c5b04ed6"
+    },
+    {
+      "path": "brain_graph/bin/replay_register_reflex.py",
+      "sha": "36645821b602f36f1c1a4cc13b8f055b64e45701"
+    },
+    {
+      "path": "brain_graph/bin/reseal_blockdiff.py",
+      "sha": "39f9fc1a204ff4f3bf4749150981d963d9f380c4"
+    },
+    {
+      "path": "brain_graph/bin/reseal_laundering_control.py",
+      "sha": "1fe88e15ddf9789fc28989833b71e9f2d488c15e"
+    },
+    {
+      "path": "brain_graph/bin/reseal_math_rows.py",
+      "sha": "29a0a7f2aac0d994870fa89094862e107f83379b"
+    },
+    {
+      "path": "brain_graph/bin/reseal_serve_probe.py",
+      "sha": "09ca6eb75c8985cbffbc37dd414a8f1df706ce43"
+    },
+    {
+      "path": "brain_graph/bin/run_graph.py",
+      "sha": "e9915d64dcfaecea906ed844b781aad49dde686d"
+    },
+    {
+      "path": "brain_graph/bin/run_suite.py",
+      "sha": "404fed7140917d83f5ad0fd400e057e3e9e42ec8"
+    },
+    {
+      "path": "brain_graph/bin/run_with.py",
+      "sha": "29d23a7d5fac85fde89016d40933bcb18906954d"
+    },
+    {
+      "path": "brain_graph/bin/scope_lint.py",
+      "sha": "74db6006966aedd3cb738c66d42027adc27345f6"
+    },
+    {
+      "path": "brain_graph/bin/score_corrections_per_session.py",
+      "sha": "689102ae020d0749fec457ef168f3dcd7cb7d6ef"
+    },
+    {
+      "path": "brain_graph/bin/seq_attractors.py",
+      "sha": "35397db0d4be5141bcc12b0eddd6af891dcf0397"
+    },
+    {
+      "path": "brain_graph/bin/served_vs_delivered.py",
+      "sha": "a91da8468eeafb10f6a2bb81ef5837ac24241f73"
+    },
+    {
+      "path": "brain_graph/bin/served_vs_delivered_1to1.py",
+      "sha": "c0d311afd471d408ac91240b56ec67164831d466"
+    },
+    {
+      "path": "brain_graph/bin/session_kinds.py",
+      "sha": "bba22fe8ff075a2e956641dd7d14f6a542c2627d"
+    },
+    {
+      "path": "brain_graph/bin/sidecar_hourly.sh",
+      "sha": "d449fca604171fe3ed7bc5ce37aa4826c3e2a1e8"
+    },
+    {
+      "path": "brain_graph/bin/source_check_0810.py",
+      "sha": "b4bb0b62851d9db0036219174d7b713a09e80ea8"
+    },
+    {
+      "path": "brain_graph/bin/source_check_0810_formulas.py",
+      "sha": "7f4a9b03090941e974dfeaf5ad7576ee8e17684e"
+    },
+    {
+      "path": "brain_graph/bin/study_answer_coverage.py",
+      "sha": "1791f9cec1f7c87ed7873750c13c324990eeeb9f"
+    },
+    {
+      "path": "brain_graph/bin/study_answer_orders.py",
+      "sha": "f24c8c44d771a9250a7790092f40feb53b747e9e"
+    },
+    {
+      "path": "brain_graph/bin/study_collision_replay.py",
+      "sha": "f721e840cbc048e81d2578dd70eee780ce981483"
+    },
+    {
+      "path": "brain_graph/bin/study_corrections_casecontrol.py",
+      "sha": "16c2ca3a6464c2274105989acee0a68738323605"
+    },
+    {
+      "path": "brain_graph/bin/study_date_roles.py",
+      "sha": "c8f38acab4d23678a01b295ee33140909e7b1aa2"
+    },
+    {
+      "path": "brain_graph/bin/study_drift_casecontrol.py",
+      "sha": "abde4663a6425a8f002709193b81456e9a792452"
+    },
+    {
+      "path": "brain_graph/bin/study_drift_live.py",
+      "sha": "0637e955388b1b7229a1bdb0016a82b614dafe76"
+    },
+    {
+      "path": "brain_graph/bin/study_expansion_filter.py",
+      "sha": "fc77d459fe11899b2dd9594ddb1a130b33573a67"
+    },
+    {
+      "path": "brain_graph/bin/study_gra05_sequence_state.py",
+      "sha": "156adb0cc0ee8126ef6fe99fa4134c2b59791053"
+    },
+    {
+      "path": "brain_graph/bin/study_lag_edges.py",
+      "sha": "bbedfc9224b6c928b5a8fe641415ebb08c238146"
+    },
+    {
+      "path": "brain_graph/bin/study_live_membrane.py",
+      "sha": "6bdd470c0a41704630eb38af562267d4676aa43d"
+    },
+    {
+      "path": "brain_graph/bin/study_membrane_eligibility.py",
+      "sha": "a9a272837b0de9638554c1499605f6c89de3208a"
+    },
+    {
+      "path": "brain_graph/bin/study_recall_floor.py",
+      "sha": "9b92f5d579042f6cd63aae93d183cacc749fda7d"
+    },
+    {
+      "path": "brain_graph/bin/study_reply_judge.py",
+      "sha": "d2d4e30a9f58318d46b69754b2b5459e57a88c8a"
+    },
+    {
+      "path": "brain_graph/bin/study_reply_orders.py",
+      "sha": "519712068081d450f2f04fed918af93353eba304"
+    },
+    {
+      "path": "brain_graph/bin/study_scar_fire_before_repeat.py",
+      "sha": "74db63005700088ff753e6eabd62377c085a3d22"
+    },
+    {
+      "path": "brain_graph/bin/study_scar_fire_moviehook.py",
+      "sha": "576e1483d3840d38f78cb920b52d764bfa3beca6"
+    },
+    {
+      "path": "brain_graph/bin/study_scar_fire_posthoc.py",
+      "sha": "8d015b87d6318c7dceb5418a0588eea3f9f290c0"
+    },
+    {
+      "path": "brain_graph/bin/study_sequence_model.py",
+      "sha": "6e6ae9f0eb4d317d2e36e0c7f3c0878b0b3aa404"
+    },
+    {
+      "path": "brain_graph/bin/study_session_knn.py",
+      "sha": "d196a3f9eaf55089c6a1f632d280e202de33cf82"
+    },
+    {
+      "path": "brain_graph/bin/study_standing_orders.py",
+      "sha": "21eb3079c0b71c6dc92a710cf831b4c4042f515e"
+    },
+    {
+      "path": "brain_graph/bin/study_support_gate.py",
+      "sha": "357b475ca7175002a8f6e0ad54f1ffdc366072cf"
+    },
+    {
+      "path": "brain_graph/bin/study_tokenizer_variants.py",
+      "sha": "80e738a9f28855fc6a6423f999085797b58bc91b"
+    },
+    {
+      "path": "brain_graph/bin/study_unclaimed_writes.py",
+      "sha": "2ce0c591ccf3651638c6aeb6a6e5dca291631c28"
+    },
+    {
+      "path": "brain_graph/bin/sweep_credential_urls.py",
+      "sha": "63ae6508301eb54bba9b75016edd4d2dfae6b881"
+    },
+    {
+      "path": "brain_graph/bin/test_brain_data_guard.py",
+      "sha": "da41e700ca502a05b6897c323dbd215208a78e57"
+    },
+    {
+      "path": "brain_graph/bin/test_capture_complete_lines.py",
+      "sha": "7cd4c9239557314d2aa44fd25b1202253d4bd695"
+    },
+    {
+      "path": "brain_graph/bin/test_capture_exactly_once.py",
+      "sha": "ad9943de4dd8701841e1f5f262f0c3ed04b457ab"
+    },
+    {
+      "path": "brain_graph/bin/test_casecontrol_evidence.py",
+      "sha": "75ebb1475ac48e147d8bcb90ec873a7b80a55fe6"
+    },
+    {
+      "path": "brain_graph/bin/test_check_no_console.py",
+      "sha": "52bde4b6c8beaa40d9fa74937667556e6586eadf"
+    },
+    {
+      "path": "brain_graph/bin/test_codex_capture_boundaries.py",
+      "sha": "d80f41c51f01af99141c6fdb4864b7f151de32ed"
+    },
+    {
+      "path": "brain_graph/bin/test_codex_capture_exactly_once.py",
+      "sha": "afeea24ef3bdb6d7acf38fa7607ff275eed0e221"
+    },
+    {
+      "path": "brain_graph/bin/test_codex_capture_zst.py",
+      "sha": "b545dea6c9ef3454f444a91f370d5bd3ecc8ea9c"
+    },
+    {
+      "path": "brain_graph/bin/test_codex_orders.py",
+      "sha": "927d1f24b41264f743df04f8fcb0e6dad30b3a31"
+    },
+    {
+      "path": "brain_graph/bin/test_codex_orders_errors.py",
+      "sha": "5d44346cf565dbbe62edc3e6581c7bbd92c9b52f"
+    },
+    {
+      "path": "brain_graph/bin/test_codex_verdicts.py",
+      "sha": "183aadbbd03606971815f4af33c4adaadd67432a"
+    },
+    {
+      "path": "brain_graph/bin/test_context_rank.py",
+      "sha": "8287c19be9a384e356b4c198648646d04147680b"
+    },
+    {
+      "path": "brain_graph/bin/test_doc_expand_changed.py",
+      "sha": "49a17eb528b88ce3eae214b99c1c9e5d9406f60a"
+    },
+    {
+      "path": "brain_graph/bin/test_doc_expand_owner_hold.py",
+      "sha": "444b57e962b3ed558f9f5c3e70298c58b17cf69f"
+    },
+    {
+      "path": "brain_graph/bin/test_doc_expansion.py",
+      "sha": "2d731e20586108a63e93fd9724cf626e6f8afe25"
+    },
+    {
+      "path": "brain_graph/bin/test_eval_agent_recalls_parity.py",
+      "sha": "5ea13ac0f5425c908358bbeb2bea8b461f2c8666"
+    },
+    {
+      "path": "brain_graph/bin/test_fast_layer_equivalence.py",
+      "sha": "9080af936d6c0fba6ac58ed3e67634c6017e89f6"
+    },
+    {
+      "path": "brain_graph/bin/test_fix_candidate_learner.py",
+      "sha": "621d30200f6a11d363beb3a92f382cd00d7e361b"
+    },
+    {
+      "path": "brain_graph/bin/test_fusion_shared.py",
+      "sha": "2ca7dfafe54466c017e1a91ad1ac0d5ba8b456ef"
+    },
+    {
+      "path": "brain_graph/bin/test_graph_lane_cache.py",
+      "sha": "77563f32bf0161ee5a80619f023070eb9b4a6bee"
+    },
+    {
+      "path": "brain_graph/bin/test_graph_lane_combine.py",
+      "sha": "9a0412d8796aebac07dbbc788ad735745df79867"
+    },
+    {
+      "path": "brain_graph/bin/test_graph_learn_bars.py",
+      "sha": "ade92284db990bcdc027c9c73755a95478227a1a"
+    },
+    {
+      "path": "brain_graph/bin/test_graph_learn_crash.py",
+      "sha": "7a9e295f634b8638e9666b45574528b18e75745f"
+    },
+    {
+      "path": "brain_graph/bin/test_graph_learn_exactly_once.py",
+      "sha": "8540262a66d4166739c88a9e72534bfb42cf2a50"
+    },
+    {
+      "path": "brain_graph/bin/test_graph_learn_kinds.py",
+      "sha": "88bd86906eb72a6487f444211a7a2022e4c163bb"
+    },
+    {
+      "path": "brain_graph/bin/test_graph_learn_prefix_binding.py",
+      "sha": "5c151ebcf41824e7b9945c1a2f1ab87447c80386"
+    },
+    {
+      "path": "brain_graph/bin/test_graph_store_skip.py",
+      "sha": "b2c507bda0357385125f2fd50b7d02c33a93cf5d"
+    },
+    {
+      "path": "brain_graph/bin/test_graph_store_times.py",
+      "sha": "dc80d6359c44f511e73d10c4e502f15ad98b8249"
+    },
+    {
+      "path": "brain_graph/bin/test_launchers_resolve_home.py",
+      "sha": "95c70c5912381be157daf5c1b52fc621515726c7"
+    },
+    {
+      "path": "brain_graph/bin/test_live_delta_generation.py",
+      "sha": "736d2d1073ec1390ef0f7f5802c0abfcb5b1b1c2"
+    },
+    {
+      "path": "brain_graph/bin/test_live_delta_lookback.py",
+      "sha": "5180c6d42fc1169c1e52349b23d12f98b759c00c"
+    },
+    {
+      "path": "brain_graph/bin/test_live_delta_merge.py",
+      "sha": "967756015a616570c553a618104df2aa860ac8b6"
+    },
+    {
+      "path": "brain_graph/bin/test_live_membrane.py",
+      "sha": "0f424328972484c627c7aaa4b2c8f9c0bc433b19"
+    },
+    {
+      "path": "brain_graph/bin/test_live_membrane_quota.py",
+      "sha": "e3cae6014d3cc90e234250ce9a76e563084d9f3c"
+    },
+    {
+      "path": "brain_graph/bin/test_math_use_one_set_per_session.py",
+      "sha": "09844e083faf509f6bbd5ad6c790dc4a0508a893"
+    },
+    {
+      "path": "brain_graph/bin/test_math_use_sessions.py",
+      "sha": "8774d9b3e2f138abeda1e4272e7afcaac693d48b"
+    },
+    {
+      "path": "brain_graph/bin/test_membrane_diffuse_trial.py",
+      "sha": "f58560761b58f1fe4249c47d4e4b804531a8de84"
+    },
+    {
+      "path": "brain_graph/bin/test_membrane_hold_parity.py",
+      "sha": "73f40844ba600ff4d6027e17dfc50cc38159a687"
+    },
+    {
+      "path": "brain_graph/bin/test_membrane_r17.py",
+      "sha": "97d47c7daba4f6e073a01f390da89bee3759081e"
+    },
+    {
+      "path": "brain_graph/bin/test_membrane_save.py",
+      "sha": "5f6235baa020bb7ffa00b3380977101a81b448f7"
+    },
+    {
+      "path": "brain_graph/bin/test_membrane_session_lock.py",
+      "sha": "c02d723a3a8432dc225cf7a328dc73ae54a2d9b6"
+    },
+    {
+      "path": "brain_graph/bin/test_orders_channel.py",
+      "sha": "2bc21147596998b519e7cd2ef178b8356f57a8af"
+    },
+    {
+      "path": "brain_graph/bin/test_prefix_binding.py",
+      "sha": "1bfddc35912fa73d69f07a61f9987fffe9df024c"
+    },
+    {
+      "path": "brain_graph/bin/test_quarantine_rows.py",
+      "sha": "e464471c8a206380eaa47d298c23a729eae35569"
+    },
+    {
+      "path": "brain_graph/bin/test_queued_prompts.py",
+      "sha": "90525c4980f83654ebff87945a2d79665f465f64"
+    },
+    {
+      "path": "brain_graph/bin/test_r9_kinds.py",
+      "sha": "5c26fb7e5a338fa7fef442a08ea2b1d870bffbd0"
+    },
+    {
+      "path": "brain_graph/bin/test_recall_log_bounds.py",
+      "sha": "f63ea675e802f08b976c744e947822d5bd4562f9"
+    },
+    {
+      "path": "brain_graph/bin/test_recall_rewrite.py",
+      "sha": "2d04541ee0601a3054ae5ecce6940f9c3b6b0a16"
+    },
+    {
+      "path": "brain_graph/bin/test_reseal_semantic_interlock.py",
+      "sha": "ff0ee9aa8fe6b88171c78270574df281f3a58b13"
+    },
+    {
+      "path": "brain_graph/bin/test_run_graph_lock.py",
+      "sha": "c9f3d4838046f9875dadc0e73cb0b5a92d8ed3f5"
+    },
+    {
+      "path": "brain_graph/bin/test_search_session_identity.py",
+      "sha": "aa1a8533303ed0ead219f052d58a67184697d8c3"
+    },
+    {
+      "path": "brain_graph/bin/test_session_kind_pending.py",
+      "sha": "f8319c324d2e2943cce3ab987b4f74a3bd577e74"
+    },
+    {
+      "path": "brain_graph/bin/test_session_kinds.py",
+      "sha": "5fb325d6b6e1fc3506a0f9a17dd7ded9bea5599e"
+    },
+    {
+      "path": "brain_graph/bin/test_shared_edit_collision_hook.py",
+      "sha": "c84a4167b9a11345a35fafa93b2ed8435013d379"
+    },
+    {
+      "path": "brain_graph/bin/test_sidecar_publication.py",
+      "sha": "315dc33ca657b751b01e45f9ce11a15c687f9073"
+    },
+    {
+      "path": "brain_graph/bin/test_sweep_credential_urls.py",
+      "sha": "b3e244e7dc34a608987b3708978153433f513e67"
+    },
+    {
+      "path": "brain_graph/bin/test_trial_analysis.py",
+      "sha": "10fa46a9c4be4de2de0aea46ed18c6f73bea0e27"
+    },
+    {
+      "path": "brain_graph/bin/test_trial_cohort.py",
+      "sha": "265b7e06214ab17222ebefdfe07675f4e7442da4"
+    },
+    {
+      "path": "brain_graph/bin/test_word_channel.py",
+      "sha": "a76b748be05c1017138335c4edfec29625c3f8fd"
+    },
+    {
+      "path": "brain_graph/bin/trial_analysis.py",
+      "sha": "8beede6867ac12eb33d573f04b6f47a6a016d17d"
+    },
+    {
+      "path": "brain_graph/bin/verify_casecontrol.py",
+      "sha": "e4ef3d22889db419f40518f22ab5e5866b2d77c3"
+    },
+    {
+      "path": "brain_graph/bin/widen_population_reflex.py",
+      "sha": "e4c1ae01162505ff8f0fd95622b5c9bb40ec92b7"
+    },
+    {
+      "path": "brain_graph/bin/wrong_at_creation_control.py",
+      "sha": "5abf42ae7ed514943bc6510f092b9be2828d2e95"
+    },
+    {
+      "path": "brain_graph/membrane.py",
+      "sha": "faf59d4507957332d31ee3eb1c8b779581dbb01d"
+    },
+    {
+      "path": "common_sense/ENABLED",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "common_sense/README.md",
+      "sha": "160b5d95b477274a9da3d29c91fd157095e300fe"
+    },
+    {
+      "path": "common_sense/cs001_a_doubted_number_is_a_bug_report.py",
+      "sha": "260818208b33d1ae8317261a6d10eadc8beb04ae"
+    },
+    {
+      "path": "common_sense/cs002_never_invent_a_constraint_nobody_gave.py",
+      "sha": "81f6e9084bad9a96afdeaa41c68cf7a997912a3e"
+    },
+    {
+      "path": "common_sense/cs003_a_setting_that_changes_nothing_is_not_wired.py",
+      "sha": "e6623d1d017a677eb39f1af01b666499b93a71b9"
+    },
+    {
+      "path": "common_sense/cs004_run_it_on_all_the_data_there_is.py",
+      "sha": "926cbfd6e73303082841e58c776ec363a99d5f42"
+    },
+    {
+      "path": "common_sense/cs005_a_finish_time_from_a_measured_rate.py",
+      "sha": "bc7f2e1375b95b9e4a75b9f8d3ee8dca884fb390"
+    },
+    {
+      "path": "common_sense/cs006_you_sure_means_check_it_a_second_way.py",
+      "sha": "de16f5d1bdc0a7ff82ef621f2903adb8d7a38187"
+    },
+    {
+      "path": "common_sense/cs007_a_fix_that_made_it_worse_is_rolled_back_first.py",
+      "sha": "ae24d107a857ce31bb30d81f3e7fba0b8d4f2e52"
+    },
+    {
+      "path": "common_sense/cs008_change_only_what_was_named.py",
+      "sha": "d02b88cf326ef941f97bcd36d24288e1fee478f7"
+    },
+    {
+      "path": "common_sense/cs009_a_broad_delete_keeps_what_matters.py",
+      "sha": "7c9eac96a4c641ee5a8ff779ad27a457a433b3a7"
+    },
+    {
+      "path": "common_sense/cs010_edit_a_copy_keep_the_original.py",
+      "sha": "4ba7654cb5f5b8254987cb28dc5b1037c1654d32"
+    },
+    {
+      "path": "common_sense/cs011_saved_means_read_back_from_every_place_named.py",
+      "sha": "783adb16da7fe35dfc716d47ac55dd7ee973a81b"
+    },
+    {
+      "path": "common_sense/cs_core.py",
+      "sha": "a40590cf14284a404d52b6f88451316b43021330"
+    },
+    {
+      "path": "coordination/.gitignore",
+      "sha": "299d03115053489fd68348042554d7fc86471b2d"
+    },
+    {
+      "path": "coordination/MANIFEST.json",
+      "sha": "26ced06098cbe33d3e563af85c27cf2851ad4b9d"
+    },
+    {
+      "path": "coordination/PROVENANCE.md",
+      "sha": "f7a9d1365639d0666deaab51f69b9d202eb25acc"
+    },
+    {
+      "path": "coordination/README.md",
+      "sha": "8cc7ba76a8a2b3f567ecf3d6ca0986c206a93d86"
+    },
+    {
+      "path": "coordination/TOP10.template.json",
+      "sha": "0f49049ea3c71ce92908fb715d76fcd5f20a2132"
+    },
+    {
+      "path": "coordination/client.py",
+      "sha": "30869d3b4eee3220538007ccfb73ecb8aedd1c1d"
+    },
+    {
+      "path": "coordination/email_adapter.py",
+      "sha": "ce1376bc4b68d54b0dfbc1591e55ac79e3cee9fa"
+    },
+    {
+      "path": "coordination/hub.py",
+      "sha": "f7ba8255e4bf5b92f3f1bec2d853fa371db27e12"
+    },
+    {
+      "path": "coordination/owner_questions.py",
+      "sha": "bb19b8c3a506f6ffeca0a2e03ed3277733df6773"
+    },
+    {
+      "path": "coordination/test_coordination.py",
+      "sha": "65e3bcd51a826c58bd8da799beac15da7edc8087"
+    },
+    {
+      "path": "coordination/test_owner_questions.py",
+      "sha": "093d0209af14399333751a666b18c39dd3db1c2f"
+    },
+    {
+      "path": "delegation/DELEGATION.md",
+      "sha": "5bd7752d5ea075c5e53cdbbeb67a11e6103a3809"
+    },
+    {
+      "path": "delegation/delegate_codex.py",
+      "sha": "80b99e2788649f947471f17fd77ad9eb9d006126"
+    },
+    {
+      "path": "delegation/dream_delegation_review.py",
+      "sha": "a3e72be82995e1e175956ee68f5ff4e7a042ca39"
+    },
+    {
+      "path": "delegation/high_broadcast.py",
+      "sha": "146858ed877d844f9413897901b09367456304be"
+    },
+    {
+      "path": "delegation/high_broadcast_launcher.vbs",
+      "sha": "e989a8bf025938b328d06b469ee27e306436cd07"
+    },
+    {
+      "path": "delegation/high_selftest.py",
+      "sha": "51ba376570d437cd1724bd8742089dc675536ed5"
+    },
+    {
+      "path": "delegation/ledger.py",
+      "sha": "be2b318c6e8f4865c8a7614a05102df8717e0e82"
+    },
+    {
+      "path": "delegation/record_worker.py",
+      "sha": "64c0aee849be2416aea7c499bf685edf951226b7"
+    },
+    {
+      "path": "delegation/route.py",
+      "sha": "5bb18ab8b54aaf4c4b693ba06da7987c153b3f87"
+    },
+    {
+      "path": "delegation/verify_model.py",
+      "sha": "da05e8da1af9d1d188a76a335cc82318c25d6306"
+    },
+    {
+      "path": "docs/1000_WAYS_TO_IMPROVE_THE_BRAIN.md",
+      "sha": "911ad7c39e4b309f2c9fd3ca403dbf61e03971ab"
+    },
+    {
+      "path": "docs/AGENTIC.md",
+      "sha": "b97e0359258d4447e916f01d34fde1a5a16cf878"
+    },
+    {
+      "path": "docs/AI_MEMORY_ENGINEERING_VS_THIS_BRAIN.md",
+      "sha": "e8b80eeaf6830f8299833047860518808744306a"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "sha": "3fb1c40a8718c763514d29ce29149e51e45249a6"
+    },
+    {
+      "path": "docs/BRAIN_SCIENCE_AUDIT.md",
+      "sha": "38503a6973f90571077c3198d17bf23d6e928a47"
+    },
+    {
+      "path": "docs/CHANGES_2026-09-02.md",
+      "sha": "d2320b75c3846bb3dc3d051bcffa9c3b93d0693a"
+    },
+    {
+      "path": "docs/CHANGES_2026-09-03.md",
+      "sha": "36ef6bef3bae5a8b9e8e106e7d884fd41813d8d4"
+    },
+    {
+      "path": "docs/CHANGES_2026-10-15.md",
+      "sha": "290c7dceae2393d60f64c68cf694f5644f1f97d8"
+    },
+    {
+      "path": "docs/COGNITIVE_ARCHITECTURE.md",
+      "sha": "2ab9e22aa25a5477a2d98f99d9fdf538183f0c06"
+    },
+    {
+      "path": "docs/COMPACTION.md",
+      "sha": "a039ac9a0fdc110aa41b76dc93da86a523374725"
+    },
+    {
+      "path": "docs/EVERYTHING_IS_A_NODE.md",
+      "sha": "5d2dc609fb05d6d3c75c766a8f8845f5c170b457"
+    },
+    {
+      "path": "docs/EXERCISING.md",
+      "sha": "afa2da1734d25fbfdff26bc60a303af4b3ff52bc"
+    },
+    {
+      "path": "docs/FAST_RECALL.md",
+      "sha": "609cc0dc6cca73285fbe67c78b58f71bf26062c6"
+    },
+    {
+      "path": "docs/FULL_BRAIN_MAP.md",
+      "sha": "274ab563ff46c0e47e71aba67a2d5be5cb8f733c"
+    },
+    {
+      "path": "docs/LITERATURE_MECHANISM_MAP.md",
+      "sha": "1bb89d1d6e617f0234b9b692de664ed45ff16dc3"
+    },
+    {
+      "path": "docs/MACOS_INSTALL.md",
+      "sha": "9de261c072d18d407c7a1a41e45793376d606ebd"
+    },
+    {
+      "path": "docs/MATH_BRAIN_SETUP.md",
+      "sha": "9b0fa6604b1e1d460cb672fd4d028a9f8f1b0ced"
+    },
+    {
+      "path": "docs/MEASURING_A_NOTES_ARM.md",
+      "sha": "1074c0766e77baeddf693d9e9e41bd216af6f71f"
+    },
+    {
+      "path": "docs/MEMORY_CONVENTIONS.md",
+      "sha": "5b312fa0ffe75d9f1b08ab7fa071112843caf17c"
+    },
+    {
+      "path": "docs/METHOD.md",
+      "sha": "5c2c8f46984fa81d56c67b0a025778583bf1faff"
+    },
+    {
+      "path": "docs/MULTI_AGENT_OPERATIONS.md",
+      "sha": "dc5b06589637f554d0a6234898ab9a7a1231659e"
+    },
+    {
+      "path": "docs/NOTES_ARE_HINTS.md",
+      "sha": "8cfc4e7ffa2b440bf8ecf2567e8d3c1e1636bcb5"
+    },
+    {
+      "path": "docs/PORTABLE-ENGINEERING-ARTIFACTS.md",
+      "sha": "62fedc2251a50623363026bb02835ef9469fc0e0"
+    },
+    {
+      "path": "docs/PORTING.md",
+      "sha": "4049866309c2b5d60fe35a0aff771c7abc00cc8f"
+    },
+    {
+      "path": "docs/RECALL_LEVERS.md",
+      "sha": "1d8518f5805867a530b7abdd1100064ecf617620"
+    },
+    {
+      "path": "docs/RUNNING_THE_EVALUATORS.md",
+      "sha": "66ef9d06e313443d26ba64f699179872a74b32ab"
+    },
+    {
+      "path": "docs/TASK_CHECKLIST.md",
+      "sha": "9c2fdff1f9e397bb3f3a785f7c2b9e676cd833ca"
+    },
+    {
+      "path": "docs/UNDER_SATURATION.md",
+      "sha": "560e5c03f325d6cefc82ed4f3546322d964d86f1"
+    },
+    {
+      "path": "docs/brain-additional-tests-2026-11-06.md",
+      "sha": "87d565321e9347939a7ce338f4824ce947d39003"
+    },
+    {
+      "path": "docs/brain-building/compactions-as-brain-nodes.md",
+      "sha": "c5892089929871611548f233260e906a70a80249"
+    },
+    {
+      "path": "docs/brain-evidence-review-2026-11-06.md",
+      "sha": "e5ff490d76a36a4bbfd93a865a8a744cee8da830"
+    },
+    {
+      "path": "docs/capture-boundaries.md",
+      "sha": "48d2b5ff7b667a62f89bd84d8bbd8bdcb0937b90"
+    },
+    {
+      "path": "docs/heeding-gates.md",
+      "sha": "c57a8d5ddbfc2532a1fb3a6ad2b10f9501c119c5"
+    },
+    {
+      "path": "docs/keyword-topic-nodes.md",
+      "sha": "2f405844db9e541bc54c77fca3502d05ad044b40"
+    },
+    {
+      "path": "docs/math/DIFFUSION_PROCESS_SOTA.md",
+      "sha": "0df73abfb41fd83b6604084376fe05aa05648d95"
+    },
+    {
+      "path": "docs/math/DIFFUSION_THEORY.md",
+      "sha": "7b5f520528a52469a67340d6a895280ae2a940a2"
+    },
+    {
+      "path": "docs/math/DIFFUSION_THEORY_primary_additions.md",
+      "sha": "669847a583d338a9cd1658e03c3c30db62a9cbbf"
+    },
+    {
+      "path": "docs/mistake-first-recall.md",
+      "sha": "4a0e23ea96e709e5f19eae576da05f1fc22059ef"
+    },
+    {
+      "path": "docs/setup-questions-2026-11/ANSWERS.txt",
+      "sha": "93dc9254c6919adc1e4a543f0efde34757e18134"
+    },
+    {
+      "path": "docs/setup-questions-2026-11/BRAIN_INSTALL_STATUS.template.md",
+      "sha": "7a8462bf86494d2a57d8328c49c95ac18e67b329"
+    },
+    {
+      "path": "docs/setup-questions-2026-11/hook_dispatch_list.macos.template.json",
+      "sha": "35df1f4d4c9034af4cd03988f0b0b5982687a2f8"
+    },
+    {
+      "path": "docs/setup-questions-2026-11/setup-questions-2026-11.zip",
+      "sha": "786f6498e5064dbdb8e23c5ed926de61b288dff5"
+    },
+    {
+      "path": "dreaming/CONSCIOUSNESS.md",
+      "sha": "67e87a592bf6c12f5c6d46a26103d043c2f7a75a"
+    },
+    {
+      "path": "dreaming/README.md",
+      "sha": "52e73db2f494b5e7d78d703ce828d106d4dbc2a5"
+    },
+    {
+      "path": "dreaming/_usersite.py",
+      "sha": "4d0c8976e895994a401d89fed34218e70df2fea4"
+    },
+    {
+      "path": "dreaming/agent_launch_save_hook.py",
+      "sha": "2acd79eeb55679ebb26b1a15fe89412537cbe38f"
+    },
+    {
+      "path": "dreaming/append_journal.py",
+      "sha": "5dbab5182d7219f8648c8653e2a76e1a77a72e34"
+    },
+    {
+      "path": "dreaming/apply_prompt_classes.py",
+      "sha": "d8a675821719e9c26a8f5e0be371d02bd3291a38"
+    },
+    {
+      "path": "dreaming/archive_spread_fired.py",
+      "sha": "0cb9c3f44c23196f2af921c69f8852d774ed54ca"
+    },
+    {
+      "path": "dreaming/argv_idiom_check.py",
+      "sha": "fb3f78cc8e58719fd5dfb866b2fc8761e0d0aea7"
+    },
+    {
+      "path": "dreaming/ascii_lint.py",
+      "sha": "8bf13a9d4b244f92581d231940446438f217a673"
+    },
+    {
+      "path": "dreaming/attribution.py",
+      "sha": "c4aabe82412950f7d0bf81a5c6f5093c7e470106"
+    },
+    {
+      "path": "dreaming/backfill_created_dates.py",
+      "sha": "4a263ec35cfcc6c2d9ca27b98299e7867274f18c"
+    },
+    {
+      "path": "dreaming/backfill_origin.py",
+      "sha": "d300e9f793e46266c623b6e6e78790454fc400f0"
+    },
+    {
+      "path": "dreaming/backfill_prompts.py",
+      "sha": "8fdcd5d6b5071b1bdb3f4aad1972dbf11600685c"
+    },
+    {
+      "path": "dreaming/base_activation.py",
+      "sha": "1068d290924bac6a35f7fcf94f839432681d4183"
+    },
+    {
+      "path": "dreaming/bm25.py",
+      "sha": "58416aecc93bad3cc2e55460d8f887bad1f9ecd7"
+    },
+    {
+      "path": "dreaming/bm25_append.py",
+      "sha": "ac4c548fd66289a952a0db2c70bc60e3edb6c1a4"
+    },
+    {
+      "path": "dreaming/bm25_lane_selftest.py",
+      "sha": "b203f824fee53df620707699ac2537f494acfa1c"
+    },
+    {
+      "path": "dreaming/bm25_refresh_if_stale.py",
+      "sha": "530e668ebdf5c672d3c339df1cb92eb465ef0e2d"
+    },
+    {
+      "path": "dreaming/board_pages.py",
+      "sha": "3e643a436044bcc48ecab9061d49a0e0f23d47e1"
+    },
+    {
+      "path": "dreaming/brain.py",
+      "sha": "cd2498c4e373715a7ca5ad93f7345b9860967593"
+    },
+    {
+      "path": "dreaming/brain_bm25_release.py",
+      "sha": "2b5587b8278447bf3606e7d1406af3b1c9e7be80"
+    },
+    {
+      "path": "dreaming/brain_call_sampler.py",
+      "sha": "d3d1d17c6bc906c5f79d9b0a2f6fe13ac654b5e9"
+    },
+    {
+      "path": "dreaming/brain_checkout_guard.py",
+      "sha": "7bafc2bbc52487d5ad9b40d4cc4319ba3ee4bcfd"
+    },
+    {
+      "path": "dreaming/brain_community_health.py",
+      "sha": "f491e0eeef3a4e011a1e4cc3c4201fe91682e91b"
+    },
+    {
+      "path": "dreaming/brain_data_guard.py",
+      "sha": "d28d186d7ce8cf7c80b1300e96173ca60c7f6ab5"
+    },
+    {
+      "path": "dreaming/brain_digest.ps1",
+      "sha": "25c9da80c916fda7657b51db53b1f1a8421d7a3d"
+    },
+    {
+      "path": "dreaming/brain_graph_dial.json",
+      "sha": "03b6980faaca8cdc1e5b157e81905c56d405a437"
+    },
+    {
+      "path": "dreaming/brain_health.py",
+      "sha": "2e4eb8df30430ad031513c7f86ba0e7e2655a8f9"
+    },
+    {
+      "path": "dreaming/brain_node_documents.py",
+      "sha": "a4c3736739793931b02ec3dcf60fc55a9c498692"
+    },
+    {
+      "path": "dreaming/brain_recall_client.py",
+      "sha": "240d205c0424c0ec14d4bf32da1632e22d32b4fe"
+    },
+    {
+      "path": "dreaming/brain_recall_server.py",
+      "sha": "e325cb5d989e0818600e311945642f9bc0d4560a"
+    },
+    {
+      "path": "dreaming/brain_regression_gate.py",
+      "sha": "2e7277f8ba530140e4d8c2d556f2422fe33221ed"
+    },
+    {
+      "path": "dreaming/brain_release_check.py",
+      "sha": "41ea91b1fb648e0caea4724d607209d39a33824b"
+    },
+    {
+      "path": "dreaming/brain_resident_listing.py",
+      "sha": "3f6866f05757dcdfe1678c53d8264b2a46f0a465"
+    },
+    {
+      "path": "dreaming/brain_resident_listing_mac.py",
+      "sha": "c250e61c6728671212fdfca2250cab51dfd6f47f"
+    },
+    {
+      "path": "dreaming/brain_selfcare.py",
+      "sha": "53362f5e003dafcef47e8bdb2aecb60ed7244d11"
+    },
+    {
+      "path": "dreaming/brain_status.py",
+      "sha": "078664baf33525fb7fc603e536b93c600369cdb4"
+    },
+    {
+      "path": "dreaming/brain_switch.py",
+      "sha": "2592075feaf32f847696385dbf4bd3feac185871"
+    },
+    {
+      "path": "dreaming/brain_syn.py",
+      "sha": "772e6f027bb85f067e4df85c6fccd2f8a17eb787"
+    },
+    {
+      "path": "dreaming/brain_tests_index.py",
+      "sha": "8f0d9a45e0524fd2831a2d1635eb612a193fecd0"
+    },
+    {
+      "path": "dreaming/bridge_health.py",
+      "sha": "b916e84ad1766ceba61d990c6f4416dbd54b95c7"
+    },
+    {
+      "path": "dreaming/build_communities.py",
+      "sha": "886982cc90aeff02c04f5259b3fb2b32fe449978"
+    },
+    {
+      "path": "dreaming/build_keyword_edges.py",
+      "sha": "50c9e8f2c734d2b0186dc3dfdd20c5618c63cd16"
+    },
+    {
+      "path": "dreaming/build_keyword_nodes.py",
+      "sha": "2b549b222447a61d572bf58d04a39f24fe1f41c6"
+    },
+    {
+      "path": "dreaming/build_memory_access.py",
+      "sha": "79ad85bc9a523d3e5e6742bc3990b35a5c01655b"
+    },
+    {
+      "path": "dreaming/build_memory_embeddings.py",
+      "sha": "ef6d6d117103a7911302b123cfd340f049ecc926"
+    },
+    {
+      "path": "dreaming/build_memory_embeddings_local.py",
+      "sha": "6b32f91098ac442c6b6a2474b8dba15afc4f73e6"
+    },
+    {
+      "path": "dreaming/build_mistake_weights.py",
+      "sha": "6ff9c6ee09fffca6e785766b99848ba8ee8273b7"
+    },
+    {
+      "path": "dreaming/build_near_duplicate_report.py",
+      "sha": "cb5073bff9d6406afe3e08e449ecf9cd8d35bdf3"
+    },
+    {
+      "path": "dreaming/build_orphan_edges.py",
+      "sha": "42b9f24b311f67938d007f0b3d0755a7429d32dc"
+    },
+    {
+      "path": "dreaming/build_programs_view.py",
+      "sha": "cd8287a58ab5b50701dda1e6c557930d1e145196"
+    },
+    {
+      "path": "dreaming/build_prompt_views.py",
+      "sha": "7327aac417986401f44d28b4a045784a45dae2f6"
+    },
+    {
+      "path": "dreaming/build_reflex_ranking.py",
+      "sha": "e64c7fca7323de016f0d863ab524391b6f84c03c"
+    },
+    {
+      "path": "dreaming/build_retrieval_trace.py",
+      "sha": "56eebf2d66f46c01baa946a51551a7995b5cfb2e"
+    },
+    {
+      "path": "dreaming/build_series_edges.py",
+      "sha": "0ffca474e04e087b2b290357a2718d39734cf1a3"
+    },
+    {
+      "path": "dreaming/build_spread_edges.py",
+      "sha": "56f5954739728e4fd32373a34bd20c32524f2070"
+    },
+    {
+      "path": "dreaming/build_vouch_vocab.py",
+      "sha": "e35b186bcab695cab9e1309407d1d98915b8d3bc"
+    },
+    {
+      "path": "dreaming/canonical_route.py",
+      "sha": "cdb1c5ddec3e2baef4817283fe85c6040a5b4709"
+    },
+    {
+      "path": "dreaming/certify_no_flash.py",
+      "sha": "6099bb38be5a051dfdf53cee96803ee4fd882aad"
+    },
+    {
+      "path": "dreaming/check_brain_recall_health.py",
+      "sha": "5bc381c3511d7d533189d4d7ee0a0e6c5daf05f8"
+    },
+    {
+      "path": "dreaming/check_gate.py",
+      "sha": "d512c66284e7f8a85a95bde8cb689af81d7d6c52"
+    },
+    {
+      "path": "dreaming/checklist.py",
+      "sha": "9549b7dccd85b41ecf4f1dbc8eab5a2c8d5427cf"
+    },
+    {
+      "path": "dreaming/claim_check.py",
+      "sha": "2340d614e326d8f13f2d3f68302ad97cad199e77"
+    },
+    {
+      "path": "dreaming/clock_stamp_hook.py",
+      "sha": "7ba156e2436b56abf49f6c1fd9c58763299eabf8"
+    },
+    {
+      "path": "dreaming/coactivation_end.py",
+      "sha": "88d7bfeafb8e1c20904a7ce16817d0de787a97b7"
+    },
+    {
+      "path": "dreaming/coactivation_log.py",
+      "sha": "c1d10d25d81f129796e92c37d16b2d5894690a05"
+    },
+    {
+      "path": "dreaming/code_map.py",
+      "sha": "8a8e0bb13e9a1fbda0671db0ecf8f29199e7f478"
+    },
+    {
+      "path": "dreaming/codex_brain_wake_guard.py",
+      "sha": "ba48a8c5c85ad45ad68ee6615117d0c254ce16d6"
+    },
+    {
+      "path": "dreaming/codex_help_guard_hook.py",
+      "sha": "1c89699b0c6f9f4d31b0b21a89c82e6b03d1dd1a"
+    },
+    {
+      "path": "dreaming/codex_hook_telemetry.py",
+      "sha": "efdf214921eb26434c2a68614ad96c826353e1d4"
+    },
+    {
+      "path": "dreaming/codex_manual_compact.py",
+      "sha": "ca12cd4f1ef17b174b982d488f90b8c8243f5df3"
+    },
+    {
+      "path": "dreaming/codex_orders_hook.py",
+      "sha": "7d97e807798c7b86c79c2693e0030503ebaa78d9"
+    },
+    {
+      "path": "dreaming/codex_profile_hooks.py",
+      "sha": "1982dabd7f545aea7ca49275759507bf6f67e534"
+    },
+    {
+      "path": "dreaming/codex_reflex_hook.py",
+      "sha": "f2b9bf025dc08b9cb58184d89785f6156aaf19b4"
+    },
+    {
+      "path": "dreaming/codex_stop_guard.py",
+      "sha": "3ea614ce05ea5db5a590bfd306846408a7fd8605"
+    },
+    {
+      "path": "dreaming/codex_wake.py",
+      "sha": "3625c302e3f629b73c4c1c1e6fba7160c71a71f4"
+    },
+    {
+      "path": "dreaming/codex_warning_acceptance.py",
+      "sha": "0fc8c9589d73bd4902c30a56f9449bc074f209f8"
+    },
+    {
+      "path": "dreaming/compact_hooks.jsonl",
+      "sha": "82bf63161403abcb6d33502db1c371b576d4aaf8"
+    },
+    {
+      "path": "dreaming/compact_hooks.py",
+      "sha": "f70083b274129f231c1f28e6b8586ed2211d5e0f"
+    },
+    {
+      "path": "dreaming/compact_index.py",
+      "sha": "a1f84833d6508c53fdd58ca9b55abc7df2db418a"
+    },
+    {
+      "path": "dreaming/compact_math.py",
+      "sha": "d9dd9560ef3416858e65d41b0d624155e99e6a0b"
+    },
+    {
+      "path": "dreaming/compact_nodes.py",
+      "sha": "8fb6e7f1fb23103a3834192f1108702dda60db8d"
+    },
+    {
+      "path": "dreaming/compact_on_task_end.py",
+      "sha": "59d191fd0f4d13ad092b4ab9f7a742e6956edce6"
+    },
+    {
+      "path": "dreaming/compute_sense.py",
+      "sha": "ed869f821cb587de8b2b016ec2fd2f3070f5655f"
+    },
+    {
+      "path": "dreaming/conftest.py",
+      "sha": "4fc22ee171c696cafb88a1a810324f72766b536e"
+    },
+    {
+      "path": "dreaming/conscience.py",
+      "sha": "04ff3ffee648207dbc25faf74a1673de6fdc709d"
+    },
+    {
+      "path": "dreaming/consciousness.py",
+      "sha": "d4423b83505180096bde48176e9a40eba8381011"
+    },
+    {
+      "path": "dreaming/control_policy.py",
+      "sha": "fe7ec326fec65b80055c9238f52881efc15a09a6"
+    },
+    {
+      "path": "dreaming/control_random_graph.py",
+      "sha": "f493795a13d38b548c083cc4ff2fdde329b5c629"
+    },
+    {
+      "path": "dreaming/correction_ingestion_status.py",
+      "sha": "108c3a646ad4d12cd6931fff57af137a25fb2616"
+    },
+    {
+      "path": "dreaming/crash_breadcrumb.py",
+      "sha": "a6a8282d17e07998eb183159e1bbc2c3b5374c6e"
+    },
+    {
+      "path": "dreaming/curiosity.py",
+      "sha": "02d8a77dad0c6ca74db7c638ff0d7523a90059ed"
+    },
+    {
+      "path": "dreaming/danger_mode.py",
+      "sha": "1b9837591be48a012befdec2c01b3811d31528c9"
+    },
+    {
+      "path": "dreaming/demojibake.py",
+      "sha": "200a907033457cc91d1a9974610a5acf75402fa1"
+    },
+    {
+      "path": "dreaming/diffusion.py",
+      "sha": "e34ef0d9cce7cab952efddd93e65879ec7f308f4"
+    },
+    {
+      "path": "dreaming/discuss_gate.py",
+      "sha": "50bda104d052cd560940fe664d16d511b9075faf"
+    },
+    {
+      "path": "dreaming/dream.py",
+      "sha": "f731d137cf969b9e38d8f3bb32ff640f7a729910"
+    },
+    {
+      "path": "dreaming/dream_atomic_io.ps1",
+      "sha": "6b92828fc9418011c781694ca2ce2606e48360d4"
+    },
+    {
+      "path": "dreaming/dream_duration.ps1",
+      "sha": "ed18093f6e55386c67a39218712c15bfcd507dd4"
+    },
+    {
+      "path": "dreaming/dream_git_sync.ps1",
+      "sha": "ebdd4f94ee4d4d211dd63ee254e541c20540b596"
+    },
+    {
+      "path": "dreaming/dream_git_sync.py",
+      "sha": "e21ebab44a3b363436c92c7f2ca089f26979f686"
+    },
+    {
+      "path": "dreaming/dream_prompt.md",
+      "sha": "2c4c6f2661162d851a3afee954225006e8769fef"
+    },
+    {
+      "path": "dreaming/dream_prompt_nap.md",
+      "sha": "2cc0c6fedbcd8da4f8397dac18763d0efc321891"
+    },
+    {
+      "path": "dreaming/dream_prompt_rem.md",
+      "sha": "2e185ea1b9aee4331449454dc3806b64a52f59ca"
+    },
+    {
+      "path": "dreaming/dream_prompt_sws.md",
+      "sha": "4524e1c14b90048a09793eca8c9df30a2d729f7f"
+    },
+    {
+      "path": "dreaming/dream_requests.py",
+      "sha": "654f8ca390a8ef7a3d75c412f727510471a52e34"
+    },
+    {
+      "path": "dreaming/dream_sync_facts.py",
+      "sha": "6954fe7b3497da076ff9291f8df26a92f811721a"
+    },
+    {
+      "path": "dreaming/dream_sync_index.py",
+      "sha": "ed67cbff42a711ee1d66da9894e29c59dcbe73e0"
+    },
+    {
+      "path": "dreaming/dream_tree_replay.py",
+      "sha": "ee29d32578f57de4475851a50826e3f64b067369"
+    },
+    {
+      "path": "dreaming/dream_unthrottle.py",
+      "sha": "617dcfacbfd8376f082b9052976040f35bc76fca"
+    },
+    {
+      "path": "dreaming/effort_guard.py",
+      "sha": "2d9eb6f3f6149b39eba1201bc324162ed07151e1"
+    },
+    {
+      "path": "dreaming/eligibility_credit.py",
+      "sha": "119f28e62129590cb8291beaf95749927da14121"
+    },
+    {
+      "path": "dreaming/embedding_artifact.py",
+      "sha": "9d5cf399d04763b2578ceaaaef36075b4cd405ed"
+    },
+    {
+      "path": "dreaming/embedding_coverage.py",
+      "sha": "3c5a5b02be18d7fc352b025a609c7b1567bb362e"
+    },
+    {
+      "path": "dreaming/ensure_index.py",
+      "sha": "c3f553e73068bc2cc2ccee524af2f7932f6a4635"
+    },
+    {
+      "path": "dreaming/ern_calibration.py",
+      "sha": "c492b1463f28a028e393e35a90836ea598e993e9"
+    },
+    {
+      "path": "dreaming/ern_learn.py",
+      "sha": "05defae057d7f3bb2b7057847f270a15171f6aa6"
+    },
+    {
+      "path": "dreaming/ern_reliability.py",
+      "sha": "882849ecb850c253cb36f0c6801b907de564cb29"
+    },
+    {
+      "path": "dreaming/error_graph/DEPLOYMENT_MANIFEST.json",
+      "sha": "04e3feebbc455ad1845f0b4bef42abfdd23242a7"
+    },
+    {
+      "path": "dreaming/error_graph/default_graph.json",
+      "sha": "804cf7fbeafafb6a9214395cdccaa7a9130a3843"
+    },
+    {
+      "path": "dreaming/error_graph/engine.py",
+      "sha": "2436855020892c8785bcd1551a65ea1610cb6328"
+    },
+    {
+      "path": "dreaming/error_graph/events.py",
+      "sha": "b76a70e705ecdc8e88d4a4f874578ba412060f71"
+    },
+    {
+      "path": "dreaming/error_graph/hook.py",
+      "sha": "23ff7f258864017e1a898796517825d6c72fdcf7"
+    },
+    {
+      "path": "dreaming/error_graph/metrics.py",
+      "sha": "ac7f0c9fd6efca6a196f721b0b66d7c1772270be"
+    },
+    {
+      "path": "dreaming/error_graph/patterns.json",
+      "sha": "681fd7dc7a82d7e1382cb57aa0082b361d20d7b7"
+    },
+    {
+      "path": "dreaming/error_graph/policy.json",
+      "sha": "9d65e86b2ad216a22a7a3b1aedb3194240779d65"
+    },
+    {
+      "path": "dreaming/error_graph/schema.sql",
+      "sha": "97a74eb2623342a46ef22f312f68a80395cecdeb"
+    },
+    {
+      "path": "dreaming/error_graph/sequences.py",
+      "sha": "f0d662919fe63acd54a0c0cab5a0923a42ec5323"
+    },
+    {
+      "path": "dreaming/error_graph/store.py",
+      "sha": "9dfe352419d2573ef79d19ed9fa48145d8ddb60f"
+    },
+    {
+      "path": "dreaming/error_graph/typed_graph.py",
+      "sha": "239ecbe2ba912f6038ec0e403841c0a2b97f840c"
+    },
+    {
+      "path": "dreaming/error_graph_gate.py",
+      "sha": "0ee2e5f15d73bf7a0d25b7950e1b89acc9f1c173"
+    },
+    {
+      "path": "dreaming/error_graph_hook.py",
+      "sha": "41a487d9521d82fa52edea503e7b092fd7ab6f34"
+    },
+    {
+      "path": "dreaming/error_monitor.py",
+      "sha": "c4a22e34e3dcbe56fc9653c721d3c3dee1b9ce87"
+    },
+    {
+      "path": "dreaming/eval_S_predicts_recall.py",
+      "sha": "97ae787ee5c886dd1c14455e43f5ebf6058fc92f"
+    },
+    {
+      "path": "dreaming/eval_S_v2_partial.py",
+      "sha": "44e60e288cbfb61751d0954ef0ad3531805c659a"
+    },
+    {
+      "path": "dreaming/eval_archive_seed_replay.py",
+      "sha": "1871fd2f1dd7c0d96aa8064d0d8c25dd27764aa0"
+    },
+    {
+      "path": "dreaming/eval_bhat_flag.py",
+      "sha": "1db211995cf1d1305dea522c4c1f834e668efa35"
+    },
+    {
+      "path": "dreaming/eval_bm25_postings.py",
+      "sha": "2582006f6964fead4f49ca7f8b7d7d40d1b07b96"
+    },
+    {
+      "path": "dreaming/eval_bm25first.py",
+      "sha": "82712e688b05495bce8c866a65be573c7871635c"
+    },
+    {
+      "path": "dreaming/eval_brain_recall_fresh.py",
+      "sha": "7cd5c33822de57e7ce80279e3a615a8dc878edd1"
+    },
+    {
+      "path": "dreaming/eval_coactivation_decay.py",
+      "sha": "cfcd5d438026fb117b24c15bb1b48c3d83618a27"
+    },
+    {
+      "path": "dreaming/eval_deliberate_recall.py",
+      "sha": "16d911abeae02b6b007ce1faedbc22a411210b1e"
+    },
+    {
+      "path": "dreaming/eval_deliberate_spellfix.py",
+      "sha": "736fa7e44a5015188d81ce35d9181121f2dbbd45"
+    },
+    {
+      "path": "dreaming/eval_denoise.py",
+      "sha": "ccc7dc27238e1f6429d990ee04a8e1082eedf1d0"
+    },
+    {
+      "path": "dreaming/eval_domain2.py",
+      "sha": "7a3201dcf169c6e464452e0cbb84e940bc063d86"
+    },
+    {
+      "path": "dreaming/eval_eligibility_credit.py",
+      "sha": "086db6febde7a2b07b071e1b32edbd473d2972df"
+    },
+    {
+      "path": "dreaming/eval_embedding_refresh.py",
+      "sha": "b93f6b501735374c6a6147964274f25da04cfbd5"
+    },
+    {
+      "path": "dreaming/eval_event_boundaries.py",
+      "sha": "c352639740000c2ed89c9864c1fba30c87024087"
+    },
+    {
+      "path": "dreaming/eval_fok_abstention.py",
+      "sha": "2cbdcf83590b182b2d8612df1bc75356224f7127"
+    },
+    {
+      "path": "dreaming/eval_fusion_live.py",
+      "sha": "c2c7121606124b5356c7b61b0e325a40b511657e"
+    },
+    {
+      "path": "dreaming/eval_fusion_weights.py",
+      "sha": "32a0488e3357a7d2ec38aae154212a51d97b1924"
+    },
+    {
+      "path": "dreaming/eval_fuzzy_recall.py",
+      "sha": "6b37af03e5fd464335189288afa78c36e7421ef6"
+    },
+    {
+      "path": "dreaming/eval_hook_cofire.py",
+      "sha": "8b1190961dfa3882542288f991a4f93e903f8e2b"
+    },
+    {
+      "path": "dreaming/eval_hook_fire_reasons.py",
+      "sha": "6d50cf1f457911887aa9fc15ccc2d3ac22e0da3a"
+    },
+    {
+      "path": "dreaming/eval_hype.py",
+      "sha": "ae1da9c4d541c6e78361d4c3cd2d5de5e485a1e1"
+    },
+    {
+      "path": "dreaming/eval_keyword_edges.py",
+      "sha": "0fa3c589117a936992118227050d03df02606add"
+    },
+    {
+      "path": "dreaming/eval_learned_ranker.py",
+      "sha": "2593af06c1130c31a8ec4a14c996c34a0455f8f9"
+    },
+    {
+      "path": "dreaming/eval_lift_ablation.py",
+      "sha": "5e7fe3a953081871ea08e376c5d52b989adc8875"
+    },
+    {
+      "path": "dreaming/eval_linkpred.py",
+      "sha": "23e1b388358252e373357ade44d6cda254278749"
+    },
+    {
+      "path": "dreaming/eval_llm_judge_replay.py",
+      "sha": "19467820e0bcc3c324ced0c8eab8c566dd05757c"
+    },
+    {
+      "path": "dreaming/eval_locate_reach.py",
+      "sha": "dc2eb018eae268ed0912adcddce5c56ea2eddd11"
+    },
+    {
+      "path": "dreaming/eval_math_answerable.py",
+      "sha": "f6d9beace6ebf2979460802cd07a8315ffecdc1b"
+    },
+    {
+      "path": "dreaming/eval_math_fire_judged.py",
+      "sha": "75c9f4a983b5ef3c447cf5ea26a71e03c0d7fe6b"
+    },
+    {
+      "path": "dreaming/eval_math_fresh.py",
+      "sha": "904f0dcb700af0b775447b28d3c3abe251ba8eeb"
+    },
+    {
+      "path": "dreaming/eval_math_hookpath.py",
+      "sha": "0d6f72de445ddb1fe9bc3740c547c269909cc895"
+    },
+    {
+      "path": "dreaming/eval_math_hookpath_frozen.py",
+      "sha": "795ebe066fc2c6c4c6422f529ea6d0036d537d66"
+    },
+    {
+      "path": "dreaming/eval_math_hookpath_ident.py",
+      "sha": "70e8813a18e4c088ce28577362a4ecaf6cc91d5c"
+    },
+    {
+      "path": "dreaming/eval_math_probes.py",
+      "sha": "6b6e9320441a89256dab9f75e186b642c508119e"
+    },
+    {
+      "path": "dreaming/eval_math_selfretrieval.py",
+      "sha": "a7986346119b322cdb02c6b7e0c9091a2a86ea5a"
+    },
+    {
+      "path": "dreaming/eval_memory_access.py",
+      "sha": "7020487a15939c3720770fad44335efb5d86af77"
+    },
+    {
+      "path": "dreaming/eval_memory_age.py",
+      "sha": "b28ca125295c9788d9aa10ced55998520959e1bc"
+    },
+    {
+      "path": "dreaming/eval_mistake_surfacing.py",
+      "sha": "ebf92bf9c4b16833c894686c4c088d5bbfe5622e"
+    },
+    {
+      "path": "dreaming/eval_neff_predicts_recall.py",
+      "sha": "f0c88bf715c7ba20cab53df862e78724822fa794"
+    },
+    {
+      "path": "dreaming/eval_orphan_edges.py",
+      "sha": "1f3fbdc4c46c236c59e99119effd92725eb1ae6d"
+    },
+    {
+      "path": "dreaming/eval_ownvoice.py",
+      "sha": "92aa94d84d6789ae2aadb5ed415fab9d920fcaa9"
+    },
+    {
+      "path": "dreaming/eval_ownvoice_frozen.py",
+      "sha": "f452e0f44b436f69370b7f3300b728f923d45109"
+    },
+    {
+      "path": "dreaming/eval_paraphrase_reach.py",
+      "sha": "79a8b42305116706f19d6aa5fd68f773029ce21f"
+    },
+    {
+      "path": "dreaming/eval_pmi_edges.py",
+      "sha": "41268656a5f0251e07bd789de8d3accc95016fbb"
+    },
+    {
+      "path": "dreaming/eval_pre_report_overfire.py",
+      "sha": "0d1e8aeff4021d3997d48e735bd17e9c205daf4f"
+    },
+    {
+      "path": "dreaming/eval_premise_check.py",
+      "sha": "137a386a7a8b1fb260e6f78f835dd237f5f665cf"
+    },
+    {
+      "path": "dreaming/eval_premise_follow.py",
+      "sha": "398dcd9114cb5126de454c91ba314de19c88576c"
+    },
+    {
+      "path": "dreaming/eval_proactive_coeffs.py",
+      "sha": "744eee50daec0f0ffba9413ab085dcee8dc9128d"
+    },
+    {
+      "path": "dreaming/eval_prompt_recall.py",
+      "sha": "7046cce72c97f76765c400110e4994a18515b38b"
+    },
+    {
+      "path": "dreaming/eval_prompt_recall_fullstack.py",
+      "sha": "50b003b24326ce9406eb60002f0f662cecf654be"
+    },
+    {
+      "path": "dreaming/eval_proof_banks.py",
+      "sha": "b66471b67940c805059b51ac6fe7604b0346bd0f"
+    },
+    {
+      "path": "dreaming/eval_reasoning_guards.py",
+      "sha": "b174f69ac10b8d53bc6b6e4a095464ff50b33cea"
+    },
+    {
+      "path": "dreaming/eval_recall_attractor.py",
+      "sha": "4008c8c00c94c7793c031be36c1802785c43d90c"
+    },
+    {
+      "path": "dreaming/eval_recall_real_prompts.py",
+      "sha": "998a02d19efdc3d96da7e1b25bc23b6339424796"
+    },
+    {
+      "path": "dreaming/eval_recall_signals.py",
+      "sha": "aad4e8861edc428fbdc5210e892cef925055f001"
+    },
+    {
+      "path": "dreaming/eval_recency_kernel.py",
+      "sha": "44ee755cf40d0bb05820c9f56e88101e40f06f9d"
+    },
+    {
+      "path": "dreaming/eval_recency_ship.py",
+      "sha": "025d33683ae8436ba2076c22e08d2985c0e3a607"
+    },
+    {
+      "path": "dreaming/eval_retrieval_trace_integrity.py",
+      "sha": "b2372dafc8898083e30eed2fe2c01ca224e9860b"
+    },
+    {
+      "path": "dreaming/eval_score_rerank.py",
+      "sha": "214c511f20348258cef4ba3d85d7c3a136e91540"
+    },
+    {
+      "path": "dreaming/eval_semantic_candidates.py",
+      "sha": "4ae93a1199b8f8eb331eb5dfc36b50005d27bb41"
+    },
+    {
+      "path": "dreaming/eval_semantic_recall.py",
+      "sha": "d7ac59be8befdca836fd08ded9b2f8bc29aa5063"
+    },
+    {
+      "path": "dreaming/eval_series_edges.py",
+      "sha": "5f831b307d056f36368af37ae71e955efdcd7d19"
+    },
+    {
+      "path": "dreaming/eval_shadow_fires.py",
+      "sha": "e2c096803168cf20cac29b5426ad469cd2aa3bb8"
+    },
+    {
+      "path": "dreaming/eval_stale_fact.py",
+      "sha": "febd4b2190cc9aa37ec4c96d3789d4b7d8ba8d72"
+    },
+    {
+      "path": "dreaming/eval_surface_conversion.py",
+      "sha": "eedae41bc7bfa7907a974a99e6f0caaaa396f953"
+    },
+    {
+      "path": "dreaming/eval_temporal_context.py",
+      "sha": "3fd42fed8aed4391b03923f67dd39ca1b06b927e"
+    },
+    {
+      "path": "dreaming/eval_tilt_ablation.py",
+      "sha": "3a112f321729f4d12d82955a98b82c8ba95b2985"
+    },
+    {
+      "path": "dreaming/eval_type_utility.py",
+      "sha": "75f58cfd36b7c741b57ff62ccdc1f62dacb2c007"
+    },
+    {
+      "path": "dreaming/eval_value_in_block.py",
+      "sha": "33ba95c7560b97613db539b4c6cdfebfbf1b997a"
+    },
+    {
+      "path": "dreaming/eval_walk_norm.py",
+      "sha": "bf919aaa1477200e863b7a87cd1dbe0e0f400b59"
+    },
+    {
+      "path": "dreaming/eval_walk_reach.py",
+      "sha": "5e86e8e7362b067fa37616cfb755a41bf01ed0e3"
+    },
+    {
+      "path": "dreaming/eval_workflow_recall.py",
+      "sha": "fb187176fe627ceafbbeb46c4dbdfa541c7f0816"
+    },
+    {
+      "path": "dreaming/exact_clauses.py",
+      "sha": "e7a6357abcc896c1551b9eed01a2c12ce9e2e5da"
+    },
+    {
+      "path": "dreaming/exact_name.py",
+      "sha": "14db0c2b278a12f9446ee6dc2c0da033c0752af2"
+    },
+    {
+      "path": "dreaming/fastrecall.py",
+      "sha": "5c2a327bd8fa1409e956c12fefa6bb81194ff662"
+    },
+    {
+      "path": "dreaming/fastrecall_delta.py",
+      "sha": "89e77e0e4672b59c279c054ba8bc849c6531aafc"
+    },
+    {
+      "path": "dreaming/fetch_bge_onnx.py",
+      "sha": "83730e3e6060262cb8d2339c85519de7539ae23d"
+    },
+    {
+      "path": "dreaming/fetch_prompt_shards.py",
+      "sha": "46a4ae35f4ec7bc8c357931fa77a9bbed79af835"
+    },
+    {
+      "path": "dreaming/fire_judge_aggregate.py",
+      "sha": "96bfceb9f68810fa294da6d9ecf11929af235e7f"
+    },
+    {
+      "path": "dreaming/fire_judge_fulltext.py",
+      "sha": "ef24ff209c01e262e9419f4b333b70dab50b8c82"
+    },
+    {
+      "path": "dreaming/fire_judge_nightly.py",
+      "sha": "9e73f95c7b48bb9f06e5306b0a31f4510004bd18"
+    },
+    {
+      "path": "dreaming/fire_judge_sample.py",
+      "sha": "cc94ad753e720576375b617e6fd52a43199ae490"
+    },
+    {
+      "path": "dreaming/fire_surface.py",
+      "sha": "ea1cce0f9599287e336bd3a3d1809ff096ad53f0"
+    },
+    {
+      "path": "dreaming/fire_telemetry.py",
+      "sha": "e2398894fad60d4ab0758248231c544d764dea42"
+    },
+    {
+      "path": "dreaming/fired_vs_shipped.py",
+      "sha": "6599ce57bbe0bbd3e870a25204b325e0f81fdeb8"
+    },
+    {
+      "path": "dreaming/fix_deadlinks_namemismatch.py",
+      "sha": "fd1fc40be84d80ec4441a3334a930d314aebdae9"
+    },
+    {
+      "path": "dreaming/flash_poll_test.ps1",
+      "sha": "77f98cd7a4d24fda690f5590c278b72307146209"
+    },
+    {
+      "path": "dreaming/fleet.py",
+      "sha": "9de6ce02474b27f54d70a7d229a3e43a01ce01e1"
+    },
+    {
+      "path": "dreaming/fleet_board.py",
+      "sha": "37b9b4e00d50f3619eb4cbf174e5a9986a423b34"
+    },
+    {
+      "path": "dreaming/fleet_inbox_hook.py",
+      "sha": "4c8e624c075a3ff68185444522d2e48f33b18b73"
+    },
+    {
+      "path": "dreaming/flow_sentinel.py",
+      "sha": "8126c29a313f25c133247b7362c3ea7a846645a0"
+    },
+    {
+      "path": "dreaming/fok_probe.py",
+      "sha": "e6c137368606a3407f3936db13f001c56bb7b8a2"
+    },
+    {
+      "path": "dreaming/foresight.py",
+      "sha": "7517e95eb9cd06decbed388a0d8f690d6b045684"
+    },
+    {
+      "path": "dreaming/fresh_tail.py",
+      "sha": "91496dbd90078e7c13178c4da2b663fa82d19150"
+    },
+    {
+      "path": "dreaming/fresh_vectors.py",
+      "sha": "0b39dbe73dc18cff297b037051409a6dda694f2f"
+    },
+    {
+      "path": "dreaming/frontier_digest.py",
+      "sha": "8bf106cae8fde88e65b3cbec92d1a7adedd9ec64"
+    },
+    {
+      "path": "dreaming/frontier_hook.py",
+      "sha": "0ee501a914189779abe11e0a8d606722e780a329"
+    },
+    {
+      "path": "dreaming/gap_watch_hook.py",
+      "sha": "5103784258e612008a3c3e04a2acd1ed4f2a2eac"
+    },
+    {
+      "path": "dreaming/gemini_brain_hook.py",
+      "sha": "367e3ddda3afb9841ba4bd3407e6550d7157f376"
+    },
+    {
+      "path": "dreaming/github_push_cost_guard.py",
+      "sha": "683d96cc730b70c7f00ebdb747863e38ed169151"
+    },
+    {
+      "path": "dreaming/graph_cases.py",
+      "sha": "8e5fea755bb49e619155fb951f08a75d6923daee"
+    },
+    {
+      "path": "dreaming/graph_fire/.gitignore",
+      "sha": "e346ed1a6e1303bb6add75d56510d76db2d3521b"
+    },
+    {
+      "path": "dreaming/graph_fire/DESIGN.md",
+      "sha": "43763e051da5b4dce2b13ecf89aae639723c9caf"
+    },
+    {
+      "path": "dreaming/graph_fire/REFEREE_discuss_gate_proposal.md",
+      "sha": "462bbf9369da4d8448d8a3179edec942c3354443"
+    },
+    {
+      "path": "dreaming/graph_fire/ack_gate.py",
+      "sha": "c29fea6291398472df63691b9b90349824f02450"
+    },
+    {
+      "path": "dreaming/graph_fire/activation_buffer.py",
+      "sha": "4c85664d85d003b51b5ace2272a986bd0eaf79c0"
+    },
+    {
+      "path": "dreaming/graph_fire/build_anchors.py",
+      "sha": "586a0c6a92a86c9f92182b3d6815908bbab5d03b"
+    },
+    {
+      "path": "dreaming/graph_fire/calibrate.py",
+      "sha": "46c4a98fca90b9676f88b1508a52aabc77a4e666"
+    },
+    {
+      "path": "dreaming/graph_fire/conditioning_guard.py",
+      "sha": "43bbc11444ea218f30b6b2b0f7085ad8330c9114"
+    },
+    {
+      "path": "dreaming/graph_fire/enforcement.py",
+      "sha": "c4ffe5e2b8a3cdf62b3949dcecf707f2684ed20d"
+    },
+    {
+      "path": "dreaming/graph_fire/ern_labels.py",
+      "sha": "25f674e5eb549275cdf594e47cd9166f30557f4c"
+    },
+    {
+      "path": "dreaming/graph_fire/eval_guard_against_green_corpus.py",
+      "sha": "54ffba7cc31b8b42642c1332bed854ef69981731"
+    },
+    {
+      "path": "dreaming/graph_fire/eval_priming.py",
+      "sha": "a55402eac23361ae2f92b915d897ab307f32ec8d"
+    },
+    {
+      "path": "dreaming/graph_fire/eval_real.py",
+      "sha": "63052f0440a0d8c30eb66806a6187489566fe7fa"
+    },
+    {
+      "path": "dreaming/graph_fire/forward_feed.py",
+      "sha": "072f82caa8bc3ab6de237bb238a3fba889df6176"
+    },
+    {
+      "path": "dreaming/graph_fire/gap_watch.py",
+      "sha": "25657ed31385b183bc64f3cc349ae8f8d6bdaf1d"
+    },
+    {
+      "path": "dreaming/graph_fire/gfcore.py",
+      "sha": "7a4e4b198922e409fb1fa554da37ca867be6d9b2"
+    },
+    {
+      "path": "dreaming/graph_fire/green_act_guard.py",
+      "sha": "0dcf519eb8da1070483dae052a51f3c3f6847c5b"
+    },
+    {
+      "path": "dreaming/graph_fire/habituation_filter.py",
+      "sha": "ffc41cdf54d69fd1052f07d32d89d2ec5fc7ce42"
+    },
+    {
+      "path": "dreaming/graph_fire/heed_gate.py",
+      "sha": "2bee565cc61ff04c3d47467193017f6d95a3c87a"
+    },
+    {
+      "path": "dreaming/graph_fire/learn_probe.py",
+      "sha": "1e9416852521a88539a894a3ee124e7bf12e2f91"
+    },
+    {
+      "path": "dreaming/graph_fire/mine_green_claims.py",
+      "sha": "f38b1eb1dfb5990c0b190662c0b6f2d60e0981f1"
+    },
+    {
+      "path": "dreaming/graph_fire/miss_budget.py",
+      "sha": "ed1ea4549d1870b029423a7286b21a45746c0771"
+    },
+    {
+      "path": "dreaming/graph_fire/monitor.py",
+      "sha": "8957531d3572f8ef0fb58d9ed2f2ad085556fd3f"
+    },
+    {
+      "path": "dreaming/graph_fire/pipeline_audit.py",
+      "sha": "158b2838fe24a1fd1322d3216881081e405a04c2"
+    },
+    {
+      "path": "dreaming/graph_fire/pre_report.py",
+      "sha": "aa11aa2148d4ab404fbe34651f47cfaf85f34ddb"
+    },
+    {
+      "path": "dreaming/graph_fire/pre_report_check.py",
+      "sha": "1da7d0237c085bf7ea26a68c30c5d15e6a25a6ce"
+    },
+    {
+      "path": "dreaming/graph_fire/proof_of_failure.py",
+      "sha": "38123c5c07e3041da52d3c2aef73bc49b4c40f5b"
+    },
+    {
+      "path": "dreaming/graph_fire/recalibrate.py",
+      "sha": "c81ea5b770419353513419849fc047f4c9bec0a8"
+    },
+    {
+      "path": "dreaming/graph_fire/report_guards.py",
+      "sha": "1061a704b527a32939242d00c2e39c29b4716aa5"
+    },
+    {
+      "path": "dreaming/graph_fire/retro_shadow_analyzer.py",
+      "sha": "57af3324cb2e19fde4a8040e3298820e68052a5c"
+    },
+    {
+      "path": "dreaming/graph_fire/sample_actions.py",
+      "sha": "18b98d5164e20e87ee146f7741ed1073cf3cb0be"
+    },
+    {
+      "path": "dreaming/graph_fire/shadow_eval.py",
+      "sha": "b34c6b4885c3d256ab65b6e1a07a96a7a8cc82cb"
+    },
+    {
+      "path": "dreaming/graph_fire/strategy_rules.example.json",
+      "sha": "fcdfa3a7a31fb98a36663a1ddd6dfbf27ff3fdd5"
+    },
+    {
+      "path": "dreaming/graph_fire/test_graph_priming.py",
+      "sha": "acacddee36a21b4aaa0242e888c248df13a80f7d"
+    },
+    {
+      "path": "dreaming/graph_fire/test_pre_report_turn_boundary.py",
+      "sha": "aa24cdef2d74f7470c52926760773de3dd2997d2"
+    },
+    {
+      "path": "dreaming/graph_fire/test_proof_of_failure.py",
+      "sha": "d089ce471d98468622e921f494469076535d3c05"
+    },
+    {
+      "path": "dreaming/graph_lane.py",
+      "sha": "b6ac861e676256bcf77e6161afd6f96d324f8fe5"
+    },
+    {
+      "path": "dreaming/graph_lane_ties_selftest.py",
+      "sha": "934cd0d35ef93fe8d9dc7c4e4d07efa1cae1c1bb"
+    },
+    {
+      "path": "dreaming/graph_membrane_hook.py",
+      "sha": "9ae64c31618751311fab5e0bbd17c03f060f2484"
+    },
+    {
+      "path": "dreaming/graph_release_tick.sh",
+      "sha": "c6cc0975e9a444d44145834d74c1f7d24fb52804"
+    },
+    {
+      "path": "dreaming/growth.py",
+      "sha": "75588313e7f4f53dec8188e9f61eea9584457eff"
+    },
+    {
+      "path": "dreaming/guard_audit.py",
+      "sha": "7a91e698a16d0af926d84cfaac0450a5645ce612"
+    },
+    {
+      "path": "dreaming/guard_orphans.py",
+      "sha": "038e12739fde590a0a7215d1188a7aea8c2276f9"
+    },
+    {
+      "path": "dreaming/heed_audit.py",
+      "sha": "ce7eca182cb8599ee5cc994c58e8a569bb90bfd8"
+    },
+    {
+      "path": "dreaming/heed_weekly_report.py",
+      "sha": "c54c0055a072f2c51443d71d8c7e262f22735462"
+    },
+    {
+      "path": "dreaming/help_hazard_baseline.txt",
+      "sha": "210e81b15f1f93e113a87a51f7d44ddfff5773a9"
+    },
+    {
+      "path": "dreaming/hook_dispatch.py",
+      "sha": "79c8bfe3aa5b7a5b48192b968e5902b7724b78a4"
+    },
+    {
+      "path": "dreaming/hook_dispatch_control.py",
+      "sha": "cbffb31a7270788391da4584f4cc17b9fe94a3bd"
+    },
+    {
+      "path": "dreaming/hook_dispatch_deadman.py",
+      "sha": "b7296acc1fca248c73a7545916bdfde5f9d6ff86"
+    },
+    {
+      "path": "dreaming/hook_dispatch_extend.py",
+      "sha": "8d8a574e516fe65f000446add6ad6face6859d25"
+    },
+    {
+      "path": "dreaming/hook_dispatch_list.json",
+      "sha": "9d3afa88eac96760d14cffec8390aed8c05ffd75"
+    },
+    {
+      "path": "dreaming/hook_dispatch_wire.py",
+      "sha": "8c9b1c844d858c9c5e56ac1ecb28d7660ca0167e"
+    },
+    {
+      "path": "dreaming/hook_double_wiring.py",
+      "sha": "3f8594af38a5ed46632f22ce808eb0b5aa19a464"
+    },
+    {
+      "path": "dreaming/hook_liveness.py",
+      "sha": "0a698142ff4a2854a3cca498b501b17ce48d943f"
+    },
+    {
+      "path": "dreaming/hook_reaper.py",
+      "sha": "a7d63eefbbe0fd8410f937ef8923ce9eadc8cc4a"
+    },
+    {
+      "path": "dreaming/hook_reaper.vbs",
+      "sha": "586a21193081cc178baa4d87314d2c41277676d7"
+    },
+    {
+      "path": "dreaming/hook_seen.py",
+      "sha": "0120ec0ffaa231d5c45b56e0609f9f24562a8a97"
+    },
+    {
+      "path": "dreaming/hookcall.py",
+      "sha": "ed5e30136d3f98eeaee2ca29a329664e8fbc9d6e"
+    },
+    {
+      "path": "dreaming/humanness_check.ps1",
+      "sha": "610f1a78ee55e05373a3ee0223e89ff6618c0b3e"
+    },
+    {
+      "path": "dreaming/humanness_test.md",
+      "sha": "a41f7154acd592c636cb4c4be6274ffefbd07c6c"
+    },
+    {
+      "path": "dreaming/humility_check.py",
+      "sha": "e767f7c8b443664eba9a038e27548c4c536b8b8f"
+    },
+    {
+      "path": "dreaming/incubate.py",
+      "sha": "5fa676ab87b2a548bbbd39172887e328c75cb84c"
+    },
+    {
+      "path": "dreaming/index_drift_check.py",
+      "sha": "de32ea7081a3a6a9b5b3074df3f7f748ec28a3c0"
+    },
+    {
+      "path": "dreaming/index_text.py",
+      "sha": "e76d0a8cb15e83b330fc964e2e2d54e3c75a6a8c"
+    },
+    {
+      "path": "dreaming/instinct_anchors.py",
+      "sha": "4780809d043d85d97fc632eefec49f423465b5a8"
+    },
+    {
+      "path": "dreaming/instinct_cost.py",
+      "sha": "7ed6337f61b7baf59dbf078e1bdf1666b466d74e"
+    },
+    {
+      "path": "dreaming/instinct_prime.py",
+      "sha": "903b3098a66f6d81370ce1fd4de9fbfca1dd14ce"
+    },
+    {
+      "path": "dreaming/instincts.py",
+      "sha": "ae541a3e82e4f8ff71fcd452a6f7fae19f32cf93"
+    },
+    {
+      "path": "dreaming/invoke_secret_scan.ps1",
+      "sha": "e5acff1c761d599be2b043a242840131ff9c3c11"
+    },
+    {
+      "path": "dreaming/job_cycle/job_common.py",
+      "sha": "f5b666b4617b3e06eb42c4ac03f6db1f8ccf3979"
+    },
+    {
+      "path": "dreaming/job_cycle/job_done.py",
+      "sha": "f74fd2152703a9a262b15dc18fda848c24178ca9"
+    },
+    {
+      "path": "dreaming/job_cycle/job_proc.py",
+      "sha": "5c563a27050fc59095653abbd11e7865c9b5374c"
+    },
+    {
+      "path": "dreaming/job_cycle/job_readme.py",
+      "sha": "8be7597b0e4f9238eba97891a43fe578d8d232f7"
+    },
+    {
+      "path": "dreaming/job_cycle/job_reseed.py",
+      "sha": "aac93da04a483cedb797f69576f5b839f9de2355"
+    },
+    {
+      "path": "dreaming/job_cycle/test_handover.py",
+      "sha": "9f50b392f7f44aaea347e8da2cfca0cd19fa191b"
+    },
+    {
+      "path": "dreaming/judge_agenda.py",
+      "sha": "0c96aa3a59dc7221916b179697a972a857ec20d0"
+    },
+    {
+      "path": "dreaming/keep_working_after_compact.py",
+      "sha": "bec49b2c12beae9130b6e0b7448b7960b056686b"
+    },
+    {
+      "path": "dreaming/keep_working_brain.py",
+      "sha": "13e3ba5dcb9a20092ea37d969b536a60f59e73ff"
+    },
+    {
+      "path": "dreaming/keyword_artifacts.py",
+      "sha": "ca36fb2d539df02ffafbe16aadaea9a77e7ce695"
+    },
+    {
+      "path": "dreaming/keyword_corpus_cache.py",
+      "sha": "d6879c70241fac1f82321d1f03be672a16d161e5"
+    },
+    {
+      "path": "dreaming/launch_dream.vbs",
+      "sha": "fdc6540c345140f6732d859bfef605fd394a9574"
+    },
+    {
+      "path": "dreaming/launch_humanness.vbs",
+      "sha": "1b5b1704160dedcf660528033b15f25d6b934398"
+    },
+    {
+      "path": "dreaming/lean_check.py",
+      "sha": "f30c075f1c322836a65f179e080fed6fefaf093b"
+    },
+    {
+      "path": "dreaming/lean_process.py",
+      "sha": "a66275c873fe4be1c0454464426ff469ae9c23ff"
+    },
+    {
+      "path": "dreaming/link_audit.py",
+      "sha": "40ea932e7dc3062dfb303ea6179abadfa571a425"
+    },
+    {
+      "path": "dreaming/literature_extract.py",
+      "sha": "6650300aed4f57d17c62d034d494dc92d9f3671b"
+    },
+    {
+      "path": "dreaming/literature_harvest.py",
+      "sha": "616b299b93c54deb1b5b7fa3592f80a48279e150"
+    },
+    {
+      "path": "dreaming/literature_license.py",
+      "sha": "43cdd7d96f70a3755e473f12ac03115ba32abd81"
+    },
+    {
+      "path": "dreaming/literature_recall.py",
+      "sha": "e389dcb483fded861040c4c2d5e226d6e817557d"
+    },
+    {
+      "path": "dreaming/literature_to_drafts.py",
+      "sha": "52ff6c12bd1b82c1edb5aa973c2c66c95362a7fd"
+    },
+    {
+      "path": "dreaming/live_inbox_hook.py",
+      "sha": "d5f0128cf8d405129b598f61a1b9489c7c2ea656"
+    },
+    {
+      "path": "dreaming/mac_folder_watch.py",
+      "sha": "64676a4d964de09c6b33ff8f65d3a17016b69ef7"
+    },
+    {
+      "path": "dreaming/make_tool_catalog.py",
+      "sha": "9bf7500251cf8ab1d0045003688e5411563c94ad"
+    },
+    {
+      "path": "dreaming/math_answer_closure_selftest.py",
+      "sha": "123fd73d93ce322ffef1f237c7a33b6795c72424"
+    },
+    {
+      "path": "dreaming/math_block_parse.py",
+      "sha": "bbaeeaef357d56ddda8a002ab3e4d474090db886"
+    },
+    {
+      "path": "dreaming/math_brain_regression_gate.py",
+      "sha": "04fefaf4f9fc07a87dc8f0f9db8df010ead2925f"
+    },
+    {
+      "path": "dreaming/math_claim_vecs.py",
+      "sha": "533b855a070e706f4bbf582326790b324ce03386"
+    },
+    {
+      "path": "dreaming/math_coh_common_words.txt",
+      "sha": "b926240c57fd103d2baf79975bb37b24d57f6ff6"
+    },
+    {
+      "path": "dreaming/math_note.py",
+      "sha": "0b2e9709ebc9c659972507da71f49c3ae850bac5"
+    },
+    {
+      "path": "dreaming/math_prefilter.py",
+      "sha": "7ff8ea0c483f71aa7f3119e789e3d1e82c3bfba1"
+    },
+    {
+      "path": "dreaming/math_recall.py",
+      "sha": "9b01e75f105f6e07192128e88b0ebdcf707e1ca3"
+    },
+    {
+      "path": "dreaming/math_recall_prebuild.py",
+      "sha": "076df55c067bfb76e33fef7ddc2634d67e694172"
+    },
+    {
+      "path": "dreaming/math_sense.py",
+      "sha": "29c10ad61f81642094b418aa2dc0af303f975415"
+    },
+    {
+      "path": "dreaming/math_sense_healthcheck.py",
+      "sha": "d0e16fad72ff63d4bc381824ec62ad7233b3bb2e"
+    },
+    {
+      "path": "dreaming/math_sense_ident.py",
+      "sha": "0b7da9712ca0a8f36c030b06d0482161dd8944e5"
+    },
+    {
+      "path": "dreaming/math_sense_live_ident.py",
+      "sha": "113462dd9b78c7203f9447d55ae4ed6de428be83"
+    },
+    {
+      "path": "dreaming/math_strength.py",
+      "sha": "8476ee8fc3aa054dd3c8dad064978bec7584237c"
+    },
+    {
+      "path": "dreaming/math_transport.py",
+      "sha": "b15d641c6009f36c10c5cfa6e62b9d94afa505fa"
+    },
+    {
+      "path": "dreaming/math_walk.py",
+      "sha": "012e76290fd62fdae7905d3f557f1f29a760c6e4"
+    },
+    {
+      "path": "dreaming/measure_candidate_pool.py",
+      "sha": "9973a0828ab8971fbf390a21c0949fdbce60717b"
+    },
+    {
+      "path": "dreaming/measure_mention_fires.py",
+      "sha": "e9fbd39c570eafb72ec729f78913485b46a92f02"
+    },
+    {
+      "path": "dreaming/measure_spread_reach.py",
+      "sha": "b79252258171ce868f609625fed410695aac68f5"
+    },
+    {
+      "path": "dreaming/mechanisms.py",
+      "sha": "240ef1a927a48ec411e1d927b2ebad88b08df1fa"
+    },
+    {
+      "path": "dreaming/memlayer_stage.py",
+      "sha": "096a732fd1ee03f6b0824bfac484d92c66e9abe4"
+    },
+    {
+      "path": "dreaming/memlayer_store_build.py",
+      "sha": "a5d85dea41155bc7d06cde006ae116637c008cfb"
+    },
+    {
+      "path": "dreaming/memlayer_walk_build.sh",
+      "sha": "bfaa626abf89e1a858a83bb86edbeba9305fa86b"
+    },
+    {
+      "path": "dreaming/memory_date.py",
+      "sha": "b8d150914b32cd9a23f0cfaebae27c4e161b0753"
+    },
+    {
+      "path": "dreaming/memory_hub_merge.py",
+      "sha": "f56534d6fff45f05a42fe477799ae2af8d1caf11"
+    },
+    {
+      "path": "dreaming/memory_pull.py",
+      "sha": "07f1adae23d457a40ac265156c6ee3b333a583c8"
+    },
+    {
+      "path": "dreaming/memory_push.py",
+      "sha": "6e0c50436d6726ed537a21ee139b8b743752fff1"
+    },
+    {
+      "path": "dreaming/memory_twoway_sync.py",
+      "sha": "ebcf9b66898c14998890843f042d22b10bd3c059"
+    },
+    {
+      "path": "dreaming/mistake_graph.py",
+      "sha": "7e0eb0295d72421ce55c58218aa779c1e2c1a63a"
+    },
+    {
+      "path": "dreaming/mistake_graph_status.py",
+      "sha": "96991fd1dd0b5c91ff574e80d9f4d2bd8d1a1573"
+    },
+    {
+      "path": "dreaming/mojibake.py",
+      "sha": "9f62eb0e8bf5986d2bf082dab8b9c281770d0f3f"
+    },
+    {
+      "path": "dreaming/moved_facts.py",
+      "sha": "b3fa4c443b9aad77fa4b319bda660ccc04eec0ca"
+    },
+    {
+      "path": "dreaming/neff_characterize.py",
+      "sha": "163fa24acfeb1d0bea204dd89dd2eb749cd3aaa3"
+    },
+    {
+      "path": "dreaming/network/DESIGN.md",
+      "sha": "05cf224fb28819d054964dbd674e553741df8a59"
+    },
+    {
+      "path": "dreaming/network/INTEGRATION_NOTES.md",
+      "sha": "c4c0f1ba4bafc72217c4ca1a0ed519bcdc0e414b"
+    },
+    {
+      "path": "dreaming/network/README.md",
+      "sha": "b88a1fec01df0b570bf0501c0684041d5eff4464"
+    },
+    {
+      "path": "dreaming/network/adapt_live.py",
+      "sha": "e564d18112c6a49ec515d22ddf558f98ade3c8ca"
+    },
+    {
+      "path": "dreaming/network/build_graph.py",
+      "sha": "3422e5eb049f3acbfb1a1bd0e2c5bd74fe1e972f"
+    },
+    {
+      "path": "dreaming/network/calibrate_caution.py",
+      "sha": "0f84c2f22371b77f457315a76b085d3211d5142f"
+    },
+    {
+      "path": "dreaming/network/cascade_rules.py",
+      "sha": "e1935bbacf54892be3203d57cfdece205810f207"
+    },
+    {
+      "path": "dreaming/network/dev_loop_turn.py",
+      "sha": "287597b0cc1ce6ed9ccc77f7fdc4b594b8f10618"
+    },
+    {
+      "path": "dreaming/network/dev_turn_cluster_retrieval.py",
+      "sha": "390ac5f00916a18f3a0af609e76828e51c0fb570"
+    },
+    {
+      "path": "dreaming/network/dream_grow.py",
+      "sha": "991a1f60a2d8f5c5187f7007343876707cfd4838"
+    },
+    {
+      "path": "dreaming/network/episodes.py",
+      "sha": "9ac83aaedcaddf6e537c62b090733dc63ed36916"
+    },
+    {
+      "path": "dreaming/network/eval_replay.py",
+      "sha": "d81f957a58bc7f2c27cb122a96070946d6238947"
+    },
+    {
+      "path": "dreaming/network/fire.py",
+      "sha": "75a834394a2b90391509fe12f0871a0a308e50d4"
+    },
+    {
+      "path": "dreaming/network/firing_audit.py",
+      "sha": "667f196d8b943821009eedf6aded355c3691ca32"
+    },
+    {
+      "path": "dreaming/network/grow.py",
+      "sha": "a2200fd0a7cd5f3289d87605d504764f9148573b"
+    },
+    {
+      "path": "dreaming/network/hook_cascade_fire.py",
+      "sha": "7552f90d95bf8b83005627ce53e41f8131c58978"
+    },
+    {
+      "path": "dreaming/network/hook_network_fire.py",
+      "sha": "87e53d7747bf20a4ab7c2142a74a8e80144803af"
+    },
+    {
+      "path": "dreaming/network/netstore.py",
+      "sha": "5bc27ac7a7acf09b09e8547275c17540d49d87fd"
+    },
+    {
+      "path": "dreaming/network/ppr_local.py",
+      "sha": "716fcbf62e5c82ecfe2711ccfcfe253cf31aaca1"
+    },
+    {
+      "path": "dreaming/network/surprise_rank.py",
+      "sha": "85c992c13214dcbf4ad52b0c8a3b11f904dd2410"
+    },
+    {
+      "path": "dreaming/network/test_network.py",
+      "sha": "671f92d33bf78a332253efdcbf68553505fa2768"
+    },
+    {
+      "path": "dreaming/once_per_context.py",
+      "sha": "b2bc92536c1bea6d905f43ac97eb7c9918b27eee"
+    },
+    {
+      "path": "dreaming/owner_board_hook.py",
+      "sha": "518b2a9831310a57656cbc201098b7c927b4b865"
+    },
+    {
+      "path": "dreaming/owner_context_delivery.py",
+      "sha": "0912a6d384913d59fa855a3a4a54f8e273026195"
+    },
+    {
+      "path": "dreaming/owner_law.py",
+      "sha": "d048659500bd7191c8de9a13613b4c80f53ac0a2"
+    },
+    {
+      "path": "dreaming/owner_prompt_context.py",
+      "sha": "e93a8db693116829aebfb5570b559b729a3ee87d"
+    },
+    {
+      "path": "dreaming/owner_prompt_topics.example.json",
+      "sha": "835d95d9a67bbabec2b39d5a6ccef55e68633e99"
+    },
+    {
+      "path": "dreaming/owner_prompts_brains.py",
+      "sha": "1ade0e98115e428c83928d3a83626c5a7e51d150"
+    },
+    {
+      "path": "dreaming/owner_prompts_hook.py",
+      "sha": "324ddbf33e3a2f59d7cc15726e551821e9d49fa2"
+    },
+    {
+      "path": "dreaming/owner_prompts_hourly.py",
+      "sha": "a0732f78ff8cc1048561569597a780cf4b235626"
+    },
+    {
+      "path": "dreaming/owner_report_contract.py",
+      "sha": "0c64d8f67664fb9293c580c4095990bb0c0a55e4"
+    },
+    {
+      "path": "dreaming/ownvoice_negative_control.py",
+      "sha": "c6be0c63b0197292587f6b7b32d7305887c08184"
+    },
+    {
+      "path": "dreaming/paper_release_guard.py",
+      "sha": "17b91522d24b48e97ee05f6a248ae392a46317da"
+    },
+    {
+      "path": "dreaming/payload_parse_check.py",
+      "sha": "cbd295ae6a04d126c4180a45e33ddb30e2b8471f"
+    },
+    {
+      "path": "dreaming/portable_artifact.py",
+      "sha": "9df2998d1e00986df2f461a8e6d374f4da4ae224"
+    },
+    {
+      "path": "dreaming/posix_proc.py",
+      "sha": "f24121f8bce30eacfe4184c1c99fa98ac469c16f"
+    },
+    {
+      "path": "dreaming/precision_audit.py",
+      "sha": "4618fd47aa55780dd54c8ddd18c9c122fe533f04"
+    },
+    {
+      "path": "dreaming/predict.py",
+      "sha": "a5e367d377011cc214ee48aeba7778509af0bcda"
+    },
+    {
+      "path": "dreaming/prediction_calibration_check.py",
+      "sha": "cfea926de821c35d5a83caf317c9950061ee053d"
+    },
+    {
+      "path": "dreaming/prepush_secret_gate.py",
+      "sha": "90ddfc48e17d46b1c881f8a6c22159048664811f"
+    },
+    {
+      "path": "dreaming/primary_hook.py",
+      "sha": "016abbc2ef811108ed7db26db2ccbdb7f998faa4"
+    },
+    {
+      "path": "dreaming/probe_candidate_spread.py",
+      "sha": "c96a00ece5cf1c91ac0565494c518beee4d662e2"
+    },
+    {
+      "path": "dreaming/problem_recall.py",
+      "sha": "6cf309704c86739f03dac890c3d22b9075d1d151"
+    },
+    {
+      "path": "dreaming/project_memory/README.md",
+      "sha": "c5ee744e0e045c969c3df25c2b094a505d8b86a7"
+    },
+    {
+      "path": "dreaming/project_memory/__init__.py",
+      "sha": "dae2de4b3db6417c72840063f02d35ee5c131656"
+    },
+    {
+      "path": "dreaming/project_memory/classify.py",
+      "sha": "6f9250529bcf12060a196557abe09897595754ce"
+    },
+    {
+      "path": "dreaming/project_memory/clauses.py",
+      "sha": "b190f930c40864f9f9686e584ed08fa53b34a123"
+    },
+    {
+      "path": "dreaming/project_memory/drift.py",
+      "sha": "084592279c1ac39a5089e8a0081d7f634951f22f"
+    },
+    {
+      "path": "dreaming/project_memory/hook.py",
+      "sha": "7140b3f134aaa188e2a3f823f454992429413d37"
+    },
+    {
+      "path": "dreaming/project_memory/hot_cache.py",
+      "sha": "d4e568c737ebc1fe38a65d4a5b72bf4ec186c1c4"
+    },
+    {
+      "path": "dreaming/project_memory/hourly_runner.py",
+      "sha": "c3de847f73a6aadc9bfa43c7e03fdc925d59e176"
+    },
+    {
+      "path": "dreaming/project_memory/project_memory.example.json",
+      "sha": "164affc767c3af7ff00f121f6300ba6c42afcb10"
+    },
+    {
+      "path": "dreaming/project_memory/reclassify.py",
+      "sha": "42839a00ea6419e3e85cffdf54ad0ad7a2f2fb0b"
+    },
+    {
+      "path": "dreaming/project_memory/review.py",
+      "sha": "5a415793d7d54a6e6483d343f6f74f43cfa25024"
+    },
+    {
+      "path": "dreaming/project_memory/schema.sql",
+      "sha": "51e835ecba2719a2f2a4b4e07b77e4e2a76be74c"
+    },
+    {
+      "path": "dreaming/project_memory/sources.py",
+      "sha": "0e7bf3b4637520db7d43de03c26b82ba4232a3fb"
+    },
+    {
+      "path": "dreaming/project_memory/store.py",
+      "sha": "067e1588d8218fb09550ccc8349ab3ca42b6c0d5"
+    },
+    {
+      "path": "dreaming/project_memory/tests/__init__.py",
+      "sha": "7c652510eb17d367179c84e5ecda51b0a6bd86c8"
+    },
+    {
+      "path": "dreaming/project_memory/tests/test_project_memory.py",
+      "sha": "44055aa60e36bde9547c4a193eae1088f6a598ad"
+    },
+    {
+      "path": "dreaming/project_memory_cli.py",
+      "sha": "b84f81c7ecacc1046626665773e66bd5a91eefe7"
+    },
+    {
+      "path": "dreaming/project_memory_hook.py",
+      "sha": "49299fd8af1b690a82e1dbc50e4baee84291ff8c"
+    },
+    {
+      "path": "dreaming/project_memory_hot_hook.py",
+      "sha": "4fe7098698dde632d47d38d8eab68659acb1c02a"
+    },
+    {
+      "path": "dreaming/prompt_archive.py",
+      "sha": "7f1043dd1340b083a53882641ac9c4cd993d5547"
+    },
+    {
+      "path": "dreaming/prompt_origin.py",
+      "sha": "e239e183c1393eafb9d32f2ea8c5a54917e1471a"
+    },
+    {
+      "path": "dreaming/proof_deny_hook.py",
+      "sha": "0b6af9d1db6cdfe36c7c26a3c5461814ebceb2ab"
+    },
+    {
+      "path": "dreaming/proof_receipt.py",
+      "sha": "da36e1504785fdc0672eca6eef04a31cd64e7399"
+    },
+    {
+      "path": "dreaming/proof_sense.py",
+      "sha": "31b923e21ba9263869adf43960d84ac290eea0d2"
+    },
+    {
+      "path": "dreaming/property_order.py",
+      "sha": "f46967ce350330eeceeb7a8a0c10cffd6c1eb7a3"
+    },
+    {
+      "path": "dreaming/prune_embedding_generations.py",
+      "sha": "1faad26ec8fce610de290045eeb9e53d8b16f000"
+    },
+    {
+      "path": "dreaming/ps1_guard.py",
+      "sha": "ffae223885517538b922c37c8f502e24b82aa075"
+    },
+    {
+      "path": "dreaming/publish_memory_embeddings.py",
+      "sha": "a8be2311e0720b9272484fa1b95483ed580de430"
+    },
+    {
+      "path": "dreaming/push_paths.sh",
+      "sha": "e587583b3e3634a682e1edb289ddf53cda562d7c"
+    },
+    {
+      "path": "dreaming/push_paths_api.py",
+      "sha": "f37667bc78fea2ff02225b19ed2a71ebda611c6c"
+    },
+    {
+      "path": "dreaming/push_paths_gitdata.py",
+      "sha": "2bf637ff2d4ab45b5e0611799a959ee3554fcd6e"
+    },
+    {
+      "path": "dreaming/push_reminder.log",
+      "sha": "a3955921f8eeab0277f4b383ed19537b6f46ddbd"
+    },
+    {
+      "path": "dreaming/push_reminder.py",
+      "sha": "30db39b40da11173357b5e3da6e696d7392725f5"
+    },
+    {
+      "path": "dreaming/query_embed.py",
+      "sha": "896b2eaca903fd9a8cd91d45e5c819dca9ed91f2"
+    },
+    {
+      "path": "dreaming/query_embed_proc.py",
+      "sha": "2a3ddd214c940b65ac6a98a7f15ea3d36ee5bfea"
+    },
+    {
+      "path": "dreaming/reactivation.py",
+      "sha": "daf5bc5464b08eba2afece42fcd175f1d48b44f9"
+    },
+    {
+      "path": "dreaming/read_trace.py",
+      "sha": "0c347516d2eedeb16b690c587657a518f13e591b"
+    },
+    {
+      "path": "dreaming/reality_monitor.py",
+      "sha": "157a47dffa7829f035bdd17952411e8f7e26f0aa"
+    },
+    {
+      "path": "dreaming/recall_acronyms.json",
+      "sha": "291a3a51f8d2305912813e34676aef13763ea318"
+    },
+    {
+      "path": "dreaming/recall_client.py",
+      "sha": "3364136766ae0146de2a4815cb5aa88b1d02429c"
+    },
+    {
+      "path": "dreaming/recall_generation_receipt.py",
+      "sha": "83ab3ad28e8c4fc8860a191d8bb39df870a140c3"
+    },
+    {
+      "path": "dreaming/recall_keeper.py",
+      "sha": "85c7a2e58f7afc3826bd1b0966c3793c6fa19dea"
+    },
+    {
+      "path": "dreaming/recall_levers.py",
+      "sha": "8f23ce549d9546ca93885db72799de6c36f4ca97"
+    },
+    {
+      "path": "dreaming/recall_or.py",
+      "sha": "6e46092cd1c68c54b28efae5a7345a6cdab51803"
+    },
+    {
+      "path": "dreaming/recall_policy.json",
+      "sha": "c6ed372569ee3a7054cc768251ad678f16d23f3f"
+    },
+    {
+      "path": "dreaming/recall_policy_regression.py",
+      "sha": "ceda67e0dd87cc1231274a61268f830dabe0a5e2"
+    },
+    {
+      "path": "dreaming/recall_protocol.py",
+      "sha": "0dafc7c5d24f56eb2817ea1913c11ad983ae2e6e"
+    },
+    {
+      "path": "dreaming/recall_rewrite.py",
+      "sha": "eca685e8aa581f604618b096b3c0cba734939926"
+    },
+    {
+      "path": "dreaming/recall_server.py",
+      "sha": "a6a4fa996d5199da984d3148a5425a5893763ad6"
+    },
+    {
+      "path": "dreaming/reconsolidate.py",
+      "sha": "86b433aacfd1ec464ad5ea56210b9db4fc22caa9"
+    },
+    {
+      "path": "dreaming/referee_forward_feed_precision.py",
+      "sha": "dc9628d48e16107c75a975a5f2514c240dffc9d8"
+    },
+    {
+      "path": "dreaming/referee_hook_failsafe.py",
+      "sha": "afef7c8a3377205549b0c72bd84a74333590b135"
+    },
+    {
+      "path": "dreaming/referee_mention_block.py",
+      "sha": "17bdd00e749a5beebef833c9504960601f2336a7"
+    },
+    {
+      "path": "dreaming/referee_mention_fix_proto.py",
+      "sha": "db01cc8a40e6d4f735c705ac7cb666581a339a75"
+    },
+    {
+      "path": "dreaming/referee_staged_build.py",
+      "sha": "f6475676b5fbc9f25104b4bb97ba1c89dbd337b7"
+    },
+    {
+      "path": "dreaming/referee_suite.py",
+      "sha": "378cdd5b0705ced1e45403790af0ee8e48399019"
+    },
+    {
+      "path": "dreaming/reflex_audit.py",
+      "sha": "5d47567755cc648fc3c4f02f04b2792d4ff27b5e"
+    },
+    {
+      "path": "dreaming/reflex_metafamilies.py",
+      "sha": "69050ab854b8a6f2e3b09f5af1987b099757bb3d"
+    },
+    {
+      "path": "dreaming/reflex_precision.py",
+      "sha": "56d4d549faed684508aa85ffb65511d17590e1b2"
+    },
+    {
+      "path": "dreaming/registry_freshness_canary.py",
+      "sha": "3cda955682e3436d98c026a2d61858b9f29697df"
+    },
+    {
+      "path": "dreaming/registry_refresh.py",
+      "sha": "f20d37a0880fe88694720fae2ff801656c99069e"
+    },
+    {
+      "path": "dreaming/relabel_synthetic_sessions.py",
+      "sha": "5e1a4bce557ea9f47ead4fe9bb98b73c65bcd066"
+    },
+    {
+      "path": "dreaming/rem_watch.ps1",
+      "sha": "5c5577e7dbd1963e0e06037d8747ee3341afed05"
+    },
+    {
+      "path": "dreaming/remember_from_json.py",
+      "sha": "52befff6213057d7b18e1e33542eae8523cb609e"
+    },
+    {
+      "path": "dreaming/remember_index.py",
+      "sha": "9e9b860fc5cfa8ed9be48767358be6a194bcdbe1"
+    },
+    {
+      "path": "dreaming/repair_dangling_links.py",
+      "sha": "cb6418acf52b838cd9b3d3527d8e3eac903ae520"
+    },
+    {
+      "path": "dreaming/repair_ledger_mojibake.py",
+      "sha": "4b25a0624cc2812e1900619e42896478abd1ece1"
+    },
+    {
+      "path": "dreaming/replay_schedule_shadow.py",
+      "sha": "9313e0c829794de73fd6dd2f286f54c3574de805"
+    },
+    {
+      "path": "dreaming/replay_text_form.py",
+      "sha": "5631dbb9d1c31404476c8baa941007539da004e8"
+    },
+    {
+      "path": "dreaming/replay_walk_harness.py",
+      "sha": "ee532084e71a4a5d67515b26c875ae8854f3626f"
+    },
+    {
+      "path": "dreaming/report_guards_hook.py",
+      "sha": "4e532f29402f1407cb9a33b91dfe77b2db3f9149"
+    },
+    {
+      "path": "dreaming/restart_handoff_hook.py",
+      "sha": "e3aac72f2e386f34106f6993be686e01a7eb1a96"
+    },
+    {
+      "path": "dreaming/resume_checkpoint.py",
+      "sha": "79295208b3374b449f19ecf198c1df84014aca9f"
+    },
+    {
+      "path": "dreaming/retraction_guard.py",
+      "sha": "ee7825e37c857e8fa18bc360887a1383ef2e18e5"
+    },
+    {
+      "path": "dreaming/reversion_horizon.py",
+      "sha": "29179243fb6df47748c3ce8e471a881626c870e9"
+    },
+    {
+      "path": "dreaming/rotate_logs.py",
+      "sha": "54ffab3679ab3f4bfbdcc5ef740c3066ea4725a3"
+    },
+    {
+      "path": "dreaming/row_resync.py",
+      "sha": "7faea5522f42453aa9aa1e9217637f1eddb91641"
+    },
+    {
+      "path": "dreaming/run_bounded.py",
+      "sha": "730968b0d81c4b5981e8094fb413540a77654839"
+    },
+    {
+      "path": "dreaming/run_dream.ps1",
+      "sha": "8d11820359604b5b478cb95c23154288a3c98928"
+    },
+    {
+      "path": "dreaming/run_dream.py",
+      "sha": "b123a9a4971c9e1dc90801510bc78a0d21b506fc"
+    },
+    {
+      "path": "dreaming/runtime.py",
+      "sha": "6bd98452b075b1ae5a89f8d929697087c1035d6d"
+    },
+    {
+      "path": "dreaming/safe_push.py",
+      "sha": "a5c047488f219ca458a20cafb9109728492eafc6"
+    },
+    {
+      "path": "dreaming/salience.py",
+      "sha": "bd4a2e6fe089a2d717e4feac25ef162fa00019ec"
+    },
+    {
+      "path": "dreaming/scan_secrets.py",
+      "sha": "743b716a48aa8bfca9a816f059bdc237f125e879"
+    },
+    {
+      "path": "dreaming/schema_extract.py",
+      "sha": "ada3a81640bc56ac47d31ca90506e43ea136a3b5"
+    },
+    {
+      "path": "dreaming/schema_supersede.py",
+      "sha": "3d62a0826f241b75f345e8cf8a3a973cbb7067a0"
+    },
+    {
+      "path": "dreaming/server_safety.py",
+      "sha": "ed5bda81724fc42f807160cf4dc6bc3e861d3cad"
+    },
+    {
+      "path": "dreaming/shadow_deny_status.py",
+      "sha": "bc26e0da326fa084c0e2ee406dc3965c8a5b150f"
+    },
+    {
+      "path": "dreaming/shard_prompt_archive.py",
+      "sha": "389168e6ff591165e35f4479104d230721741839"
+    },
+    {
+      "path": "dreaming/shared_edit_collision_hook.py",
+      "sha": "82924b814d0731847703d7568cd2781258ea571a"
+    },
+    {
+      "path": "dreaming/shared_read.py",
+      "sha": "3e9ac52fb309297c1d4b6df48b28376ba43bbe0c"
+    },
+    {
+      "path": "dreaming/sidecar_refresh/README.md",
+      "sha": "12328d199c5e47ae54da64db3d52b5bda27c5493"
+    },
+    {
+      "path": "dreaming/sidecar_refresh/sidecar_refresh.ps1",
+      "sha": "021eeb2602b79103a0d919e9e019b885e9c6576a"
+    },
+    {
+      "path": "dreaming/sidecar_refresh/sidecar_refresh_launcher.vbs",
+      "sha": "7f9673c08f65acb0732098b2828a9e1475e89b46"
+    },
+    {
+      "path": "dreaming/sliced_scan_push.py",
+      "sha": "2cab43ac9bc12ee30a92ecb90bb481b7a7500c44"
+    },
+    {
+      "path": "dreaming/slow_probe.py",
+      "sha": "ed83e727185f2ddca5b59c3da8de6040f6269e0a"
+    },
+    {
+      "path": "dreaming/slow_sense.py",
+      "sha": "5c888c92af37bb9bbb93e9e6bba6e73a53a20518"
+    },
+    {
+      "path": "dreaming/slow_sense_selftest.py",
+      "sha": "9c1b374650081950413fc6e007a7d2c56f29f67c"
+    },
+    {
+      "path": "dreaming/sourced_memory.py",
+      "sha": "673ae020a86517ede6ff0270788fc4b998551ca9"
+    },
+    {
+      "path": "dreaming/split_big_commit.py",
+      "sha": "c65f64e7746efef49b3c330ca3164fb024f7f0a1"
+    },
+    {
+      "path": "dreaming/spread.py",
+      "sha": "e0f2491c14b50588e0b74df1883b304830b1c05a"
+    },
+    {
+      "path": "dreaming/spread_client.py",
+      "sha": "196ca86b79f700c3dd01bce2214f3fda1d20a0c6"
+    },
+    {
+      "path": "dreaming/spread_recall.py",
+      "sha": "2e9426b273974d51200d443d67ed4dfa46bf95fb"
+    },
+    {
+      "path": "dreaming/spread_server.py",
+      "sha": "60eaf1cf75bfce4b21bcd8d52bf7d87a6e3a14c6"
+    },
+    {
+      "path": "dreaming/stream_integrity.py",
+      "sha": "104b6e165233fd0d864916510628b01bd6dc09c6"
+    },
+    {
+      "path": "dreaming/strong_node_watch.py",
+      "sha": "b28e990ee0817e2d2daa842fe772d74d2a22da97"
+    },
+    {
+      "path": "dreaming/suggest_links.py",
+      "sha": "fedbafd445338fb26f883ed851479b7062bc236f"
+    },
+    {
+      "path": "dreaming/suggest_orphan_links.py",
+      "sha": "b1fe34f60e61b0ce4c53f1e09e962053709af8d1"
+    },
+    {
+      "path": "dreaming/summary_hook.py",
+      "sha": "aeb1256c9748b4244e6af87040167abe85ea9361"
+    },
+    {
+      "path": "dreaming/supersession.py",
+      "sha": "a5d011c212778af7c45460b8984d5598eef4c3a7"
+    },
+    {
+      "path": "dreaming/supersession_cascade.py",
+      "sha": "faa4f2e75731273eae8c4f4c663794454aed55cd"
+    },
+    {
+      "path": "dreaming/tag_transient.py",
+      "sha": "5e0933bc3ec27ff92e3909e84f13ea59f6de4d4d"
+    },
+    {
+      "path": "dreaming/task_checklist_hook.py",
+      "sha": "30257ba8e2a7a27b0812b2b690fbb4c3db1ebb9b"
+    },
+    {
+      "path": "dreaming/task_checklist_merge.py",
+      "sha": "64149e2925ff4a297e14cae51f0c3b76b78d2b7c"
+    },
+    {
+      "path": "dreaming/test_aliases.py",
+      "sha": "8c49ea6d9791ac7cda3beaeb0f886396ad3e3eef"
+    },
+    {
+      "path": "dreaming/test_anchor_rule.py",
+      "sha": "eee307e5633e0a71445ce9f06436076f203e9125"
+    },
+    {
+      "path": "dreaming/test_anchors_4_5_possessive.py",
+      "sha": "09d69cca684267cfe046d1a037c135ae056befee"
+    },
+    {
+      "path": "dreaming/test_answer_after_result.py",
+      "sha": "6cb01ca5d3f3e6298948b01cfd854b29b3f81091"
+    },
+    {
+      "path": "dreaming/test_append_journal.py",
+      "sha": "6e9b624437653c3b9373b0e69ca88f1e46c0a3d0"
+    },
+    {
+      "path": "dreaming/test_attachment_isolation.py",
+      "sha": "a1214a021360b509de997e94d4e941c925521531"
+    },
+    {
+      "path": "dreaming/test_block_cov.py",
+      "sha": "62e07225ac62af3507ecd01e6bc59ad61308cf24"
+    },
+    {
+      "path": "dreaming/test_brain_call_sampler.py",
+      "sha": "4c33b96e47eae3c894e45e094db972b8bdeba254"
+    },
+    {
+      "path": "dreaming/test_brain_emb_lazy_scope.py",
+      "sha": "f15675be7970cb0214ea8210671bbf961218efd6"
+    },
+    {
+      "path": "dreaming/test_brain_recall_liveness.py",
+      "sha": "6eddbda6ed1837ecec36ae6eb9386470877cb88d"
+    },
+    {
+      "path": "dreaming/test_brain_syn.py",
+      "sha": "5ae132f1ab42ab174e4c21243a58160c8813c2bc"
+    },
+    {
+      "path": "dreaming/test_canonical_route_gate_cache.py",
+      "sha": "b01f48052feba348a60ae29012d09fe031f6ec26"
+    },
+    {
+      "path": "dreaming/test_cli_same_result.py",
+      "sha": "19495958e6c0b6734180b73e0e886c8999f8b8ad"
+    },
+    {
+      "path": "dreaming/test_coactivation_partition.py",
+      "sha": "e580cc270d12d5553f492a2da3d3efefae0fcb70"
+    },
+    {
+      "path": "dreaming/test_codex_manual_compact.py",
+      "sha": "097a6983469b3459c205e3afcdb5223dc0977766"
+    },
+    {
+      "path": "dreaming/test_codex_opaque_boundary.py",
+      "sha": "1cbbb2a2d704cd25f5c1fe7fa8ac5a11de4138e4"
+    },
+    {
+      "path": "dreaming/test_codex_reflex_hook.py",
+      "sha": "c57d94609b4a22ea22bd77012536d3a4f5a69381"
+    },
+    {
+      "path": "dreaming/test_codex_sweep_identity.py",
+      "sha": "68c2b1dec82f692df422c938cc06a870b83e383b"
+    },
+    {
+      "path": "dreaming/test_coherence_cut.py",
+      "sha": "bff867d651c11cc19a9884c0c9817486f2e0b126"
+    },
+    {
+      "path": "dreaming/test_compact_nodes_agent.py",
+      "sha": "c4a1a486a3b6c074dc7b86b2d30acfa576f7c6fb"
+    },
+    {
+      "path": "dreaming/test_compact_nodes_overlay_vectors.py",
+      "sha": "3f9bea5ffd81491a89b13548f4c9a7c2ecd70781"
+    },
+    {
+      "path": "dreaming/test_correction_ingestion_status.py",
+      "sha": "e757ff2a4382410508873c2f338c1d0af0e363dd"
+    },
+    {
+      "path": "dreaming/test_cov_agree.py",
+      "sha": "3f72cc768904fa9eeecfe23d490f9fd55aec244d"
+    },
+    {
+      "path": "dreaming/test_cover_eps.py",
+      "sha": "9756408bf528789aae9b480a88c26c87c6bddae4"
+    },
+    {
+      "path": "dreaming/test_ctail_mem_scope.py",
+      "sha": "a4db1d2347d6864a90c5c1ac16c11ce86b126ead"
+    },
+    {
+      "path": "dreaming/test_curated_label_subqueries.py",
+      "sha": "3f685ed53e545344e180f5cc398c204845841389"
+    },
+    {
+      "path": "dreaming/test_dedup_per_context.py",
+      "sha": "7a9a3138b31849793c6ce7475f130530d276a2e7"
+    },
+    {
+      "path": "dreaming/test_dispatch_decisions.py",
+      "sha": "9480d925082cc0c82e591e8cbd82cd1ea1607132"
+    },
+    {
+      "path": "dreaming/test_dispatch_top_level.py",
+      "sha": "aba2970b8ffccc01b43d67441304082b286723bf"
+    },
+    {
+      "path": "dreaming/test_dream_tree_replay.py",
+      "sha": "4149050f253cb1db7972f76ebb847f40a9ae7635"
+    },
+    {
+      "path": "dreaming/test_emb_lever.py",
+      "sha": "3ac407c9eda614d1076cb3ab2a651093a760e299"
+    },
+    {
+      "path": "dreaming/test_enum_min_share.py",
+      "sha": "b463ce35b1ca14fa615520c9de3df69be52cde74"
+    },
+    {
+      "path": "dreaming/test_exact_name.py",
+      "sha": "cd751378f9921a7b463e745d66797aecbd974438"
+    },
+    {
+      "path": "dreaming/test_exp_letter.py",
+      "sha": "dff1045814b0d52bbd0d1e5062d5aab78c414228"
+    },
+    {
+      "path": "dreaming/test_far_block_z.py",
+      "sha": "d1d971c8d786dc71484cb0fc8166ad88276a431c"
+    },
+    {
+      "path": "dreaming/test_fastrecall_pins.py",
+      "sha": "5470a2c0d53f3fdd1bdde30dbb681411bbab0108"
+    },
+    {
+      "path": "dreaming/test_fastrecall_rebuilt_store.py",
+      "sha": "500f9b2c869cda8bf69c94dabadefc357c3d67c3"
+    },
+    {
+      "path": "dreaming/test_fc_sup_memo_and_corpus_rows.py",
+      "sha": "4473125e5e0ca00b7e986dae001a31f9430909d1"
+    },
+    {
+      "path": "dreaming/test_ff_precision.py",
+      "sha": "f8fcb0649c58e20adaad9ce9b3bd81cc964bb62a"
+    },
+    {
+      "path": "dreaming/test_fleet_board_lazy_urllib.py",
+      "sha": "6d3142ce881051cef403edce15b7625d95df44d8"
+    },
+    {
+      "path": "dreaming/test_fleet_inbox_seen.py",
+      "sha": "89c59b78053d0a5f3d52f049923f2cb86c86c459"
+    },
+    {
+      "path": "dreaming/test_flow_sentinel.py",
+      "sha": "f4b8dbcf51f5c02261bd798eded181844bacbed4"
+    },
+    {
+      "path": "dreaming/test_foresight_dated.py",
+      "sha": "87abb07fbd633602ede59d5755975be9230a7435"
+    },
+    {
+      "path": "dreaming/test_foresight_mistakes_cache.py",
+      "sha": "9aab18e2ba409dd9569175258cb99704613a6207"
+    },
+    {
+      "path": "dreaming/test_generic_only.py",
+      "sha": "1af5f5f20418a8ae31ee988d22be0c0ae11d5c42"
+    },
+    {
+      "path": "dreaming/test_global_idf.py",
+      "sha": "46bc0e47f2e4bef50e1ea47a73315b792d3747b0"
+    },
+    {
+      "path": "dreaming/test_hard_deadline.py",
+      "sha": "2a5fbe1b041a7661bbb0be748aa8569b0d6e2f37"
+    },
+    {
+      "path": "dreaming/test_headless_budget.py",
+      "sha": "de4a12013b117b48b33a328e8b00338d3dcacf0c"
+    },
+    {
+      "path": "dreaming/test_help_flag_is_inert.py",
+      "sha": "062a5fa00cef62f2f2abaa527988a8f8b480e96e"
+    },
+    {
+      "path": "dreaming/test_hook_liveness_judge_hint.py",
+      "sha": "4e7c7f80552c94de40d03c7d159c6a053759ac9e"
+    },
+    {
+      "path": "dreaming/test_hook_stdin_utf8.py",
+      "sha": "9feedbec2bf298a8508d17b941aada5fbb069af9"
+    },
+    {
+      "path": "dreaming/test_hookcall.py",
+      "sha": "a4deffa29f0c1fe5fa2dab2569624747b70332c7"
+    },
+    {
+      "path": "dreaming/test_ident_kw_lift.py",
+      "sha": "204e7cb54f9e57fb9514517c68d63f047fbfaf04"
+    },
+    {
+      "path": "dreaming/test_instinct_exact_clauses_cache.py",
+      "sha": "dec4b5e45c653668dec686b596186351d15742d4"
+    },
+    {
+      "path": "dreaming/test_judge_agenda.py",
+      "sha": "d0a3510fd544ce4af838cf49fdcbae0128160e45"
+    },
+    {
+      "path": "dreaming/test_judge_reasons.py",
+      "sha": "b941be9c70bdba68669153e71695a6daff003030"
+    },
+    {
+      "path": "dreaming/test_judge_window_seek.py",
+      "sha": "af64600a634b576b323786bf53774c15373ea218"
+    },
+    {
+      "path": "dreaming/test_keyword_corpus_cache.py",
+      "sha": "6799a1f6c7b3d80c0ac3725da74e27e231b5ec2a"
+    },
+    {
+      "path": "dreaming/test_latex_accents.py",
+      "sha": "317574d97dd243d5aa5b0920f35cbdf46b0d7471"
+    },
+    {
+      "path": "dreaming/test_lead_filter.py",
+      "sha": "e986628f5f2a5265b89ab292cd7560315a788dad"
+    },
+    {
+      "path": "dreaming/test_linked_rival.py",
+      "sha": "c06a248668109a5ed56609e83e1f73ac1f7d86df"
+    },
+    {
+      "path": "dreaming/test_marshal_memo.py",
+      "sha": "0036deca36890f9adafb756e1c61309657344cc0"
+    },
+    {
+      "path": "dreaming/test_matched_terms.py",
+      "sha": "e4612ccba9b393634f683541f3e0c9476f446f7a"
+    },
+    {
+      "path": "dreaming/test_math_note_fetch_log.py",
+      "sha": "0512f50a1def2208b198dc43ba3484561f747466"
+    },
+    {
+      "path": "dreaming/test_math_recall_on_demand_posix.py",
+      "sha": "d1246d11edbf2dfd48bb2e2ad16cac5a95f77293"
+    },
+    {
+      "path": "dreaming/test_math_recall_server_posix.py",
+      "sha": "bdbf84a964b0511de43efdcc083abeabfbfe95dc"
+    },
+    {
+      "path": "dreaming/test_memory_hub_merge.py",
+      "sha": "da8e44adc7dc282e53f919998130b0ecf5b4440d"
+    },
+    {
+      "path": "dreaming/test_memory_pull.py",
+      "sha": "b823313afe73e8c9528400c6727d6fbede278971"
+    },
+    {
+      "path": "dreaming/test_memory_push.py",
+      "sha": "1b1db6f537d50992abc2317c365348ba55ee4937"
+    },
+    {
+      "path": "dreaming/test_memory_twoway_sync.py",
+      "sha": "5dc567b7eb1dc0775778ff8737417fd74fc33175"
+    },
+    {
+      "path": "dreaming/test_merge_dedup.py",
+      "sha": "167006ef05e295d5d4e90ac651af166a0cffd229"
+    },
+    {
+      "path": "dreaming/test_mesh_literal_dollar.py",
+      "sha": "ce4112a55fcb5b5810f8aa55dcdec181f3038a47"
+    },
+    {
+      "path": "dreaming/test_mistake_graph_dated.py",
+      "sha": "5f96bd2b8bbb88b9e29dbfba0446026bb8a3d061"
+    },
+    {
+      "path": "dreaming/test_named_kind.py",
+      "sha": "e968e312f2493fe672e86bd5a686371328761726"
+    },
+    {
+      "path": "dreaming/test_named_slots.py",
+      "sha": "9eefa07cfe698df15299b1d103c5eaf31c37b08a"
+    },
+    {
+      "path": "dreaming/test_named_title.py",
+      "sha": "48762127b14cd0227b513cc08a5c0532054526e3"
+    },
+    {
+      "path": "dreaming/test_nonmath_gate.py",
+      "sha": "d80fd067ad92a48f5f4de8b2c6457fbdd83d8874"
+    },
+    {
+      "path": "dreaming/test_once_per_context.py",
+      "sha": "2673b86969093fa40d2cdcb02a02544155f39f38"
+    },
+    {
+      "path": "dreaming/test_or_tables_once.py",
+      "sha": "d4328f505feaf273045a3090e979b8061680433b"
+    },
+    {
+      "path": "dreaming/test_origin_hint.py",
+      "sha": "9828b0f87187190fd27db685033161a34fa1f4be"
+    },
+    {
+      "path": "dreaming/test_owner_board_text_streams.py",
+      "sha": "f3fa0573c2a316674d65f0930f275480467b808a"
+    },
+    {
+      "path": "dreaming/test_piped_gate_guard.py",
+      "sha": "945a0d5f2c88d05a52775185ba4020a2167fa701"
+    },
+    {
+      "path": "dreaming/test_pitfall_lines.py",
+      "sha": "b515f10c2836f42f2ffb83f25419bffed22f7a32"
+    },
+    {
+      "path": "dreaming/test_postings_lock.py",
+      "sha": "2f69727c0847205044c10860fa9421ece664a889"
+    },
+    {
+      "path": "dreaming/test_precision_gate.py",
+      "sha": "15976ae580aa46ebf78d1e7e340d8f8fb5a8d682"
+    },
+    {
+      "path": "dreaming/test_prefilter_fresh.py",
+      "sha": "08013e05440821a2b7d009b21179a3f75be22f88"
+    },
+    {
+      "path": "dreaming/test_prefilter_sidecars.py",
+      "sha": "4d8349d3c6f5652aa3032c1c5192eb4b1e049608"
+    },
+    {
+      "path": "dreaming/test_prepush_new_ref.py",
+      "sha": "8e82b5a3e16d46c420d2c0e79182a37dbc629b70"
+    },
+    {
+      "path": "dreaming/test_program_anchors.py",
+      "sha": "f9cf367d6e740a8527b61f3778541daf6991bd7f"
+    },
+    {
+      "path": "dreaming/test_prompt_archive_line_breaks.py",
+      "sha": "bfc8b584bfb1db83a5158508ebeccd9db381f37d"
+    },
+    {
+      "path": "dreaming/test_proof_sense_silent_cache.py",
+      "sha": "96b09748acfd5c087268ba18b3b475aea88363ce"
+    },
+    {
+      "path": "dreaming/test_proof_text.py",
+      "sha": "f8716911dfbe196335d1de6e624ede362c679d3f"
+    },
+    {
+      "path": "dreaming/test_push_paths_gitdata.py",
+      "sha": "54cee79cf6fbbb76978b121d6220a1f8c5beb43d"
+    },
+    {
+      "path": "dreaming/test_push_reminder_once.py",
+      "sha": "c62dbaddf91f3c8ec4c6146d871472c09442f043"
+    },
+    {
+      "path": "dreaming/test_push_with_resync_lease.py",
+      "sha": "a539c2560ca745e47dc77da20d6d767af78e4756"
+    },
+    {
+      "path": "dreaming/test_python_dash_guard.py",
+      "sha": "3613882b7240e83a0e0241bf41c654b108974c98"
+    },
+    {
+      "path": "dreaming/test_qpart.py",
+      "sha": "e76982712ff60d17965a0ec902936cc06d05f656"
+    },
+    {
+      "path": "dreaming/test_quote_cov.py",
+      "sha": "ce2e42fb7b4b9506d1f2c3dac4dc97c4f13ff21a"
+    },
+    {
+      "path": "dreaming/test_quote_name_exempt.py",
+      "sha": "22404f928f07742ad8298bf8c7ae00f7ce9645de"
+    },
+    {
+      "path": "dreaming/test_recall_attractor.py",
+      "sha": "80a0a050d51dc523cf900d93014850e59489f0c0"
+    },
+    {
+      "path": "dreaming/test_recall_display_floor.py",
+      "sha": "e46d21457c27a0894ae561baa4e197039c6a11be"
+    },
+    {
+      "path": "dreaming/test_recall_id_seeds.py",
+      "sha": "779565cbfd9f65f28784b30d57d842770f5971bd"
+    },
+    {
+      "path": "dreaming/test_recall_levers.py",
+      "sha": "588c67bbd7bc866e9c598b6467f2ace0dbcaeed6"
+    },
+    {
+      "path": "dreaming/test_recall_server_bm25_stay.py",
+      "sha": "d5f7d63eef7b165cee521850048c1b944324481f"
+    },
+    {
+      "path": "dreaming/test_recall_server_late_import_watch.py",
+      "sha": "ff36b7ae5bd9030f6bdfb9dc24d5a12f0f521585"
+    },
+    {
+      "path": "dreaming/test_recall_server_lock_posix.py",
+      "sha": "f65bbfc84dadb4ee854396c9c2063a7e4888703a"
+    },
+    {
+      "path": "dreaming/test_recall_server_pf_field.py",
+      "sha": "0f10574c96d748af8932c11404c98d99b8ce8ce9"
+    },
+    {
+      "path": "dreaming/test_recall_server_read_doc_memo.py",
+      "sha": "fcdb371638bff5e29595343b80212ba16c0c4f7d"
+    },
+    {
+      "path": "dreaming/test_recall_server_session_env.py",
+      "sha": "9e30e94f434a86e830915a722f75841db22451a5"
+    },
+    {
+      "path": "dreaming/test_recall_server_warm_every_start.py",
+      "sha": "43113b61932d4bbd92bbdc1d6967bfa441a0db73"
+    },
+    {
+      "path": "dreaming/test_reflex_commit_after_emit.py",
+      "sha": "4ee356edf1d9e11d019061f31b4645cbc38880c1"
+    },
+    {
+      "path": "dreaming/test_reflex_precision_paths.py",
+      "sha": "2ff1303971e2cb29a71802fbc8f938941cec38d4"
+    },
+    {
+      "path": "dreaming/test_refusal_kwargs.py",
+      "sha": "95e8bd847f344cda21d9992d300f98875f672247"
+    },
+    {
+      "path": "dreaming/test_relay_skip.py",
+      "sha": "c061c2fcdeac0a638a0aecbb04871df8e895b6d1"
+    },
+    {
+      "path": "dreaming/test_repeat_silence_memo.py",
+      "sha": "4d9327354d5d71d9a6e61a408d10e939f55dd9cf"
+    },
+    {
+      "path": "dreaming/test_repeat_skip.py",
+      "sha": "0ec225d47c4027abecc1cdf4564707a70b34e40a"
+    },
+    {
+      "path": "dreaming/test_reset_state.py",
+      "sha": "f291795f11c18691ebec519f6d278767e9ac16bd"
+    },
+    {
+      "path": "dreaming/test_resident_listing_mac_idle.py",
+      "sha": "ffb05f4595bdec3387fb71dd0a1e10348c07cdf3"
+    },
+    {
+      "path": "dreaming/test_review_reads.py",
+      "sha": "c15c99ad8e925825d4c1c1f9de8f7168f0731ccf"
+    },
+    {
+      "path": "dreaming/test_revision_edge.py",
+      "sha": "b94c84e3473442490cdc2c4475b74c192a678e34"
+    },
+    {
+      "path": "dreaming/test_rigor_hook.py",
+      "sha": "49cbe52bdfcc8f5fde8cdb66d0819f1c74abbabf"
+    },
+    {
+      "path": "dreaming/test_run_dream_heavy_wait.py",
+      "sha": "a898788bd4b0451b2c37a5f9cdcf22bd6a1cd8ab"
+    },
+    {
+      "path": "dreaming/test_run_dream_pm_defer.py",
+      "sha": "b8a7e33340edc817789fbc2de1e408250dc24d35"
+    },
+    {
+      "path": "dreaming/test_runindex_sync.py",
+      "sha": "e49f699fe7a6ea70c427a5c53ac4b6e9b1f78afb"
+    },
+    {
+      "path": "dreaming/test_same_result.py",
+      "sha": "e6019951be0cf5f54de4fbdff1f3a099a6c73e31"
+    },
+    {
+      "path": "dreaming/test_scan_secrets_bearer.py",
+      "sha": "1a9977b7b9db92f883db112534d397119b260ed0"
+    },
+    {
+      "path": "dreaming/test_scan_secrets_citekeys.py",
+      "sha": "0b5a0ca4be1857db778a3b0f6466fae73e6670a5"
+    },
+    {
+      "path": "dreaming/test_scan_secrets_sk_slugs.py",
+      "sha": "36e21e1b0b400eab8dd1ed565b294721df49fe1c"
+    },
+    {
+      "path": "dreaming/test_served_archive.py",
+      "sha": "2246415bc5d295ae39d6e2f57b5f2f38943f4e52"
+    },
+    {
+      "path": "dreaming/test_session_context.py",
+      "sha": "29e48005e6b6d4bd59a961b7f69c5bf8cfc5fb97"
+    },
+    {
+      "path": "dreaming/test_shadow.py",
+      "sha": "b2cdfccb2f7102ebca4f5d7d7d3014ad63d92c8b"
+    },
+    {
+      "path": "dreaming/test_sibling_rival.py",
+      "sha": "597f7b412378d44494acceb154d5cf3f357411b4"
+    },
+    {
+      "path": "dreaming/test_signal_db_load.py",
+      "sha": "b138a349f4fb7d3bf6b5defcaf087362072f6f8f"
+    },
+    {
+      "path": "dreaming/test_split_big_commit.py",
+      "sha": "c5284e3fd4cc7a0d8c3244062f64991d8022b9f5"
+    },
+    {
+      "path": "dreaming/test_spread_call_cost.py",
+      "sha": "257cb4fbee9173352532465e467f1ff1ccce4acf"
+    },
+    {
+      "path": "dreaming/test_spread_df_memo.py",
+      "sha": "ba24779551f06879e96cd767885babbf07905263"
+    },
+    {
+      "path": "dreaming/test_spread_df_vocab.py",
+      "sha": "a57b7bfd9a1602b2cc956245248cd69c98295d34"
+    },
+    {
+      "path": "dreaming/test_spread_held_names.py",
+      "sha": "2316676fda3cdd8ba993b0af2752c0ea9bbf5a49"
+    },
+    {
+      "path": "dreaming/test_spread_stale_bm25.py",
+      "sha": "2c0e6367905ffdc0d72b945fb4f8295a9d9c6d5c"
+    },
+    {
+      "path": "dreaming/test_status_tag_trailing.py",
+      "sha": "bbdcf6ae8cd71c75141f62fbb0fed286ffafaa3d"
+    },
+    {
+      "path": "dreaming/test_subq_coh_guard.py",
+      "sha": "99278bb18d78abd66c5c58192eceee8b6e905e52"
+    },
+    {
+      "path": "dreaming/test_subq_off.py",
+      "sha": "37095c468a9b6bcb8e103fd75cff84f076eadd40"
+    },
+    {
+      "path": "dreaming/test_sup_base_folder_cache.py",
+      "sha": "9ada3905c01f7f28d6a0d8da3b8048482cbba15e"
+    },
+    {
+      "path": "dreaming/test_sup_quiet_named_edit.py",
+      "sha": "7eff13d61d952b041c1c39778536889d93cd015d"
+    },
+    {
+      "path": "dreaming/test_supersession_identity.py",
+      "sha": "979fdb61820ad833da3cccbd8f5097212dee146a"
+    },
+    {
+      "path": "dreaming/test_supersession_producers.py",
+      "sha": "0e4c1cf9ca16a66c99513f2b9107595183d21f4f"
+    },
+    {
+      "path": "dreaming/test_supersession_qualified_pointer.py",
+      "sha": "2bca75af2c768c32293e4309229a853e2b63b0bd"
+    },
+    {
+      "path": "dreaming/test_supersession_route_cache.py",
+      "sha": "57b371bf41ad89d10d261e8db87f25117d42ee49"
+    },
+    {
+      "path": "dreaming/test_supersession_target_existence.py",
+      "sha": "f630d8f2c29413c36073459ac2dd5230f8ee9464"
+    },
+    {
+      "path": "dreaming/test_suppressed_log_failure.py",
+      "sha": "97508c4d75d929131d6a653ae0493bf9ece11ad7"
+    },
+    {
+      "path": "dreaming/test_task_checklist_fresh_install.py",
+      "sha": "97d868e44ed65e3a4f9c74a6c6d43e105481bc0f"
+    },
+    {
+      "path": "dreaming/test_task_checklist_save_bytes.py",
+      "sha": "154e7612748664812e2b8d2eb01d60bd5b411ac6"
+    },
+    {
+      "path": "dreaming/test_title_dedup_fold.py",
+      "sha": "b13068d0662039f61608e99d309fb68fda0df37e"
+    },
+    {
+      "path": "dreaming/test_title_twins.py",
+      "sha": "64107ba851bfda82cd8d2897c9ffeea79059433f"
+    },
+    {
+      "path": "dreaming/test_typo_fix.py",
+      "sha": "12652a186ac4836ff60c2191ba3213684def1a24"
+    },
+    {
+      "path": "dreaming/test_unserved_kinds.py",
+      "sha": "57adf69a33eba4436736e8bd4a708eea17c3bd07"
+    },
+    {
+      "path": "dreaming/test_use_layer.py",
+      "sha": "d81b7673da400594f432034a4826399a2bdd6cbb"
+    },
+    {
+      "path": "dreaming/test_user_site.py",
+      "sha": "bc5bcc382a069a6e40801476df24b17b7489ad97"
+    },
+    {
+      "path": "dreaming/test_verdict_gate.py",
+      "sha": "761dc35eed86d888eb252dca8d031de1a53d279a"
+    },
+    {
+      "path": "dreaming/test_verify_dispatch.py",
+      "sha": "5b16a7b450b442e482daee60d61077dd5cc50777"
+    },
+    {
+      "path": "dreaming/test_verify_hooks.py",
+      "sha": "eb83c0cb2365a8805882bb0fd537f99862ca7cee"
+    },
+    {
+      "path": "dreaming/test_verify_replay_compat.py",
+      "sha": "b31f261e43c0a2d14a45c155224d706534ca06ae"
+    },
+    {
+      "path": "dreaming/test_vouch.py",
+      "sha": "2940a869924ef16be08cff19e0432b5cda8067bc"
+    },
+    {
+      "path": "dreaming/test_walk_speedups.py",
+      "sha": "3eeec86ca246754977823bfa26dd14884ec533bf"
+    },
+    {
+      "path": "dreaming/test_waste_sense_once.py",
+      "sha": "8c247c0061d0c3b3b125f892f230befb5bc28817"
+    },
+    {
+      "path": "dreaming/transactive_index.py",
+      "sha": "2da09237d0a850ca3b5b8c11dd05fa9200e69075"
+    },
+    {
+      "path": "dreaming/trigger_rewrites.json",
+      "sha": "937e5c2d0a3ec2575f430e0edb0fc5d8e96bb4b7"
+    },
+    {
+      "path": "dreaming/type_backfill.py",
+      "sha": "16d21b0aa0948e89a7b9ecc60035b51d25152f35"
+    },
+    {
+      "path": "dreaming/usage_watch.py",
+      "sha": "857a10d3fa65eccdee8a46046c0658c1853e1815"
+    },
+    {
+      "path": "dreaming/verdict_from_rows.py",
+      "sha": "f292f96e9cc6580bda64678751f4f82973191aca"
+    },
+    {
+      "path": "dreaming/verify_gate.py",
+      "sha": "0d7a3cd6d10caf5e0cc0089e2e10dd5555b2ad12"
+    },
+    {
+      "path": "dreaming/verify_mirror.py",
+      "sha": "747936f44298f68f230e2fb69a383f4619d1a559"
+    },
+    {
+      "path": "dreaming/verify_ops.py",
+      "sha": "bf9bfeda3301e19c607529cb23655a64ec41c86d"
+    },
+    {
+      "path": "dreaming/verify_replay.py",
+      "sha": "e8b31795dc4b018657658b3662206f9b71f690e9"
+    },
+    {
+      "path": "dreaming/verify_sense.py",
+      "sha": "2e9deda84d6eb4caa4f448dec982159b6bacd851"
+    },
+    {
+      "path": "dreaming/voice_guard_hook.py",
+      "sha": "3fa1d4fc8d97d2520abca0b2d412e5d97bac2b9b"
+    },
+    {
+      "path": "dreaming/wake_cached.py",
+      "sha": "f7f24c137f57af588853cdf0d8ba4a5ba9287da9"
+    },
+    {
+      "path": "dreaming/waste_sense.py",
+      "sha": "8420ba9a183ab5029dac2a19a375038a7b71b4be"
+    },
+    {
+      "path": "dreaming/window_witness.py",
+      "sha": "66e9f1c74ea90c25cd3bfd24213804333bc96206"
+    },
+    {
+      "path": "dreaming/work_timer.py",
+      "sha": "3aaef6cf81ed7c39682aa0dfa379090ad49ce3b2"
+    },
+    {
+      "path": "filmbrain/README.md",
+      "sha": "e19b514494ab8898ad802a7dd5c0451d43394665"
+    },
+    {
+      "path": "filmbrain/craft/anchors.py",
+      "sha": "182d2417132b66b0b0fc41630706045b4f06eebc"
+    },
+    {
+      "path": "filmbrain/craft/animation_story.py",
+      "sha": "32e5110bcf4212df722bf0ba40ae9b3fa6c49632"
+    },
+    {
+      "path": "filmbrain/craft/assets_sourcing.py",
+      "sha": "8e31d136d7200e55e0dd38891b76d924bb1e807e"
+    },
+    {
+      "path": "filmbrain/craft/camera.py",
+      "sha": "45dad9d6579e8d6ec6b7cc37a75eca4bc632dbe7"
+    },
+    {
+      "path": "filmbrain/craft/editing_sound.py",
+      "sha": "4e84c98e3bc5740bd27caaaef52e6cb3d5f7947c"
+    },
+    {
+      "path": "filmbrain/craft/explainer_graphics.py",
+      "sha": "2b329eae4d6853c6d9322596f1cace52b27243a5"
+    },
+    {
+      "path": "filmbrain/craft/gotchas.py",
+      "sha": "12e69c55a813779be9b44f35c447e85cddf58a76"
+    },
+    {
+      "path": "filmbrain/craft/lecture_geometry.py",
+      "sha": "118ba1493f6e59d084f5d7ec138f2a5a690f9bcd"
+    },
+    {
+      "path": "filmbrain/craft/light_color.py",
+      "sha": "fba7aa66c329611f736922483100f4eb073aa252"
+    },
+    {
+      "path": "filmbrain/craft/lived_completion.py",
+      "sha": "3480cf24cadeaf595dd514e217b71982befee33e"
+    },
+    {
+      "path": "filmbrain/craft/looks_reference.py",
+      "sha": "be46cf4065ebc1be6ceb6862dda74b05ebcdbe42"
+    },
+    {
+      "path": "filmbrain/craft/making_and_publishing.py",
+      "sha": "aee670e970987c096079396d16ae89f0a7395a0e"
+    },
+    {
+      "path": "filmbrain/craft/narration.py",
+      "sha": "1aa37403a4c5d2592f033b1f6a50fc4b84359951"
+    },
+    {
+      "path": "filmbrain/craft/pipeline_ai.py",
+      "sha": "ef6ed2a62041eb8ddea49edc9d024bffb3873bd9"
+    },
+    {
+      "path": "filmbrain/craft/recipes.py",
+      "sha": "2f34c80d5ed7f027889b8659b2fbd2e4419ae95f"
+    },
+    {
+      "path": "filmbrain/craft/sound_music.py",
+      "sha": "741aa5762b46935ddaaa0f5de82de4f78d613ef5"
+    },
+    {
+      "path": "filmbrain/craft/symptoms.py",
+      "sha": "cf4fa24a820d4cfeedad0fdac0d798b38c21a76a"
+    },
+    {
+      "path": "filmbrain/craft/symptoms2.py",
+      "sha": "cecde511110c5684d109fb5a52b085ad94cce656"
+    },
+    {
+      "path": "filmbrain/craft/this_machine.py",
+      "sha": "0de0bb4e05c45aab1cdb392ac4701f802c9f2c41"
+    },
+    {
+      "path": "filmbrain/craft/tools_free.py",
+      "sha": "a7a7000ee36875049b43648d7d7d3fc6a002fa96"
+    },
+    {
+      "path": "filmbrain/fb_store.py",
+      "sha": "94fdb3799eddc7971d2ce194bf079cccecd14c3f"
+    },
+    {
+      "path": "filmbrain/fbnew.py",
+      "sha": "d63b260f716dd93bfb30fef111e0a5c9d5648653"
+    },
+    {
+      "path": "filmbrain/fbplan.py",
+      "sha": "db92a3647bffd0f4f6e2067af3e765255f6e2e86"
+    },
+    {
+      "path": "filmbrain/fbrun.py",
+      "sha": "1505053c9f7c4b32d23433a2f7b253663f1a3900"
+    },
+    {
+      "path": "filmbrain/filmbrain.py",
+      "sha": "5cb2ee32070c2e696a9b895e6065be60c8b1a518"
+    },
+    {
+      "path": "filmbrain/ingest/blender_probe.py",
+      "sha": "7143581b69c36b9e2e93bfcf51b3a27a8b8681a1"
+    },
+    {
+      "path": "filmbrain/ingest/harvest_ffmpeg.py",
+      "sha": "8c771738293a0fa5b8736ffbb44483a5680ecbd0"
+    },
+    {
+      "path": "filmbrain/ingest/ingest_blender.py",
+      "sha": "e1c39023f6531390bdf68aaad7e5984b60888a2d"
+    },
+    {
+      "path": "filmbrain/ingest/ingest_videoquality_0906.py",
+      "sha": "17fe66e0672dedb1827bae087cd248160cafb98b"
+    },
+    {
+      "path": "filmbrain/ingest/link_craft_to_tools.py",
+      "sha": "5675253d8187b469c9ee27d04844669f75284ed0"
+    },
+    {
+      "path": "filmbrain/ingest/load_craft.py",
+      "sha": "3c831bf70347e0981664c210fb569e947955f8f0"
+    },
+    {
+      "path": "filmbrain/pipeline/beatfilm.py",
+      "sha": "655e39eb0d4c35fb66d63e03ab0c43b845e7ff79"
+    },
+    {
+      "path": "filmbrain/pipeline/make_timeline.py",
+      "sha": "482b15c01e3ec50b0ab65979a0cc1ec02d54e1c7"
+    },
+    {
+      "path": "filmbrain/pipeline/visuals.py",
+      "sha": "e0b756c08f0896f0935df4e8b11498b7de872970"
+    },
+    {
+      "path": "filmbrain/selftest.py",
+      "sha": "473e8fa7289e4c960665bac4d98c01faba642e19"
+    },
+    {
+      "path": "filmbrain/tools/INVENTORY.json",
+      "sha": "f54f9dd3738924a05debbecb156ed4910d8197c0"
+    },
+    {
+      "path": "filmbrain/tools/fetch_msi_peruser.py",
+      "sha": "a85fdb1b3d205ed60999f70b043726028d78c46c"
+    },
+    {
+      "path": "filmbrain/tools/fetch_portable.py",
+      "sha": "8e7b09d48597108e8b1d82a972de3ca683829171"
+    },
+    {
+      "path": "filmbrain/tools/install_round2.ps1",
+      "sha": "3452180ab0dd5f5e29735977eba68172678080bd"
+    },
+    {
+      "path": "filmbrain/tools/install_tools.ps1",
+      "sha": "6e1b49092466116befcdb938c8383faa6a2bccdf"
+    },
+    {
+      "path": "filmbrain/tools/verify_tools.py",
+      "sha": "8ba7267f45b97e34bccac16cf216060498d72f76"
+    },
+    {
+      "path": "filmbrain/video_brain/DASHBOARD.md",
+      "sha": "ebb3277beb16e253e2d2b838297932d85142140e"
+    },
+    {
+      "path": "filmbrain/video_brain/DELIVERY_SCHEMA.md",
+      "sha": "00b448c031f0f898e7978d7dcce335ae55b49bab"
+    },
+    {
+      "path": "filmbrain/video_brain/HANDBOOK.md",
+      "sha": "073f3cdc7523d155bc8c507f5a47645520936284"
+    },
+    {
+      "path": "filmbrain/video_brain/README.md",
+      "sha": "ad36e25ca1aba7a1af70d9ec818b07507180897c"
+    },
+    {
+      "path": "filmbrain/video_brain/STATUS.json",
+      "sha": "02290087dde523e06b495b67576310472b8cb0a6"
+    },
+    {
+      "path": "filmbrain/video_brain/catalog.py",
+      "sha": "0ae16fdc372b4eec974ab8360178e0fdecdf51ff"
+    },
+    {
+      "path": "filmbrain/video_brain/knowledge.json",
+      "sha": "28269065fbb831982241ac7cef53eb61bcd572b8"
+    },
+    {
+      "path": "filmbrain/video_brain/modules/compute.md",
+      "sha": "8bbceffea6442e5df07493c9a69a44a8f7ed22fb"
+    },
+    {
+      "path": "filmbrain/video_brain/modules/delivery.md",
+      "sha": "16eed97c9c67e4afbe836daa19f1654ee19af953"
+    },
+    {
+      "path": "filmbrain/video_brain/modules/design.md",
+      "sha": "4f1a275caed881a3a7b2175d5a227377102981c2"
+    },
+    {
+      "path": "filmbrain/video_brain/modules/geometry.md",
+      "sha": "29c8a1a298091ec4aeb78dfad01063627c6e342b"
+    },
+    {
+      "path": "filmbrain/video_brain/modules/intent.md",
+      "sha": "b5d15a47b0da2861aa59e3c32958041184bb5b8c"
+    },
+    {
+      "path": "filmbrain/video_brain/modules/learning.md",
+      "sha": "8ced665cd392dc17a4fda798fbd4e4ddfe8087d7"
+    },
+    {
+      "path": "filmbrain/video_brain/modules/review.md",
+      "sha": "ef3ba46f8ca6744327d8a1e74e7dc365412c77dc"
+    },
+    {
+      "path": "filmbrain/video_brain/modules/story.md",
+      "sha": "12ce99502f8314be372597c9642af0cc0eba91fa"
+    },
+    {
+      "path": "filmbrain/video_brain/modules/timing.md",
+      "sha": "bcfbc8681bb4fb2a0ee33b06199e9ace84b8a742"
+    },
+    {
+      "path": "filmbrain/video_brain/modules/voice.md",
+      "sha": "2aa1a515336d624dfbd011ceb8e79c71458c501c"
+    },
+    {
+      "path": "filmbrain/video_brain/templates/README.md",
+      "sha": "84181fd5dfdd87624ca41f89115b7552472a2e86"
+    },
+    {
+      "path": "filmbrain/video_brain/templates/documentary.json",
+      "sha": "6caee4966bab85d4b9795ab21d2b606866b9af01"
+    },
+    {
+      "path": "filmbrain/video_brain/templates/lecture.json",
+      "sha": "f779264d4d25a86d30afbc7a9968a5384a3f91e7"
+    },
+    {
+      "path": "filmbrain/video_brain/video_brain.py",
+      "sha": "b88df66704b7ef8f9c842d76ae5e7c73c5f07a85"
+    },
+    {
+      "path": "fleet/FLEET_CONTROL.md",
+      "sha": "0f5a8886ccac57b15eda56b162be6c807231587e"
+    },
+    {
+      "path": "fleet/PROMPTING.md",
+      "sha": "5c5c973789a735e85af2f64924209132a5521920"
+    },
+    {
+      "path": "fleet/README.md",
+      "sha": "92b30d82a1e3da11e96409714008265460270912"
+    },
+    {
+      "path": "fleet/RECOVERY_CARD.md",
+      "sha": "e47e96e3661208b036cb5adb35d8ec1274f64f4d"
+    },
+    {
+      "path": "fleet/agentA/README.md",
+      "sha": "aee54bb71bee75c9ce757d66f70813c89ac1c284"
+    },
+    {
+      "path": "fleet/agentA/launch_agentA.vbs",
+      "sha": "acf1246dab1beacbc4f18a2a6f8791690bc366fb"
+    },
+    {
+      "path": "fleet/agentA/run_one.ps1",
+      "sha": "7ed2170d1c8148f8c842efd5348357825c14289c"
+    },
+    {
+      "path": "fleet/agentA/spin_up_agentA.ps1",
+      "sha": "1039fea5ff61a0a72a8fb23b888b0c2becc855e8"
+    },
+    {
+      "path": "fleet/agentA/start_agentA.ps1",
+      "sha": "1760458078c05df23d91d6245fff1bbfcb797e71"
+    },
+    {
+      "path": "fleet/agentA/status_agentA.ps1",
+      "sha": "428a983456caeab429495ca0863b66580014e9a7"
+    },
+    {
+      "path": "fleet/agentA/stop_agentA.ps1",
+      "sha": "8e68781feef1f921df3cc0d67497b15ae6cfba01"
+    },
+    {
+      "path": "fleet/autorecover.ps1",
+      "sha": "e49cc1122710081e52dbda362b54e07a31f0d39b"
+    },
+    {
+      "path": "fleet/autorecover.vbs",
+      "sha": "fa9674714d5e9543e9c415f20d75bd985f44b052"
+    },
+    {
+      "path": "fleet/bringup_A.ps1",
+      "sha": "b7679c04800e60016ec85609330d800e99848203"
+    },
+    {
+      "path": "fleet/console.py",
+      "sha": "18d32d02efe07323da725109d82b9a0f745437e1"
+    },
+    {
+      "path": "fleet/fleet_learn.py",
+      "sha": "8c64b12392916000e08ed868394a8abdcb5fa290"
+    },
+    {
+      "path": "fleet/health.py",
+      "sha": "1f5f9609024e52285387fecbca9804dc0f7d5023"
+    },
+    {
+      "path": "fleet/killall.ps1",
+      "sha": "fc036acf8791de6cde1109bb7728abd3f7b966fc"
+    },
+    {
+      "path": "fleet/launch_one.ps1",
+      "sha": "f610d82674de71b536da8b0c1a39d343a0a60004"
+    },
+    {
+      "path": "fleet/mailbox_hook.py",
+      "sha": "96ee2cfcba63250aac5c05d93353ba339540e2bf"
+    },
+    {
+      "path": "fleet/mesh_mail/MAIL_DISCIPLINE.md",
+      "sha": "36f3cc4e3cdcf31cd8bf9ec2678689f133394b13"
+    },
+    {
+      "path": "fleet/mesh_mail/ack_sweep.py",
+      "sha": "1ecae4aeca02b1c1db9c19d8d1eac835e9bf7d80"
+    },
+    {
+      "path": "fleet/mesh_mail/triage.py",
+      "sha": "8f237483644802bc9f6e0dae7bf37dadecab1841"
+    },
+    {
+      "path": "fleet/nudge.py",
+      "sha": "fb16641acdf11900aa50ec49af7bad0a58a3b429"
+    },
+    {
+      "path": "fleet/push_all.py",
+      "sha": "8661ec596bebdc10d9f30dbd5253d9b9d28b6e1a"
+    },
+    {
+      "path": "fleet/reconcile.py",
+      "sha": "52c9c636cecfe624bbade0061ad9f732abcf3630"
+    },
+    {
+      "path": "fleet/register.ps1",
+      "sha": "f90ed583f0e175b14d52b39302592ac722fbe4c2"
+    },
+    {
+      "path": "fleet/registry_hygiene.py",
+      "sha": "28b1a7e500ef95bda9104955642b4fd522601458"
+    },
+    {
+      "path": "fleet/relaunch.ps1",
+      "sha": "1093bbafa5a25b76f4665006c2a771858140a027"
+    },
+    {
+      "path": "fleet/roster_A.py",
+      "sha": "4c342caaadd41c1e35ba401f71d5fd5a2f580005"
+    },
+    {
+      "path": "fleet/selftest.ps1",
+      "sha": "aee71481d7eb59fb1f22122de8b40dba77aa37a0"
+    },
+    {
+      "path": "fleet/selftest_consolidation.py",
+      "sha": "341e8fe5b462d559f5d6ad686a93baa028994fcd"
+    },
+    {
+      "path": "fleet/snapshot_modes.ps1",
+      "sha": "75e6ee77e8ec44e216c86d19a471ec0aefc8c34f"
+    },
+    {
+      "path": "fleet/status.ps1",
+      "sha": "35292d22892df526ec4ffabc86858c0920147a8e"
+    },
+    {
+      "path": "fleet/substance.py",
+      "sha": "054da2d9531449e556dd40afcce145853e906c76"
+    },
+    {
+      "path": "fleet/supervisor/README.md",
+      "sha": "859e23b16174bdaa76ec6ce832c13a06d98cbd83"
+    },
+    {
+      "path": "fleet/supervisor/install_task.ps1",
+      "sha": "90c60e81cd5eec39cebe26db5ab3e8865421a893"
+    },
+    {
+      "path": "fleet/supervisor/integration_probe.py",
+      "sha": "29215c4b4ec1024a7395e2cc3a628f78c71be651"
+    },
+    {
+      "path": "fleet/supervisor/launch_supervisor.vbs",
+      "sha": "279555aa130b19fcf1f72ecf48186aa29c14b838"
+    },
+    {
+      "path": "fleet/supervisor/manifest.json",
+      "sha": "12934e5a42808d748d4b545656cd4d79fb6713c1"
+    },
+    {
+      "path": "fleet/supervisor/supervisor.py",
+      "sha": "2c7f00f36a36dd2d5773c01ab6f4ba9bf84bcb91"
+    },
+    {
+      "path": "fleet/supervisor/tests/test_supervisor.py",
+      "sha": "4183a75487d81fe5fad4d2043cd4125e4e04dd58"
+    },
+    {
+      "path": "fleet/wake_after_limit.ps1",
+      "sha": "7e296f2c4d8189ac0f443922fd88705e9b5c0a65"
+    },
+    {
+      "path": "fleet/wake_after_limit.vbs",
+      "sha": "1d06defdab16102793adf97a09b526a62c7b69db"
+    },
+    {
+      "path": "fleet/watch/fleet_watch.py",
+      "sha": "93c9b9a8e42748f8e7f7ca63802ec967defa6e87"
+    },
+    {
+      "path": "governor/COMPUTE_DOCTRINE.md",
+      "sha": "8019cf2ed7afb203775227cb3851fe29e877500e"
+    },
+    {
+      "path": "governor/README.md",
+      "sha": "179ae9274385770e9290370985fdf446bed25dbd"
+    },
+    {
+      "path": "governor/azure/compute-sentinel.service",
+      "sha": "f0a1d3cea11b63b1ae4eae3969bd55bea60e4239"
+    },
+    {
+      "path": "governor/azure/compute-sentinel.timer",
+      "sha": "96e9b290003806edf555153bb789291c6f85852f"
+    },
+    {
+      "path": "governor/azure/compute_sentinel.py",
+      "sha": "51516346605f1f06b70fdee722adab62c773d8ac"
+    },
+    {
+      "path": "governor/azure/research.slice",
+      "sha": "5b77411fa4e6f4939863f88dc147f89637366a3b"
+    },
+    {
+      "path": "governor/azure/tests/test_compute_contract.ps1",
+      "sha": "f760c80aaa645f97329715e55c7736547d4bd96a"
+    },
+    {
+      "path": "governor/azure/tests/test_compute_sentinel.py",
+      "sha": "39754e3da871bf4a13dea07a1b1be72c212de9aa"
+    },
+    {
+      "path": "governor/azure_access/bootstrap_nsg_selfheal.ps1",
+      "sha": "acfb83beb1e1cd13bf04924923c686bf8ee77728"
+    },
+    {
+      "path": "governor/azure_access/refresh_box_access.ps1",
+      "sha": "395a90fbada90e4f889311f22ca4f56e42a71a9c"
+    },
+    {
+      "path": "governor/azure_poll.ps1",
+      "sha": "efb26e6911fd3d8547f7528e680ef40e23881eb7"
+    },
+    {
+      "path": "governor/compute_governor.ps1",
+      "sha": "4484b7a9ed0133861b2e35ca1c74521b9c0520cb"
+    },
+    {
+      "path": "governor/compute_governor_posix.py",
+      "sha": "388168179fca90e9516318e531d2d67266aa29b4"
+    },
+    {
+      "path": "governor/governor_alive_check.ps1",
+      "sha": "d2d498a245d12e6434196a144bb1e33a5d807782"
+    },
+    {
+      "path": "governor/install_compute_governor.ps1",
+      "sha": "56ba9efe829993a7ea8841e4af5183afa1908a5c"
+    },
+    {
+      "path": "governor/launch_alive_check.vbs",
+      "sha": "50c4ead526606c4bc7c253dee998ca3d6f8ecf36"
+    },
+    {
+      "path": "governor/launch_compute_governor.vbs",
+      "sha": "b1780cfcb1acc31ca8d5241bf4f9a1e1e959648a"
+    },
+    {
+      "path": "governor/mesh_broadcast.py",
+      "sha": "1ec1b1f3ba39451d35cf0c390dab23a88e126a99"
+    },
+    {
+      "path": "governor/tests/test_compute_governor_posix.py",
+      "sha": "85db9c873120cfcff09c861f2a89068fa822dd30"
+    },
+    {
+      "path": "governor/tests/test_live_process_filter.ps1",
+      "sha": "c4c9f2a02c23edfaaf0d2679a08f23862e2716b3"
+    },
+    {
+      "path": "governor/tests/test_local_commit_pressure.ps1",
+      "sha": "78d57113fc1446c83ebd8e5be62335377b9573e9"
+    },
+    {
+      "path": "governor/uninstall_compute_governor.ps1",
+      "sha": "a15eac94864adde4b153e72f4e231fd0be907922"
+    },
+    {
+      "path": "hooks/README.md",
+      "sha": "641ad712ab62920f48738e65b00c9c10a18dc238"
+    },
+    {
+      "path": "hooks/brain_startup.template.md",
+      "sha": "27b3651d18e5975597173474bc27ed3a98b5bbe4"
+    },
+    {
+      "path": "hooks/commands/checklist.md",
+      "sha": "a649aa9a4cc29492dd20e11278dca0beb79efa5c"
+    },
+    {
+      "path": "hooks/commands/connect.md",
+      "sha": "e1f6354ec76e7c35eaea434e9484a56a09a7d62c"
+    },
+    {
+      "path": "hooks/commands/don't.md",
+      "sha": "12f115ec2f7761fc0fd4d6333902d9bd1310f1aa"
+    },
+    {
+      "path": "hooks/commands/dont.md",
+      "sha": "12f115ec2f7761fc0fd4d6333902d9bd1310f1aa"
+    },
+    {
+      "path": "hooks/commands/dream.md",
+      "sha": "c71311bc8e33ce8eb433f3d66884763281b674f5"
+    },
+    {
+      "path": "hooks/commands/high.md",
+      "sha": "782f9397cc17a9edebce36004b26b6acba45b8f7"
+    },
+    {
+      "path": "hooks/commands/seen.md",
+      "sha": "f0d9e8ce622667127a4e1d615e02b324d724ccf9"
+    },
+    {
+      "path": "hooks/hooks.codex.template.json",
+      "sha": "0a42fdc23ff9b79ae259cd8be6db7585d97dc10f"
+    },
+    {
+      "path": "hooks/settings.hooks.flat.template.json",
+      "sha": "01fb74e84d7d7da0f2f549098321e730f1a5f812"
+    },
+    {
+      "path": "hooks/settings.hooks.template.json",
+      "sha": "d7dd4e04a3e94fd78683ca3f1c05c3ae10bea6bc"
+    },
+    {
+      "path": "hooks/wake_brain.py",
+      "sha": "9d0000f5caf07a888a23d298f799b434a36632ff"
+    },
+    {
+      "path": "hooks/wake_brain.template.ps1",
+      "sha": "05a69e78ccef63a1023881ea910c1ee22621ab09"
+    },
+    {
+      "path": "manifests/build_tools/build_brain_architecture.py",
+      "sha": "9657017734e07627e88bd2af9b0d81d3b9ed4358"
+    },
+    {
+      "path": "manifests/required_files.json",
+      "sha": "a6caf9cd97b5c711e4ab43f2258799e18d99cb72"
+    },
+    {
+      "path": "mathbrain/.github/workflows/ci.yml",
+      "sha": "ed9d4b0aaa9fbe920b0b7303cfa32bba0e7ace96"
+    },
+    {
+      "path": "mathbrain/.gitignore",
+      "sha": "1d067f914d6cbba54640d3a0f42ac6ffef252449"
+    },
+    {
+      "path": "mathbrain/AGENTS.md",
+      "sha": "1a41014b2ac82a8e93bc1f93c747bb56fe3c75e6"
+    },
+    {
+      "path": "mathbrain/README.md",
+      "sha": "e10d765db62cfc57e7adf303433b189f0e946bdb"
+    },
+    {
+      "path": "mathbrain/association/DESIGN.md",
+      "sha": "05cf224fb28819d054964dbd674e553741df8a59"
+    },
+    {
+      "path": "mathbrain/association/README.md",
+      "sha": "1bb977d2879a6560a3ea352f7da0db4fff63f7f7"
+    },
+    {
+      "path": "mathbrain/association/adapt_live.py",
+      "sha": "e564d18112c6a49ec515d22ddf558f98ade3c8ca"
+    },
+    {
+      "path": "mathbrain/association/build_graph.py",
+      "sha": "3422e5eb049f3acbfb1a1bd0e2c5bd74fe1e972f"
+    },
+    {
+      "path": "mathbrain/association/dream_grow.py",
+      "sha": "bd7009a284e68a25bdedac02c8f9c457a9a9227c"
+    },
+    {
+      "path": "mathbrain/association/episodes.py",
+      "sha": "9ac83aaedcaddf6e537c62b090733dc63ed36916"
+    },
+    {
+      "path": "mathbrain/association/eval_replay.py",
+      "sha": "d81f957a58bc7f2c27cb122a96070946d6238947"
+    },
+    {
+      "path": "mathbrain/association/fire.py",
+      "sha": "a8accf08d4b959cf43938c0a6e379877fb6bd358"
+    },
+    {
+      "path": "mathbrain/association/grow.py",
+      "sha": "2063313c3659dacd50380ddfa1b6eec2e4427525"
+    },
+    {
+      "path": "mathbrain/association/netstore.py",
+      "sha": "045e08d8a0a76e24e36dadc5532149f80b28250e"
+    },
+    {
+      "path": "mathbrain/association/test_network.py",
+      "sha": "f3d0d8677eb95179fdb76e7539a3a310f3e676fe"
+    },
+    {
+      "path": "mathbrain/config/challenge_bank.json",
+      "sha": "14f14a231cd3a1525aadfe3bc7dbb1d58650612b"
+    },
+    {
+      "path": "mathbrain/config/challenge_evaluation.toml",
+      "sha": "e9917456cd0886653d597b2ec33ae8fbac481af2"
+    },
+    {
+      "path": "mathbrain/config/evaluation.toml",
+      "sha": "3df76c942fa7c20bf3b8c5970de583af13ce4db4"
+    },
+    {
+      "path": "mathbrain/config/privacy.toml",
+      "sha": "8984517ad419a356a067265b5c52f5e63c22b7ef"
+    },
+    {
+      "path": "mathbrain/config/triggers.toml",
+      "sha": "b4234ffb6500902c3096ca7b9c6a891cda9dac63"
+    },
+    {
+      "path": "mathbrain/conftest.py",
+      "sha": "7d4533bf04e4194b050a1424576c2a8840183818"
+    },
+    {
+      "path": "mathbrain/docs/architecture.md",
+      "sha": "fc3ad5f78261dc649ef93037daa293dc9d1bd0b7"
+    },
+    {
+      "path": "mathbrain/docs/attempt-ledger.md",
+      "sha": "4e282e22128774054c743decbbcf3af56a38daef"
+    },
+    {
+      "path": "mathbrain/docs/benchmark-v4-10000-evidence.md",
+      "sha": "4ad9aa9f6347a8f94208a2d47acb1e33a593999d"
+    },
+    {
+      "path": "mathbrain/docs/benchmark.md",
+      "sha": "0b5ecf9b817f2ad887f7a0cc79257c7c09cd7829"
+    },
+    {
+      "path": "mathbrain/docs/brain-benefit-three-arm-study.md",
+      "sha": "d4dc7067f158d558087cf26f10c67d6353423030"
+    },
+    {
+      "path": "mathbrain/docs/calibration-outcome-binding-v3.md",
+      "sha": "eae98f5fe566af759f31e8bf2d8d53e52109e077"
+    },
+    {
+      "path": "mathbrain/docs/calibration-preregistration-v3.md",
+      "sha": "96d3943d61ee9401693d7fcbdaeb341a9ba2e78a"
+    },
+    {
+      "path": "mathbrain/docs/campaign-log.md",
+      "sha": "a762c3242c408f8567b0526c0ead9efd4c34ccf9"
+    },
+    {
+      "path": "mathbrain/docs/challenge-bank.md",
+      "sha": "7ddc09b8f716f40a20dcc60889e3ae172aed5ebb"
+    },
+    {
+      "path": "mathbrain/docs/challenge-evaluation.md",
+      "sha": "4871a5ab52a2a2885d27c93b7ad9fb8f3af3af57"
+    },
+    {
+      "path": "mathbrain/docs/codex-runner.md",
+      "sha": "32a0502bfd0da088815794cc3929b47168286889"
+    },
+    {
+      "path": "mathbrain/docs/design-brief.md",
+      "sha": "c8727ef63d901f5febfeb0384852d2820491b940"
+    },
+    {
+      "path": "mathbrain/docs/evaluation-protocol.md",
+      "sha": "ee4a3d52b60d5b11cc20bcf33ed959d439e8d67b"
+    },
+    {
+      "path": "mathbrain/docs/evaluation-v2.md",
+      "sha": "7d7d65216d88896d27ed6822b281449a7f68a53f"
+    },
+    {
+      "path": "mathbrain/docs/formal-verification.md",
+      "sha": "8822425653d66159b79246c308f9d8495c6ab770"
+    },
+    {
+      "path": "mathbrain/docs/hard-blind-pilot-v1-disposition.json",
+      "sha": "227c8134be1b8fb83fbdffbc1b8fcc280a9c9e51"
+    },
+    {
+      "path": "mathbrain/docs/hard-blind-pilot-v1-preregistration.json",
+      "sha": "ec1248ca714fef7ec349a56aa9afe020e93bc8cc"
+    },
+    {
+      "path": "mathbrain/docs/hard-blind-pilot-v1.md",
+      "sha": "686eac74a0e86ea559ac13d884ebebfbe993c38a"
+    },
+    {
+      "path": "mathbrain/docs/hard-calibration-v3.md",
+      "sha": "06a31857c9ac42d4e23a476fca4355d078d76230"
+    },
+    {
+      "path": "mathbrain/docs/hard-challenge-v2.md",
+      "sha": "810f475c4978661fffdc45890357c1666aeefb3d"
+    },
+    {
+      "path": "mathbrain/docs/hard-challenge-v3-design.md",
+      "sha": "b3b8567153ccaceaa4f0d00d3a42810d88d40ee4"
+    },
+    {
+      "path": "mathbrain/docs/hard-evaluation-v2-acceptance.md",
+      "sha": "19ff4c86e27e844d26d719ffe3ab1e4702a2abf2"
+    },
+    {
+      "path": "mathbrain/docs/hard-evaluation-v2-power.md",
+      "sha": "b23d1c28934da3f0e1c66eb8ba8cf3c5982bf27f"
+    },
+    {
+      "path": "mathbrain/docs/hard-evaluation-v2.md",
+      "sha": "3c966f6f781dedaa504481a11299265103d02453"
+    },
+    {
+      "path": "mathbrain/docs/local-audit-protocol.md",
+      "sha": "c0793f8c1025322bccaaeeee903e8e8d25949034"
+    },
+    {
+      "path": "mathbrain/docs/privacy-boundary.md",
+      "sha": "a6ccb2426098a348b1584375a240a618b98abc0b"
+    },
+    {
+      "path": "mathbrain/docs/public-calibration-v2.md",
+      "sha": "e7d135f4073e1932a4e98164a6a13e1587baa61f"
+    },
+    {
+      "path": "mathbrain/docs/random-external-pilot-v4-preregistration.md",
+      "sha": "48a9a86dddf598898a06197457a953180508e4fe"
+    },
+    {
+      "path": "mathbrain/docs/retrieval-and-consolidation.md",
+      "sha": "e2c42bde4f5b6c6a0244436c37434414b3886284"
+    },
+    {
+      "path": "mathbrain/docs/threat-model.md",
+      "sha": "ae34055e8457516fa10f8732fc70e5b31d099eee"
+    },
+    {
+      "path": "mathbrain/examples/generate_benchmark_sample.py",
+      "sha": "6ce8bcd7940ced866fb640dd9f18614cef98000f"
+    },
+    {
+      "path": "mathbrain/examples/materialize_benchmark.py",
+      "sha": "f0e10f1f40cfb3be648472ee20e3a507cf528fc4"
+    },
+    {
+      "path": "mathbrain/examples/run_challenge_study.py",
+      "sha": "009b6e2d7dd55080ccd9ad6cdf2da42d25015e62"
+    },
+    {
+      "path": "mathbrain/formal/MathBrain.lean",
+      "sha": "41ae63989a0e46cbb51977ce7f38443db7cb9c5b"
+    },
+    {
+      "path": "mathbrain/formal/MathBrain/Basic.lean",
+      "sha": "d56b5a6cadd147a27db24447a2e2f47d9ea49391"
+    },
+    {
+      "path": "mathbrain/formal/lakefile.toml",
+      "sha": "f3c6538ff507de3193c427da02b3e1f062123968"
+    },
+    {
+      "path": "mathbrain/formal/lean-toolchain",
+      "sha": "af9e5d339aeb37e4e6ba2603fb873e637678e304"
+    },
+    {
+      "path": "mathbrain/pyproject.toml",
+      "sha": "5ccf80e5049ba44d5158f4d2207c74ef20d0ca35"
+    },
+    {
+      "path": "mathbrain/src/math_brain/__init__.py",
+      "sha": "065a737d636b68544e38991c554146a7eaaad17c"
+    },
+    {
+      "path": "mathbrain/src/math_brain/attempt_ledger.py",
+      "sha": "5d8af3d528b21075c89820bcb030bfc8bcf0bfa3"
+    },
+    {
+      "path": "mathbrain/src/math_brain/background_hubs.py",
+      "sha": "a00a9cde061547d43a7cd0dbb398702f4f9a4843"
+    },
+    {
+      "path": "mathbrain/src/math_brain/benchmark.py",
+      "sha": "61b0362df3767e236fa418d5d25f0831af459fa8"
+    },
+    {
+      "path": "mathbrain/src/math_brain/benchmark_artifacts.py",
+      "sha": "425619c675dadc9f4daaa83a125524756450bcc1"
+    },
+    {
+      "path": "mathbrain/src/math_brain/benchmark_verifier.py",
+      "sha": "134076c7d98c6a53ca81dd906d4b03e2849f9017"
+    },
+    {
+      "path": "mathbrain/src/math_brain/brain_corpus_v3.py",
+      "sha": "a5d9c93106f42e2e90a307c0f3d4103ca15c2977"
+    },
+    {
+      "path": "mathbrain/src/math_brain/build_signal_cache.py",
+      "sha": "e7728d74a644be445f12fb532be032d6ac2abdee"
+    },
+    {
+      "path": "mathbrain/src/math_brain/calibration_plan_v3.py",
+      "sha": "d3ed59a3e09f66bd823efc18021f796d733d4040"
+    },
+    {
+      "path": "mathbrain/src/math_brain/calibration_protocol_v3.py",
+      "sha": "1e1aa785851cf7f47fd73498d25d2b47689b5f49"
+    },
+    {
+      "path": "mathbrain/src/math_brain/calibration_v2.py",
+      "sha": "b9683b0dd6fcdbcbe809360ec0786c0f32916846"
+    },
+    {
+      "path": "mathbrain/src/math_brain/canonical_ed25519_v3.py",
+      "sha": "3165f05969a64a649c10d557d08f3b79f2537bc4"
+    },
+    {
+      "path": "mathbrain/src/math_brain/challenge_bank.py",
+      "sha": "33860744512a64f869433752873ee16fcc44d1fc"
+    },
+    {
+      "path": "mathbrain/src/math_brain/challenge_study.py",
+      "sha": "edb439f14d5367f8a0ca08cb852e3691e44d1529"
+    },
+    {
+      "path": "mathbrain/src/math_brain/citations.py",
+      "sha": "0f9d32808d262e7c44285c0d74cce2a6879ce657"
+    },
+    {
+      "path": "mathbrain/src/math_brain/cli.py",
+      "sha": "4fbf07f0e553c1ebaedc3976f90735480fc2137d"
+    },
+    {
+      "path": "mathbrain/src/math_brain/codex_artifact_io.py",
+      "sha": "2dd7ccd70ec6ff031152fab9ec738471f34d3aac"
+    },
+    {
+      "path": "mathbrain/src/math_brain/codex_runner.py",
+      "sha": "5f440b95c976f13b6bc080042ad5abced3f848c7"
+    },
+    {
+      "path": "mathbrain/src/math_brain/consolidation.py",
+      "sha": "138e86a1f200f6c6ba55dc40e9f25b3543b1f9f0"
+    },
+    {
+      "path": "mathbrain/src/math_brain/current_note.py",
+      "sha": "f4dc368dcf03da2ba715899b04b0ee11c8fdb777"
+    },
+    {
+      "path": "mathbrain/src/math_brain/delivery_audit.py",
+      "sha": "e0db9e0c01c8c3ab018f19fc9131c1f660766241"
+    },
+    {
+      "path": "mathbrain/src/math_brain/domain_free_retrieval_v4.py",
+      "sha": "1107222d4c7563989d44c23f9140b56166139272"
+    },
+    {
+      "path": "mathbrain/src/math_brain/evaluation.py",
+      "sha": "41e2b1498bcd47a3517474aaa613c9f28971fadb"
+    },
+    {
+      "path": "mathbrain/src/math_brain/evaluation_v2.py",
+      "sha": "424593359c2ba6675bfaf8073477d9d5433f3aa8"
+    },
+    {
+      "path": "mathbrain/src/math_brain/exact_answer_v3.py",
+      "sha": "1fae75a1b4ea7419765c4f80cbfb05312e52dc9b"
+    },
+    {
+      "path": "mathbrain/src/math_brain/expansion.py",
+      "sha": "cd7202f6a511b20314d4d7e4a1827df9d5a14e95"
+    },
+    {
+      "path": "mathbrain/src/math_brain/external_blind_gold_audit_collect_v3.py",
+      "sha": "595db74501477e84afe749a99c89c4c283a94b24"
+    },
+    {
+      "path": "mathbrain/src/math_brain/external_blind_gold_audit_collect_v4.py",
+      "sha": "b42fe81034ad2443f0c048faa9e45d46449ced3d"
+    },
+    {
+      "path": "mathbrain/src/math_brain/external_blind_gold_audit_v3.py",
+      "sha": "58434b5adf905141d7acfffd147fa65c54d2f624"
+    },
+    {
+      "path": "mathbrain/src/math_brain/external_blind_gold_audit_v4.py",
+      "sha": "6ca003134a5d44d4c929d0b472a527bc59c7436c"
+    },
+    {
+      "path": "mathbrain/src/math_brain/github_execution_ack_v4.py",
+      "sha": "ae4de044b0aeb9a9025e0a8379281e174467279c"
+    },
+    {
+      "path": "mathbrain/src/math_brain/github_precommit_anchor_v4.py",
+      "sha": "272b1b85d620a9fc24cc5605e4eec93c8beddeec"
+    },
+    {
+      "path": "mathbrain/src/math_brain/hard_blind_pilot_v1.py",
+      "sha": "5f5d214a8144cb1877bc5d9c74c0665083dc1c3d"
+    },
+    {
+      "path": "mathbrain/src/math_brain/hard_calibration_v3.py",
+      "sha": "49854fbef12fa1c20516ccedfc02b24a2fdf0fa0"
+    },
+    {
+      "path": "mathbrain/src/math_brain/hard_challenge_v2.py",
+      "sha": "ac2f2c8226ba0abcfa0abe0fc52eec158ececff9"
+    },
+    {
+      "path": "mathbrain/src/math_brain/ingestion.py",
+      "sha": "fe4ae3c2f39eafac46917fe68fabb8c794eb176f"
+    },
+    {
+      "path": "mathbrain/src/math_brain/internal_pilot_author_v3.py",
+      "sha": "7b25da473a1de30997feb3892822cdb1f914249f"
+    },
+    {
+      "path": "mathbrain/src/math_brain/internal_pilot_selection_v3.py",
+      "sha": "9a063cae572372e5d9f50e6ec409a15a5895fb92"
+    },
+    {
+      "path": "mathbrain/src/math_brain/lean.py",
+      "sha": "d55445ac9286aee9a4fab1f60170f07738246a55"
+    },
+    {
+      "path": "mathbrain/src/math_brain/mathnet_acquisition_v3.py",
+      "sha": "e4024eb6a85345eeea8087dddcf816f035116b7a"
+    },
+    {
+      "path": "mathbrain/src/math_brain/mathnet_bank_v3.py",
+      "sha": "1cd5f40d8b6a81e49c6807f87b068cdd4d201a82"
+    },
+    {
+      "path": "mathbrain/src/math_brain/mathnet_body_card_review_collect_v3.py",
+      "sha": "b98d6f97933887663156b6f7e15c0cdf82c84248"
+    },
+    {
+      "path": "mathbrain/src/math_brain/mathnet_body_card_review_execution_v3.py",
+      "sha": "e27cb7a84ba94e2a870c3b9f53ebf7919d14c3f2"
+    },
+    {
+      "path": "mathbrain/src/math_brain/mathnet_body_card_review_signed_pair_v3.py",
+      "sha": "751b671205cfb641f4937b0857191be641535901"
+    },
+    {
+      "path": "mathbrain/src/math_brain/mathnet_body_card_review_v3.py",
+      "sha": "cb992fc76082d327cac493d4f0e316190cac2bb1"
+    },
+    {
+      "path": "mathbrain/src/math_brain/mathnet_language_audit_projection_v3.py",
+      "sha": "739491d63ac4687053044e77b527142f4e73ac96"
+    },
+    {
+      "path": "mathbrain/src/math_brain/mathnet_language_review_manifest_v3.py",
+      "sha": "ec4a3fadb5c34e1b515e2285a8aeef30e078382a"
+    },
+    {
+      "path": "mathbrain/src/math_brain/mathnet_pilot_material_v3.py",
+      "sha": "a3945b125366a9e9819f2cd270cbc4d7e331b5e9"
+    },
+    {
+      "path": "mathbrain/src/math_brain/mathnet_random_external_lane_v4.py",
+      "sha": "2b02801793b784448f2b823019d2d73efdb14b1d"
+    },
+    {
+      "path": "mathbrain/src/math_brain/mistakes.py",
+      "sha": "15bd4fbac44cf5d2ad61729197a0c32ec1a1293a"
+    },
+    {
+      "path": "mathbrain/src/math_brain/models.py",
+      "sha": "4e3108f18626d4b3d76db8e9e96180cf52534168"
+    },
+    {
+      "path": "mathbrain/src/math_brain/nightly.py",
+      "sha": "88e8bae7e8e9a10b8e101c2a188d65278b47fc89"
+    },
+    {
+      "path": "mathbrain/src/math_brain/overlay.py",
+      "sha": "d91d86bcae07a83b30a3a75f98f21c5f7653dc0a"
+    },
+    {
+      "path": "mathbrain/src/math_brain/power_v2.py",
+      "sha": "ba44c0a39ec544bbcfd307222b57bb153581cfdd"
+    },
+    {
+      "path": "mathbrain/src/math_brain/privacy.py",
+      "sha": "7a6238d8ab8dffe2ce0e8696e4802e4850fea34f"
+    },
+    {
+      "path": "mathbrain/src/math_brain/privacy_scan.py",
+      "sha": "f87e0a101f53bb6134cfb0a4dcaedfb5d298057b"
+    },
+    {
+      "path": "mathbrain/src/math_brain/proofswarm.py",
+      "sha": "02622dfb0146b18ec89c0f3b2fdbdf3a14c3f35b"
+    },
+    {
+      "path": "mathbrain/src/math_brain/provenance.py",
+      "sha": "52106f7763c10bac7001180957904585d99fe4de"
+    },
+    {
+      "path": "mathbrain/src/math_brain/publication.py",
+      "sha": "b33249cfb04c3a68b32e240c4d75cfb4b911804d"
+    },
+    {
+      "path": "mathbrain/src/math_brain/random_external_execution_authorization_v4.py",
+      "sha": "c4a4fae243960df5a32eeb26a8c3f9e3237018eb"
+    },
+    {
+      "path": "mathbrain/src/math_brain/random_external_execution_manifest_v4.py",
+      "sha": "33bb8bdb9e92366948ada21e19c6857e4707d3ee"
+    },
+    {
+      "path": "mathbrain/src/math_brain/random_external_pilot_evaluation_v4.py",
+      "sha": "e687cd0941d2159c70dea504f569074ff6f9e6fd"
+    },
+    {
+      "path": "mathbrain/src/math_brain/random_external_pilot_execution_v4.py",
+      "sha": "e526b0d0e8c51df398b11e87328386eda3653851"
+    },
+    {
+      "path": "mathbrain/src/math_brain/random_external_pilot_task_map_v4.py",
+      "sha": "9d4f6bd432b3a903efe9beab2342a903e8fab815"
+    },
+    {
+      "path": "mathbrain/src/math_brain/random_external_scoring_authority_v4.py",
+      "sha": "4044ce451bae7232386ba225d5ba3eabd5733dc2"
+    },
+    {
+      "path": "mathbrain/src/math_brain/random_external_sham_materialization_v4.py",
+      "sha": "99d33ab29f70be9c55682963ed1c0971b6098fe3"
+    },
+    {
+      "path": "mathbrain/src/math_brain/random_external_tokenizer_attestation_v4.py",
+      "sha": "5fd6a12f032e70cb93b53f64133064bfcbb411bc"
+    },
+    {
+      "path": "mathbrain/src/math_brain/recurrence_axis_v3.py",
+      "sha": "37ee1105f8c6c21667130ffe2657c0cec4a3eb18"
+    },
+    {
+      "path": "mathbrain/src/math_brain/recurrence_binding_v3.py",
+      "sha": "4ea03c2d45fa0334e3f89ff8aa365b6777b079bc"
+    },
+    {
+      "path": "mathbrain/src/math_brain/recurrence_manifest_v3.py",
+      "sha": "4311c59c1d5decf6cda17f22d5561d26209a490c"
+    },
+    {
+      "path": "mathbrain/src/math_brain/relational_leakage_v3.py",
+      "sha": "e1c8591944b4cc4b0a01fcb41eee7113c40e51ba"
+    },
+    {
+      "path": "mathbrain/src/math_brain/rendering.py",
+      "sha": "045c60ea90342b4ab77ec7abe90556ab6a7a9b85"
+    },
+    {
+      "path": "mathbrain/src/math_brain/request_hook.py",
+      "sha": "c246559e86a3e1e20372e25e37a69461ce56640b"
+    },
+    {
+      "path": "mathbrain/src/math_brain/requests.py",
+      "sha": "826b385bacb1418aeb6b9e6bce5fdc05724ecf3e"
+    },
+    {
+      "path": "mathbrain/src/math_brain/retrieval.py",
+      "sha": "baedf3db4dfc65ffef8edb471ae852a8fdde0e69"
+    },
+    {
+      "path": "mathbrain/src/math_brain/selection_integrity.py",
+      "sha": "df2c8ad2ab7c3322cd10a0b9c4571a239ce5c4ce"
+    },
+    {
+      "path": "mathbrain/src/math_brain/semantic.py",
+      "sha": "0af1cc39a83c75154146285d2304598cf5a24c15"
+    },
+    {
+      "path": "mathbrain/src/math_brain/source_role_v3.py",
+      "sha": "f9999516469aea1edbcd3c6ec4652147d1e21a8b"
+    },
+    {
+      "path": "mathbrain/src/math_brain/store.py",
+      "sha": "842034d72f5a06ea45863380d1e9038f93725d20"
+    },
+    {
+      "path": "mathbrain/src/math_brain/successor_dispatch_v2.py",
+      "sha": "0d0e3681dd647ed3403feae415553ae776614ebb"
+    },
+    {
+      "path": "mathbrain/src/math_brain/three_arm_evaluation.py",
+      "sha": "45c92cfbe598adc3d5dff22c7ff7bec03f5356af"
+    },
+    {
+      "path": "mathbrain/src/math_brain/three_arm_pilot_ledger_v3.py",
+      "sha": "7bbd95e2429e293219a6051f2a011dcfb90655d8"
+    },
+    {
+      "path": "mathbrain/src/math_brain/three_arm_pilot_material_v3.py",
+      "sha": "4ffe999fddf5e8542f13adc3a9014aa1a1477d47"
+    },
+    {
+      "path": "mathbrain/src/math_brain/three_arm_pilot_protocol_v3.py",
+      "sha": "45ff0f19754e541e23c1a9e9ae259e391c45303c"
+    },
+    {
+      "path": "mathbrain/src/math_brain/three_arm_pilot_task_map_v3.py",
+      "sha": "adf752125a2f3bf4ac360cd4d53f5aa21b54155c"
+    },
+    {
+      "path": "mathbrain/src/math_brain/three_arm_random_external_pilot_v4.py",
+      "sha": "a17382385344520878e1fd825f8574f0769e7539"
+    },
+    {
+      "path": "mathbrain/src/math_brain/three_arm_tokenizer_attestation_v3.py",
+      "sha": "96d4dacb6ed6f29452439112386c56c1a3bd486c"
+    },
+    {
+      "path": "mathbrain/src/math_brain/triggers.py",
+      "sha": "67f27dc0767a4baf510f9ced9f0ff9a9f1b3cfb2"
+    },
+    {
+      "path": "mathbrain/src/math_brain/typed_paths.py",
+      "sha": "5d920990275259a210e2b46c9607cff7ed5a76e8"
+    },
+    {
+      "path": "mathbrain/src/math_brain/verification.py",
+      "sha": "708ba798fb19bfd8bd1e7826297142c7a5962d87"
+    },
+    {
+      "path": "mathbrain/tests/test_attempt_ledger.py",
+      "sha": "ad817a2aa6d4aa0361c365be53eb25039f0257e4"
+    },
+    {
+      "path": "mathbrain/tests/test_background_hubs.py",
+      "sha": "81795347b3ddb9a192a847431c6837afd4f25230"
+    },
+    {
+      "path": "mathbrain/tests/test_benchmark.py",
+      "sha": "16e20af56ce204d1a7dc80b27e40b6abe664a4f1"
+    },
+    {
+      "path": "mathbrain/tests/test_benchmark_artifacts.py",
+      "sha": "aeb73216460f23c03a09c8788370ef29c40a911c"
+    },
+    {
+      "path": "mathbrain/tests/test_brain_corpus_v3.py",
+      "sha": "333da489cdbff110e7d74d46a1c9591013891bcc"
+    },
+    {
+      "path": "mathbrain/tests/test_build_signal_cache.py",
+      "sha": "c33eeb72103fdce565e58642788fe8f528e35ae7"
+    },
+    {
+      "path": "mathbrain/tests/test_calibration_plan_v3.py",
+      "sha": "2e550d1280237ce26a918dd8a9e08612a4684eb0"
+    },
+    {
+      "path": "mathbrain/tests/test_calibration_protocol_v3.py",
+      "sha": "9ed405a5119ba705e84358bf2ae2f0dabb05e2da"
+    },
+    {
+      "path": "mathbrain/tests/test_calibration_v2.py",
+      "sha": "0ae01ca5f0ba05c470a7f5df31ad764f8604607c"
+    },
+    {
+      "path": "mathbrain/tests/test_canonical_ed25519_v3.py",
+      "sha": "79453a6fa29cf6efc5df406defd53c70b1ca5c6c"
+    },
+    {
+      "path": "mathbrain/tests/test_challenge_bank.py",
+      "sha": "6d638b39a5f46b485b5d7bc45e92b22578d1f3be"
+    },
+    {
+      "path": "mathbrain/tests/test_challenge_study.py",
+      "sha": "3f181830dbd6a278a77d8b75263700f8d4159f1e"
+    },
+    {
+      "path": "mathbrain/tests/test_citations.py",
+      "sha": "9e1824cec891cbe9ccda414dd869a375deb5cec7"
+    },
+    {
+      "path": "mathbrain/tests/test_cli_docs.py",
+      "sha": "623174b04cdbc78d62830f6a02603b461bb4cf07"
+    },
+    {
+      "path": "mathbrain/tests/test_cli_privacy.py",
+      "sha": "09e301ad14da4c3a2abc7eab7d6c92f89bfd36aa"
+    },
+    {
+      "path": "mathbrain/tests/test_codex_artifact_io.py",
+      "sha": "6fbaae2cee4606bf47a0e4b63f9da23f12a267be"
+    },
+    {
+      "path": "mathbrain/tests/test_codex_runner.py",
+      "sha": "f7210378661f873156c6d3f8df18da216922c133"
+    },
+    {
+      "path": "mathbrain/tests/test_consolidation.py",
+      "sha": "d0b8fa4f98d2a2321098a154e1c7b5f9d608e607"
+    },
+    {
+      "path": "mathbrain/tests/test_delivery_audit.py",
+      "sha": "242f90d0f67992791685d7b02c3ce40dfc6ac543"
+    },
+    {
+      "path": "mathbrain/tests/test_domain_free_retrieval_v4.py",
+      "sha": "ec7910710344db48ea8f12891a95e15c62c78192"
+    },
+    {
+      "path": "mathbrain/tests/test_evaluation.py",
+      "sha": "0998f6c82262ddcb9da4d6855edad4d1a7492bf4"
+    },
+    {
+      "path": "mathbrain/tests/test_evaluation_v2.py",
+      "sha": "a072ab9c6e8374866c6c0a5d3d3c1d628f8633b4"
+    },
+    {
+      "path": "mathbrain/tests/test_expansion.py",
+      "sha": "c634d67b024df73b75b170ad5d24fc6ab0f1ba43"
+    },
+    {
+      "path": "mathbrain/tests/test_external_blind_gold_audit_v3.py",
+      "sha": "9fa9b97474788c0ebfa07803433f22104fc069f6"
+    },
+    {
+      "path": "mathbrain/tests/test_external_blind_gold_audit_v4.py",
+      "sha": "7b37937c88bfbcbe9ba31390c01d34e74843932a"
+    },
+    {
+      "path": "mathbrain/tests/test_github_execution_ack_v4.py",
+      "sha": "b0d8cbd8fad1a70e02ac852422d2ab62ff9def6b"
+    },
+    {
+      "path": "mathbrain/tests/test_github_precommit_anchor_v4.py",
+      "sha": "0288e7a9ce7f1cac1319809a2cf62b8b3b57c9d3"
+    },
+    {
+      "path": "mathbrain/tests/test_hard_blind_pilot_v1.py",
+      "sha": "b3ed61606310bd96b495aac97170470c0129a4ad"
+    },
+    {
+      "path": "mathbrain/tests/test_hard_calibration_v3.py",
+      "sha": "eb11505f8aa5ee227dd98d0477ee94dfe1e6b2e1"
+    },
+    {
+      "path": "mathbrain/tests/test_hard_challenge_v2.py",
+      "sha": "a9af8e01267e7e50f45113c513b736c7ccddd03e"
+    },
+    {
+      "path": "mathbrain/tests/test_hard_v2_public_schedule_decoder.py",
+      "sha": "129fda4c6ff4b4ad4f295db059de87f3977269a3"
+    },
+    {
+      "path": "mathbrain/tests/test_ingestion_bundle.py",
+      "sha": "6e7a895071b23dbd6ea0c436687c387238e7c511"
+    },
+    {
+      "path": "mathbrain/tests/test_internal_pilot_author_v3.py",
+      "sha": "f55d13b14e7c65b6495351fc37bc39aebe1c6981"
+    },
+    {
+      "path": "mathbrain/tests/test_internal_pilot_selection_v3.py",
+      "sha": "434abb227b2fb36da99979306d010547786cba1e"
+    },
+    {
+      "path": "mathbrain/tests/test_lean.py",
+      "sha": "3072c7151c1b9e37846fa00266f28f61df5a1c44"
+    },
+    {
+      "path": "mathbrain/tests/test_mathnet_acquisition_v3.py",
+      "sha": "f1c224540a540e05cceafb13e42acd7c1b0d3628"
+    },
+    {
+      "path": "mathbrain/tests/test_mathnet_bank_v3.py",
+      "sha": "09d49bfb7315480186bec412f4262b68494c6f2c"
+    },
+    {
+      "path": "mathbrain/tests/test_mathnet_body_card_review_collect_v3.py",
+      "sha": "e354196643ed7a69d6d52b2fb4dad4417bc66dcc"
+    },
+    {
+      "path": "mathbrain/tests/test_mathnet_body_card_review_v3.py",
+      "sha": "f1562f060f7f6a608b6588295b3c3276e364ce97"
+    },
+    {
+      "path": "mathbrain/tests/test_mathnet_pilot_acquisition_v3.py",
+      "sha": "d535796f56784a2006a8c391f6c6335adf047d31"
+    },
+    {
+      "path": "mathbrain/tests/test_mathnet_pilot_material_v3.py",
+      "sha": "9b322aa7491151d857ecf5407b7ba09e62d4e81f"
+    },
+    {
+      "path": "mathbrain/tests/test_mathnet_random_external_lane_v4.py",
+      "sha": "f3952f969edf1371dcd35079bdce789735c29c62"
+    },
+    {
+      "path": "mathbrain/tests/test_mistakes.py",
+      "sha": "22c98a60266428166082e4e328d9f653730c6a49"
+    },
+    {
+      "path": "mathbrain/tests/test_models.py",
+      "sha": "1e7b54b5a5f846e46ec2dcac1c0e4e639653ff02"
+    },
+    {
+      "path": "mathbrain/tests/test_overlay.py",
+      "sha": "6cf9f8f9edec6d88dab0a7d2e9de67b0336c290d"
+    },
+    {
+      "path": "mathbrain/tests/test_power_v2.py",
+      "sha": "a50076738e0282b7ad47b7abe9e8f7886990db0d"
+    },
+    {
+      "path": "mathbrain/tests/test_privacy.py",
+      "sha": "2b8424a820ae5c1fadc40f66591de0d514d8a479"
+    },
+    {
+      "path": "mathbrain/tests/test_privacy_scan.py",
+      "sha": "321746b157c80ef8ec5e329d05cbe05c1cba9018"
+    },
+    {
+      "path": "mathbrain/tests/test_publication.py",
+      "sha": "fd10d9e34cc918245ec8f940e1ebe220ce981c14"
+    },
+    {
+      "path": "mathbrain/tests/test_random_external_execution_authorization_v4.py",
+      "sha": "795223361ae7e1c49fcd645b8154ea513977fa19"
+    },
+    {
+      "path": "mathbrain/tests/test_random_external_execution_manifest_v4.py",
+      "sha": "5cc812b79165a70ab6fc916b3b2a6aba386ee995"
+    },
+    {
+      "path": "mathbrain/tests/test_random_external_pilot_evaluation_v4.py",
+      "sha": "0fd45238ba6d701501cb784b11432179ee499361"
+    },
+    {
+      "path": "mathbrain/tests/test_random_external_pilot_execution_v4.py",
+      "sha": "cc95b8fd599fa50b3841cc8ae4bcb8bde439f020"
+    },
+    {
+      "path": "mathbrain/tests/test_random_external_pilot_task_map_v4.py",
+      "sha": "01bec9f81ecfc5b148f1e9e6735466a5deea613e"
+    },
+    {
+      "path": "mathbrain/tests/test_random_external_scoring_authority_v4.py",
+      "sha": "31a83ab77cd8260de7ed29f078b58636b5347e13"
+    },
+    {
+      "path": "mathbrain/tests/test_random_external_sham_materialization_v4.py",
+      "sha": "628c8f009f9bec09cf894444d36df80e86e5b1c0"
+    },
+    {
+      "path": "mathbrain/tests/test_random_external_tokenizer_attestation_v4.py",
+      "sha": "67f514f5d264d3f126c493405a6bb255d6b8395d"
+    },
+    {
+      "path": "mathbrain/tests/test_recurrence_axis_v3.py",
+      "sha": "9f1bb116dd8d57b436ea59e69163597fc14e73a0"
+    },
+    {
+      "path": "mathbrain/tests/test_recurrence_binding_v3.py",
+      "sha": "14d27e72a02c6c0a9ef962eaad100f5cc1d77f56"
+    },
+    {
+      "path": "mathbrain/tests/test_recurrence_manifest_v3.py",
+      "sha": "4335a70864c8bcdf350d506e7adb020b7778aea1"
+    },
+    {
+      "path": "mathbrain/tests/test_relational_leakage_v3.py",
+      "sha": "361595c40c3d1e0792b8c13e433e6cb288aeb11e"
+    },
+    {
+      "path": "mathbrain/tests/test_requests_and_nightly.py",
+      "sha": "3f493636faac52add7d30145ad75c9abc8b3ba04"
+    },
+    {
+      "path": "mathbrain/tests/test_retrieval.py",
+      "sha": "80383457b98db842cf31fc06eaf27279e69baa08"
+    },
+    {
+      "path": "mathbrain/tests/test_selection_integrity.py",
+      "sha": "5aa5c34cdad3632aeda3bfda11130439fafca256"
+    },
+    {
+      "path": "mathbrain/tests/test_source_role_v3.py",
+      "sha": "467f2b20018ac014a1cb34e7a655aff473af027c"
+    },
+    {
+      "path": "mathbrain/tests/test_store.py",
+      "sha": "2a920f0c8536dbadfbc6b29d6005d4c4eceb9719"
+    },
+    {
+      "path": "mathbrain/tests/test_successor_dispatch_v2.py",
+      "sha": "5763df0a1413dc58f7af011c5510d56016abb8a4"
+    },
+    {
+      "path": "mathbrain/tests/test_three_arm_evaluation.py",
+      "sha": "cea1b6a71afd3ab81629e6b22ded7f1a66709eb9"
+    },
+    {
+      "path": "mathbrain/tests/test_three_arm_pilot_ledger_v3.py",
+      "sha": "4e9877a50f95ce6ce1eb8db2b6affe8fd35a08c6"
+    },
+    {
+      "path": "mathbrain/tests/test_three_arm_pilot_material_v3.py",
+      "sha": "75aa43dbf9a891a7dc44f45bcc43d55fe54ce167"
+    },
+    {
+      "path": "mathbrain/tests/test_three_arm_pilot_protocol_v3.py",
+      "sha": "c006fdcb1dec4b215ecfad1938782054d2ec7689"
+    },
+    {
+      "path": "mathbrain/tests/test_three_arm_pilot_task_map_v3.py",
+      "sha": "14d4cc2203e268927842e2defbd0c89c4a129fac"
+    },
+    {
+      "path": "mathbrain/tests/test_three_arm_random_external_pilot_v4.py",
+      "sha": "8f910c225cde5525fb955a7083a49a5b29873e98"
+    },
+    {
+      "path": "mathbrain/tests/test_three_arm_tokenizer_attestation_v3.py",
+      "sha": "42387ef422d4c2b460f903e85df2b0af5141032f"
+    },
+    {
+      "path": "mathbrain/tests/test_triggers.py",
+      "sha": "1975489b1f45d3a16fb8bcd3603ff99bb29819cb"
+    },
+    {
+      "path": "mathbrain/tests/test_typed_paths.py",
+      "sha": "252c86036d29d2905e622d50ed61268ab17ab0d7"
+    },
+    {
+      "path": "mathbrain/tests/test_verification.py",
+      "sha": "420b60ade49ee6474b2e8e613da982b82cea85d2"
+    },
+    {
+      "path": "mesh/PROTOCOL.md",
+      "sha": "635c7c96d730ced548dd05fce65bbd96bc8a0852"
+    },
+    {
+      "path": "mesh/README.md",
+      "sha": "21bb05b096053da2a4fc8beb8bb35b75aead348d"
+    },
+    {
+      "path": "mesh/agent_mesh.py",
+      "sha": "6185d2cf7fdc9cc7497f44b0654795d3fbecb524"
+    },
+    {
+      "path": "mesh/bridge/README_BRIDGE.md",
+      "sha": "f7fc884c0c57085c0176617389c18990d2bd2552"
+    },
+    {
+      "path": "mesh/bridge/mesh_bridge.py",
+      "sha": "12519a0cf15e0a9b5b9192e19ba98cd5e8ce9349"
+    },
+    {
+      "path": "mesh/bridge/tests/test_mesh_bridge.py",
+      "sha": "11f41c636bb3a1fdebef2aa1c11bd2a38a1487be"
+    },
+    {
+      "path": "mesh/claim_gate.py",
+      "sha": "1110ddefa189e2540b9616c7b96a103553ed663b"
+    },
+    {
+      "path": "mesh/claim_then.py",
+      "sha": "c6c07afb011ae6b810ec38a77861263f6c36ecd1"
+    },
+    {
+      "path": "mesh/claimed_run.py",
+      "sha": "0cee9a5b4a38de5a5781b37d6441f3b6faca5f5e"
+    },
+    {
+      "path": "mesh/mesh_hook.py",
+      "sha": "f6c575be7889a7c7f811bcba9e7f1514b5665c2b"
+    },
+    {
+      "path": "mesh/tests/test_agent_mesh.py",
+      "sha": "a7b5793897b37eb812c5033f94cf11d294e0de72"
+    },
+    {
+      "path": "mesh/tests/test_brain_remember_concurrency.py",
+      "sha": "8626f62b2193c5c6f9b90ad3383dac64b87cf0dc"
+    },
+    {
+      "path": "mesh/tests/test_cli_delivery.py",
+      "sha": "728c74abcaf9bb04d3f0287aef3f1fd39b9100b6"
+    },
+    {
+      "path": "mesh/tests/test_delivery_truth.py",
+      "sha": "be4dfd7a88419e8468a8a7f03629558611f380da"
+    },
+    {
+      "path": "mesh/tests/test_handoffs_index.py",
+      "sha": "d6bd6ac094aec6d7c04815cdcab64a6030db013b"
+    },
+    {
+      "path": "mesh/tests/test_idle_lapse.py",
+      "sha": "2109b2c60ea4404113cc1074adb29f668422ec93"
+    },
+    {
+      "path": "mesh/tests/test_mesh_hook.py",
+      "sha": "afc35168c4a3320030ad5f8b630648c57ce75e21"
+    },
+    {
+      "path": "mesh/tests/test_open_no_lock.py",
+      "sha": "bd69ba4080a03c7f0cb78aa3536ee22402fad87e"
+    },
+    {
+      "path": "mesh/tests/test_schema_fastpath.py",
+      "sha": "d8d4fac5d9453149c23ce590977fbd7859d060ca"
+    },
+    {
+      "path": "methods/proofswarm/.gitignore",
+      "sha": "bb1c6a0f340097916e237f87a2412bd155f285ab"
+    },
+    {
+      "path": "methods/proofswarm/README.md",
+      "sha": "949524a82a50b582c5cf3b82cc21f88bd35fb9d1"
+    },
+    {
+      "path": "methods/proofswarm/_probe_grounded.json",
+      "sha": "939d1212e462e3faa3434f36ebd7291159ccdf92"
+    },
+    {
+      "path": "methods/proofswarm/conftest.py",
+      "sha": "bc0d013e0786f870a5a9917f3baf7357d3ae5b5e"
+    },
+    {
+      "path": "methods/proofswarm/infra/01_enable_apis.sh",
+      "sha": "20bdb05a9ac4b15b69e2fa766c62e5e36b99868c"
+    },
+    {
+      "path": "methods/proofswarm/infra/02_build_lean.sh",
+      "sha": "4108092cb559b90ddb3f8841257042392b152e71"
+    },
+    {
+      "path": "methods/proofswarm/infra/03_init_firestore.sh",
+      "sha": "54b7a42550abdf2ce82b7975c93ac5b73c4d8473"
+    },
+    {
+      "path": "methods/proofswarm/lean_worker/Dockerfile",
+      "sha": "6ccedf0952a6581b4f137578939bdc86cc3c4951"
+    },
+    {
+      "path": "methods/proofswarm/lean_worker/lakefile.lean",
+      "sha": "a8712e667ad3e894cd695215c098cb28215baa00"
+    },
+    {
+      "path": "methods/proofswarm/lean_worker/server.py",
+      "sha": "7a36ef8de685345243fc3c0dc18c7bdf450db86f"
+    },
+    {
+      "path": "methods/proofswarm/lean_worker/source_policy.py",
+      "sha": "4fda158819f8a8f1cbf47fb6b56fccf76302c2e3"
+    },
+    {
+      "path": "methods/proofswarm/problems/furstenberg_x2x3.md",
+      "sha": "665ef0319ede6ea2202cd3d4c01788067a29936f"
+    },
+    {
+      "path": "methods/proofswarm/problems/poincare_birkhoff.md",
+      "sha": "f07a14ee50817095dce3140473da5758bba86a13"
+    },
+    {
+      "path": "methods/proofswarm/problems/smale_mean_value.md",
+      "sha": "750f7d37a8029e7fdc6fdc314e85bf78de19f04c"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/__init__.py",
+      "sha": "917db6ab3b62e65195bb364783d3da13ebe10c1a"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/agents/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/autonomous_solver.py",
+      "sha": "b3907b2df7c6d5517bbadad9b6d3074777808dde"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/calibration.py",
+      "sha": "094627d719b2b02a887f5b10dcdaed554e06e950"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/config.py",
+      "sha": "aa72722a0ca8d9d3d3870c7f11f4584078a839ea"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/local_runtime.py",
+      "sha": "b9ce101218b4b878785d91a6872fbbac8241182c"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/orchestrator.py",
+      "sha": "0dac5660112105ae990d24e98a6ec99c4bfdfe77"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/paper_review.py",
+      "sha": "4a21af9e8805533074655929beff0e5d57a45720"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/prompts.py",
+      "sha": "9e810aabefa86245eae2777de038f8eab949db82"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/prompts_creative.py",
+      "sha": "0d2e572a30702368d0c78bd823879f1d41d40030"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/prompts_personas.py",
+      "sha": "3b851129be759e9716891ed967a7e273d0f8f917"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/prompts_v2.py",
+      "sha": "fdaacf193051f3f55356a9f7e14b27ab7b090b03"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/report.py",
+      "sha": "ef77a7e12744784afa93a2beae37a8b63186c95c"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/schemas.py",
+      "sha": "ef11e78154484531037474e699101320b5f112a2"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/tools/__init__.py",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/tools/latex_parser.py",
+      "sha": "8648cfe0466c266037a37c4d21d8a42d08b95d32"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/tools/lean_verify.py",
+      "sha": "27b813da5373f5a161f72b93059cf060688fc622"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/tools/numerical.py",
+      "sha": "d785766738e66d733744b6330c5af11109782a39"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/tools/smale_numerical.py",
+      "sha": "3e77112fa017a2da8e54cd5efd0799bdb3e55cac"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/tools/symbolic.py",
+      "sha": "d2ba83d03d38c9b05da48c4f5e000b7de46eb65d"
+    },
+    {
+      "path": "methods/proofswarm/proofswarm/tools/ticket_store.py",
+      "sha": "af26713afe6a0852e6cca6d4c6b9bcb773023cd1"
+    },
+    {
+      "path": "methods/proofswarm/pyproject.toml",
+      "sha": "46be19bd55d68a249285feaf28b7d29f4280c07d"
+    },
+    {
+      "path": "methods/proofswarm/tests/test_lean_worker.py",
+      "sha": "f72899b1d2a17abf620ab9cb5d7416e466a3e160"
+    },
+    {
+      "path": "methods/proofswarm/tests/test_local_mock.py",
+      "sha": "4a57016e1ff49a977fe2f4e713788bf085c64d83"
+    },
+    {
+      "path": "methods/proofswarm/tests/test_local_policy.py",
+      "sha": "3cbdf7121e24ea04c6f9fc7dd241fe7030626bc9"
+    },
+    {
+      "path": "network/DESIGN.md",
+      "sha": "05cf224fb28819d054964dbd674e553741df8a59"
+    },
+    {
+      "path": "network/INTEGRATION_NOTES.md",
+      "sha": "6588d5b1f91303ecc23cea8294ade8687652d9ba"
+    },
+    {
+      "path": "network/README.md",
+      "sha": "b88a1fec01df0b570bf0501c0684041d5eff4464"
+    },
+    {
+      "path": "network/adapt_live.py",
+      "sha": "e564d18112c6a49ec515d22ddf558f98ade3c8ca"
+    },
+    {
+      "path": "network/build_graph.py",
+      "sha": "3422e5eb049f3acbfb1a1bd0e2c5bd74fe1e972f"
+    },
+    {
+      "path": "network/calibrate_caution.py",
+      "sha": "0f84c2f22371b77f457315a76b085d3211d5142f"
+    },
+    {
+      "path": "network/cascade_rules.py",
+      "sha": "f157df08839495cc025040bae7d0c7ca6b76f957"
+    },
+    {
+      "path": "network/dev_loop_turn.py",
+      "sha": "287597b0cc1ce6ed9ccc77f7fdc4b594b8f10618"
+    },
+    {
+      "path": "network/dream_grow.py",
+      "sha": "e925d16021235c5edf468cdd841dad150e189a1d"
+    },
+    {
+      "path": "network/episodes.py",
+      "sha": "9ac83aaedcaddf6e537c62b090733dc63ed36916"
+    },
+    {
+      "path": "network/eval_replay.py",
+      "sha": "d81f957a58bc7f2c27cb122a96070946d6238947"
+    },
+    {
+      "path": "network/fire.py",
+      "sha": "75a834394a2b90391509fe12f0871a0a308e50d4"
+    },
+    {
+      "path": "network/firing_audit.py",
+      "sha": "667f196d8b943821009eedf6aded355c3691ca32"
+    },
+    {
+      "path": "network/grow.py",
+      "sha": "2063313c3659dacd50380ddfa1b6eec2e4427525"
+    },
+    {
+      "path": "network/hook_cascade_fire.py",
+      "sha": "859270c906b62c9667efd3769a1ef34d0fd1505e"
+    },
+    {
+      "path": "network/hook_network_fire.py",
+      "sha": "87e53d7747bf20a4ab7c2142a74a8e80144803af"
+    },
+    {
+      "path": "network/install_live.py",
+      "sha": "16328bc0b7a0846f85f9abcae550c13671a732b7"
+    },
+    {
+      "path": "network/netstore.py",
+      "sha": "045e08d8a0a76e24e36dadc5532149f80b28250e"
+    },
+    {
+      "path": "network/ppr_local.py",
+      "sha": "716fcbf62e5c82ecfe2711ccfcfe253cf31aaca1"
+    },
+    {
+      "path": "network/surprise_rank.py",
+      "sha": "85c992c13214dcbf4ad52b0c8a3b11f904dd2410"
+    },
+    {
+      "path": "network/test_network.py",
+      "sha": "09090c39e94fa2e09f288feda3cea34b328938f7"
+    },
+    {
+      "path": "resilience/README.md",
+      "sha": "8cd1ef26b6dcd088ef5c01e6d56e8fd03ac10328"
+    },
+    {
+      "path": "resilience/backup_brain.py",
+      "sha": "b325ba760c31bae011a10d7236faa3a536146d83"
+    },
+    {
+      "path": "resilience/bootstrap_s3.ps1",
+      "sha": "9edfeb7f11a98e07e5b2807885a3eab44059a4db"
+    },
+    {
+      "path": "resilience/envelope.py",
+      "sha": "b5866487894e9d5a9fb501b5c51c90b9f8af3270"
+    },
+    {
+      "path": "resilience/install_task.ps1",
+      "sha": "3072b5eb5481a378f23df88dd720cbba1dfa5cc9"
+    },
+    {
+      "path": "resilience/launch_backup.vbs",
+      "sha": "7545907c81658a49f2baadd28d92fc37433e7475"
+    },
+    {
+      "path": "resilience/restore_drill.py",
+      "sha": "0d265a41c8cfcd962b30adf1c76fc41f79de5d51"
+    },
+    {
+      "path": "resilience/run_backup.ps1",
+      "sha": "5e50f3b159c27ae562f2a9581dfbccf0b85688e7"
+    },
+    {
+      "path": "resilience/sanitized_snapshot.py",
+      "sha": "71af381898819209e69ca8eec7cd3296d0e65144"
+    },
+    {
+      "path": "resilience/tests/test_backup_brain.py",
+      "sha": "d105c5f63d6ba81f7a23949e6bae69985bf606e8"
+    },
+    {
+      "path": "resilience/tests/test_envelope.py",
+      "sha": "8567b6f4bf36ab9d23df3e503b22d045b7c8ec86"
+    },
+    {
+      "path": "resilience/tests/test_restore_drill.py",
+      "sha": "bd156340d211a044db91441c51e9619902e0924b"
+    },
+    {
+      "path": "resilience/tests/test_sanitized_snapshot.py",
+      "sha": "02612397a7924fb183499c72c519f77d3bdb21a6"
+    },
+    {
+      "path": "resilience/trust/README.md",
+      "sha": "32440bada5ca02f7656fccb1585d2b4eb99ebc21"
+    },
+    {
+      "path": "scripts/brain_doctor.py",
+      "sha": "6d5b6017acba81a0d30785dc0cb8dc60de7f1e18"
+    },
+    {
+      "path": "scripts/check_mathbrain_imports.py",
+      "sha": "4a2fdfd7633525323a5652d0e0b5a621c41c4c9e"
+    },
+    {
+      "path": "scripts/check_no_private_labels.py",
+      "sha": "4083832aa7fdfcb403d225e3864b259836defa64"
+    },
+    {
+      "path": "scripts/preflight.py",
+      "sha": "28db05a82e91d9de44d2c78868a8d792054384a3"
+    },
+    {
+      "path": "scripts/smoke_framework.py",
+      "sha": "89c4fe2ed1d8f3c7867e309a8277a35358cc4950"
+    },
+    {
+      "path": "scripts/test_brain_doctor.py",
+      "sha": "30fb14257ee82f65aef46131ab24f83b9a4bdb73"
+    },
+    {
+      "path": "scripts/test_check_mathbrain_imports.py",
+      "sha": "885eba2a9a9b5e71c76c2e8c8c9e8cb3341ebab2"
+    },
+    {
+      "path": "scripts/test_check_no_private_labels.py",
+      "sha": "038a1f942231fa5ae3fe067e95bdf3c8c3067fbd"
+    },
+    {
+      "path": "tests/test_portable_artifact.py",
+      "sha": "88134fc7d4c885fd1f6e5ed945cccada86af69b0"
+    },
+    {
+      "path": "tests/test_running_code_git.py",
+      "sha": "6b709ae8c8aeeb80c38891e7502ae493efbd1126"
+    },
+    {
+      "path": "tools/_audio_reset.ps1",
+      "sha": "35083a408d8ca8c42e480e4de5bc2e0ddc955365"
+    },
+    {
+      "path": "tools/api_push_folder.py",
+      "sha": "9aea5ba861f60deeed9145477449ebb312f32a3a"
+    },
+    {
+      "path": "tools/cpu_ram_watchdog.py",
+      "sha": "1b45d598d2b997270e4415d0202d32ec5bdd9285"
+    },
+    {
+      "path": "tools/flash_hunt.ps1",
+      "sha": "dd3e92bfc6509f0d306ebb32e13e3f3a9c01c4a2"
+    },
+    {
+      "path": "tools/gpu_fix_admin.ps1",
+      "sha": "3e7c407a82fbb1e6dc30729fac467c18cec15737"
+    },
+    {
+      "path": "tools/gpu_fix_tdr_update.ps1",
+      "sha": "9e338b33cbdd28e4c9c89cb36b9c9866f36fe97f"
+    },
+    {
+      "path": "tools/gpu_watchdog.py",
+      "sha": "2fc753eaa847c8060cc421b465e6acca30b980d8"
+    },
+    {
+      "path": "tools/gpu_watchdog_startup.ps1",
+      "sha": "139d6abd4233594c95fb9d868fcfc0bec453999c"
+    },
+    {
+      "path": "tools/install_project_memory.py",
+      "sha": "4072ea95cf8a911238c45502a85ef75ad9182f75"
+    },
+    {
+      "path": "tools/install_windows_updates.ps1",
+      "sha": "d9ea93f73f7b387db18e47c7eb1c6f58ee186f02"
+    },
+    {
+      "path": "tools/proc_flash_watch.ps1",
+      "sha": "a012215013acf20a4e62c80198e578bd94e28296"
+    },
+    {
+      "path": "tools/push_paths_api.py",
+      "sha": "8633662a0791bdb4d8980e2fac842fb9d8f420ba"
+    },
+    {
+      "path": "tools/run_script_tests.py",
+      "sha": "e888bd9d21f527dd084f5952ef082c744171c692"
+    },
+    {
+      "path": "tools/running_code_git.py",
+      "sha": "de729d057f57faaa1b7f94c9815984580114e626"
+    },
+    {
+      "path": "tools/system_watchdog.py",
+      "sha": "99a0393ecd8471d23aea1dd20c6989e87cabddae"
+    },
+    {
+      "path": "tools/win_flash_watch.ps1",
+      "sha": "7668de6256cad274a304783961756d372f8d4dd6"
+    },
+    {
+      "path": "viewer/README.md",
+      "sha": "53014645ec4d256ce5d10908ce22d3fc04f5dc18"
+    },
+    {
+      "path": "viewer/app.js",
+      "sha": "7cd2b3c376e1cffdeeed295caf24d6b94154c3fa"
+    },
+    {
+      "path": "viewer/index.html",
+      "sha": "beedea6fccbaf67e3873f14c3023761b1d2f0783"
+    },
+    {
+      "path": "viewer/launch.vbs",
+      "sha": "ac77a66f6fbb16f578739ff741b64756c49edf41"
+    },
+    {
+      "path": "viewer/server.py",
+      "sha": "efff85a0eee868d792bf452547031c2bd7a7b4dd"
+    },
+    {
+      "path": "viewer/styles.css",
+      "sha": "3399107a1ce2e92ea07f0d2a3f56dd46703458e1"
+    },
+    {
+      "path": "viewer/tests/test_server.py",
+      "sha": "6698a00af4ce9d83221ad596e5fe484c4c4479d3"
+    },
+    {
+      "path": "workspace/global_workspace/README.md",
+      "sha": "75e2b0c0f6e27d40431de9d41ad0b324bd1dc290"
+    },
+    {
+      "path": "workspace/global_workspace/WIRING.md",
+      "sha": "ff33cdca56d3a9638e5b73951c3b704f0eed4bcf"
+    },
+    {
+      "path": "workspace/global_workspace/WORKSPACE_DESIGN.md",
+      "sha": "dcb91c3180ccd378ffe3ab98f9bb6ece5de6c30d"
+    },
+    {
+      "path": "workspace/global_workspace/tests/eval_duplicate_detector.py",
+      "sha": "2587bd87e1105ad1c41c08e807aa2e41af5a9860"
+    },
+    {
+      "path": "workspace/global_workspace/tests/test_workspace.py",
+      "sha": "566438787f4e796a96c779010772d3720680f179"
+    },
+    {
+      "path": "workspace/global_workspace/workspace.py",
+      "sha": "b6b300ee7b8d853e03d51fbacd82f4237746bef9"
+    },
+    {
+      "path": "workspace/global_workspace/workspace_hook.py",
+      "sha": "5fccde2a666058d059104cc8883b7c4b4a755e8f"
+    },
+    {
+      "path": "workspace/prospective_control/DESIGN.md",
+      "sha": "58aecb8106c82e847e2767a61943da6ee3156ba2"
+    },
+    {
+      "path": "workspace/prospective_control/README.md",
+      "sha": "0da3d2686c1abbf655c7850739cf1a90bbf9542d"
+    },
+    {
+      "path": "workspace/prospective_control/__init__.py",
+      "sha": "2604748580b81d320de139a1d8a9f6b16bf0652c"
+    },
+    {
+      "path": "workspace/prospective_control/prospective_control.py",
+      "sha": "45c58d074cb299ad0feb635ead0103e4fd5b56fa"
+    },
+    {
+      "path": "workspace/prospective_control/tests/test_prospective_control.py",
+      "sha": "bba945c3fec9ba2f4a1ab1dd2d4d54750a735c63"
+    }
+  ]
+}

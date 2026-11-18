@@ -1,0 +1,718 @@
+{
+  "schema": 1,
+  "revision": "c788e6690a6c40f5637bb1c9f9caef3cf1353a73",
+  "scope": "Connector setup duties and native engine admission, mapped to the complete pinned public repository. Every explicit invocation reports unchecked setup obligations; source availability or copied code is not engine readiness.",
+  "mechanisms": [
+    {
+      "id": "S01",
+      "mechanism": "Upstream authority and pinned revision",
+      "capability": "core",
+      "source_paths": [
+        "docs/METHOD.md"
+      ],
+      "setup": "Original startup/method and faculty source, exact revision and declared overlays",
+      "admission": "All locked source blobs match; revision retained in receiver evidence",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Verify the complete pinned GitHub tree and retain revision in current runtime evidence",
+        "Read original startup/method and applicable faculty implementations; retain declared overlays"
+      ]
+    },
+    {
+      "id": "S02",
+      "mechanism": "Source acquisition, integrity and offline fallback",
+      "capability": "core",
+      "source_paths": [
+        "bootstrap/README.md"
+      ],
+      "setup": "Offline archive or pinned GitHub codeload; no Git requirement",
+      "admission": "Cache, missing-file, altered-byte and untracked-module controls",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Keep a verified complete public source locally",
+        "Verify offline archive, real network acquisition, cache tamper/missing/untracked controls",
+        "Review upstream changes as inactive candidates; never silently repin"
+      ]
+    },
+    {
+      "id": "S03",
+      "mechanism": "Transferable skill package and fresh-profile prerequisites",
+      "capability": "core",
+      "source_paths": [
+        "bootstrap/install.py"
+      ],
+      "setup": "Unpack public skill bundle; choose actual Python 3.13+ (excluding 3.14.1) and profile",
+      "admission": "Install from bundle into second empty profile; no lived state in package",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Preflight the selected Python, private venv and component dependency locks",
+        "Exclude lived state and credentials from the transferable package",
+        "Install the actual public package into a second ignorant profile"
+      ]
+    },
+    {
+      "id": "S04",
+      "mechanism": "Bootstrap, corpus binding and identity seeds",
+      "capability": "core",
+      "source_paths": [
+        "bootstrap/templates/CLAUDE.template.md"
+      ],
+      "setup": "Native bootstrap into new private generation; bind one corpus and fill only known identity facts",
+      "admission": "Seed nodes, native remember/node/recall and actual corpus path verified",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Bind one private corpus and verify native provenance write/read/recall",
+        "Seed identity, relationship, voice, creativity and standing ledgers with truthful local facts",
+        "Preserve existing user-authored identities, memories and domain boundaries during migration"
+      ]
+    },
+    {
+      "id": "S05",
+      "mechanism": "OS and runtime adapters",
+      "capability": "core",
+      "source_paths": [
+        "hooks/hooks.codex.template.json"
+      ],
+      "setup": "Render native template with actual interpreter, path quoting and host contract",
+      "admission": "All installed handlers execute; native receiver sees events; real-host limitations remain explicit",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Qualify this computer’s actual runtime event and output contracts",
+        "Bind interpreters, quoted paths, advice commands, canonical corpus, imports and process ownership",
+        "Name unqualified runtime/OS features without claiming cross-host execution"
+      ]
+    },
+    {
+      "id": "S06",
+      "mechanism": "Standing profile activation and preservation",
+      "capability": "core",
+      "source_paths": [
+        "docs/COGNITIVE_ARCHITECTURE.md"
+      ],
+      "setup": "Preserved marked block in effective global instructions",
+      "admission": "BOM/CRLF/override/idempotence/damaged-block/lock/disconnect controls",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Verify effective marked startup instructions and owned hook registrations",
+        "Preserve unrelated instructions, overrides, BOM/CRLF, hooks, bytes and modes",
+        "Verify idempotence, immediate disconnect and reversible restoration"
+      ]
+    },
+    {
+      "id": "S07",
+      "mechanism": "Fresh root source delivery",
+      "capability": "core",
+      "source_paths": [
+        "docs/COGNITIVE_ARCHITECTURE.md"
+      ],
+      "setup": "Fresh native root with normal profile discovery",
+      "admission": "Receiver prompt inspection plus observed source reads and source-backed decision",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Observe fresh-root original-source reads, scoped recall and a correct evidence-backed decision",
+        "Inspect receiver-visible startup context; do not accept sender-only delivery"
+      ]
+    },
+    {
+      "id": "S08",
+      "mechanism": "Wake, relationship, voice and creativity",
+      "capability": "core",
+      "source_paths": [
+        "hooks/brain_startup.template.md"
+      ],
+      "setup": "Original startup and authorized identity/relationship/voice/creativity seeds",
+      "admission": "Receiver consults seeds and applies actual verified preferences without importing upstream identity",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Read and apply local identity, relationship, voice, shared language, values and creative method",
+        "Keep unknown partner facts explicitly unknown; avoid upstream-owner identity",
+        "Refresh truthful state-of-mind, partner-model and autobiography through genuine work"
+      ]
+    },
+    {
+      "id": "S09",
+      "mechanism": "Recall discovery, corpus binding and lexical lane",
+      "capability": "core",
+      "source_paths": [
+        "docs/RECALL_LEVERS.md"
+      ],
+      "setup": "Bound native lexical index, node reader, alternate wording and recall lanes",
+      "admission": "Relevant note returned; unrelated fixture rejected; current deployment provenance read back",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Read actual provenance from this corpus through native recall",
+        "Verify relevant/irrelevant and alternate-wording recall controls",
+        "Verify indexing after ordinary writes, cache binding and stale-index behavior"
+      ]
+    },
+    {
+      "id": "S10",
+      "mechanism": "Semantic recall, models, embeddings and fusion readiness",
+      "capability": "semantic",
+      "source_paths": [
+        "docs/MACOS_INSTALL.md"
+      ],
+      "setup": "Production BGE dependencies and model; stage, publish, audit coverage",
+      "admission": "Pinned model hashes, actual query encoder, complete corpus sidecar and semantic retrieval control",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Verify production model hashes/parity, actual encoder and complete current coverage",
+        "Verify ordinary native writes acquire fresh semantic vectors and are meaning-recallable",
+        "Preserve publication/coverage authority, concurrency and failed-publication controls"
+      ]
+    },
+    {
+      "id": "S11",
+      "mechanism": "Memory schema, evidence status, corrections and write-back",
+      "capability": "core",
+      "source_paths": [
+        "docs/MEMORY_CONVENTIONS.md"
+      ],
+      "setup": "Normal native memory writer, status/evidence/supersession and copies",
+      "admission": "Written node/index read back; concurrent writes and supersession controls from upstream",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Use native schema/status/evidence writer and independently read node/index effects",
+        "Verify missing evidence is refused and concurrent writes preserve content",
+        "Exercise correction/supersession/attachments and hunt relevant stale copies"
+      ]
+    },
+    {
+      "id": "S12",
+      "mechanism": "Graph capture, coactivation, salience and association growth",
+      "capability": "graph",
+      "source_paths": [
+        "docs/FULL_BRAIN_MAP.md"
+      ],
+      "setup": "Native transcript/event capture, learned edges and graph/network state; preserve shadow gates",
+      "admission": "Actual scoped events and nodes on disk; complete-line/exactly-once/idempotent growth controls",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Capture this profile’s actual complete transcript events with durable cursors",
+        "Verify repeated capture, partial/torn records and replay do not double-count",
+        "Keep Codex alias/test-session, bank, shadow/replay and causal-evaluation gates intact",
+        "Admit association/coactivation/salience/network growth only from eligible real data"
+      ]
+    },
+    {
+      "id": "S13",
+      "mechanism": "Reflexes, mistake/error graph, danger and heeding gates",
+      "capability": "reflex",
+      "source_paths": [
+        "docs/NOTES_ARE_HINTS.md",
+        "dreaming/strong_node_watch.py",
+        "dreaming/instincts.py",
+        "dreaming/danger_mode.py",
+        "docs/heeding-gates.md"
+      ],
+      "setup": "Compile actual mistakes; native hint/danger and opt-in heeding gates",
+      "admission": "Relevant defect blocks or fires; allowed/misleading input stays allowed; selection/precision status retained",
+      "external_inputs": [
+        "Strong-node scanner runtime/generation and governed release inputs when selected; absent from a fresh public corpus"
+      ],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Compile original reflexes with a genuine matching receipt and preserve authored overlays",
+        "Check relevant, allowed and misleading trigger inputs; preserve danger/error/claim/report guards",
+        "Collect real correction/fire/heeding/precision evidence before learned enforcement or promotion",
+        "Verify the observe-only strong-node recurrence feed and its admitted scanner/release pin; report degraded feed explicitly and never create ENABLED or sign/promote on its behalf"
+      ]
+    },
+    {
+      "id": "S14",
+      "mechanism": "Prompt archive, owner context and task checklist",
+      "capability": "checklist",
+      "source_paths": [
+        "bootstrap/templates/CLAUDE.template.md"
+      ],
+      "setup": "Native prompt archive and task checklist; preserve words/time; owner-only seen",
+      "admission": "Real prompt reaches private ledger; working/done round trip; agent seen attempt refused",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Verify prompt archive and checklist retain actual asked words/time/scope",
+        "Round-trip working/done and owner context; agent never marks owner seen",
+        "Verify concurrent ledger preservation, queued context and session attribution"
+      ]
+    },
+    {
+      "id": "S15",
+      "mechanism": "Dreams, consolidation, reflex judging and measured promotion",
+      "capability": "dream",
+      "source_paths": [
+        "dreaming/README.md"
+      ],
+      "setup": "Original manual mechanical dream and enabled tail; no unattended LM by default",
+      "admission": "Read actual logs and every failed/capped/skipped step; derived outputs and locks/stop controls",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Run an original mechanical dream and inspect every failed/capped/skipped step",
+        "Conduct a genuine bounded model consolidation/replay/judging pass and write a truthful journal",
+        "Verify freshness, locking/STOP and source data gates; never pad fires or historical corpus",
+        "Configure recurring dream upkeep only within operator-authorized schedule scope"
+      ]
+    },
+    {
+      "id": "S16",
+      "mechanism": "Compaction, checkpoint nodes and job closeout",
+      "capability": "continuity",
+      "source_paths": [
+        "docs/COMPACTION.md"
+      ],
+      "setup": "Original durable Codex checkpoint and job-cycle handover",
+      "admission": "Full summary and anchor read/hash checked; native task/claim/NEXT metadata and recallable handover",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Save a native-session-bound full checkpoint and independently verify summary/hash/anchor",
+        "Preserve tasks, mesh identity, claims, source revision and NEXT across handoff/compaction",
+        "Write/read/recall an actual job handover without inflating always-loaded memory"
+      ]
+    },
+    {
+      "id": "S17",
+      "mechanism": "Worker inheritance and source/result verification",
+      "capability": "core",
+      "source_paths": [
+        "delegation/DELEGATION.md"
+      ],
+      "setup": "Exact source/profile/scope/evidence worker contract plus parent verification",
+      "admission": "Independent fresh worker consults originals, applies decision and returns artifacts checked by parent",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Observe one actual fresh worker consulting originals and permitted recall",
+        "Verify native worker identity, minimal scoped handoff, no answer leakage and parent recheck",
+        "Preserve the same exact source/scope contract for follow-ups and nested authorized workers"
+      ]
+    },
+    {
+      "id": "S18",
+      "mechanism": "Delegation routing, served-model verification and outcome ledger",
+      "capability": "delegation",
+      "source_paths": [
+        "delegation/DELEGATION.md"
+      ],
+      "setup": "Original route, served-model evidence and outcome ledger",
+      "admission": "Authoritative served-model evidence or explicit unknown; accepted/fixed/rejected outcome recorded and routing review",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Record actual requested/served-model evidence or explicit unknown plus parent verdict",
+        "Inspect native route recommendations against available current model inventory",
+        "Verify outcome-ledger preservation and measured dream routing/reflex review"
+      ]
+    },
+    {
+      "id": "S19",
+      "mechanism": "Mesh claims, workspace, conflicts and handoffs",
+      "capability": "mesh",
+      "source_paths": [
+        "mesh/PROTOCOL.md"
+      ],
+      "setup": "Native identities/digest/claim/assert/conflict/handoff; separate worktrees or one integrator",
+      "admission": "Conflicting claim refused and available after release; exact workspace body; explicit acceptance",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Establish native identities, leases, digest and covering claims before shared mutation",
+        "Observe conflicting claim refusal, immediate assert, release and successful successor",
+        "Round-trip exact workspace bodies and explicit structured handoff acceptance"
+      ]
+    },
+    {
+      "id": "S20",
+      "mechanism": "Privacy, authorization and isolated domain state",
+      "capability": "core",
+      "source_paths": [
+        "docs/PORTING.md"
+      ],
+      "setup": "Source/state separation, scoped recall and handoffs, private domain stores",
+      "admission": "Fixture paths/state isolated; bundle excludes lived data; no unauthorized transport",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Keep code/source/public distribution separate from private lived state",
+        "Enforce scoped recall, inherited-environment isolation and denied domain ingestion",
+        "Check propagation and transport do not expose credentials or private histories"
+      ]
+    },
+    {
+      "id": "S21",
+      "mechanism": "Compute, governor, protected workloads and body",
+      "capability": "governor",
+      "source_paths": [
+        "governor/COMPUTE_DOCTRINE.md"
+      ],
+      "setup": "Actual target compute/body policy; native one-shot observation; platform capability report",
+      "admission": "Fresh state and pressure fields; no claims of Windows process enforcement on POSIX",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Observe current compute/body state and preserve human/protected-workload priority",
+        "Use target-native governor measurement and bounded owned-process cleanup",
+        "Report Windows CrashGuard/enforcement and remote sentinel prerequisites on this host"
+      ]
+    },
+    {
+      "id": "S22",
+      "mechanism": "Fleet supervision, unattended loops and restart recovery",
+      "capability": "fleet",
+      "source_paths": [
+        "docs/AGENTIC.md"
+      ],
+      "setup": "Operator-authorized fleet/schedule/loop and original supervision",
+      "admission": "Loaded service/process identity, fresh output, scoped stop/restart and recovery evidence",
+      "external_inputs": [
+        "approved local schedule/fleet scope"
+      ],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Identify actual target-supported fleet/supervision/continuity entry points",
+        "Obtain schedule/service scope before installing a recurring or unattended loop",
+        "Verify loaded owned service, fresh output, locks, stop/restart and recovery"
+      ]
+    },
+    {
+      "id": "S23",
+      "mechanism": "Specialist faculties: math, film, proof and research tools",
+      "capability": "specialists",
+      "source_paths": [
+        "README.md"
+      ],
+      "setup": "Separate optional math/film/proof stores, native dependencies, local tool inventory",
+      "admission": "Native store round trip and artifact integrity; missing binaries/credentials named; no domain contamination",
+      "external_inputs": [
+        "selected domain",
+        "authorized store/artifacts",
+        "present local tool inventory"
+      ],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Discover separate math/film/proof/research setup entry points and actual local tools",
+        "Initialize selected domain stores and verify native independent round trips",
+        "Keep ingestion/publication rights and domain evidence gates; report absent binaries/artifacts"
+      ]
+    },
+    {
+      "id": "S24",
+      "mechanism": "Liveness, recall-server/cache health, viewer and repair",
+      "capability": "core",
+      "source_paths": [
+        "docs/FULL_BRAIN_MAP.md"
+      ],
+      "setup": "Recompute source/code/config/recall/handler health; read original warnings",
+      "admission": "Tampered code/missing hooks/stale receipt become non-ready; receiver evidence and actual liveness inspected",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Recompute actual source/code/config/corpus/encoder health; stale receipts cannot make ready",
+        "Check recall cache/server and read-only viewer through actual entry points",
+        "Distinguish source-layout/corpus-specific diagnostics from actual adapter delivery and repair faults"
+      ]
+    },
+    {
+      "id": "S25",
+      "mechanism": "Authorized propagation across machines/profiles",
+      "capability": "core",
+      "source_paths": [
+        "docs/PORTING.md"
+      ],
+      "setup": "Authorized public skill package and target activation; private state separate",
+      "admission": "Second empty target receives exact revision and passes independent core and receiver checks",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Transfer only the public locked source/skill and operator-authorized state",
+        "Prove second empty profile install from that exact package",
+        "Verify target-native activation, root/worker behavior and remaining input checklist"
+      ]
+    },
+    {
+      "id": "S26",
+      "mechanism": "Cross-machine memory/fleet synchronization and conflict handling",
+      "capability": "sync",
+      "source_paths": [
+        "docs/FULL_BRAIN_MAP.md"
+      ],
+      "setup": "Configured authorized remote, insertion-only memory pull and event-identity ledger union",
+      "admission": "Remote/local overlap and collision controls; neither side loses prior history",
+      "external_inputs": [
+        "authorized peer/repository",
+        "remote authentication",
+        "merge policy"
+      ],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Configure only authorized peers, remote authentication and merge policy",
+        "Verify insertion-only memory merge and event-identity union preserve both histories",
+        "Exercise overlap/collision controls and independently inspect remote results"
+      ]
+    },
+    {
+      "id": "S27",
+      "mechanism": "Git publication, secret-scan gate and upgrades",
+      "capability": "publication",
+      "source_paths": [
+        "docs/FULL_BRAIN_MAP.md"
+      ],
+      "setup": "Authorized repository, original secret pre-push gate, new staged source revision",
+      "admission": "Secret positive control fails; allowed payload passes; exact remote result verified; original source unchanged",
+      "external_inputs": [
+        "authorized repository and publication request",
+        "target-specific push policy"
+      ],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Stage source upgrades and review changed originals without modifying active authority",
+        "Install/verify original secret scan and pre-push controls for selected publication target",
+        "Publish only within explicit request/policy and independently verify exact remote state"
+      ]
+    },
+    {
+      "id": "S28",
+      "mechanism": "Backup, restore drills and complete runtime removal",
+      "capability": "resilience",
+      "source_paths": [
+        "resilience/README.md"
+      ],
+      "setup": "Reversible config snapshots; local restore drill; upstream private backup trust roots if selected",
+      "admission": "Backup digests and independent restore comparison; rollback preserves live state; disabled hooks stop immediately",
+      "external_inputs": [
+        "for cloud backup: operator cloud identifiers and pinned trust roots"
+      ],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Preserve code/config/corpus and exact reversible version/permission snapshots",
+        "Perform an independent local restore/rollback drill and preserve later owner edits",
+        "Configure original encrypted/cloud backup trust roots and verify exact restore when selected",
+        "Disconnect/remove only owned runtime/services while retaining lived state"
+      ]
+    },
+    {
+      "id": "S29",
+      "mechanism": "Task-specific adaptation and upstream exceptions",
+      "capability": "core",
+      "source_paths": [
+        "docs/PORTING.md"
+      ],
+      "setup": "Separate smallest overlay with original invariant, falsifier, baseline and fallback",
+      "admission": "Relevant failure case and unchanged comparison; declared High worker-wake exception scoped",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Keep every runtime/task overlay separate from hash-pinned original code",
+        "Record original invariant, target need, falsifier, baseline and fallback",
+        "Verify observed behavior with relevant failure and safe controls; retain user-scoped exceptions"
+      ]
+    },
+    {
+      "id": "S30",
+      "mechanism": "Verification discipline and negative controls",
+      "capability": "core",
+      "source_paths": [
+        "docs/METHOD.md"
+      ],
+      "setup": "Observe normal entry points; retain discriminating controls with code",
+      "admission": "Checker catches intentionally planted target defects and accepts safe controls",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Verify effects through normal entry points instead of trusting exit code or self-report",
+        "Retain discriminating negative/allowed controls with the changed mechanism",
+        "Independently inspect sources, worker effects, artifacts and stale/forged-receipt rejection"
+      ]
+    },
+    {
+      "id": "S31",
+      "mechanism": "End-to-end fresh-machine acceptance",
+      "capability": "core",
+      "source_paths": [
+        "scripts/smoke_framework.py"
+      ],
+      "setup": "Source through runtime and fresh root/worker acceptance, current receipt",
+      "admission": "Every required current-state gate proven; no completion from configurations or sender reports",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Validate current source→runtime→automatic hooks→fresh root→fresh worker evidence",
+        "Verify selected faculties and list every unfinished setup/admission/input obligation",
+        "Warn at each explicit invocation; do not mark manual-only Brain use fully embedded"
+      ]
+    },
+    {
+      "id": "S32",
+      "mechanism": "Common-sense hook integration",
+      "capability": "common-sense",
+      "source_paths": [
+        "common_sense/README.md"
+      ],
+      "setup": "Original cs_core, enabled switch and native JSON context",
+      "admission": "Original selftest fire/quiet/backoff/judging/disable cases plus native receiver delivery",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Run original common-sense fire/quiet/backoff/judging/disable controls",
+        "Verify runtime-visible delivery with native context contract and private state binding"
+      ]
+    },
+    {
+      "id": "S33",
+      "mechanism": "Coordination hub and owner-question transport",
+      "capability": "coordination",
+      "source_paths": [
+        "coordination/hub.py"
+      ],
+      "setup": "Explicitly configured additive hub and authorized transport; private inputs separate",
+      "admission": "Native hub/owner-question tests, actual delivery/ack if enabled; no unsolicited messages",
+      "external_inputs": [
+        "approved transport endpoint",
+        "explicit messaging authorization"
+      ],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Identify and configure only authorized coordination/owner-question endpoints",
+        "Verify original hub/owner-question refusal, scope, expiry and acknowledgment controls",
+        "Verify actual allowed transport delivery/ack; no unsolicited messages"
+      ]
+    },
+    {
+      "id": "S34",
+      "mechanism": "Runtime hook installation and receiver-visible event delivery",
+      "capability": "core",
+      "source_paths": [
+        "hooks/hooks.codex.template.json"
+      ],
+      "setup": "Native hook templates, bridge context/deny semantics, review/trust and disconnect",
+      "admission": "Original hosts plus native receiver events; deny survives adapter, Stop cannot loop, trusted scope recorded",
+      "external_inputs": [],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Observe native SessionStart, prompt, pre/post-tool, Stop and worker contract delivery",
+        "Complete supported persisted hook review of exact owned definitions; preserve unrelated trust",
+        "Repair missing/ignored/untrusted/misbound hooks and retest actual receiver behavior",
+        "Verify deny semantics, immediate disconnect, bounded timeout and no Stop continuation loop"
+      ]
+    },
+    {
+      "id": "S35",
+      "mechanism": "Prediction, surprise and calibration",
+      "capability": "prediction",
+      "source_paths": [
+        "docs/COGNITIVE_ARCHITECTURE.md",
+        "dreaming/predict.py"
+      ],
+      "setup": "Bind the append-only prediction ledger and derived score/wake destinations; preserve genuine dated forecasts",
+      "admission": "Dated hit/miss and malformed-ledger controls; independently inspect Brier/surprise/calibration and wake/dream consumption",
+      "external_inputs": [
+        "genuine pre-outcome forecasts and observed outcomes"
+      ],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Discover the native parser and dry-run/lint; bind the approved corpus, predictions.tsv and brain/PREDICTIONS.md outputs",
+        "Preserve dated probabilities, resolutions and provenance; keep absent or thin forecast history unqualified",
+        "Verify hit/miss scoring, malformed-status detection/reporting and wake/dream consumption using isolated controls before claiming calibration"
+      ]
+    },
+    {
+      "id": "S36",
+      "mechanism": "Literature acquisition, separate recall and licensed drafts",
+      "capability": "literature",
+      "source_paths": [
+        "README.md",
+        "dreaming/literature_harvest.py",
+        "dreaming/literature_extract.py",
+        "dreaming/literature_recall.py",
+        "dreaming/literature_license.py",
+        "dreaming/literature_to_drafts.py"
+      ],
+      "setup": "Select a separate paper store, extraction dependencies and scoped acquisition/draft destinations",
+      "admission": "Known/unrelated recall, resumable hashes, actual license provenance and accepted/rejected attributed draft controls",
+      "external_inputs": [
+        "selected literature scope",
+        "authorized acquisition and destination",
+        "PyMuPDF when extracting PDFs"
+      ],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Bind a separate BRAIN_LITERATURE_DIR and authorized inbox; inventory extraction dependencies and acquisition scope",
+        "Verify bounded harvest/extract/recall, duplicate/resume/content-hash controls and polite source rate limits",
+        "Verify actual license provenance and CC-BY/CC-BY-SA/CC0 admission versus missing/NC/ND refusal; inspect short attributed concept/definition drafts with null proof_text"
+      ]
+    },
+    {
+      "id": "S37",
+      "mechanism": "Shadow prospective control experiment",
+      "capability": "prospective-control",
+      "source_paths": [
+        "workspace/prospective_control/README.md",
+        "workspace/prospective_control/DESIGN.md",
+        "workspace/prospective_control/prospective_control.py",
+        "workspace/prospective_control/tests/test_prospective_control.py"
+      ],
+      "setup": "Explicit selection, private ledger/external key, bounded experiment and allocator/actor/blinded-adjudicator separation",
+      "admission": "Native hash-chain/locking/evidence-cutoff/hidden-control tests; externally retained head; manual promotion only",
+      "external_inputs": [
+        "explicit experiment selection",
+        "private allocator ledger and assignment key",
+        "separate actor and blinded adjudicator roles"
+      ],
+      "grade": "unverified",
+      "engine_state": "must be observed; never inferred from this catalog",
+      "setup_checks": [
+        "Keep this lane unintegrated by default; when selected bind private ledger/key, stable units, pre-work cutoff and bounded end date",
+        "Verify hash-chain/semantic/locking controls, external head retention, hidden receipt non-disclosure and role separation",
+        "Inspect independent forecast/outcome/overhead gates; retain automatic_integration_permitted=false and require manual review of PROMOTION_CANDIDATE"
+      ]
+    }
+  ]
+}

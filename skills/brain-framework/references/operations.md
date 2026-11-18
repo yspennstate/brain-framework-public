@@ -1,0 +1,36 @@
+# Native operation bindings
+
+Use this skill's `scripts/brainctl.py --profile PROFILE native TOOL ...` so the interpreter, corpus and state seams stay bound to the selected deployment. Read the original tool parser before using a new subcommand; several upstream programs write beside themselves or continue after a failed step. The isolated source cache is never the working state directory.
+
+First validate the designated main via `resolve` and freshly run `--workspace WORKSPACE admit --session SESSION` as required by the skill. Main is always used; add `--brain PROJECT-ID --workspace PROJECT-WORKSPACE` only for explicitly bound project operations. See [brain-selection.md](brain-selection.md). Native memory mutations, script dispatch, dreams, graph capture, workspace publication and checkpoints additionally require global `--session SESSION --workspace WORKSPACE` and a successful admission less than 30 minutes old for that exact session/selection/configuration. This includes alternate script routes to the native writer. For explicitly authorized setup/repair/qualification/skill maintenance, use the corresponding global `--maintenance setup|repair|qualification|skill-maintenance`; this permits only the assigned repair, never ordinary work or a substitute store. Read/recall and mesh/checklist remain available to establish calibration and diagnose blockers. Original diagnostic hosts/installers run directly only within that bounded maintenance lane. Every memory write still requires valid designated identity, claims, native write and independent readback.
+
+| Work | Bound command and source rule |
+|---|---|
+| Recall/read/write | `native brain recall QUERY`, `native brain node SLUG`, `native brain remember SLUG --type project --desc FINDING --status provisional --evidence POINTER --body TEXT`; inspect `brain.py` for supersession and attachment options |
+| Task asks/progress | `native checklist add --asked WORDS --by AGENT --runtime codex --session FULL-ID`; `working ID TEXT`, `note ID TEXT`, `done ID RESULT`, `blocked ID REASON`, `list --all`; only the user marks `seen` |
+| Mesh | `native mesh hello --agent ID --runtime codex --session FULL-ID --task SAFE-SUMMARY`, `digest`, `claim`, immediate `assert`, `pulse`, `inbox`, structured `handoff`, accept/reject and `bye`; follow the full original protocol |
+| Workspace | `native workspace --db DB post --agent ID --kind found --body SAFE-TEXT`; verify the exact posted body through the stream |
+| Durable Codex checkpoint | `native checkpoint --summary FILE --session-id FULL-UUID --rollout ACTUAL-ROLLOUT --agent NATIVE-MESH-ID --save`; summary includes open requests, source revision, task/node IDs, verified state, leases and `NEXT:`. This preserves context, not native context reduction |
+| Session disconnect | `native switch off --session FULL-ID`; reconnect with `on --session FULL-ID`. Permanent profile disconnect uses `brainctl.py disable` |
+| Native health | `native status`; also recompute connector `verify`, inspect actual recall/query lanes, hook telemetry and enabled-faculty freshness |
+| Manual dream | `native dream --type nap`; inspect the runner and actual log first. A completion marker or exit zero cannot hide `STEP FAILED`, `STEP CAPPED` or `STEP SKIPPED` |
+
+## Learning and upkeep
+
+Use `docs/MEMORY_CONVENTIONS.md`: one durable fact per file, meaningful description, type/status, evidence and related links. Never import upstream's private partner identity. Retractions and supersession belong inside the original node; hunt relevant copies with a positive search control. Keep tentative associations and dream hypotheses provisional. A durable finding is not a per-turn status report.
+
+The checklist stores the user's ask and time in its approved private boundary. Preserve request scope words. Do not turn the always-loaded memory index into a fleet log. Compaction summaries keep identifiers, dependencies, claims, open work and a next action; use the original Codex manual checkpoint tool when a native compaction hook cannot supply the summary. A job handover must be recallable through the original job-cycle path, with its body read back independently.
+
+Graph capture, coactivation, mistake compilation, reflex judging, linking and consolidation use their upstream entry points and controls from the mechanism map. Do not hand-invent graph nodes, treat hints as orders, weaken signed private-project validation, publish diagnostic LSA embeddings as production, or enable shadow mechanisms without their admission evidence. After changing a trigger, retain relevant and misleading actual serialized inputs; after changing recall, measure both wins and losses against the unchanged baseline.
+
+Before heavy work, observe target compute/body state and size only your own work according to the target's actual policy. POSIX governor code observes and publishes; do not claim Windows process-priority enforcement on a Mac. Schedules/fleets/remote transport are separate authorized operations. A scheduled file is not proof of a loaded service; inspect fresh effects, locks and stop behavior. Never copy historical production launch or automatic-push policy as a generic requirement.
+
+For synchronization, union shared prompt/checklist event histories and preserve provenance. Never replace a larger remote ledger with a smaller local one. Use insertion-only memory pull unless the native supersession/merge path justifies a change. Before publication install/verify the original secret gate and check exact remote paths after an authorized push. Source code may be public; learned corpus/state is private unless the user authorizes otherwise.
+
+For backups, follow `resilience/README.md` and the operator's configured trust roots. Verify actual restore into a separate destination and compare refs/files and authenticated receipts. A sanitized public snapshot cannot replace an exact encrypted recovery backup. Missing credentials, remote identifiers or keys are named missing inputs, never invented defaults.
+
+`native graph-capture --days 40 --out PRIVATE-OUTPUT --state PRIVATE-CURSOR` binds the original capture root to this profile’s actual sessions. Inspect cursor/event effects and preserve the source’s test-exclusion and Codex alias admission gate. A new corpus can correctly have no learned edges, judged fires or domain history. Report those states as awaiting data; never pad histories or relax thresholds. Source-owner regression floors are diagnostics for that corpus, not fresh-user training targets.
+
+For manual model naps, prediction scoring, literature and the shadow prospective-control lane, read [upkeep.md](upkeep.md) and its named originals. Use explicit maintenance scope for upkeep commands; discovery does not select an engine or authorize acquisition, transport, schedules or promotion.
+
+Admission repairs clean selected semantic drift once through original lexical/vector builders, publication and independent strict coverage. Source/runtime/native identity must pass first; missing identity does not launch upkeep. A failed attempt still produces a fresh blocked admission when required checks fail. POSIX adapter children run at priority10 or lower; it never changes the caller or unrelated processes.

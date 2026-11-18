@@ -6,7 +6,7 @@ This procedure runs in the skill's bounded maintenance lane until full admission
 
 ## Entry point
 
-The portable distribution is the whole `brain-framework` skill directory, including the locked public source archive. No Git or developer-tools installation is required. Unpack it, then run its entry point with the actual Python 3.13+ (excluding 3.14.1) interpreter:
+The portable distribution is the whole `brain-framework` skill directory. Copied out of the public repository it carries no source archive, so give it the locked source with `--source` (a checkout at the pinned revision) or `--network`; a package built by `brainctl.py bundle` includes `assets/upstream-source.tar.gz` when one is present. No Git or developer-tools installation is required. Unpack it, then run its entry point with the actual Python 3.13+ (excluding 3.14.1) interpreter:
 
 ```
 python3 /path/to/brain-framework/scripts/brainctl.py --profile /target/.codex install

@@ -7,6 +7,8 @@ than once.
 
 ## Recall before you derive
 
+*In this document since 5 November 2026.*
+
 The brain's first job is to stop you re-deriving what it already knows. That only works if you
 query it at the START of an investigation, not while writing up the result.
 
@@ -19,6 +21,8 @@ The tell: a defect that specific, in a codebase that well-audited, has usually b
 before. One query costs seconds.
 
 ## A check is only worth its control
+
+*In this document since 5 November 2026.*
 
 This is the discipline that produced more real findings than any other, and the one most often
 skipped, because a green is pleasant and a control is work.
@@ -49,6 +53,8 @@ debugging.
 
 ## The negative half is where the information is
 
+*In this document since 5 November 2026.*
+
 "It passes after my change" says almost nothing. The informative experiment is the one where
 you break it deliberately and watch WHICH check goes red.
 
@@ -63,6 +69,8 @@ agreement, is what makes a green worth quoting.
 
 ## Measure; do not infer from a summary
 
+*In this document since 5 November 2026.*
+
 Counting is not comparing. Two directories with 74 files each looked identical and were not;
 the byte comparison was what proved it, and the same method then answered a question that had
 been treated as an unanswerable judgement call - three branches "tied" until tree object ids
@@ -74,6 +82,8 @@ times that were six hours wrong while a hook printed the true time on every turn
 clock; do not quote yourself.
 
 ## Verify the host, not the patch
+
+*In this document since 5 November 2026.*
 
 When you inject code into N files, the question is not "does my snippet work" but "does every
 host still satisfy what my snippet assumes" - imports, globals, encoding, line endings,
@@ -89,6 +99,8 @@ each host.
 
 ## An observation is evidence only about the instant it samples
 
+*In this document since 5 November 2026.*
+
 Hunting a transient - an in-flight file, a lock held, a process mid-exit - "not present when I
 looked" is the expected reading whether or not it happened.
 
@@ -98,6 +110,8 @@ sample point is part of the design. Name the window in which the evidence exists
 the sampler fires inside it.
 
 ## Claim what you will mutate; announce what you are doing
+
+*In this document since 5 November 2026.*
 
 The mesh protects shared STATE. It does not protect shared WORK unless you publish what you
 are working on.
@@ -110,6 +124,8 @@ Read the digest during the work, not only at the start.
 
 ## Correct the original, then hunt the copies
 
+*In this document since 5 November 2026.*
+
 A retraction you only announce lives on in whatever copy you forgot: a summary, an eval
 replica, a deployed clone, a stale index line, a worker's self-report.
 
@@ -119,6 +135,8 @@ grep for the copies with a positive control so the silence means something.
 
 ## When you cannot fix it responsibly, ship the instrument
 
+*In this document since 5 November 2026.*
+
 Some defects should not be fixed at 3am by whoever found them - concurrency, anything whose
 reproduction you do not have. Deferring is fine; deferring silently is not.
 
@@ -127,6 +145,8 @@ occurrence self-explaining: the failure message that prints what was on disk, wh
 running, and what the end state was. A queue is transport; only an instrument is landing.
 
 ## Match the alarm to the blast radius
+
+*In this document since 5 November 2026.*
 
 Before escalating anything: public or private, live money or scratch, does it block someone or
 merely tidy things. A credential in a private scratch repo and the same credential in a public

@@ -444,6 +444,93 @@ def possessive_variants(queries, lex, ratio=0.005, min_df=2, swap=False):
     return out
 
 
+# Lone surname -> the hyphenated compound it belongs to (19 Nov 2026).
+# The tokenizer keeps a single-hyphen or en-dash name pair as ONE term (kantorovich-rubinstein, paley-zygmund), so a
+# wording that names one of the two people ("Paley inequality") never matches the card titled with the pair. For a
+# query word that is one part of a name pair found in card titles, one extra wording is added with the pair in its
+# place, fused by rank like the possessive swap, never summed. A part counts as a name when at least SUR_NAME of the
+# titles that use it alone capitalise it (cross, non, leave stay out), and a pair is offered for a part only when the
+# pair's count is at least SUR_FRAC of the part's standalone count (markov, gauss get none). At most SUR_K pairs per
+# word, SUR_MAX wordings per call. The map is cached next to the prepared store (<heavy>.surname.m), keyed by the
+# store file's size and mtime and the four constants; MATH_RECALL_SURNAME=0 turns the extra wording off.
+SUR_K, SUR_MAX, SUR_NAME, SUR_FRAC = 2, 3, 0.7, 0.25
+_SUR_MAP = {}
+_PAIR = re.compile(r"(?<![\w-])([A-Z][a-zà-ÿ]{2,})-([A-Z][a-zà-ÿ]{2,})(?![\w-])")
+
+
+def _surname_map(titles, heavy=None):
+    key = (id(titles), len(titles))
+    if key in _SUR_MAP:
+        return _SUR_MAP[key]
+    import collections
+    import marshal
+    dkey = None
+    if heavy:
+        try:
+            st = os.stat(heavy)
+            dkey = [st.st_size, int(st.st_mtime), len(titles), SUR_K, SUR_NAME, SUR_FRAC]
+            with open(heavy + ".surname.m", "rb") as fh:
+                got = marshal.loads(fh.read())
+            if got.get("key") == dkey:
+                _SUR_MAP.clear()
+                _SUR_MAP[key] = got["map"]
+                return got["map"]
+        except (OSError, ValueError, EOFError, TypeError, AttributeError):
+            pass
+    pairs, cap, low = collections.Counter(), collections.Counter(), collections.Counter()
+    for t in titles.values():
+        t = (t or "").replace("\u2013", "-").replace("\u2010", "-").replace("\u2011", "-")
+        for w in re.findall(r"(?<![\w-])([A-Za-z][a-z\u00e0-\u00ff]{2,})(?![\w-])", t):
+            (cap if w[0].isupper() else low)[w.lower()] += 1
+        for a, b in _PAIR.findall(t):
+            pairs[(a.lower(), b.lower())] += 1
+    # a name is capitalised in nearly every title that uses it alone (a word seen alone under 3 times passes)
+    name = lambda w: cap[w] + low[w] < 3 or cap[w] >= SUR_NAME * (cap[w] + low[w])   # noqa: E731
+    m = collections.defaultdict(list)
+    for (a, b), c in pairs.items():
+        if a == b or not name(a) or not name(b):
+            continue
+        for k in (a, b):   # only where the pair is a real share of how titles use the name (markov alone: no)
+            if c >= SUR_FRAC * (cap[k] + low[k]):
+                m[k].append((c, a + "-" + b))
+    out = {k: [x[1] for x in sorted(v, key=lambda x: (-x[0], x[1]))[:SUR_K]] for k, v in m.items()}
+    _SUR_MAP.clear()
+    _SUR_MAP[key] = out
+    if dkey is not None:
+        try:
+            tmp = heavy + ".surname.m.%d" % os.getpid()
+            with open(tmp, "wb") as fh:
+                fh.write(marshal.dumps({"key": dkey, "map": out}))
+            os.replace(tmp, heavy + ".surname.m")
+        except OSError:
+            pass
+    return out
+
+
+def surname_variants(queries, by_id, heavy=None):
+    M = _surname_map(by_id, heavy)
+    out = []
+    for q in queries:
+        low = q.lower().replace("–", "-")
+        words = re.split(r"(\s+)", q)
+        for i, w in enumerate(words):
+            k = w.lower().strip(".,;:()'\"")
+            if k.endswith("'s"):
+                k = k[:-2]
+            if k not in M or "-" in w:
+                continue
+            for comp in M[k]:
+                other = comp.replace(k, "").strip("-")
+                if other in low:
+                    continue
+                v = "".join(words[:i] + [comp] + words[i + 1:])
+                if v not in out and v not in queries:
+                    out.append(v)
+        if len(out) >= SUR_MAX:
+            break
+    return out[:SUR_MAX]
+
+
 # Number words against digits (31 Oct 2026). math_brain.retrieval.tokenize keeps a hyphenated word whole, so
 # "zero-one" and "0-1" are two terms that never match: "Kolmogorov 0-1 law" missed both Kolmogorov Zero-One cards in
 # its top 3, and "Levy zero-one law" missed the card titled Levy's 0-1 Law. The lexicon holds 49 such pairs in both
@@ -838,6 +925,8 @@ def main(argv=None):
         elif P is not None and _poss == "swap":   # the other form as its own wording: fused by rank, never summed
             queries = queries + [v for v in possessive_variants(queries, P.s.get("lex") or {}, swap=True)
                                  if v not in queries]
+        if P is not None and os.environ.get("MATH_RECALL_SURNAME", "1") == "1":
+            queries = queries + [v for v in surname_variants(queries, P.tool["title"], getattr(P, "heavy_path", None)) if v not in queries]
         _numw = os.environ.get("MATH_RECALL_NUMWORD", "swap")
         if P is not None and _numw == "1":
             queries = numword_variants(queries, P.s.get("lex") or {})

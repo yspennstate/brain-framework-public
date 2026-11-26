@@ -2,8 +2,8 @@
 
 The session's nervous system, as templates:
 
-- `settings.hooks.template.json` — the full hook wiring (42 hooks over PreToolUse,
-  PostToolUse, UserPromptSubmit, Stop, SessionStart), with install tokens. The
+- `settings.hooks.template.json` — the full hook wiring (PreToolUse, PostToolUse,
+  PostToolUseFailure, UserPromptSubmit, Stop, SessionStart, PreCompact, PostCompact), with install tokens. The
   bootstrap expands it to `bootstrap/settings.hooks.generated.json`; merge that
   object into your runtime's `settings.json`.
 - `wake_brain.template.ps1` — the SessionStart wake ritual: identity, body state,
@@ -67,3 +67,17 @@ reminds a session that has an advisor tool to call it before committing to an ap
 done, and counts advisor calls in the transcript every twelve tool calls. The nudge ships off, because a stock install
 has no advisor tool: turn it on by creating `~/.claude/advisor_nudge/ENABLED` or setting `ADVISOR_NUDGE=1`. Both take
 `--selftest`.
+
+Motivation hooks. `dreaming/motivation_hooks.py` gives an agent one short encouraging line at the moment it is likely to
+need one: at the start of a session, after a second failed tool call within ten minutes, when its last message says it
+cannot do something or is stuck, and after it has been corrected. A refusal by a rule or a guard gets a different line,
+one that says the rule stands and points at the honest way through it. The thousand lines are
+`dreaming/motivation_hooks.jsonl` (25 kinds of 40). `dreaming/motivation_hourly.py`, which the prompt hook imports, adds
+one longer piece per session per hour, the first twenty minutes in (`motivation_hourly.jsonl`). The hook is quiet on
+purpose: a lone failure is silent, failures a few seconds apart count as one, a prompt in a session's first ten minutes
+is silent, and after any line the session waits before it gets another, so a failure right after the session-start line
+says nothing. Wiring: the session-start line is a direct SessionStart entry in `settings.hooks.template.json`; prompts
+and failed tool calls go through the dispatcher, which is why the template routes PostToolUseFailure to
+`hook_dispatch.py`. Fires are logged to `~/.claude/motivation_hooks/fires.jsonl`; the file
+`~/.claude/motivation_hooks/OFF` silences both. Both programs take `--selftest`. An install made before this section
+existed gets the new SessionStart and PostToolUseFailure groups by running the installer again with `--merge-settings`.

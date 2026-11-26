@@ -1,0 +1,5 @@
+[
+ {"name": "paper_writing_rules", "id_regex": "\\bP\\d{4}\\b", "globs": ["dreaming/paper_writing_hooks/PW1K_RULES.md"]},
+ {"name": "motivation_lines", "id_regex": "\\bM0\\d{3}\\b", "globs": ["dreaming/motivation_hooks.jsonl"]},
+ {"name": "compaction_cards", "id_regex": "\\bCP\\d{1,3}\\b", "globs": ["dreaming/compact_hooks.jsonl", "dreaming/compact_hooks.py"]}
+]

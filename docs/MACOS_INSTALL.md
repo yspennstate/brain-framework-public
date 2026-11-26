@@ -61,15 +61,16 @@ install with `--fetch-models`, or:
 
 ## Build the reflex table
 
-The installer copies the reflex compiler but does not run it, so the reflex hook has nothing to fire
-until you do:
+The reflex hook only reads `~/.claude/dreaming/instincts.tsv`. The installer compiles that table at
+the end of `--apply` and prints a `reflex table:` line; on the test install it reported 27 starter
+reflexes (19 fire, 8 carry). If it prints `REFLEX TABLE NOT BUILT` instead, or you installed with an
+older copy of the installer, build it by hand:
 
 ```bash
 "$BRAIN_PY" ~/.claude/dreaming/instincts.py
 ```
 
-On the test install this wrote `instincts.tsv` and `INSTINCTS.md` with 27 starter reflexes. With
-the system Python 3.9 it also printed "TRIGGER COST: the check exited 1": the trigger-cost check
+Run by hand with the system Python 3.9, the compiler also printed "TRIGGER COST: the check exited 1": the trigger-cost check
 (`instinct_cost.py`) imports `re._constants`, which exists only from Python 3.11. The table is
 still written; the check runs with 3.11 or newer. Your own reflexes go in
 `~/.claude/dreaming/instincts_learned.json`, a JSON list that does not exist on a fresh install. Run

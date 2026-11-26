@@ -7,7 +7,8 @@ compact_nodes.py). A machine whose settings lack that line lets sessions grow to
 As a UserPromptSubmit hook (reads the hook JSON on stdin) it prints a warning when
   1. settings.json has no autoCompactWindow, or one above MAX_WINDOW, or autoCompactEnabled is false; or
   2. this session's last call read more than OVER x the window (compaction is not happening).
-It prints nothing when all is well. It never blocks and fails open.
+It prints nothing when all is well. It never blocks and fails open. The settings warning is shown once per session
+(a fresh install has no autoCompactWindow until you add it); the oversize-context warning repeats while it holds.
 
   python compaction_guard.py --fleet [--minutes 60]   every session written in the last hour, oversize ones listed
   python compaction_guard.py --selftest
@@ -116,6 +117,28 @@ def fleet(minutes):
     return 1 if (bad or prob) else 0
 
 
+SEEN_DIR = os.path.expanduser("~/.claude/compute/compaction_guard_seen")
+
+
+def once_per_session(msgs, sid, seen_dir=SEEN_DIR):
+    """Drop the settings warning after its first showing in a session; keep every other warning."""
+    if not sid or not msgs:
+        return msgs
+    flag = os.path.join(seen_dir, "".join(c for c in str(sid) if c.isalnum() or c in "-_")[:64] or "nosession")
+    keep, shown = [], os.path.exists(flag)
+    for m in msgs:
+        if "this session's last call read" not in m:
+            if shown:
+                continue
+            try:
+                os.makedirs(seen_dir, exist_ok=True)
+                io.open(flag, "w", encoding="utf-8").write("shown\n")
+            except Exception:
+                pass
+        keep.append(m)
+    return keep
+
+
 def selftest():
     import tempfile
     d = tempfile.mkdtemp()
@@ -131,7 +154,10 @@ def selftest():
              ("good settings, 700k session: warns", len(check(t_big, s_ok)) == 1),
              ("missing setting and 700k: two warnings", len(check(t_big, s_bad)) == 2),
              ("last call is the one read", last_context(t_big) == 700015),
-             ("no transcript: settings only", check(None, s_ok) == [])]
+             ("no transcript: settings only", check(None, s_ok) == []),
+             ("settings warning once per session", len(once_per_session(check(t_small, s_bad), "x1", d)) == 1
+              and once_per_session(check(t_small, s_bad), "x1", d) == []),
+             ("oversize warning repeats", len(once_per_session(check(t_big, s_bad), "x1", d)) == 1)]
     for name, ok in cases:
         print("%s  %s" % ("PASS" if ok else "FAIL", name))
     return 0 if all(ok for _, ok in cases) else 1
@@ -149,7 +175,7 @@ def main():
     except Exception:
         data = {}
     try:
-        msgs = check(data.get("transcript_path"))
+        msgs = once_per_session(check(data.get("transcript_path")), data.get("session_id"))
     except Exception:
         return 0
     if msgs:

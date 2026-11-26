@@ -630,6 +630,25 @@ def main():
             print(f"  recall index: rc {p.returncode} {lines[0] if lines else ''}")
         except Exception as e:
             print(f"  recall index: not built ({type(e).__name__}); run {os.path.join(dreaming, 'bm25.py')} build")
+        # The reflex hook (instinct_prime.py) only reads instincts.tsv, which instincts.py compiles from the seed
+        # reflexes and instincts_learned.json. Nothing compiled it at install, so a new brain's reflex hook had nothing
+        # to fire until someone ran the compiler by hand. Compile it now; an existing table is rebuilt the same way.
+        comp = os.path.join(dreaming, "instincts.py")
+        if os.path.exists(comp):
+            cenv = {k: v for k, v in env.items() if k != "INSTINCTS_LEARNED_PATH"}
+            try:
+                p = subprocess.run([a.python, comp], cwd=dreaming, env=cenv, capture_output=True, text=True,
+                                   timeout=600, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                built = os.path.exists(os.path.join(dreaming, "instincts.tsv"))
+                if p.returncode == 0 and built:
+                    said = [ln for ln in (p.stdout or "").splitlines() if "reflexes" in ln]
+                    print(f"  reflex table: {said[-1].strip() if said else 'built'}")
+                else:
+                    err = (p.stderr or p.stdout or "").strip().splitlines()
+                    print(f"  REFLEX TABLE NOT BUILT (rc {p.returncode}): {err[-1] if err else ''}")
+                    print(f"  fix: {a.python} {comp}")
+            except Exception as e:
+                print(f"  reflex table: not built ({type(e).__name__}); run {a.python} {comp}")
         # The query-meaning lane (query_embed.py) needs the ONNX model, which is not in the repository. Without it
         # recall still runs and still prints "semantic on" (that flag is the seed-centroid lane), but a query that
         # shares no word with a memory finds nothing. Fetch it with --fetch-models, or say plainly that it is missing.

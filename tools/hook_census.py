@@ -7,14 +7,20 @@ A hook count means little unless it says what it counts. This script reports fou
      under a folder whose name contains "hooks" (backups left out)
   C  rules with their own trigger: rows of instincts.tsv, and rule cards in each *hooks* folder
      (files named like K01_..., C12_..., dk004_...), with the number of distinct trigger strings
+     when each card carries its own (None when the cards share a trigger core), and rule families
+     kept as data, given with --families
   D  fires: rows in every fires.jsonl and instinct_fires*.tsv under the install
+
+--families FILE is a JSON list of {"name", "id_regex", "globs"}: the distinct ids the regex finds in
+the files the globs match (relative to --root) are that family's rules. hook_families.example.json
+beside this script is a starting point.
 
 With --compare DIR it also says how many of the hook program files in B exist, by file name, in
 another tree (for example a checkout of the public framework).
 
 Usage:
   python hook_census.py                       # ~/.claude and ~/.codex
-  python hook_census.py --root PATH --codex PATH --compare PATH --json out.json
+  python hook_census.py --root PATH --codex PATH --families FILE --compare PATH --json out.json
   python hook_census.py --selftest
 """
 import argparse
@@ -80,7 +86,7 @@ def hook_dirs(root):
     return found
 
 
-def census(root, codex=None, compare=None):
+def census(root, codex=None, compare=None, family_config=None):
     out = {"root": "<root>"}
     dreaming = os.path.join(root, "dreaming")
 
@@ -125,9 +131,21 @@ def census(root, codex=None, compare=None):
             m = TRIGGER_LINE.findall(read(p))
             if m:
                 trig.add(m[0])
-        families[name] = {"cards": len(cards), "distinct_triggers": len(trig)}
+        # cards that share one core read their trigger from it, not from a line of their own
+        families[name] = {"cards": len(cards), "distinct_triggers": len(trig) if trig else None}
     out["C_rule_card_families"] = families
-    out["C_rules_total"] = out["C_reflex_rows"] + sum(f["cards"] for f in families.values())
+    data = {}
+    for fam in family_config or []:
+        rx = re.compile(fam["id_regex"])
+        ids = set()
+        for g in fam["globs"]:
+            for p in glob.glob(os.path.join(root, g), recursive=True):
+                if not BACKUP.search(os.path.basename(p)):
+                    ids.update(rx.findall(read(p)))
+        data[fam["name"]] = len(ids)
+    out["C_data_families"] = data
+    out["C_rules_total"] = (out["C_reflex_rows"] + sum(f["cards"] for f in families.values())
+                            + sum(data.values()))
 
     # D
     logs = []
@@ -169,13 +187,18 @@ def selftest():
             f.write("id\tmode\tvalidity\ttrigger\n r1\tfire\tm\tfoo\n r2\tfire\tm\tfoo\n")
         with io.open(os.path.join(root, "dreaming", "kaggle_hooks", "fires.jsonl"), "w", encoding="utf-8") as f:
             f.write('{"id": "K01"}\n{"id": "K02"}\n')
+        io.open(os.path.join(root, "dreaming", "RULES.md"), "w", encoding="utf-8").write("P0001 x\nP0002 y\nP0001 z\n")
+        fam = [{"name": "paper", "id_regex": r"\bP\d{4}\b", "globs": ["dreaming/RULES.md"]}]
+        rf = census(root, family_config=fam)
         r = census(root)
         checks = [
+            rf["C_data_families"] == {"paper": 2} and rf["C_rules_total"] == 6,
             r["A_settings_commands"] == 1,
             r["A_dispatcher_entries"] == {"hook_dispatch_list.json": 2},
             r["B_hook_files"] == 4,
             r["C_reflex_rows"] == 2 and r["C_reflex_distinct_triggers"] == 1,
             r["C_rule_card_families"] == {"dreaming/kaggle_hooks": {"cards": 2, "distinct_triggers": 1}},
+            r["C_data_families"] == {},
             r["C_rules_total"] == 4,
             r["D_fire_rows"] == 2,
         ]
@@ -192,12 +215,17 @@ def main():
     ap.add_argument("--root", default=os.path.join(os.path.expanduser("~"), ".claude"))
     ap.add_argument("--codex", default=os.path.join(os.path.expanduser("~"), ".codex"))
     ap.add_argument("--compare")
+    ap.add_argument("--families", help="JSON list of {name, id_regex, globs} for rules kept as data")
     ap.add_argument("--json")
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args()
     if a.selftest:
         return selftest()
-    r = census(a.root, a.codex if os.path.isdir(a.codex) else None, a.compare)
+    fams = load_json(a.families) if a.families else None
+    if a.families and not isinstance(fams, list):
+        print("could not read a list of families from", a.families)
+        return 2
+    r = census(a.root, a.codex if os.path.isdir(a.codex) else None, a.compare, fams)
     text = json.dumps(r, indent=1)
     if a.json:
         io.open(a.json, "w", encoding="utf-8").write(text)

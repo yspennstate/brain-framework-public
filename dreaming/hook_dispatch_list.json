@@ -1030,6 +1030,35 @@
           "timeout": 10
         }
       ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\motivation_hooks.py"
+          ],
+          "timeout": 20
+        }
+      ]
+    }
+  ],
+  "PostToolUseFailure": [
+    {
+      "matcher": ".*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\motivation_hooks.py"
+          ],
+          "timeout": 20
+        }
+      ]
     }
   ]
 }

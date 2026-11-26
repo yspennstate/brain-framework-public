@@ -71,9 +71,9 @@ until you do:
 On the test install this wrote `instincts.tsv` and `INSTINCTS.md` with 27 starter reflexes. With
 the system Python 3.9 it also printed "TRIGGER COST: the check exited 1": the trigger-cost check
 (`instinct_cost.py`) imports `re._constants`, which exists only from Python 3.11. The table is
-still written; the check runs with 3.11 or newer. Run it
-again whenever you add reflexes to `instincts_learned.json`; the table is a build output, so edit
-the JSON, not the table.
+still written; the check runs with 3.11 or newer. Your own reflexes go in
+`~/.claude/dreaming/instincts_learned.json`, a JSON list that does not exist on a fresh install. Run
+the compiler again after editing it; the table is a build output, so edit the JSON, not the table.
 
 ## Wire the hooks into Claude Code
 
@@ -82,11 +82,16 @@ starts with the interpreter you passed (`--python`), with forward slashes and no
 file can be merged as it is. Merge its `hooks` section into `~/.claude/settings.json`, keeping any
 settings you already have.
 
-The full dispatcher list in the form a Mac runs it is
-`docs/setup-questions-2026-11/hook_dispatch_list.macos.template.json`: replace `{{PYTHON}}`,
-`{{CLAUDE_DIR}}`, `{{DREAMING}}` and `{{FLEET}}` with your paths. `docs/setup-questions-2026-11/ANSWERS.txt`
-explains the three changes it makes against the Windows list (interpreter, slashes, and the two wake
-entries running `wake_brain.py --part 1` and `--part 2`).
+The dispatcher list the installer writes, `~/.claude/dreaming/hook_dispatch_list.json` (88 entries on
+the test install), is ready for a Mac as it stands: its commands use your interpreter, and its two
+session-start wake entries call `hooks/wake_brain.py` in your checkout by absolute path, with
+`--part 1` and `--part 2`. So leave the checkout where you cloned it, or the wake breaks. The list
+has no PowerShell commands; the word appears only as a tool name in some matchers.
+
+If you want to build your own list instead,
+`docs/setup-questions-2026-11/hook_dispatch_list.macos.template.json` is a shorter template
+(82 entries): replace `{{PYTHON}}`, `{{CLAUDE_DIR}}`, `{{DREAMING}}` and `{{FLEET}}` with your paths.
+`docs/setup-questions-2026-11/ANSWERS.txt` explains how it differs from the Windows list.
 
 ## Check the install
 
@@ -135,14 +140,12 @@ not this one.
 The files these steps use are all in the checkout or the install; the steps themselves were not
 run on the test machine.
 
-**Wake hook.** The installer writes `~/.claude/brain_startup.md` but does not copy the Python wake
-script. Copy `hooks/wake_brain.py` to `~/.claude/wake_brain.py`; the macOS dispatcher template calls
-it with `--part 1` and `--part 2`. Run both parts once by hand before opening a session:
+**Wake hook.** The session-start wake runs `hooks/wake_brain.py` from the checkout (see "Wire the
+hooks" above). Run both parts once by hand, from the checkout, before opening a session:
 
 ```bash
-cp hooks/wake_brain.py ~/.claude/wake_brain.py
-"$BRAIN_PY" -s ~/.claude/wake_brain.py --part 1
-"$BRAIN_PY" -s ~/.claude/wake_brain.py --part 2
+"$BRAIN_PY" -s hooks/wake_brain.py --part 1
+"$BRAIN_PY" -s hooks/wake_brain.py --part 2
 ```
 
 A fresh install can warn that no dream or embedding audit has run yet; that is expected.
@@ -161,9 +164,10 @@ nice -n 15 "$BRAIN_PY" -s ~/.claude/dreaming/build_spread_edges.py
 ```
 
 For meaning-based recall over the memories themselves, build the embeddings to a staging file,
-publish it, and check coverage:
+publish it, and check coverage. The builder needs `sentence-transformers` in your interpreter:
 
 ```bash
+"$BRAIN_PY" -m pip install --user sentence-transformers
 BRAIN_MEMORY=~/.claude/projects/"$(cat ~/.claude/dreaming/BRAIN_SLUG)"/memory
 nice -n 15 "$BRAIN_PY" -s ~/.claude/dreaming/build_memory_embeddings.py "$BRAIN_MEMORY" --out ~/.claude/dreaming/memory_embeddings.next.npz
 "$BRAIN_PY" -s ~/.claude/dreaming/publish_memory_embeddings.py --staged ~/.claude/dreaming/memory_embeddings.next.npz --mem-dir "$BRAIN_MEMORY"

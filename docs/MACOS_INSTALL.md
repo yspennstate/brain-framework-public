@@ -1,167 +1,208 @@
 # Installing the brain on macOS
 
-This guide describes the Mac port verified on 29 October 2026. Start with a checkout containing the POSIX changes; the original Windows bootstrap instructions alone do not produce working Mac hooks. The framework supplies the machinery and seed memories. A person's lived memories, private project configuration, mathematical artifacts and installed film tools are separate inputs.
+Every step below uses only files in this repository. The commands were run on 26 November 2026 on a
+Mac mini (Apple silicon), from a fresh shallow clone, into a throwaway home folder, so nothing in an
+existing install was touched. The test machine had only the system Python 3.9, so the results below
+are for 3.9; the places where 3.9 falls short, and why, are named.
 
-For the existing Mac mini, read `~/brain/BRAIN_INSTALL_STATUS.md` before changing anything. It is the deployment record and names the current integration owners. This document is a repeatable installation guide, not a claim that every optional subsystem is complete. The source snapshot used here ends at tick 24, 01:35 on 29 October; concurrent workers may have resolved issues listed below.
+## What you need
 
-## Prepare the checkout and Python
+- git and a terminal (Terminal.app is enough).
+- Python 3.11 or newer for the whole framework. The math brain declares `requires-python >= 3.11`.
+  The `/usr/bin/python3` that ships with macOS is 3.9: the core brain installs and runs with it, but
+  the four math-brain checks fail (see "Check the install"). Install a newer Python from python.org or
+  with Homebrew (`brew install python@3.13`) and use its absolute path everywhere below.
+- Claude Code, if you want the hooks to run inside agent sessions.
 
-Use a permanent checkout, such as `~/brain/brain-framework`, and Python 3.13. The verified machine uses `/Library/Frameworks/Python.framework/Versions/3.13/bin/python3`. Use the interpreter that will run hooks when installing dependencies. Hooks run with `-s`, so dependencies installed only in the Python user site will not be visible. A virtual environment is suitable if every hook and scheduled command uses its absolute interpreter path.
-
-The commands below assume an already obtained checkout and local porting files. They describe installation work for the integrator; no network access or live installation is needed to read this guide. Review the repository's dependency files for the components you enable. Semantic recall additionally uses `sentence-transformers` and the `BAAI/bge-small-en-v1.5` model; arrange the model cache before an offline build.
-
-In a shell, select the actual interpreter, project directory and time zone:
-
-```bash
-BRAIN_PY=/Library/Frameworks/Python.framework/Versions/3.13/bin/python3
-BRAIN_PROJECT="$HOME"                  # directory where agent sessions start
-BRAIN_TZ=Asia/Tbilisi                   # replace with your own IANA zone
-BRAIN_REPO="$HOME/brain/brain-framework"
-cd "$BRAIN_REPO"
-"$BRAIN_PY" -s --version
-"$BRAIN_PY" bootstrap/install.py --project-dir "$BRAIN_PROJECT" --timezone "$BRAIN_TZ" --python "$BRAIN_PY"
-```
-
-The last command is a dry run. Read its destinations. The installer places dreaming code in `~/.claude/dreaming`, commands in `~/.claude/commands`, and several other components under `~/brain-framework`, even when the source checkout is elsewhere. It creates state directories and generates hook wiring. It does not merge settings or install the math and film stores.
-
-Back up the existing settings, agent instructions, installed code and memories before applying. Applying copies framework machinery over existing installed files; it is not an upgrade merge for a customized lived brain. On this Mac the installed tree includes lived-module changes that must be preserved. Use a separate staging home for a rehearsal, with `--home <empty-staging-home>` and a matching `--project-dir`; do not point its builds at production indexes.
-
-When the plan is correct, apply the same options:
+## Get the checkout
 
 ```bash
-"$BRAIN_PY" bootstrap/install.py --project-dir "$BRAIN_PROJECT" --timezone "$BRAIN_TZ" --python "$BRAIN_PY" --apply
+git clone --depth 1 https://github.com/yspennstate/brain-framework-public.git ~/brain-framework-public
+cd ~/brain-framework-public
+BRAIN_PY=/Library/Frameworks/Python.framework/Versions/3.13/bin/python3   # for example; use your own path
+"$BRAIN_PY" --version
 ```
 
-## Choose and populate the memory corpus
-
-The installer writes the chosen project slug into `~/.claude/dreaming/BRAIN_SLUG`. The slug is the full project path with colons and separators replaced by dashes. For a project directory `/Users/<you>`, it is `-Users-<you>`; memories live in `~/.claude/projects/{{BRAIN_SLUG}}/memory` (here `-Users-<you>`). Check the marker and directory before building indexes. A different session working directory must not silently select an empty corpus.
-
-Fill in the seed identity and relationship memories for a fresh brain. To restore an existing brain, copy the authorized lived corpus into this directory while preserving the seeds separately for comparison. The October Mac installation restored 28,219 files and 82 lived state files; those are historical counts for that corpus, not required targets. State artifacts can carry Windows paths, so inspect them before copying. Preserve ledgers and provenance rather than replacing them with fresh empty files.
-
-`BRAIN_MEM_DIR` can redirect supported recall code, but not every helper honors the same variable. Check each builder's input and output paths. In particular, the live embedding builder inspected for this guide still has a deployment-specific default memory path; pass the chosen memory directory explicitly.
-
-## Check the POSIX port before enabling hooks
-
-The October port is recorded in framework commit `29ea7df`, with later governor, film and dream work in `8eedfd0`, `2c924e5` and `e458b73`. Use the current reviewed branch containing those changes and any subsequent fixes. The deployment also has local and lived-module merges; a commit list is not a full backup of that install.
-
-`~/brain/porting/port_posix.py` is a local migration aid, not a dependency shipped by every framework clone. It can preview rewrites on a staged tree:
+## Dry run, then apply
 
 ```bash
-"$BRAIN_PY" "$HOME/brain/porting/port_posix.py" "/path/to/staged-tree"
+"$BRAIN_PY" bootstrap/install.py --project-dir "$HOME" --timezone "$(readlink /etc/localtime | sed 's#.*zoneinfo/##')" --python "$BRAIN_PY"
 ```
 
-Replace `/path/to/staged-tree` with a real path. Apply only to a reviewed staging copy with `--apply`, then inspect the diff and compile changed Python files. The tool fixes tilde/backslash literals, forced backslash separators and Windows subprocess creation flags, and adjusts an old film root. It does not port PowerShell algorithms, Windows process queries, private configuration, or arbitrary absolute Windows paths.
+Without `--apply` this only prints the plan. Read the destinations. On the test run they were:
 
-The reviewed process port uses `posix_proc.py` and POSIX branches for process census, parent identities, liveness and idle sensing. Keep Windows behavior behind `os.name == "nt"` and use portable paths. CrashGuard and the Windows fleet launchers remain separate porting work; copying them is not evidence that they run on macOS.
+- `~/.claude/dreaming` (705 files), `~/.claude/brain_graph`, `~/.claude/fleet`, `~/.claude/mathbrain`
+  and the slash commands in `~/.claude/commands`;
+- `~/brain-framework/` for the governor, mesh, workspace and tools;
+- `~/brain-repo/` for the folders the brain fills as it runs (keep that folder under git);
+- `~/CrashGuard`;
+- the memory corpus at `~/.claude/projects/<slug>/memory`, where the slug is your project path with
+  every `/` turned into `-` (written to `~/.claude/dreaming/BRAIN_SLUG`);
+- `~/.claude/CLAUDE.md` for the agent instructions.
 
-## Wire the session and tool hooks
+The installer does not register any launchd job or cron entry; nothing runs until an agent session
+starts or you run a script yourself.
 
-Inspect `bootstrap/settings.hooks.generated.json`, then merge its required behavior into `~/.claude/settings.json` while preserving unrelated settings. The current template still includes bare `python`, PowerShell SessionStart entries and some backslash paths. `--python` does not fix every literal command in that template. Convert the generated configuration before enabling it.
-
-Use the absolute interpreter with `-s` in each command, forward slash paths, and shell quoting for paths containing spaces. Normalize both `hook_dispatch_list.json` and the settings that call it. The verified deployment routes seven events through the dispatcher: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop, PreCompact and PostCompact. Keep the event matchers and avoid wiring a hook twice through both settings and the dispatch list.
-
-Install the Python wake implementation from `hooks/wake_brain.py` as `~/.claude/wake_brain.py`. Render `hooks/brain_startup.template.md` with the same installation values into `~/.claude/brain_startup.md`, or review the restored lived startup text and fix its paths. In the dispatch list, replace the two PowerShell wake entries with calls to the installed Python script using `--part 1` and `--part 2`. Run both parts manually before opening a new session:
+Back up `~/.claude` before applying if you already have one: applying copies files over what is
+there, it does not merge a customised install. Then:
 
 ```bash
-"$BRAIN_PY" -s ~/.claude/"wake_brain.py" --part 1
-"$BRAIN_PY" -s ~/.claude/"wake_brain.py" --part 2
+"$BRAIN_PY" bootstrap/install.py --project-dir "$HOME" --timezone "$(readlink /etc/localtime | sed 's#.*zoneinfo/##')" --python "$BRAIN_PY" --apply
 ```
 
-The Python wake reads the latest dated state-of-mind triplet and uses Mac load and memory pressure in place of Windows CrashGuard. A fresh install can correctly warn that no dream or embedding audit has run yet.
-
-Bootstrap creates `~/.claude/dreaming/HOOK_DISPATCH_ENABLED`. If dispatch is broken, move this flag to a saved disabled filename: calls through the dispatcher become silent no-ops. Hooks wired directly in settings are unaffected. Restore the flag only after repairing and checking the configuration. Preserve the settings backup as the wider rollback path.
-
-Review the dispatch allowlist after changing covered code. The October install required a reviewed allowlist refresh. Follow the installed signing/review procedure; copying an old allowlist or bypassing validation is not a repair.
-
-Merge the generated `~/.claude/CLAUDE.brain.md` into existing instructions if bootstrap left that file beside `CLAUDE.md`. Review commands in `~/.claude/commands` for Windows executables and paths. On the verified Mac, `/dream`, `/checklist` and `/seen` were rewritten for Python; app-specific commands were left out when their applications were absent.
-
-## Build recall, then verify what it can retrieve
-
-After the memory directory and code agree, build lexical and association artifacts:
+The test run installed 1,365 files. At the end it warns that the query-meaning lane is off: recall
+then finds only memories that share a word with the question. To turn it on, either re-run the
+install with `--fetch-models`, or:
 
 ```bash
-nice -n 15 "$BRAIN_PY" -s ~/.claude/"dreaming/bm25.py" build
-nice -n 15 "$BRAIN_PY" -s ~/.claude/"dreaming/build_spread_edges.py"
-"$BRAIN_PY" -s ~/.claude/"dreaming/brain.py" recall "a distinctive fact from an actual memory"
+"$BRAIN_PY" -m pip install --user onnxruntime tokenizers
+"$BRAIN_PY" ~/.claude/dreaming/fetch_bge_onnx.py        # the model, about 133 MB
 ```
 
-Replace the example query with a fact whose source file you can inspect. Check the returned memory, not just a successful exit. The October build reported 27,997 lexical documents and 93,702 association edges. Corpus changes alter both counts.
+## Build the reflex table
 
-For semantic recall, use the production sentence-transformer builder, then publish its staged artifact through the publication tool. The local LSA builder is diagnostic-only and must not replace the live sidecar. Set the correct memory directory explicitly:
+The installer copies the reflex compiler but does not run it, so the reflex hook has nothing to fire
+until you do:
 
 ```bash
-BRAIN_MEMORY=~/.claude/projects/"$(cat ~/.claude/dreaming/BRAIN_SLUG)"/memory
-export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1
-nice -n 15 "$BRAIN_PY" -s ~/.claude/"dreaming/build_memory_embeddings.py" "$BRAIN_MEMORY" --out ~/.claude/"dreaming/memory_embeddings.next.npz"
-"$BRAIN_PY" -s ~/.claude/"dreaming/publish_memory_embeddings.py" --staged ~/.claude/"dreaming/memory_embeddings.next.npz" --mem-dir "$BRAIN_MEMORY"
-"$BRAIN_PY" -s ~/.claude/"dreaming/embedding_coverage.py" --mem-dir "$BRAIN_MEMORY" --require-complete --write-status
-"$BRAIN_PY" -s ~/.claude/"dreaming/brain.py" recall "a distinctive fact from an actual memory"
+"$BRAIN_PY" ~/.claude/dreaming/instincts.py
 ```
 
-Run the builder and a dream sequentially. On a shared machine, keep builds at low priority and monitor resource use. The verified corpus produced 28,020 vectors of 384 dimensions and complete coverage. Confirm the coverage audit and that recall reports semantic recall on; creating an NPZ alone does not establish that it is published or used.
+On the test install this wrote `instincts.tsv` and `INSTINCTS.md` with 27 starter reflexes. With
+the system Python 3.9 it also printed "TRIGGER COST: the check exited 1": the trigger-cost check
+(`instinct_cost.py`) imports `re._constants`, which exists only from Python 3.11. The table is
+still written; the check runs with 3.11 or newer. Run it
+again whenever you add reflexes to `instincts_learned.json`; the table is a build output, so edit
+the JSON, not the table.
 
-## Run a mechanical dream manually
+## Wire the hooks into Claude Code
 
-When recall is ready, inspect `~/.claude/dreaming/run_dream.py` and its tail, then run a manual nap:
+The installer writes `bootstrap/settings.hooks.generated.json`. On a Mac every command in it already
+starts with the interpreter you passed (`--python`), with forward slashes and no PowerShell, so the
+file can be merged as it is. Merge its `hooks` section into `~/.claude/settings.json`, keeping any
+settings you already have.
 
-```bash
-nice -n 15 "$BRAIN_PY" -s ~/.claude/"dreaming/run_dream.py" --type nap
-```
+The full dispatcher list in the form a Mac runs it is
+`docs/setup-questions-2026-11/hook_dispatch_list.macos.template.json`: replace `{{PYTHON}}`,
+`{{CLAUDE_DIR}}`, `{{DREAMING}}` and `{{FLEET}}` with your paths. `docs/setup-questions-2026-11/ANSWERS.txt`
+explains the three changes it makes against the Windows list (interpreter, slashes, and the two wake
+entries running `wake_brain.py --part 1` and `--part 2`).
 
-This changes derived brain state. Read the resulting `~/.claude/dreaming/logs/dream_*.log`. Review every `STEP FAILED`, `STEP CAPPED` and `STEP SKIPPED` entry as well as the final completion marker: this runner continues after individual step failures. A zero runner exit and “dream cycle complete” are insufficient evidence of a fully successful tail.
+## Check the install
 
-A `STOP` file beside the runner prevents a new cycle and is checked between tail steps. It does not interrupt the current child immediately. The runner uses an exclusive flock on `dream.lock`; the persistent file's existence does not mean a dream is running. Leave the lock file in place so its inode remains stable.
-
-The Mac runner is mechanical-only, even when the selected type is `rem`. It does not run the unattended language-model REM session from the Windows script. That session and any permission-bypass behavior remain an explicit owner decision. The mechanical runner also does not supply cross-machine Git synchronization.
-
-## Optional organs and unresolved configuration
-
-The project-memory warning `[prompt-contract] Signed hot cache validation failed` means its signed cache could not be validated. In the observed install, the private project configuration, signing key and cache were absent. The local proposal in `~/brain/porting/project_memory_draft/` is a draft, not installed authority. Have the owner restore or approve the project list, then follow `dreaming/project_memory/README.md` to build the store and signed cache. Verify an on-task action and a deliberately drifted control. Do not silence the warning by weakening validation.
-
-The POSIX governor can be observed once without installing a service:
-
-```bash
-"$BRAIN_PY" -s "$BRAIN_REPO/governor/compute_governor_posix.py" --once
-```
-
-It publishes observed load and politeness state; the reviewed implementation does not kill or renice processes. Continuous governor execution and a mechanical dream schedule through launchd were not authorized in the observed installation. Proposed plists stay outside `~/Library/LaunchAgents` until the owner decides. A plist on disk is not a loaded service; record an actual loaded state and fresh output when scheduling is approved. Windows Task Scheduler, VBS and PowerShell launchers are not Mac installation steps.
-
-Math research support needs its own package and store. The October deployment restored a 51,052-row database from an export using the corrected importer and configured `MATHBRAIN_STORE` plus `MATHBRAIN_BUILD_SRC`. Database rows alone were insufficient: 7,310 of 11,451 cards referenced an absent `objects/sha256` tree, and some cards failed digest checks. Restore matching artifacts and verify reader integrity before treating this lane as fully working. Follow the math package's own instructions rather than treating the framework's isolated math smoke as proof of that lived store.
-
-Film support stays in the checkout unless installed separately. From `filmbrain/`, run `python3 ingest/load_craft.py`, then `python3 tools/verify_tools.py`; run harvesters only for binaries actually present. `FILMBRAIN_ROOT` and `FILMBRAIN_DB` select alternate locations. The October authored store had 592 nodes, 996 edges and 11 stubs; all 20 inventoried film tools were absent. Craft recall can work while rendering tools remain unavailable. Keep a Mac inventory separate from a Windows inventory and record measured machine capability in `craft/this_machine.py`.
-
-The mesh was exercised successfully on the Mac. Use `mesh/README.md` for hello, digest, claims and inbox operations, and honor active claims before editing a shared runtime. Do not install the deployment-specific keep-working Stop gate as a generic requirement: it points at the owner's install checklist and has its own session scoping and off switch.
-
-## Verify the installation and preserve shared data
-
-Run checkout tests separately from installed-runtime checks. From the checkout:
+From the checkout:
 
 ```bash
 nice -n 15 "$BRAIN_PY" scripts/smoke_framework.py
-nice -n 15 "$BRAIN_PY" scripts/smoke_framework.py --installed "$HOME" --receipt installed.json
-nice -n 15 "$BRAIN_PY" -m pytest dreaming mesh governor methods -q -p no:cacheprovider --timeout=120 --continue-on-collection-errors
+nice -n 15 "$BRAIN_PY" scripts/smoke_framework.py --installed "$HOME"
 ```
 
-Install the test dependencies, including the timeout plugin, in the selected interpreter. Compile any changed Python files with `python3 -m py_compile <changed-file>` before integration. See `docs/EXERCISING.md` for redirected state and scratch verification. Avoid a whole-tree pytest invocation: the repository documents colliding test basenames.
+What the test run printed with the system Python 3.9:
 
-The historical Mac baseline was 24/24 checkout smoke and 16/18 installed smoke. The two installed failures represented math and film components absent from bootstrap's layout. The recorded framework suite had 227 passes and 8 pre-existing failures, with collection issues tracked separately. These figures are comparison points, not permission to ignore a new failure. Save the full output and compare individual failing tests with the current baseline.
+| run | passed | failed |
+|---|---|---|
+| checkout | 20 of 24 | the four math-brain checks (database initialises, claim accepted, claim recalled, claim readable) |
+| installed | 16 of 21 | the same four, and "film brain: present", because the installer does not copy `filmbrain/` |
 
-The local porting harness can exercise installed hooks:
+The math-brain failures come from the Python version: run by hand, the math brain stops at
+`from enum import StrEnum`, which Python added in 3.11. Use 3.11 or newer for those checks. The film brain can be used from the checkout (`filmbrain/`, run
+`python3 ingest/load_craft.py` there), which is why the checkout run passes its film checks.
+
+To see what you have installed, layer by layer:
 
 ```bash
-nice -n 15 "$BRAIN_PY" "$HOME/brain/porting/hook_harness.py" --out "$HOME/brain/porting/hook_results.tsv"
+"$BRAIN_PY" tools/hook_census.py --root ~/.claude --families tools/hook_families.example.json
 ```
 
-Read its TSV and summary; the harness itself does not return a failing process status for every bad hook result. The historical result was 76/76 hook invocations with hook return code zero. The harness normalizes some interpreter/path differences, so also verify real dispatch from a new session. It executes live hooks, which can append state, including synthetic prompt rows. Use an agreed test window and recognizable harness session IDs. Quiet hooks need positive controls: silence can mean a threshold, a conditional trigger or an intentional shadow mode. On this install proof-deny and gap-watch were shadowed by design; their silence was not a portability failure.
+On the test install, after the reflex table was built and before the hooks were merged into
+`settings.json`, it printed:
 
-Before syncing a restored brain with another machine, merge the ledgers. The Mac dream deliberately leaves prompt-shard publication disabled because rebuilding a month from a short local ledger could overwrite thousands of Windows prompts. Union the remote shard with local rows before publication. The shared task checklist likewise needs a union of ledger events, collision handling for reused task IDs, and regenerated state and Markdown. Never overwrite either machine's ledger or rebuild shared history solely from the smaller local copy.
+| layer | count |
+|---|---|
+| commands in `settings.json` | 0 |
+| entries in `hook_dispatch_list.json` | 88 |
+| hook program files | 85 |
+| reflex rows (each with its own trigger) | 27 |
+| motivation lines / compaction cards / paper-writing rules | 999 / 53 / 0 |
+| rules in all | 1,079 |
+| fire rows | 0 (nothing has run yet) |
 
-For deployment-specific new-memory publication, the install record describes an explicit new-files-only temporary Git index with `GIT_NO_LAZY_FETCH=1` and `git write-tree --missing-ok` for a partial clone. That technique does not merge modified ledgers by itself. Keep publication a separate reviewed operation, verify the exact paths at the remote afterward, and preserve the original copies. No automatic push or background service is required to stand up recall and mechanical dreams.
+The paper-writing family counts 0 here because its rule file ships with the math-brain repository,
+not this one.
 
-If a restored Windows path produced a directory whose name literally contains backslashes, retain it until its state has been compared and merged into the correct Mac location. Similarly, a strong-node scan raising `ENAMETOOLONG` for a long wiki-link phrase needs a reviewed scanner fix and a new reviewed runtime generation; do not modify or repin a hash-pinned runtime in place. Its deliberately degraded observation state is a separate issue from the path defect.
+## Further steps (not re-run in this test)
 
-## Sources for this guide
+The files these steps use are all in the checkout or the install; the steps themselves were not
+run on the test machine.
 
-The deployment observations come from `~/brain/BRAIN_INSTALL_STATUS.md` through tick 24 and the local porting folder, particularly `port_posix.py`, `hook_harness.py` and `project_memory_draft/README.md`. Installer behavior was checked against `bootstrap/install.py`, `bootstrap/README.md` and `hooks/settings.hooks.template.json`. Runtime command forms were checked against the installed Python wake, mechanical dream runner, BM25 builder, embedding builder, publisher and coverage checker. Consult `README.md`, `docs/EXERCISING.md`, `filmbrain/README.md`, `mesh/README.md` and the project-memory README for subsystem details.
+**Wake hook.** The installer writes `~/.claude/brain_startup.md` but does not copy the Python wake
+script. Copy `hooks/wake_brain.py` to `~/.claude/wake_brain.py`; the macOS dispatcher template calls
+it with `--part 1` and `--part 2`. Run both parts once by hand before opening a session:
 
-The counts above are attributed historical observations. This guide was reviewed against source; it was not validated by reinstalling the owner's live brain.
+```bash
+cp hooks/wake_brain.py ~/.claude/wake_brain.py
+"$BRAIN_PY" -s ~/.claude/wake_brain.py --part 1
+"$BRAIN_PY" -s ~/.claude/wake_brain.py --part 2
+```
+
+A fresh install can warn that no dream or embedding audit has run yet; that is expected.
+
+**Switching the dispatcher off.** The installer creates `~/.claude/dreaming/HOOK_DISPATCH_ENABLED`.
+Renaming that file makes every call through the dispatcher a silent no-op (hooks wired directly in
+`settings.json` still run). Put it back once the wiring is fixed.
+
+**Recall.** Once memories are in the memory folder, build the word and association indexes, then ask
+a question whose answer you can check in a memory file:
+
+```bash
+nice -n 15 "$BRAIN_PY" -s ~/.claude/dreaming/bm25.py build
+nice -n 15 "$BRAIN_PY" -s ~/.claude/dreaming/build_spread_edges.py
+"$BRAIN_PY" -s ~/.claude/dreaming/brain.py recall "a distinctive fact from one of your memories"
+```
+
+For meaning-based recall over the memories themselves, build the embeddings to a staging file,
+publish it, and check coverage:
+
+```bash
+BRAIN_MEMORY=~/.claude/projects/"$(cat ~/.claude/dreaming/BRAIN_SLUG)"/memory
+nice -n 15 "$BRAIN_PY" -s ~/.claude/dreaming/build_memory_embeddings.py "$BRAIN_MEMORY" --out ~/.claude/dreaming/memory_embeddings.next.npz
+"$BRAIN_PY" -s ~/.claude/dreaming/publish_memory_embeddings.py --staged ~/.claude/dreaming/memory_embeddings.next.npz --mem-dir "$BRAIN_MEMORY"
+"$BRAIN_PY" -s ~/.claude/dreaming/embedding_coverage.py --mem-dir "$BRAIN_MEMORY" --require-complete --write-status
+```
+
+Pass the memory folder explicitly; not every builder reads the same environment variable.
+
+**A manual dream.** `~/.claude/dreaming/run_dream.py --type nap` runs one mechanical consolidation
+pass and changes derived brain state. It carries on past a failed step, so read its log under
+`~/.claude/dreaming/logs/` for `STEP FAILED`, `STEP CAPPED` and `STEP SKIPPED` rather than trusting
+its exit code. A `STOP` file beside the runner stops the next cycle, not the current one. The
+`dream.lock` file is always there; its presence does not mean a dream is running.
+
+**Film craft.** From `filmbrain/` in the checkout, `python3 ingest/load_craft.py` loads the craft
+store and `python3 tools/verify_tools.py` lists which rendering tools this machine has.
+
+**Tests.** `docs/EXERCISING.md` explains how to run the test suites against scratch state rather
+than your live install.
+
+**Two machines.** Before syncing a brain between machines, merge their ledgers (prompt shards, the
+task checklist) as a union of rows. Copying one machine's files over the other's loses history.
+
+## Optional pieces
+
+- The compute governor can be observed once without installing anything:
+  `"$BRAIN_PY" -s ~/brain-framework/governor/compute_governor_posix.py --once`. It reports load and
+  does not kill or renice processes.
+- Several agents on one Mac coordinate through the mesh: see `mesh/README.md` for hello, digest,
+  claims and inbox.
+- Before syncing a brain with a second machine, merge the ledgers rather than copying one machine's
+  files over the other's.
+
+## Running agents on it
+
+Open Terminal, `cd` to the project folder you passed as `--project-dir`, and start Claude Code there.
+The session-start hook hands the agent the brain; `python3 ~/.claude/dreaming/brain.py recall "..."`
+asks it a question by hand. A recurring task in one session looks like:
+
+```
+/loop 10m check the open problems list, pick one, and record what you tried with brain.py remember
+```

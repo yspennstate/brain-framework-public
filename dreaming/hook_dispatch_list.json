@@ -134,6 +134,19 @@
           "timeout": 60
         }
       ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\advisor_nudge.py"
+          ],
+          "timeout": 600
+        }
+      ]
     }
   ],
   "PreToolUse": [
@@ -783,6 +796,24 @@
           "args": [
             "-s",
             "{{FLEET}}\\mailbox_hook.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\advisor_nudge.py"
+          ],
+          "timeout": 600
+        },
+        {
+          "type": "command",
+          "command": "python",
+          "args": [
+            "-s",
+            "{{DREAMING}}\\compaction_guard.py"
           ],
           "timeout": 600
         }

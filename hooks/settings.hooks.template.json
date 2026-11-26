@@ -12,6 +12,18 @@
         ]
       }
     ],
+    "PostToolUseFailure": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -s {{DREAMING}}/hook_dispatch.py",
+            "timeout": 600
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": ".*",
@@ -90,6 +102,19 @@
             ],
             "timeout": 600,
             "statusMessage": "Reloading the last job readme"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-s",
+              "{{DREAMING}}/motivation_hooks.py"
+            ],
+            "timeout": 20
           }
         ]
       }

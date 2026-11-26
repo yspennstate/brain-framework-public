@@ -6,6 +6,9 @@ PostToolUse: every CHECK_EVERY tool calls, count the advisor calls in the sessio
 last window, print a nudge with the count. Advisory only, never blocks, silent on any error.
 Plain stdout by default (a hook dispatcher wraps it); --json for a hook wired straight into settings (a machine without a dispatcher).
 --selftest runs the controls both ways.
+
+Opt-in: silent unless the session has an advisor tool and you turn it on, by creating the file
+~/.claude/advisor_nudge/ENABLED or setting ADVISOR_NUDGE=1. A stock install has no advisor tool, so it ships off.
 """
 import json, os, sys, time
 
@@ -88,6 +91,8 @@ def main():
     except Exception:
         data = {}
     ev = data.get("hook_event_name") or ""
+    if not (os.environ.get("ADVISOR_NUDGE") == "1" or os.path.exists(os.path.join(STATE_DIR, "ENABLED"))):
+        return
     try:
         if ev == "UserPromptSubmit":
             emit(ev, PROMPT_LINE, as_json)

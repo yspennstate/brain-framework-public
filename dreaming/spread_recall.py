@@ -117,8 +117,8 @@ HOPS = 2
 # prompt). So gate on margin over the runner-up + a low signal floor + a salience floor.
 ACT_FLOOR = 0.16     # the winner must carry real graph signal (not a lone whisper off one weak edge)
 MARGIN = 1.175       # ...and beat the runner-up. Was 1.35 since 2026-07-08; halved-excess on
-                     # 2026-07-25 by owner directive ("strengthen connections by 2x so that
-                     # things trigger faster"): (1.35-1)/2 = 0.175 over parity. This knowingly
+                     # 2026-07-25 by owner directive (make connections twice as strong so that
+                     # notes fire sooner): (1.35-1)/2 = 0.175 over parity. This knowingly
                      # supersedes the 07-09 shadow-eval verdict against a margin retune - that
                      # verdict optimized precision under the old objective; the owner set a new
                      # one. Same-inputs receipt at the CONNECTION_GAIN note below.
@@ -203,7 +203,7 @@ CONNECTION_GAIN = 2.0   # divides ACT_FLOOR at the speak gate; 1.0 restores pre-
 # OWNER TOPIC NODES x3 (owner request, 2026-07-25: the words the owner uses for a topic -
 # a storage volume, a provider, a term of art - are nodes, and when he is on one of them the mistakes and information under it
 # should surface ~3x more). keyword_nodes.tsv maps his vocabulary to member memories and maps
-# his misspellings to the corpus spelling (levrage -> leverage), so the boost survives his
+# his misspellings to the corpus spelling (recal -> recall), so the boost survives his
 # typing. The gain is differential, never global: only members of a topic the CURRENT text
 # names are lifted, which is the shape that worked for mistake severity and the opposite of
 # the uniform walk gain that measured WORSE. A broad topic (grid: 372 members) is capped to
@@ -706,7 +706,7 @@ def _topic_overlay(words, sal, members, aliases, hit, weights=None, related=None
 def _topic_slugs(words, sal):
     """The slugs under the topics this text names, capped per topic by salience.
 
-    Matching accepts his spelling through the alias map, so 'levrage' activates the leverage
+    Matching accepts his spelling through the alias map, so 'recal' activates the recall
     topic. Returns a set; membership in it is what earns the KEYWORD_GAIN in the walk."""
     members, aliases, hit, _weights, _related, _generation = _topic_context(words)
     if not members:

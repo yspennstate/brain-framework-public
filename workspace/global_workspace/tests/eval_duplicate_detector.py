@@ -1,27 +1,24 @@
 #!/usr/bin/env python3
 """Eval: duplicate-intent detection against realistic goal prompts.
 
-Provenance: the numbers recorded here were first measured 2026-07-10 against
-verbatim prompts from the live 2026-07 prompt archive (10,558 prompts; 70
-directive-shaped hand-labeled). Because this repo syncs off-machine, the
-committed fixtures are structure-preserving PARAPHRASES of those prompts:
-every load-bearing feature is retained - the typo families (cluade, agetn,
-forze, memeory, "jeep working"), the continuation shapes with their word
-gaps, and the token-overlap geometry of each pair. The eval re-measured
-identically on the paraphrases before commit.
+Provenance: the floors recorded here were first measured 2026-07-10 on a
+hand-labelled set of directive-shaped prompts. The committed fixtures are
+invented sentences that keep the features the detector depends on: the
+misspelled agent and verb forms the patterns accept, the continuation shapes
+with their word gaps, and the token-overlap geometry of each pair.
 
 Two questions, measured separately:
 
 1. shape-recall - of prompts that semantically continue ANOTHER session's
-   work, how many does looks_like_continuation() recognize? The first,
-   stricter pattern set scored 1/6 here; that miss motivated the current set.
+   work, how many does looks_like_continuation() recognize? An earlier,
+   stricter pattern set scored 1/6 on the labelled set; that miss motivated
+   the current set.
 2. shape-precision - of standalone directives, how many are wrongly called
    continuations? (A false shape only matters when topic overlap >= 0.15
    with a live agent also holds, but keep the shape itself honest.)
 
-Plus the restatement rule: a same-evening re-issued goal pair (the owner
-really did issue near-identical 10-hour goals three minutes apart on
-2026-07-09) must clear the containment threshold; unrelated pairs must not.
+Plus the restatement rule: a goal re-issued minutes later in slightly
+different words must clear the containment threshold; unrelated pairs must not.
 
 Run: python eval_duplicate_detector.py   (prints a report, exits 1 on
 regression below the recorded floor)
@@ -36,72 +33,66 @@ from workspace import (looks_like_continuation, intent_overlap,  # noqa: E402
 
 # --- continuation positives: reference another session's / agent's work ---
 CONTINUATION_POSITIVES = [
-    # the night's live incident (owner believed a session crashed)
-    "there was a cluade working on getting a new console and some other bits, it was "
-    "here a moment agao, but i think when it downaloded th console it forze and "
-    "crashed, jeep working on what it was doing",
-    # "there was just now a claude open with it" (word-gap + typo variant)
-    "i was working on this matrix probelm try to show that in the large limit the "
-    "exponent goes to 2, there was just now ca claude open with it, but the last part "
-    "it still oepn, keep working until you solve this full thing",
+    # a session the user believes crashed (misspelled agent word)
+    "there was a cluade tidying the build scripts earlier, i think it crashed halfway "
+    "through unpacking, please take over what it was doing",
+    # an agent named a few words after "there was" (word gap)
+    "the boundary lemma draft has a hole near the end, there was just now a claude "
+    "editing that file, carry the argument through",
     # work running on another machine
-    "i was working on this conjecture it has parts running on the microsot box, how is "
-    "the computation going? just tell me that nothing else",
-    # "last night i had you start work on ..."
-    "last night i had you start work on trying to prove a new open problem in math, "
-    "keep working on the one we can prove theoretically",
-    # misdirected prompt referencing another agent
-    "sorry that was meant for another agetn keep working on improivng the brain",
-    # owner's frozen window while an agent runs the same lane
-    "open a codex for me, also i was trying to open one on a console and it forze, "
-    "make sure i can open it",
+    "my parameter sweep has some shards running on the other box, give me one line "
+    "on its progress",
+    # "... i had you begin work on ..."
+    "yesterday evening i had you begin work on bounding that sequence, finish the "
+    "provable version",
+    # misdirected prompt referencing another agent (misspelled agent word)
+    "ignore my last message, it belonged to another agetn, carry on with the parser tests",
+    # a frozen window while an agent runs the same lane (misspelled verb)
+    "please launch a fresh terminal, the launcher hung and then it forze when i "
+    "clicked it twice",
 ]
 
 # --- standalone directives: must NOT be called continuations ---
 STANDALONE_NEGATIVES = [
-    "/goal keep working for 10 hours to improve the AI tooling and memeory stuff",
-    "/goal keep working on improing the AI memeory and toolisng stuff, work on "
-    "this for 10 hours",
-    "improve the memory recall attribution and check the observer data flow quality tonight",
-    "keep working on this full tie for 8 hours, there are telgram bots that were not "
-    "touched, and messages that look old, find every single bot, every single observer",
-    "/goal I just downaloded a matrix paper. appearnetly in the general case, there is a "
-    "gap in the proof to get to the uniform case. can you find that gap and close it",
-    "/goal I was working on this paper where we have that evvery initial condition decays "
-    "under itirations of the network. I wanted to extend it to many layers",
-    "/goal find an open problem in math, prferble in probabilityu theory or deep "
-    "learning, one that is famous, and solve it",
-    "/goal keep workng, amkeu sure the observers are running smothly, work on this for 10 hours",
-    "/goal come up with a list of 1000 way to improve the brain on this computer and then "
-    "work on implementing them, use state of art understanding of how the brain works",
-    "look at the last prompts I gave you and the brain and determine where i would like "
-    "you to keep working, keep working for 8 hours, I just want you thinking",
-    "/goal keep working on building a more human system, every single part of what makes "
-    "a human human, work on this for the next 8 hours",
-    "/goal keep working on the mathmatical theory for pricing futures, based on all of "
-    "the simulaitons and data that we have, for pricing long dated contracts",
-    "make sure that data is flowing though the obsever correct and is not stale",
-    "can you try to get to 1.8 or the strongest number you can, what is the strongest "
-    "number you can get? take a look at the refrence paper carfully as well",
-    "cut the abstract by half, and read everything, if something is too wordy, condense it",
-    "/goal find something in the futures pricing theory and applicaiton that you think is "
-    "relitivem, take a look at the brain, and keep working on improving it for 10 hours",
-    "/goal go though every observer in the stack, and every single watchgod, and "
-    "audit and improve them, fix any bugs",
-    "/goal take a look ath the memeory and helpers AI repo, and keep working on "
-    "improving it, keep working for the next 8 hours without stoping",
-    "try to get a stronger forcaster, use the gpu on this locla computer, and then "
-    "save the papramters, get something exeptional",
-    "/goal make sure that the rebalancing bots and observers are ready for the close, "
-    "and that they are ready to trade",
+    "/goal spend the next 10 hours making the note search, the index and the memory tools better",
+    "/goal for 10 hours, polish the memory tools and the search quality",
+    "tonight, tune how recall ranks results and audit the refresh step of the index",
+    "for 8 hours straight, hunt down scheduled jobs nobody has looked at and logs that "
+    "seem dated, list every one",
+    "/goal a graph theory preprint I saved claims a uniform bound but the general case "
+    "skips a step. locate the missing step and repair it",
+    "/goal my draft shows every starting point shrinks when the map is applied "
+    "repeatedly. extend that result to stacked layers",
+    "/goal pick a famous unsolved question, ideally in probability or combinatorics, "
+    "and settle it",
+    "/goal for 10 hours, keep the nightly jobs healthy and catch any that fail",
+    "/goal draft a thousand ideas for a better memory system, then build them one by "
+    "one, guided by recent research",
+    "read my recent prompts and the notes, choose the most useful place to spend "
+    "effort, and stay on it for 8 hours",
+    "/goal for 8 hours, work on prose that sounds natural, covering every part of what "
+    "makes writing feel human",
+    "/goal develop the theory of random matrix spectra in high dimension from the "
+    "experiments and tools we already have",
+    "check that the index refreshes properly and nothing in it is stale",
+    "can the constant be pushed to 1.8, or as far as it will go? go over the "
+    "reference paper slowly",
+    "halve the abstract, read all of it, and tighten anything wordy",
+    "/goal search the spectral theory literature for something relevant, compare it "
+    "with the notes, and refine it for 10 hours",
+    "/goal review each hook in the framework and each watchdog, then audit, improve "
+    "and debug them",
+    "/goal spend the next 8 hours on the memory tools repo, improving it without a break",
+    "fit a stronger ranking model, store the parameters, and aim for something exceptional",
+    "/goal before the weekend, get the release scripts and the changelog ready",
 ]
 
-# --- restatement pair: re-issued goal, minutes apart (paraphrased pair) ---
+# --- restatement pair: the same goal re-issued minutes apart ---
 RESTATEMENT_PAIR = (STANDALONE_NEGATIVES[0], STANDALONE_NEGATIVES[1])
 UNRELATED_PAIRS = [
-    (STANDALONE_NEGATIVES[0], STANDALONE_NEGATIVES[11]),   # AI-memory vs pricing theory
-    (STANDALONE_NEGATIVES[4], STANDALONE_NEGATIVES[16]),   # math paper vs observers audit
-    (STANDALONE_NEGATIVES[6], STANDALONE_NEGATIVES[19]),   # open problem vs unrelated close
+    (STANDALONE_NEGATIVES[0], STANDALONE_NEGATIVES[11]),   # memory tools vs matrix theory
+    (STANDALONE_NEGATIVES[4], STANDALONE_NEGATIVES[16]),   # math paper vs hooks audit
+    (STANDALONE_NEGATIVES[6], STANDALONE_NEGATIVES[19]),   # open problem vs release scripts
 ]
 
 RECALL_FLOOR = 5 / 6            # recorded 2026-07-10; regression fails the eval

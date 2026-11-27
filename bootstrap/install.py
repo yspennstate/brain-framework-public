@@ -349,7 +349,7 @@ def merge_hooks(settings_path, generated, apply_):
         for g in groups:
             if all(key(h) in present for h in g.get("hooks", [])):
                 # Already wired. A re-install that picked another interpreter rewrites the command in place;
-                # until Nov 2026 the full command was the key, so such a run wired every hook a second time.
+                # keying on the full command instead would wire every hook a second time.
                 for h in g.get("hooks", []):
                     old = present[key(h)]
                     if old.get("command") != h.get("command"):
@@ -477,8 +477,8 @@ def main():
     a = ap.parse_args()
 
     # The math hook imports math_brain, which needs Python 3.11. On a stock Mac the python3 that runs this
-    # script is Apple's 3.9, and until Nov 2026 every hook was wired to it: the math hook failed on import and
-    # printed nothing. An interpreter named with --python is always used as given.
+    # script is Apple's 3.9, and a math hook wired to it fails on import and
+    # prints nothing. An interpreter named with --python is always used as given.
     math = math_lane(REPO)
     py_note = None
     if a.python is None:

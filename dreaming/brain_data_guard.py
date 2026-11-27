@@ -40,8 +40,8 @@ PROTECTED = re.compile(
     r"12_cognitive_architecture[\\/]+(?:brain_graph|brain_improvement|audits|dreaming))|"
     r"math-store-build[\\/]+local[\\/]+population|math-store-main[\\/]+export|bank_recall_keys_quarantine|"
     r"codex_fleet[\\/]+movies[\\/]+out\b)")
-# the film pictures (his 11 Oct order "no pictures should be deleted locally", 5 Oct "i want to make other videos out
-# of these images"); a kit runner deleted 1,954 of them on 11 Oct, minutes after he said no, past an advisory reflex
+# the film pictures (owner orders of 11 Oct and 5 Oct: no picture is deleted locally, the images feed other
+# videos); a kit runner deleted 1,954 of them on 11 Oct, minutes after he said no, past an advisory reflex
 PICTURES = re.compile(r"(?i)codex_fleet[\\/]+movies[\\/]+out\b")
 PATHLIKE = re.compile(r"""[^\s'"`;|&()<>]*(?:\.claude|\.codex|brain-repo|math-store-build|"""
                       r"""math-store-main|bank_recall_keys_quarantine|codex_fleet)[^\s'"`;|&()<>]*""", re.I)

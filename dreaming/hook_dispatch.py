@@ -88,8 +88,8 @@ PER_HOOK_BUDGET_S = 120.0
 # SessionStart keeps the full 120 s ON PURPOSE: it fires once and it is where the brain is loaded, so
 # cutting it wakes a session without its identity - a different and worse failure than a lost note.
 #
-# EVERY CAP WAS CHECKED AGAINST HOW MANY REAL RUNS IT WOULD CUT, and that check overturned my first
-# choice. I had written 30 s for UserPromptSubmit on the assumption that its 32.6 s p90 was inflated by
+# EVERY CAP WAS CHECKED AGAINST HOW MANY REAL RUNS IT WOULD CUT, and that check overturned the first
+# choice. A 30 s cap for UserPromptSubmit rested on the assumption that its 32.6 s p90 was inflated by
 # the timeouts themselves. It is not: with every run over 100 s removed, 779 of 792 remain and their p90
 # is still **29.84 s**, p99 71.09, max 97.54. A 30 s cap would have cut 89 of 792 runs - more than one
 # prompt in nine losing its hook output - because this event genuinely takes 12-30 s. The prompt path
@@ -294,8 +294,7 @@ def _allowlist():
     window. Nothing in the log said so; the only symptom was every hook reading SUBPROCESS in a
     census nobody runs.
     This has now fired twice in two days, both times from an edit to THIS file that could not affect
-    in-process behaviour at all - a logging change on 09-17 and a subprocess-timeout change on 09-18,
-    both of mine. [[editing_a_file_can_disable_an_optimisation_keyed_on_its_mtime_2026_09_17]]
+    in-process behaviour at all - a logging change on 09-17 and a subprocess-timeout change on 09-18.
     So it still empties, and now it SAYS so, once per dispatch, with both timestamps. Re-signing is
     `python hook_dispatch_allowlist.py --resign` or simply touching the json AFTER reading the diff
     and satisfying yourself the change cannot alter what a hook does when run in-process.
@@ -1383,8 +1382,7 @@ def dispatch(event, payload, tool_name, settings_path=SETTINGS, force=False, ses
         # every per-hook row in the log was a failure - and all of them were the same 120 s timeout. The
         # cost that actually lands on the owner had no rows at all: UserPromptSubmit runs 18 hooks for a
         # MEDIAN of 12.46 s, measured over 792 invocations, and nothing said which of the eighteen owns
-        # it. An event total with no breakdown is the probe's stage table before it had stages
-        # [[forty_four_percent_of_the_probe_was_in_no_stage_at_all_2026_09_18]].
+        # it. An event total with no breakdown is the probe's stage table before it had stages.
         # The threshold is 1.0 s against a mean of 0.69 s per hook on that event and 0.14 s on
         # PreToolUse, so a normal hook writes nothing and only real contributors appear. Success rows
         # are marked ok= so they cannot be mistaken for the failure rows already in the file.

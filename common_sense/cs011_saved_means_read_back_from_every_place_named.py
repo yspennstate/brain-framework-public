@@ -19,9 +19,8 @@ HOOK = {'id': 'CS011',
         '\\b(data|files?|results?|pictures?|everything)\\b'],
  'need': 3,
  'pri': 3,
- 'fire': ['p:make sure that we are uploading data to github and the cloud bucket and once they are saved in both '
-          'they get deleted from this computer',
-          'p:you sure that all of the data is saved locally as well?'],
+ 'fire': ['p:make sure the results were pushed to github and the bucket, and only then clear the old copies',
+          'p:verify that the files are stored in both places before you remove them here'],
  'quiet': ['p:save the picture as png', 'p:the file was saved']}
 
 

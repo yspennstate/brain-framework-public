@@ -1,10 +1,14 @@
-# User mandate (verbatim, 2026-05-27)
+# User mandate (summary, 2026-05-27)
 
-> my computer crashed again, look for dignosis, i want to start building methods so that this stops happening, this problem, first download everything you cna to ensure thid eso nto happen, second set up systmes that start silently that make sure that if this is about to happene then rather then crashing we toggle back on what is cuasing the problme, it can even end me warnng meggssages, and it should always start silently in the backround when i start the computer, then audit and make sure that it is implentinted correctly, and none of the previous shutdowns, and there have been a lot, woudl have gotten through, run simulations, hundrest, and hundres of audits, and start a new project for this, making sure the computer does not shut down. we can even close application, slow things down, move ting for cpu to gpu and so on, i don't care how, also check that all of the current backround method to ensure tings like this get incorpreated into the whole system, and again run multiple test, just keep running tests. setup a watchdog that wakes you up every minute, fi you ever stop working, and keep giving you this propt and tell you to keep building the system, but you shoudl remember yourslef to simply keep building and experimenting, and this build and testings and audit thing shoudl take at least the next 20 hours until we are sure tat the project is built proof, and idely sallows things to run as smothly and quickly on the computer as possible without slowing down unless needed and while using all fo the computational capacilities of this computer perfectly
+The machine had crashed several times. The request, in short:
 
-> (paraphrased) also check the workloads that typically run on this machine - the protected production track, multiple observers, many concurrent agent sessions - and build the policies around them.
-
-> make sure to include that watchdog i mentioned and have it give you this full rpt iw wrote, and work on this fro the next 20 hours, and test and audit and simulate to make sure everythng is working perfectly
+- Find the cause of the crashes and build methods so they stop happening.
+- Set up systems that start silently in the background at boot and, when a crash is about to happen, back off whatever is causing it instead of crashing. Warning messages are acceptable.
+- Audit the setup, replay every earlier shutdown against it, and run hundreds of simulations and audits.
+- Closing applications, slowing work down or moving load from CPU to GPU are all allowed.
+- Fold the existing background protections into one system, and keep testing.
+- Run a watchdog that wakes the agent every minute with this request, so the build, test and audit work continues for at least 20 hours, until the system is proven, while still letting the machine run as smoothly and quickly as possible.
+- Build the policies around the workloads that usually run on the machine: a protected production track, several observers, and many concurrent agent sessions.
 
 ## Distilled to-dos (the persistent loop should do these each wake)
 

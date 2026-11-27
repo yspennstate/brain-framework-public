@@ -879,9 +879,9 @@ def controls(host):
         pings = ["keep working", "ok", "yes do it", "continue", "speed things up", "keep wroking", "kee working",
                  "you still working on this?", "try again", "/chrome", "reply with the word OK and nothing else."]
         check("1 continuations and pings are DROP (%d)" % len(pings), all(rule_verdict(t)[0] == "DROP" for t in pings))
-        keeps = ["one movie at a time", "if a moive already has a codex thuamnial DON'T touch it",
-                 "i also prefer the flims go longer, like 1.25 hours, that is my prefrence record that as well",
-                 "ER happen loalcly they shoudl all go through kaggle", "keep working on this for the next 10 hours",
+        keeps = ["one movie at a time", "if a video already has a thumbnail DON'T touch it",
+                 "i also prefer the films to run longer, about 1.25 hours, record that preference as well",
+                 "the heavy jobs should not run locally, send them all to the cloud queue", "keep working on this for the next 10 hours",
                  "speed up the movie making", "what about the second index", "/dream", "why is the box idle",
                  "<pasted_content id=1>a long review</pasted_content id=1> ok"]
         check("1 orders, questions, durations and pastes are never DROP by rule (%d)" % len(keeps),

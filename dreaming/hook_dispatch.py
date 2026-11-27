@@ -975,6 +975,12 @@ def merge(results, event, session=""):
                             "[hook-dispatch] the hook list could not be read, so NO hook ran for this "
                             "event: " + LIST_UNREADABLE[0] + ". The session is unharmed and unhooked; "
                             "repair that file."))
+    gone = _missing_anywhere() if event in ("UserPromptSubmit", "SessionStart") else []
+    if gone:
+        contexts.insert(0, ("hook-dispatch",
+                            "[hook-dispatch] %d wired hook script(s) are not on disk and are skipped on every event "
+                            "(a guard among them does not guard): %s. Re-run the installer, or remove them from "
+                            "hook_dispatch_list.json." % (len(gone), ", ".join(gone[:8]))))
     hso = {"hookEventName": event}
     try:
         contexts = dedup_repeats(contexts, event, session)
@@ -1176,6 +1182,49 @@ def _entry_basename(cmd, args):
         return ""
 
 
+# A WIRED SCRIPT THAT IS NOT ON DISK IS SKIPPED, NOT RUN (27 Nov 2026). Measured on a macOS install from a partial
+# checkout: one hook file missing (fleet/mailbox_hook.py, wired twice on UserPromptSubmit) made python exit 2 with
+# "can't open file", and 2 is the code that BLOCKS, so every prompt in the session was refused with no output. A file
+# that does not exist cannot have an opinion about the prompt; it is skipped (this fails open: a missing guard does not
+# guard), named in the log line of each dispatch that skipped it, and named in the session at every prompt and session
+# start - for every event it is wired on, tool events included - until it is restored. Only an absolute path is judged; a
+# relative one, or anything that is not a plain python file invocation, runs as before.
+MISSING_SCRIPTS = []
+
+
+def _script_missing(cmd, args):
+    try:
+        p = script_argv(cmd, args)[0]
+        if not p:
+            return False
+        p = os.path.expandvars(os.path.expanduser(p))
+        return os.path.isabs(p) and not os.path.exists(p)
+    except Exception:
+        return False
+
+
+def _missing_anywhere():
+    """Names of the wired scripts missing on disk across EVERY event in the list, so a guard wired only on tool calls
+    is named at the next prompt. One read of the list and one stat per entry. Never raises."""
+    names = []
+    try:
+        if not os.path.exists(LIST):
+            return names
+        for blocks in json.load(open(LIST, encoding="utf-8")).values():
+            for block in blocks or []:
+                for h in block.get("hooks", []):
+                    if _entry_flag_off(h):
+                        continue
+                    cmd, args = h.get("command", ""), h.get("args") or []
+                    if _script_missing(cmd, args):
+                        n = _entry_basename(cmd, args) or cmd[:60]
+                        if n not in names:
+                            names.append(n)
+    except Exception:
+        pass
+    return names
+
+
 def _flag_file_absent(args):
     """True when an entry is wired `... --enabled <flag file>` and that file does not exist.
 
@@ -1271,6 +1320,7 @@ def dispatch(event, payload, tool_name, settings_path=SETTINGS, force=False, ses
     headless, diet_skipped = _headless_session(event, payload, session), 0
     flag_off = 0
     FLAG_SKIPPED[0] = 0
+    del MISSING_SCRIPTS[:]
     try:
         mv = match_value(event, json.loads(payload))
     except Exception:
@@ -1286,6 +1336,11 @@ def dispatch(event, payload, tool_name, settings_path=SETTINGS, force=False, ses
             continue
         if _flag_file_absent(args):
             flag_off += 1
+            continue
+        if _script_missing(cmd, args):
+            name = _entry_basename(cmd, args) or cmd[:60]
+            if name not in MISSING_SCRIPTS:
+                MISSING_SCRIPTS.append(name)
             continue
         hook_payload = payload
         if automated and _entry_basename(cmd, args) in CONTENT_HOOKS:
@@ -1347,7 +1402,9 @@ def dispatch(event, payload, tool_name, settings_path=SETTINGS, force=False, ses
                                                 (" envelope: %d content hooks %s" % (content_seen, "skipped" if content_payload is None else "got his words only"))
                                                 if automated else "",
                                                 ((" headless diet: %d skipped" % diet_skipped) if diet_skipped else "")
-                                                + ((" flag off: %d" % flag_off) if flag_off else "")))
+                                                + ((" flag off: %d" % flag_off) if flag_off else "")
+                                                + ((" missing script skipped: %s" % ",".join(MISSING_SCRIPTS))
+                                                   if MISSING_SCRIPTS else "")))
     if _LAST_FIT[0]:
         total, n_hooks, n_cut, path = _LAST_FIT[0]
         log("%s FIT: %d hooks wrote %d chars; %d cut to share the %d-char inline budget; whole text in %s"
@@ -1419,6 +1476,8 @@ def _flag_selftest():
     fd, present = tempfile.mkstemp(prefix="flag_selftest_")
     os.close(fd)
     missing = present + ".absent"
+    fd, present_py = tempfile.mkstemp(prefix="flag_selftest_", suffix=".py")
+    os.close(fd)
     try:
         checks = [
             (_flag_file_absent(["-B", "hook.py", "--hook-runtime", "claude", "--enabled", missing]), True, "missing flag skips"),
@@ -1432,9 +1491,17 @@ def _flag_selftest():
             (_entry_flag_off({"command": "x", "enabled_if": ""}), False, "an empty enabled_if runs"),
             (_entry_flag_off({"command": "x", "enabled_if": 7}), False, "a non-string enabled_if runs"),
             (_flag_file_absent([None, 3, "--enabled", ""]), False, "junk never raises and runs"),
+            (_script_missing("python3 -s " + missing.replace("\\", "/") + ".py", []), True, "a missing absolute script skips"),
+            (_script_missing("python3 -s " + present_py.replace("\\", "/"), []), False, "a present script is not judged missing"),
+            (_script_missing("python3", ["-s", missing + ".py", "--x"]), True, "a missing script in args form skips"),
+            (_script_missing("python3 -s hook_not_here.py", []), False, "a relative script runs as before"),
+            (_script_missing('python3 -c "print(1)"', []), False, "an inline -c command runs as before"),
+            (_script_missing("node " + missing + ".js", []), False, "a non-python command runs as before"),
+            (_script_missing(None, None), False, "junk never raises and runs"),
         ]
     finally:
         os.remove(present)
+        os.remove(present_py)
     bad = [name for got, want, name in checks if got != want]
     print("hook_dispatch flag selftest: %s (%d checks%s)" % ("FAIL" if bad else "PASS", len(checks),
                                                              ": " + ", ".join(bad) if bad else ""))

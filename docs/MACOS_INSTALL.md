@@ -12,6 +12,14 @@ are for 3.9; the places where 3.9 falls short, and why, are named.
   The `/usr/bin/python3` that ships with macOS is 3.9: the core brain installs and runs with it, but
   the four math-brain checks fail (see "Check the install"). Install a newer Python from python.org or
   with Homebrew (`brew install python@3.13`) and use its absolute path everywhere below.
+  If you leave out `--python`, the installer looks for a 3.11 or newer interpreter itself (on PATH, in
+  Homebrew, python.org, pyenv and uv locations), wires the hooks to it and prints which one it chose.
+  With `--merge-settings`, running the installer again with another interpreter moves the existing hook
+  lines to it; it does not add a second copy.
+- A math store, if you want the math hook to speak. This repository ships the math package, not a store;
+  math-brain-public builds one with its `tools/import_store.py`. Point `MATHBRAIN_STORE` at that
+  `brain.sqlite3` in the `env` object of `~/.claude/settings.json`. With `--merge-settings` the installer
+  writes `MATHBRAIN_BUILD_SRC` there for you, so the card command the math hook prints finds the package.
 - Claude Code, if you want the hooks to run inside agent sessions.
 
 ## Get the checkout

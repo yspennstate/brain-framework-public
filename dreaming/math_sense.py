@@ -4928,7 +4928,16 @@ def _reset_per_prompt_state():
 #     the match rather than the card. A card with no word match in its trace (a pinned citation) gets no such line.
 RECALL_POINTER = os.environ.get("MATHBRAIN_RECALL_POINTER", "1").strip() not in ("0", "off", "false", "")
 _NOTE_POINTER = "Full note: python ~/.claude/dreaming/math_note.py SOURCE_ID"
-_RECALL_POINTER = "Card + links: python ~/.claude/dreaming/math_recall.py --id ID"
+def _pointer_python():
+    """The interpreter the recall pointer names: python on Windows; elsewhere the one running this hook, since a stock
+    Mac has no `python` and its python3 can be older than math_recall.py needs (3.11)."""
+    exe = sys.executable or ""
+    if os.name == "nt" or not exe:
+        return "python"
+    return '"%s"' % exe if " " in exe else exe
+
+
+_RECALL_POINTER = "Card + links: %s ~/.claude/dreaming/math_recall.py --id ID" % _pointer_python()
 _TRACE_TERM = _lazy_re(r"""matched (?:normalized term|title phrase) ['"](.+?)['"]\s*$""")
 
 

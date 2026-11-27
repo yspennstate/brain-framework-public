@@ -923,9 +923,9 @@ GENERIC_RESEARCH_WORDS = ("open problem problems conjecture conjectures theorem 
                           "lemmas paper papers true false known famous literature full fully general case cases work "
                           "working method methods close closer "
                           # the words of his work orders about the research (cand17): with them the rule silences three
-                          # more junk blocks ("ok can we use these method to solve a known open problem in the area",
-                          # "tell the schduled taks working on this conjecture to converge on this problem", "please push
-                          # all the reuslts to the open problem folder") and still nothing on any bank. Chosen by reading
+                          # more junk blocks ("ok can we use these methods to solve a known open problem in the area",
+                          # "tell the scheduled tasks working on this conjecture to converge on this problem", "please push
+                          # all the results to the open problem folder") and still nothing on any bank. Chosen by reading
                           # those blocks, so in-sample; his later traffic is the held-out check.
                           "area areas push pushed folder folders task tasks scheduled schedule converge better strong "
                           "stronger strongest strengthen fix fixed publishable publish published post posted github repo "

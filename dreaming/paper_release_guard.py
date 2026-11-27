@@ -1,8 +1,8 @@
 """Paper release guard (owner, 2 Nov 2026 05:0x).
 
-His words, after a paper went up on a public GitHub repo with an overflowing line and no funding statement or AI
-acknowledgment: "this is not how we write paper, fix that repo right now, and put in the brian this ifnroamtion and
-hooks so that this never ever happens agian".
+Written after a paper went up on a public GitHub repo with an overflowing line and no funding statement or AI
+acknowledgment. The request was to fix that repo at once and to record the rules, with hooks, so that it does not
+happen again.
 
 A paper (a .tex file with \\documentclass, \\begin{document} and an abstract or \\maketitle) pushed to a PUBLIC
 GitHub repository must have:

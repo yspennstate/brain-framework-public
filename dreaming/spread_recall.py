@@ -200,8 +200,8 @@ MW_SCORE_TILT = 0.10   # score x(1 + tilt*sev): a big scar wins ties, never floo
 #       neutral-or-better). Combined with mistake-first surfacing, the session's total vs the
 #       morning baseline on the same prompts: 68 -> 138 fires = 2.03x triggering. SHIPPED.
 CONNECTION_GAIN = 2.0   # divides ACT_FLOOR at the speak gate; 1.0 restores pre-07-25 behaviour
-# OWNER TOPIC NODES x3 (owner, 2026-07-25: the words he uses - "microsoft volume", "aws",
-# "levrage" - are nodes, and when he is on one of them the mistakes and information under it
+# OWNER TOPIC NODES x3 (owner request, 2026-07-25: the words the owner uses for a topic -
+# a storage volume, a provider, a term of art - are nodes, and when he is on one of them the mistakes and information under it
 # should surface ~3x more). keyword_nodes.tsv maps his vocabulary to member memories and maps
 # his misspellings to the corpus spelling (levrage -> leverage), so the boost survives his
 # typing. The gain is differential, never global: only members of a topic the CURRENT text

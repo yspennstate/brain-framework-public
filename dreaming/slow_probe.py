@@ -898,7 +898,7 @@ def starvation(st):
     and a PowerShell start that waits many seconds while using almost no processor. The 2026-09-15 case was
     starvation: an eight-core reservation nothing was using, TEN CORES IDLE while six ran flat out. The
     2026-09-16 02:5x case looked identical on those three signals and was the opposite - every usable core at
-    100 per cent with the owner away, which is what he asked for ("use the whole card and all the cores",
+    100 per cent with the owner away, which is what he asked for (the whole GPU and every core in use,
     2026-09-09) and what the governor itself calls owner_away_open.
 
     The difference is IDLE CAPACITY sitting beside the saturation, and it costs one line to measure. Cores 14

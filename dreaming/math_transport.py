@@ -881,8 +881,8 @@ def correct(stale_slug, statement, store=STORE, dry=False, rebuild=True):
                         note="correction: %s is overtaken (%s)" % (stale_slug, why), source_kind="campaign")
 
 
-# PRIVATE TOPICS (owner, 27 Oct 2026: the bitcoin work goes "in maht brian, but not the brian that is public only math
-# brain and the brian"). A card on such a topic IS carried into the private store, but its node metadata carries
+# PRIVATE TOPICS (owner, 27 Oct 2026: some work belongs in the private math store only, never in a public edition).
+# A card on such a topic IS carried into the private store, but its node metadata carries
 # private_topic = "mb-private-topic:<topic>"; release_store.py drops every marked card (and every row citing it) from
 # the public edition, and build_edition.py refuses a build in which the marker survives.
 PRIVATE_TOPICS = (("crypto-tracing", re.compile(

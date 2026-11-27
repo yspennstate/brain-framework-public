@@ -755,7 +755,8 @@ FIT_WORK_WEIGHT = 3
 
 
 def _fit_weight(label):
-    return FIT_WORK_WEIGHT if os.path.basename(str(label)) in FIT_WORK_HOOKS else 1
+    # split on both separators: a Windows label read on a Mac kept its whole path and lost its work weight
+    return FIT_WORK_WEIGHT if os.path.basename(str(label).replace("\\", "/")) in FIT_WORK_HOOKS else 1
 
 
 def fit_contexts(items, cap, event, session):
@@ -1600,7 +1601,8 @@ def main():
     _unthrottle()
     event = "PreToolUse"
     if "--selftest" in sys.argv:
-        return _fit_selftest() or _flag_selftest() or _code_selftest()
+        rcs = [_fit_selftest(), _flag_selftest(), _code_selftest()]  # all three run; one failure no longer hides the rest
+        return next((r for r in rcs if r), 0)
     if "--event" in sys.argv:
         event = sys.argv[sys.argv.index("--event") + 1]
     # The payload is UTF-8 JSON from the harness; read it as bytes so a non-cp1252 character in his prompt cannot

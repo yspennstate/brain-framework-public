@@ -77,7 +77,7 @@ def due(key, now, state_path=STATE, every=EVERY_S):
     return True
 
 
-# THE PRIME DIRECTIVE HOOK (his 7 Oct 20:4x order, "and write a prime directive hook as well"): the directive's own
+# THE PRIME DIRECTIVE HOOK (added 7 Oct 2026): the directive's own
 # rules, fired by what the prompt is about (test material, credits, fleet size, store writes, the timeline ...), each at
 # most once per session per 45 minutes and at most two a prompt, plus a stage clock once per session per hour. Rules and
 # selector: C:/Users/me/primary_directive/directive_hooks (DIRECTIVE_HOOKS_v1.jsonl, directive_hooks.py --selftest).
@@ -104,7 +104,7 @@ def directive_lines(key, text, now, state_path=STATE):
         return []
 
 
-# THE USAGE WATCH (his 7 Oct 22:3x order: "you should have been paying closer attention to this, make a hook about it"):
+# THE USAGE WATCH (added 7 Oct 2026, after usage ran high unnoticed):
 # the Claude meters, the directive fleet's last hour and this session's own re-read per turn (usage_watch.py beside this
 # file, --selftest). Measured at most once per session per 5 minutes, said at most once per 30, only when something is off.
 USAGE_CHECK_S = 300

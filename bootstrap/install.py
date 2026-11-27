@@ -310,6 +310,21 @@ def longest_path_this_install_would_create(home, slug):
     return max(paths, key=len) if paths else ""
 
 
+def _without_interpreter(cmd):
+    """The command with a leading Python interpreter replaced by a marker, so the same hook wired to two
+    interpreters compares equal. A first token that is not a Python interpreter is left as it is."""
+    s = cmd.strip()
+    if s.startswith('"'):
+        end = s.find('"', 1)
+        first, rest = (s[1:end], s[end + 1:]) if end > 0 else (s, "")
+    else:
+        first, _, rest = s.partition(" ")
+    name = os.path.basename(first.replace(chr(92), "/")).lower()
+    if re.match(r"^(py|pythonw?(\d+(\.\d+)*)?)(\.exe)?$", name):
+        return "<python> " + rest.strip()
+    return cmd
+
+
 def merge_hooks(settings_path, generated, apply_):
     """Add the generated hook groups to settings.json. Keys and hooks already there are kept; a group whose
     commands are all present already is skipped, so a second run adds nothing."""
@@ -321,24 +336,118 @@ def merge_hooks(settings_path, generated, apply_):
     have = cur.setdefault("hooks", {})
 
     def key(h):
-        return (h.get("command"), tuple(h.get("args") or ()))
+        return (_without_interpreter(h.get("command") or ""), tuple(h.get("args") or ()))
 
     added = 0
+    swapped = 0
     for event, groups in generated.get("hooks", {}).items():
         mine = have.setdefault(event, [])
-        present = {key(h) for g in mine for h in g.get("hooks", [])}
+        present = {}
+        for g in mine:
+            for h in g.get("hooks", []):
+                present.setdefault(key(h), h)
         for g in groups:
             if all(key(h) in present for h in g.get("hooks", [])):
+                # Already wired. A re-install that picked another interpreter rewrites the command in place;
+                # until Nov 2026 the full command was the key, so such a run wired every hook a second time.
+                for h in g.get("hooks", []):
+                    old = present[key(h)]
+                    if old.get("command") != h.get("command"):
+                        old["command"] = h.get("command")
+                        swapped += 1
                 continue
             mine.append(g)
-            present.update(key(h) for h in g.get("hooks", []))
+            for h in g.get("hooks", []):
+                present.setdefault(key(h), h)
             added += 1
-    if apply_ and added:
+    if swapped:
+        print(f"  {swapped} existing hook command(s) moved to the new interpreter")
+    if apply_ and (added or swapped):
         os.makedirs(os.path.dirname(settings_path), exist_ok=True)
         if os.path.exists(settings_path):
             bak = settings_path + ".bak-" + time.strftime("%Y%m%d-%H%M%S")
             shutil.copy2(settings_path, bak)
             print(f"  settings backup -> {bak}")
+        tmp = settings_path + ".tmp"
+        io.open(tmp, "w", encoding="utf-8", newline="\n").write(json.dumps(cur, indent=2) + "\n")
+        os.replace(tmp, settings_path)
+    return added
+
+
+MATH_MIN_PY = (3, 11)   # math_brain uses enum.StrEnum and other 3.11 features
+
+
+def math_lane(repo):
+    """True when this checkout ships the math hook and its package (mathbrain/src)."""
+    return (os.path.exists(os.path.join(repo, "dreaming", "math_sense.py"))
+            and os.path.isdir(os.path.join(repo, "mathbrain", "src", "math_brain")))
+
+
+def _py_version(exe):
+    import subprocess
+    try:
+        p = subprocess.run([exe, "-c", "import sys; print('%d %d' % sys.version_info[:2])"], capture_output=True,
+                           text=True, timeout=30, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        a, b = p.stdout.split()
+        return (int(a), int(b))
+    except Exception:
+        return None
+
+
+def newer_python(minimum):
+    """The newest interpreter at or above `minimum` that this machine has, or None. Looks on PATH, in the
+    usual Homebrew, python.org, pyenv and uv locations, and asks the Windows py launcher."""
+    import glob
+    import subprocess
+    found = []
+    for n in ("python3.14", "python3.13", "python3.12", "python3.11", "python3", "python"):
+        w = shutil.which(n)
+        if w:
+            found.append(w)
+    home = os.path.expanduser("~")
+    for pat in ("/opt/homebrew/bin/python3.1*", "/usr/local/bin/python3.1*",
+                "/Library/Frameworks/Python.framework/Versions/3.1*/bin/python3",
+                os.path.join(home, ".pyenv", "versions", "3.1*", "bin", "python3"),
+                os.path.join(home, ".local", "share", "uv", "python", "cpython-3.1*", "bin", "python3")):
+        found.extend(glob.glob(pat))
+    if os.name == "nt" and shutil.which("py"):
+        for v in ("3.14", "3.13", "3.12", "3.11"):
+            try:
+                p = subprocess.run(["py", "-" + v, "-c", "import sys; print(sys.executable)"], capture_output=True,
+                                   text=True, timeout=30, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                if p.returncode == 0 and p.stdout.strip():
+                    found.append(p.stdout.strip())
+            except Exception:
+                pass
+    best, seen = None, set()
+    for exe in found:
+        real = os.path.realpath(exe)
+        if real in seen or not os.path.isfile(real) or not os.access(real, os.X_OK):
+            continue
+        seen.add(real)
+        v = _py_version(exe)
+        if v and v >= minimum and (best is None or v > best[0]):
+            best = (v, exe)
+    return best[1] if best else None
+
+
+def merge_env(settings_path, values, apply_):
+    """Add the given variables to the "env" object of settings.json. A variable already set there is the
+    user's choice and is kept. Returns the names added."""
+    cur = {}
+    if os.path.exists(settings_path):
+        raw = io.open(settings_path, encoding="utf-8").read()
+        if raw.strip():
+            cur = json.loads(raw)
+    env = cur.setdefault("env", {})
+    added = [k for k in values if k not in env]
+    for k in added:
+        env[k] = values[k]
+    if apply_ and added:
+        os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+        if os.path.exists(settings_path):
+            bak = settings_path + ".bak-env-" + time.strftime("%Y%m%d-%H%M%S")
+            shutil.copy2(settings_path, bak)
         tmp = settings_path + ".tmp"
         io.open(tmp, "w", encoding="utf-8", newline="\n").write(json.dumps(cur, indent=2) + "\n")
         os.replace(tmp, settings_path)
@@ -351,7 +460,9 @@ def main():
     ap.add_argument("--project-dir", required=True,
                     help="the working directory your agent sessions start in")
     ap.add_argument("--timezone", default="UTC")
-    ap.add_argument("--python", default=sys.executable)
+    ap.add_argument("--python", default=None,
+                    help="the interpreter the hooks run with (default: this one, or a newer one on the machine "
+                         "when the math hook needs 3.11 and this one is older)")
     ap.add_argument("--partner", default="your partner",
                     help="the person the brain works with (fills <PARTNER> in the agent instructions)")
     ap.add_argument("--apply", action="store_true", help="write (default: dry-run)")
@@ -364,6 +475,35 @@ def main():
                     help="also merge the generated Codex hook wiring into <HOME>/.codex/hooks.json "
                          "(a dated backup is written first; hooks already there are kept)")
     a = ap.parse_args()
+
+    # The math hook imports math_brain, which needs Python 3.11. On a stock Mac the python3 that runs this
+    # script is Apple's 3.9, and until Nov 2026 every hook was wired to it: the math hook failed on import and
+    # printed nothing. An interpreter named with --python is always used as given.
+    math = math_lane(REPO)
+    py_note = None
+    if a.python is None:
+        a.python = sys.executable
+        if math and sys.version_info[:2] < MATH_MIN_PY:
+            newer = newer_python(MATH_MIN_PY)
+            if newer:
+                py_note = "  python: %s is %d.%d; the math hook needs 3.11+, so hooks use %s" % (
+                    sys.executable, sys.version_info[0], sys.version_info[1], newer)
+                a.python = newer
+            else:
+                py_note = ("  WARNING: %s is %d.%d and no Python 3.11+ was found. The other hooks will run, but the "
+                           "math hook stays silent until you install one and re-run:\n"
+                           "      <python3.11 or newer> bootstrap/install.py --python <that python> ..." % (
+                               sys.executable, sys.version_info[0], sys.version_info[1]))
+    elif math:
+        v = _py_version(a.python)
+        if v and v < MATH_MIN_PY:
+            py_note = "  WARNING: --python %s is %d.%d; the math hook needs 3.11+ and will stay silent" % (
+                a.python, v[0], v[1])
+    if math:
+        note = ("  math hook: silent until MATHBRAIN_STORE names a math store (a population brain.sqlite3). This "
+                "repository ships the package, not a store: math-brain-public builds one (its tools/import_store.py). "
+                "Set MATHBRAIN_STORE in the \"env\" object of <HOME>/.claude/settings.json, or export it for Codex")
+        py_note = (py_note + "\n" + note) if py_note else note
 
     home = os.path.abspath(a.home)
     slug = slug_for(a.project_dir)
@@ -394,6 +534,8 @@ def main():
     }
 
     print(f"home={home}\nslug={slug}\napply={a.apply}\n")
+    if py_note:
+        print(py_note)
 
     # Refuse before writing anything, rather than two thirds of the way through.
     longest = longest_path_this_install_would_create(home, slug)
@@ -570,6 +712,19 @@ def main():
             print(f"  {n} hook group(s) {'merged' if a.apply else 'would be merged'} into {sp}")
         else:
             print("  merge its 'hooks' object into <HOME>/.claude/settings.json by hand, or re-run with --merge-settings")
+        # math_recall.py, the command the math hook prints, imports math_brain from MATHBRAIN_BUILD_SRC; the
+        # package is installed under .claude/mathbrain/src, which it did not look in, so the printed command
+        # failed with "No module named math_brain". A value the user has set is kept.
+        if math:
+            mvals = {"MATHBRAIN_BUILD_SRC": os.path.join(claude, "mathbrain", "src")}
+            if a.merge_settings:
+                added = merge_env(sp, mvals, a.apply)
+                print(f"  math package env {'set' if a.apply else 'would be set'} in {sp}: "
+                      f"{', '.join(added) or 'nothing new (kept yours)'}")
+            else:
+                print("  for the math hook's card command, add to the \"env\" object of <HOME>/.claude/settings.json:")
+                for k, v in mvals.items():
+                    print(f"      \"{k}\": {json.dumps(v)}")
 
     # Codex reads its hooks from <HOME>/.codex/hooks.json. Until Nov 2026 the template sat in hooks/ and nothing
     # rendered it, so a Codex session on a fresh install ran with no brain hooks at all: no wake, no reflexes and

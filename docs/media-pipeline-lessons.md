@@ -54,8 +54,8 @@ Shells read a script in pieces as they execute it. Rewriting a running script in
 reader, and the run ended with "command not found" on a line that was never written. Write the new version beside
 the old one and rename it into place, or wait for the run to finish.
 
-## 7. A held item says why it is held
+## 7. Make a held item say why it is held
 
-A queue that only counts "held" items invites an agent to release them in bulk. Each hold records its reason
+A queue that only counts "held" items invites an agent to release them in bulk. Have each hold record its reason
 (no receipt, receipt for different contents, a reviewer's flag, a remote check that did not match), so the next
 agent can clear the ones whose reason has gone and leave the rest alone.

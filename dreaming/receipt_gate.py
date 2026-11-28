@@ -17,7 +17,9 @@ Configuration (environment, or a JSON file named by RECEIPT_GATE_CONFIG with the
   RECEIPT_GATE_PATTERN   regex that recognises a publishing command; its named group "path" is the file.
                          Default: (?:^|\\s)\\S*publish\\S*\\.py\\s+(?P<path>\\S+)
   RECEIPT_GATE_DIR       folder of receipts. Default ~/.claude/receipts
-  RECEIPT_GATE_AGENT     id of this publisher; default the hook's session_id.
+  RECEIPT_GATE_AGENT     id of this publisher; default the hook's session_id. The reviewer field of a receipt must
+                         use the same namespace (both session ids, or both agent names): a receipt signed with an
+                         agent name can never match a session id, so a self-review would pass unseen.
 
 Commands that do not match are passed through silently. A matched command is refused when the file cannot be read
 or hashed (fail closed: a publish is hard to take back). Malformed hook input passes through (fail open: the gate
@@ -63,6 +65,8 @@ def judge(command, publisher, pattern, receipt_dir, cwd=None):
     m = re.search(pattern, command or "")
     if not m:
         return None
+    if not publisher:
+        return "the publisher has no id (set RECEIPT_GATE_AGENT); without one, self-review cannot be told apart"
     path = m.group("path").strip("'\"")
     if cwd and not os.path.isabs(path):
         path = os.path.join(cwd, path)
@@ -124,6 +128,7 @@ def selftest():
     io.open(f, "wb").write(b"frames v2, re-rendered after review")
     ok.append(("changed file refused", judge(cmd, "A", DEFAULT_PATTERN, rec) is not None))
     ok.append(("unrelated command silent", judge("ls -la && python render.py clip", "A", DEFAULT_PATTERN, rec) is None))
+    ok.append(("empty publisher id refused", "no id" in (judge(cmd, "", DEFAULT_PATTERN, rec) or "")))
     put("fail.json", sha256=sha256_of(f), verdict="fail", reviewer="B")
     ok.append(("failing verdict refused", judge(cmd, "A", DEFAULT_PATTERN, rec) is not None))
     for name, good in ok:

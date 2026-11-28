@@ -79,7 +79,7 @@ FINISH_RE = re.compile(r"This was (?:your|his) \d|final report|nearly done|almos
 UNFAMILIAR_RE = re.compile(r"unfamiliar|not familiar|first time (?:i|we)|never used|new to (?:me|this)", re.I)
 AREAS = (
     ("math", re.compile(r"\b(?:theorem|lemma|proof|prove|conjecture|open problem|inequalit|corollary|math)\w*", re.I)),
-    ("sims", re.compile(r"\b(?:simulation|backtest|sweep|plateau|lanes?|sqqq|uvxy|drawdown|cagr)\w*", re.I)),
+    ("sims", re.compile(r"\b(?:simulation|backtest|sweep|plateau|lanes?|drawdown|cagr)\w*", re.I)),
     ("films", re.compile(r"\b(?:film|movie|shorts?|youtube|clip|render|narration|veo)\w*", re.I)),
     ("writing", re.compile(r"\b(?:paper|draft|abstract|manuscript|cover letter|research statement|essay|chapter)\w*", re.I)),
     ("brain_building", re.compile(r"\b(?:brain|memory|memories|recall|reflex|instinct)\w*", re.I)),

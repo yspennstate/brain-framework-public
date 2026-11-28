@@ -172,6 +172,9 @@ review, publish and delete files without a person watching: balance by today's o
 holdings, never let the maker review its own file, delete only after the remote digest matches, and time the
 stages before adding lanes. `dreaming/receipt_gate.py` is the review gate from that page as a standalone hook.
 
+`docs/agent-mechanics-lessons.md` holds two shorter lessons from the same loops: a part pulled from one output
+lives on in every other output that reused it, and a filter on a script's output hides that the script failed.
+
 ## What the October measurements changed
 
 `docs/CHANGES_2026-10-15.md` records the latest pass, and three of its results decide how an

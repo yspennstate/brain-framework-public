@@ -31,7 +31,7 @@ inside the publishing script itself (call judge() before the upload); the hook i
 the lock.
 
   python receipt_gate.py < hook.json        as a hook
-  python receipt_gate.py --selftest         five controls, both ways
+  python receipt_gate.py --selftest         seven controls, both ways
 """
 import glob, hashlib, io, json, os, re, sys, tempfile
 

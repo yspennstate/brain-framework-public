@@ -59,3 +59,19 @@ the old one and rename it into place, or wait for the run to finish.
 A queue that only counts "held" items invites an agent to release them in bulk. Have each hold record its reason
 (no receipt, receipt for different contents, a reviewer's flag, a remote check that did not match), so the next
 agent can clear the ones whose reason has gone and leave the rest alone.
+
+## 8. A changed input must invalidate the render cache
+
+The remote renderer kept each segment of a short in a work folder and reused any segment whose length was right.
+After one picture was replaced for review reasons, the re-render came back byte-identical to the rejected file: the
+old segment had been reused and the new picture never reached the video. An identical hash after a changed input is
+the alarm. Clear the work folder with the output folder on every upload, or key cached segments by a hash of their
+inputs, never by name and length.
+
+## 9. Measure the link before choosing a faster carrier
+
+Splitting one run into stages showed upload 666 s, render 25 s, download 46 s: the link, not the machine, was the
+limit, because the overlay network could only relay traffic (about 68 KB/s) and never set up a direct path. A
+second carrier looked forty times faster from its download side, but the sending side measured three times faster
+at best. Shrinking the payload did more than either: pictures sent as high-quality JPEG at source size and turned
+back into PNG on the far side cut the upload from about 600 s to about 100 s, with no visible change in the frames.

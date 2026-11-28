@@ -165,6 +165,13 @@ of the event. Every rule in it is there because breaking it cost something measu
 before the architecture docs; the architecture explains what the brain is, the method decides
 whether any of it pays off.
 
+## Running a pipeline of agents
+
+`docs/media-pipeline-lessons.md` is what an agent-run media pipeline taught about letting agents make,
+review, publish and delete files without a person watching: balance by today's output rather than lifetime
+holdings, never let the maker review its own file, delete only after the remote digest matches, and time the
+stages before adding lanes. `dreaming/receipt_gate.py` is the review gate from that page as a standalone hook.
+
 ## What the October measurements changed
 
 `docs/CHANGES_2026-10-15.md` records the latest pass, and three of its results decide how an

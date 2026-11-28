@@ -77,3 +77,17 @@ at best. Shrinking the payload did more than either: pictures sent as high-quali
 back into PNG on the far side cut the upload from about 600 s to 103-182 s on the next four reels, with no visible change in the frames. A
 link that slow also drops: one upload failed three tries in a row, so the step retries and the lane logs the failure
 and moves on.
+The same link was shared with other uploads from the sending machine. On three consecutive reels the upload took
+800, 323 and 1085 s while bulk archive uploads ran beside it, and 169 s on the next one when nothing else was
+sending. Time the stage with the machine otherwise quiet before crediting or blaming any one change, and schedule
+bulk uploads for the stages that do not use the uplink.
+
+## 10. Check the publishing rules when the item is planned, not when it is uploaded
+
+The upload guard refused some finished shorts on their metadata alone: a word from one list in a song title next
+to a word from another. No review clears that rule, so every render of such an item was wasted remote time. The
+fix was a plan-time filter that imports the guard's own patterns, never a copy of them, and runs them over the text
+the metadata will be built from (titles, captions and every track and artist name). Run against the items that
+already had metadata, it gave the guard's verdict on every one, with no misses and no extra flags; only then was
+it trusted to drop unrendered items from the queue. The render lane reads the drop list before each item, so an
+addition takes effect without restarting it.

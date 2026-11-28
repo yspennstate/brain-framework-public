@@ -74,6 +74,6 @@ Splitting one run into stages showed upload 666 s, render 25 s, download 46 s: t
 limit, because the overlay network could only relay traffic (about 68 KB/s) and never set up a direct path. A
 second carrier looked forty times faster from its download side, but the sending side measured three times faster
 at best. Shrinking the payload did more than either: pictures sent as high-quality JPEG at source size and turned
-back into PNG on the far side cut the upload from about 600 s to between 100 and 180 s on the next reels, with no visible change in the frames. A
+back into PNG on the far side cut the upload from about 600 s to 103-182 s on the next four reels, with no visible change in the frames. A
 link that slow also drops: one upload failed three tries in a row, so the step retries and the lane logs the failure
 and moves on.
